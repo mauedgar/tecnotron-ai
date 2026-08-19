@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fitflowStructureGraph
+  schemaVersion="1.0"
+  repository="FitFlow"
+  scope="backend"
+  generatedAt="2026-08-16T00:00:00-03:00"
+  baselineRevision="UNKNOWN"
+  workingTreeFingerprint="UNKNOWN"
+  generator="seed-from-canonical-domain/1.0"
+  status="UNVERIFIED_SEED_REGENERATE_WITH_FF_AI_001">
+  <files>
+    <file id="f-user" path="backend/app/db/models/user.py" language="python" contentHash="UNKNOWN" parseStatus="UNPARSED"/>
+    <file id="f-person" path="backend/app/db/models/person.py" language="python" contentHash="UNKNOWN" parseStatus="UNPARSED"/>
+    <file id="f-client" path="backend/app/db/models/client.py" language="python" contentHash="UNKNOWN" parseStatus="UNPARSED"/>
+    <file id="f-teacher" path="backend/app/db/models/teacher.py" language="python" contentHash="UNKNOWN" parseStatus="UNPARSED"/>
+    <file id="f-membership" path="backend/app/db/models/membership.py" language="python" contentHash="UNKNOWN" parseStatus="UNPARSED"/>
+    <file id="f-gym-class" path="backend/app/db/models/gym_class.py" language="python" contentHash="UNKNOWN" parseStatus="UNPARSED"/>
+    <file id="f-class-schedule" path="backend/app/db/models/class_schedule.py" language="python" contentHash="UNKNOWN" parseStatus="UNPARSED"/>
+    <file id="f-class-session" path="backend/app/db/models/class_session.py" language="python" contentHash="UNKNOWN" parseStatus="UNPARSED"/>
+    <file id="f-booking" path="backend/app/db/models/booking.py" language="python" contentHash="UNKNOWN" parseStatus="UNPARSED"/>
+  </files>
+  <symbols>
+    <symbol id="s-user" fileId="f-user" kind="class" name="User" evidenceStatus="INFERRED"/>
+    <symbol id="s-person" fileId="f-person" kind="class" name="Person" evidenceStatus="INFERRED"/>
+    <symbol id="s-client" fileId="f-client" kind="class" name="Client" evidenceStatus="INFERRED"/>
+    <symbol id="s-teacher" fileId="f-teacher" kind="class" name="Teacher" evidenceStatus="INFERRED"/>
+    <symbol id="s-membership" fileId="f-membership" kind="class" name="Membership" evidenceStatus="INFERRED"/>
+    <symbol id="s-gym-class" fileId="f-gym-class" kind="class" name="GymClass" evidenceStatus="INFERRED"/>
+    <symbol id="s-class-schedule" fileId="f-class-schedule" kind="class" name="ClassSchedule" evidenceStatus="INFERRED"/>
+    <symbol id="s-class-session" fileId="f-class-session" kind="class" name="ClassSession" evidenceStatus="INFERRED"/>
+    <symbol id="s-booking" fileId="f-booking" kind="class" name="Booking" evidenceStatus="INFERRED"/>
+  </symbols>
+  <relations>
+    <relation sourceId="s-user" targetId="s-person" kind="has_profile" confidence="medium" source="docs/domain.md"/>
+    <relation sourceId="s-person" targetId="s-client" kind="specializes_as" confidence="medium" source="docs/domain.md"/>
+    <relation sourceId="s-person" targetId="s-teacher" kind="specializes_as" confidence="medium" source="docs/domain.md"/>
+    <relation sourceId="s-client" targetId="s-membership" kind="has_membership" confidence="medium" source="docs/domain.md"/>
+    <relation sourceId="s-gym-class" targetId="s-class-schedule" kind="has_schedule" confidence="medium" source="docs/domain.md"/>
+    <relation sourceId="s-class-schedule" targetId="s-class-session" kind="generates_session" confidence="medium" source="docs/domain.md"/>
+    <relation sourceId="s-class-session" targetId="s-booking" kind="has_booking" confidence="medium" source="docs/domain.md"/>
+    <relation sourceId="s-client" targetId="s-booking" kind="makes_booking" confidence="medium" source="docs/domain.md"/>
+  </relations>
+</fitflowStructureGraph>

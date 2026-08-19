@@ -1,0 +1,15 @@
+{
+  "name": "ffai-doctor",
+  "version": "1.0.0",
+  "description": "FitFlow AI Core doctor and compatibility baseline probe",
+  "private": true,
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "bin": {
+    "ffai-doctor": "bin/ffai-doctor.js"
+  },
+  "scripts": {
+    "test": "node --test tests/",
+    "doctor": "node bin/ffai-doctor.js"
+  }
+}
