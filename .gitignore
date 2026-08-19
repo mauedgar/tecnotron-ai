@@ -11,3 +11,4 @@ logs/
 *.sqlite3
 __pycache__/
 .pytest_cache/
+python/.venv_tools/

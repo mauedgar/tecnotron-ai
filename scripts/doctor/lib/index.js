@@ -98,7 +98,8 @@ async function probeTool(tool) {
 }
 
 async function probeRepoPackager() {
-  const venvPython = path.join(FFROOT, 'scripts', '.venv_tools', 'Scripts', 'python.exe');
+  const aiCoreRoot = path.resolve(__dirname, '..', '..', '..');
+  const venvPython = path.join(aiCoreRoot, 'python', '.venv_tools', 'Scripts', 'python.exe');
   const packScript = path.join(FFROOT, '.agents', 'skills', 'repo-packager', 'scripts', 'pack.py');
   const scriptExists = exists(packScript);
   const venvExists = exists(venvPython);
