@@ -7,13 +7,14 @@ Modos: reducido | ampliado | drill-down
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import os
 import re
 import subprocess
 import sys
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from collections import defaultdict
 from typing import Optional
 
@@ -30,6 +31,34 @@ except ImportError:
 CACHE_DIR_NAME = ".repo-packager-cache"
 MAX_AMPLIADO_PATHS = 10
 CHARS_PER_TOKEN = 4  # rough estimate
+
+DEFAULT_EXCLUSIONS = [
+    ".git/**",
+    ".venv*/**",
+    "node_modules/**",
+    "__pycache__/**",
+    "**/__pycache__/**",
+    ".pytest_cache/**",
+    "**/.pytest_cache/**",
+    ".ruff_cache/**",
+    "**/.ruff_cache/**",
+    "dist/**",
+    "build/**",
+    ".ai/local/**",
+    ".ai/runs/**",
+    "exports/**",
+    "storage/**",
+    ".repo-packager-cache/**",
+    "logs/**",
+    ".env",
+    ".env.*",
+    "**/.env",
+    "**/.env.*",
+    "*.key",
+    "*.pem",
+    "*.p12",
+    "*.sqlite*",
+]
 
 IMPORT_PATTERNS = [
     # Python
@@ -61,6 +90,62 @@ def extract_imports(content: str) -> set[str]:
                     imports.add(g.strip())
                     break
     return imports
+
+
+def normalize_repo_path(path: str, repo_root: Optional[Path] = None) -> str:
+    normalized = str(path).replace("\\", "/")
+    if repo_root:
+        try:
+            candidate = Path(normalized)
+            if candidate.is_absolute():
+                return candidate.relative_to(repo_root).as_posix()
+        except ValueError:
+            pass
+    return normalized[2:] if normalized.startswith("./") else normalized
+
+
+def load_ignore_patterns(repo_root: Path) -> list[str]:
+    patterns = list(DEFAULT_EXCLUSIONS)
+    for name in (".repomixignore", ".gitignore"):
+        ignore_file = repo_root / name
+        if not ignore_file.exists():
+            continue
+        for line in ignore_file.read_text(encoding="utf-8", errors="replace").splitlines():
+            pattern = line.strip()
+            if pattern and not pattern.startswith(("#", "!")):
+                patterns.append(pattern)
+    return patterns
+
+
+def path_matches_exclusion(path: str, patterns: list[str], repo_root: Optional[Path] = None) -> bool:
+    relative_path = normalize_repo_path(path, repo_root)
+    filename = PurePosixPath(relative_path).name
+    for raw_pattern in patterns:
+        pattern = raw_pattern.strip().replace("\\", "/").lstrip("/")
+        if pattern.startswith("./"):
+            pattern = pattern[2:]
+        pattern = pattern.rstrip("/")
+        if not pattern:
+            continue
+        variants = {pattern}
+        if "/" not in pattern:
+            variants.add(f"**/{pattern}")
+        if relative_path.startswith(f"{pattern}/"):
+            return True
+        if any(fnmatch.fnmatch(relative_path, variant) for variant in variants):
+            return True
+        if "/" not in pattern and fnmatch.fnmatch(filename, pattern):
+            return True
+    return False
+
+
+def filter_excluded_files(files: dict[str, str], repo_root: Path) -> dict[str, str]:
+    patterns = load_ignore_patterns(repo_root)
+    return {
+        path: content
+        for path, content in files.items()
+        if not path_matches_exclusion(path, patterns, repo_root)
+    }
 
 
 def resolve_to_file(imp: str, all_files: dict[str, str], current_file: str) -> Optional[str]:
@@ -147,7 +232,11 @@ def load_or_build_graph(json_path: Path, files: dict[str, str]) -> nx.DiGraph:
         try:
             with open(graph_cache, "rb") as f:
                 cached = pickle.load(f)
-            if cached.get("mtime") == json_mtime and "graph" in cached:
+            if (
+                cached.get("mtime") == json_mtime
+                and "graph" in cached
+                and set(cached["graph"].nodes) == set(files)
+            ):
                 return cached["graph"]
         except Exception:
             pass
@@ -224,6 +313,12 @@ def mode_reducido(args: argparse.Namespace) -> None:
         print("ERROR: JSON sin clave 'files'", file=sys.stderr)
         sys.exit(1)
 
+    files = filter_excluded_files(files, json_path.parent)
+    if not files:
+        print("STATUS: EMPTY")
+        print("No hay archivos relevantes después de aplicar exclusiones.")
+        return
+
     G = load_or_build_graph(json_path, files)
     ranked = compute_pagerank(G, personalize=args.personalize or None)
     sorted_files = sorted(ranked.items(), key=lambda x: x[1], reverse=True)
@@ -242,6 +337,9 @@ def mode_reducido(args: argparse.Namespace) -> None:
         selected_set.add(fpath)
         total_tokens += toks
 
+    omitted_paths = [fpath for fpath, _ in sorted_files if fpath not in selected_set]
+    status = "COMPLETE" if not omitted_paths else "PARTIAL"
+
     # candidates = next ones that did not fit + high-score neighbors
     candidates = []
     for fpath, score in sorted_files:
@@ -255,8 +353,10 @@ def mode_reducido(args: argparse.Namespace) -> None:
     # output
     print("=" * 60)
     print("MODO: reducido")
+    print(f"Status: {status}")
     print(f"Archivos incluidos: {len(selected)}  |  Tokens estimados: ~{total_tokens}")
-    print(f"Budget: {args.budget}  |  Signatures-only: {args.signatures_only}")
+    print(f"Archivos omitidos por budget: {len(omitted_paths)}  |  Budget: {args.budget}")
+    print(f"Signatures-only: {args.signatures_only}")
     if args.personalize:
         print(f"Personalize: {', '.join(args.personalize)}")
     print("=" * 60)
@@ -292,6 +392,12 @@ def mode_drill_down(args: argparse.Namespace) -> None:
         print("ERROR: JSON sin clave 'files'", file=sys.stderr)
         sys.exit(1)
 
+    files = filter_excluded_files(files, json_path.parent)
+    if not files:
+        print("STATUS: EMPTY")
+        print("No hay archivos relevantes después de aplicar exclusiones.")
+        return
+
     G = load_or_build_graph(json_path, files)
     ranked = compute_pagerank(G, personalize=args.personalize, focus=args.focus)
     sorted_files = sorted(ranked.items(), key=lambda x: x[1], reverse=True)
@@ -311,6 +417,9 @@ def mode_drill_down(args: argparse.Namespace) -> None:
         selected_set.add(fpath)
         total_tokens += toks
 
+    omitted_paths = [fpath for fpath, _ in sorted_files if fpath not in selected_set]
+    status = "COMPLETE" if not omitted_paths else "PARTIAL"
+
     candidates = []
     for fpath, score in sorted_files:
         if fpath in selected_set:
@@ -324,9 +433,11 @@ def mode_drill_down(args: argparse.Namespace) -> None:
 
     print("=" * 60)
     print("MODO: drill-down")
+    print(f"Status: {status}")
     print(f"Focus: {args.focus}")
     print(f"Archivos incluidos: {len(selected)}  |  Tokens estimados: ~{total_tokens}")
-    print(f"Budget: {args.budget}  |  Signatures-only: {args.signatures_only}")
+    print(f"Archivos omitidos por budget: {len(omitted_paths)}  |  Budget: {args.budget}")
+    print(f"Signatures-only: {args.signatures_only}")
     print("=" * 60)
 
     print("\n--- PATHS SELECCIONADOS (score) ---")
@@ -345,22 +456,19 @@ def mode_drill_down(args: argparse.Namespace) -> None:
 
 
 def mode_ampliado(args: argparse.Namespace) -> None:
-    paths = [p.strip() for p in args.paths.split(",") if p.strip()]
-    if not paths:
+    requested_paths = [p.strip() for p in args.paths.split(",") if p.strip()]
+    if not requested_paths:
         print("ERROR: --paths vacío", file=sys.stderr)
         sys.exit(1)
-    if len(paths) > MAX_AMPLIADO_PATHS:
-        print(
-            f"AVISO: se recibieron {len(paths)} paths. Límite duro = {MAX_AMPLIADO_PATHS}. "
-            f"Se usarán solo los primeros {MAX_AMPLIADO_PATHS}.",
-            file=sys.stderr,
-        )
-        paths = paths[:MAX_AMPLIADO_PATHS]
+
+    included_paths = requested_paths[:MAX_AMPLIADO_PATHS]
+    omitted_paths = requested_paths[MAX_AMPLIADO_PATHS:]
+    status = "COMPLETE" if not omitted_paths else "PARTIAL"
 
     # Build include pattern for repomix
     # Repomix accepts --include with globs
     include_globs = []
-    for p in paths:
+    for p in included_paths:
         p = p.rstrip("/")
         if Path(p).suffix:  # file
             include_globs.append(p)
@@ -385,7 +493,11 @@ def mode_ampliado(args: argparse.Namespace) -> None:
 
     print("=" * 60)
     print("MODO: ampliado (código real, sin compress)")
-    print(f"Paths solicitados: {', '.join(paths)}")
+    print(f"Status: {status}")
+    print(f"Paths requested: {', '.join(requested_paths)}")
+    print(f"Paths included: {', '.join(included_paths)}")
+    if omitted_paths:
+        print(f"Paths omitted: {', '.join(omitted_paths)}")
     print(f"Comando: {' '.join(cmd)}")
     print("=" * 60)
     print()
@@ -416,7 +528,7 @@ def mode_ampliado(args: argparse.Namespace) -> None:
         print(result.stdout)
         return
 
-    files = data.get("files", {})
+    files = filter_excluded_files(data.get("files", {}), Path.cwd())
     total_tokens = 0
     print(f"Archivos devueltos: {len(files)}")
     for fpath, content in files.items():
