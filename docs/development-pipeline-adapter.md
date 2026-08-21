@@ -1,39 +1,45 @@
 ---
 document_id: FFAI-ADAPTER-001
-status: accepted_pending_implementation
+status: canonical
 machine_context: true
-version: 2.0
-updated: 2026-08-18
+version: 3.0
+updated: 2026-08-21
 ---
 
 # Adapter del pipeline
 
 ## Entrada
 
-El core lee `FitFlow/.ai/config/`, contracts v2, TASK/Run State y Project
-Profile. No mantiene copias editables.
+El core consume configuracion, contracts v2, TASK/Run State y Project Profile
+desde `<FitFlow-root>`. No mantiene copias editables. La resolucion portable de
+ese root y los adapters de entrada pertenecen a `FF-AI-VNEXT-005`.
 
-## OpenCode adapter
+## Agent Runtime
 
-Implementa `AgentRuntimePort`: discovery, permisos, modelo efectivo, toolset,
-timeouts, output validation y abort. No controla transiciones ni puede emitir
-`DONE`.
+`AgentRuntimePort` define discovery, permisos, modelo efectivo, toolset,
+timeouts, output validation y abort. Ningun Agent CLI controla transiciones ni
+puede emitir `DONE`.
 
-La superficie automatizada es OpenCode CLI/headless (`run --format json` o
-`serve`); Desktop es solo interfaz manual. GitHub Copilot queda deferred y no
-se invoca por codigo. Si se usa, el desarrollador transmite la orden y registra
-la intervencion.
+OpenCode funciona como runtime actual bajo Orca y es intercambiable. Otros Agent
+CLI pueden ejecutarse bajo el mismo control plane. El adapter y su conformance
+suite permanecen pendientes; disponibilidad del CLI no equivale a conformance.
 
 ## GitHub adapter
 
 Sincroniza Issue/TASK, Project macrostate, PR summary y Actions checks. Debe ser
-idempotente y respetar la autoridad local de artifacts del run.
+idempotente y respetar la autoridad de los artifacts del run en FitFlow. Esta
+implementacion forma parte de `FF-AI-VNEXT-005` y no existe aun.
 
 ## OpenSpec adapter
 
 Consulta specs/deltas funcionales. No altera TASK, State Machine o ADR.
+Tambien permanece pendiente en `FF-AI-VNEXT-005`.
 
 ## Conformance
 
 Probar high-risk block, ownership, output invalido, review independiente,
 paid-disabled, retry limits, terminal developer gate y ausencia de secretos.
+
+Orca y Git worktree son infraestructura externa: Orca controla workspace,
+sesion, restore e hibernation; el worktree aisla la escritura. El adapter no
+debe recrear ni asumir esas responsabilidades.
