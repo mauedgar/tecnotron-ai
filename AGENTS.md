@@ -2,16 +2,18 @@
 document_id: FFAI-AGENTS-001
 status: canonical
 machine_context: true
-version: 2.0
-updated: 2026-08-18
+version: 2.1
+updated: 2026-08-21
 ---
 
 # Reglas de FitFlow-ai
 
-- Leer `../FitFlow/AGENTS.md`, `../FitFlow/docs/SOURCE_OF_TRUTH.md`, Project
-  Profile v2 y la TASK.
+- Resolver el root de FitFlow desde el contexto Orca o el Project Profile; no
+  asumir que un path relativo entre worktrees representa al checkout activo.
+- Leer `AGENTS.md` y `docs/SOURCE_OF_TRUTH.md` de FitFlow, el Project Profile
+  activo y la TASK.
 - Escribir por defecto solo dentro de `FitFlow-ai`.
-- Tratar `../FitFlow` como read-only salvo TASK explicita y ownership vigente.
+- Tratar FitFlow como read-only salvo TASK explicita y ownership vigente.
 - Depender de ports y contratos; no importar runtime de backend/frontend.
 - No instalar o actualizar dependencias sin decision del desarrollador.
 - No usar `scripts/.venv_tools` como entorno oficial; solo discovery/reuso
@@ -23,3 +25,5 @@ updated: 2026-08-18
 - OpenCode, GitHub, OpenSpec, SQLite, Repomix y proveedores son adapters.
 - `repo-packager` empaqueta; Explorer decide.
 - Paid API permanece disabled y riesgo alto queda bloqueado.
+- Orca controla workspace y sesion; Git worktree provee aislamiento. Ninguna de
+  esas responsabilidades pertenece al Agent CLI ni al AI Core.
