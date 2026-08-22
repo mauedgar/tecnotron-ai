@@ -2,6 +2,7 @@
 
 const { z } = require('zod');
 const { TaskId, RunId, Timestamp, State, Actor, Baseline, ArtifactRef } = require('./common');
+const { ModelResolutionArtifactRef } = require('./model-resolution');
 
 const RunEvent = z
   .object({
@@ -28,6 +29,16 @@ const RunEvent = z
   })
   .strict()
   .superRefine((val, ctx) => {
+    if (val.event_type === 'ROUTE_DECIDED') {
+      if (val.outputs.length !== 1) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['outputs'], message: 'ROUTE_DECIDED requires exactly one model-resolution artifact' });
+      } else {
+        const parsed = ModelResolutionArtifactRef.safeParse(val.outputs[0]);
+        if (!parsed.success) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['outputs', 0], message: 'ROUTE_DECIDED requires a model-resolution artifact' });
+        }
+      }
+    }
     if (val.state_to === 'DONE') {
       if (val.state_from !== 'PENDING_ACCEPTANCE') {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['state_from'], message: 'DONE requires PENDING_ACCEPTANCE' });

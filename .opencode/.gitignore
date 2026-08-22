@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+storage/
+exports/
+logs/
+.cache/
+.env
+.env.*
+*.sqlite
+*.sqlite3
+__pycache__/
+.pytest_cache/
+python/.venv_tools/

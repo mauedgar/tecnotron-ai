@@ -28,7 +28,8 @@ sessions, workspace metadata, and Obsidian views are not source of truth.
 | [Implementation Roadmap](implementation-roadmap.md) | Sequencing and planned implementation work. |
 | [Compatibility Baseline](compatibility-baseline.md) | Observed tool compatibility and reproducible baseline evidence. |
 | [Development Pipeline Adapter](development-pipeline-adapter.md) | Canonical adapter boundary and current adapter status. |
-| Role registry v2 | Concrete role IDs, permissions, and role attributes. The executable schema is [`src/registries/schemas/roles.js`](../src/registries/schemas/roles.js); the active `roles.yaml` is owned by FitFlow. |
+| Role registry v3 | Current role IDs and fixed deterministic routing policy. Version v2 is unsupported. The executable schema is [`src/registries/schemas/roles.js`](../src/registries/schemas/roles.js); active `roles.yaml` is owned by FitFlow. |
+| Model registry v3 | Explicit model eligibility and deterministic selection metadata. Version v2 is unsupported. The executable schema is [`src/registries/schemas/models.js`](../src/registries/schemas/models.js); active `models.yaml` is owned by FitFlow. |
 
 When documents disagree, resolve by subject authority in this table. Current
 State does not promote planned architecture to implementation; Roadmap does not

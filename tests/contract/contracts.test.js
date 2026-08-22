@@ -183,3 +183,56 @@ test('validation: gate and results validate', () => {
   const badGate = Object.assign({}, gate, { status: 'COMPLETED' });
   assert.strictEqual(contracts.validation.Gate.safeParse(badGate).success, false);
 });
+
+test('route decision variants reject contradictory evidence', () => {
+  const requirements = {
+    capabilities: ['coding'],
+    criticality: 'low',
+    minimum_trust: 'experimental',
+    allowed_resource_classes: ['local'],
+    allowed_access_modes: ['local'],
+  };
+  assert.strictEqual(contracts.route.RouteDecision.safeParse({ status: 'ROUTED', reason_code: 'ROLE_SELECTED', role: 'coder_b', requirements }).success, true);
+  assert.strictEqual(contracts.route.RouteDecision.safeParse({ status: 'BLOCKED', reason_code: 'NO_MATCHING_RULE', role: 'coder_b', requirements }).success, false);
+});
+
+test('model resolution variants reject contradictory selected/fallback evidence', () => {
+  const selected = {
+    registry_id: 'model', provider: 'local', runtime_id: 'runtime', pool_id: 'local', resource_class: 'local', access_mode: 'local',
+  };
+  assert.strictEqual(contracts.modelResolution.ModelResolutionResult.safeParse({
+    status: 'SELECTED', selected, policy_id: 'fitflow-model-selection/v1', fallback_used: false, reason_code: 'MODEL_SELECTED',
+  }).success, true);
+  assert.strictEqual(contracts.modelResolution.ModelResolutionResult.safeParse({
+    status: 'BLOCKED', selected, reason_code: 'NO_ELIGIBLE_MODEL', fallback_used: true,
+  }).success, false);
+});
+
+function routeEvent(outputs) {
+  return {
+    artifact: 'RUN_EVENT', schema_version: 'fitflow-run-event/v2', event_id: 'evt-route', sequence: 2,
+    task_id: 'FF-AI-VNEXT-007', run_id: 'FF-AI-VNEXT-007-20260822', created_at: '2026-08-22T12:00:00-03:00',
+    actor: 'router', event_type: 'ROUTE_DECIDED', state_from: 'ROUTING', state_to: 'EXECUTING', reason_code: 'MODEL_SELECTED',
+    inputs: [], outputs,
+  };
+}
+
+test('ROUTE_DECIDED accepts exactly one model-resolution ArtifactRef', () => {
+  const ref = { path: '.ai/runs/run/model-resolution.json', hash: 'a'.repeat(64), schema_version: 'fitflow-model-resolution/v1' };
+  assert.strictEqual(contracts.runEvent.RunEvent.safeParse(routeEvent([ref])).success, true);
+  assert.strictEqual(contracts.runEvent.RunEvent.safeParse(routeEvent([])).success, false);
+  assert.strictEqual(contracts.runEvent.RunEvent.safeParse(routeEvent([ref, ref])).success, false);
+  assert.strictEqual(contracts.runEvent.RunEvent.safeParse(routeEvent([{ ...ref, schema_version: 'fitflow-validation/v2' }])).success, false);
+});
+
+test('route history rejects unrelated ArtifactRefs', () => {
+  const base = {
+    artifact: 'RUN_STATE', schema_version: 'fitflow-run-state/v2', task_id: 'FF-AI-VNEXT-007', run_id: 'FF-AI-VNEXT-007-20260822',
+    updated_at: '2026-08-22T12:00:00-03:00', baseline: { revision: 'abc', fingerprint_status: 'unavailable', working_tree_fingerprint: null, fingerprint_reason: 'not captured' },
+    workflow_id: 'development', current_state: 'ROUTING', next_state: 'EXECUTING', sequence: 2,
+    retry_counters: { context: 0, implementation: 0, review: 0 }, context_deliveries: [], validation_history: [], review_history: [], blocked_by: [], last_error: null,
+  };
+  const routeRef = { path: '.ai/runs/run/model-resolution.json', hash: 'b'.repeat(64), schema_version: 'fitflow-model-resolution/v1' };
+  assert.strictEqual(contracts.runState.RunState.safeParse({ ...base, route_history: [routeRef] }).success, true);
+  assert.strictEqual(contracts.runState.RunState.safeParse({ ...base, route_history: [{ ...routeRef, schema_version: 'fitflow-review/v2' }] }).success, false);
+});
