@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-const path = require('path');
-const { collect, summarize, FFROOT } = require('../lib/index');
+const { collect, summarize } = require('../lib/index');
 
 const USAGE = `
 ffai-doctor v1.0.0 — FitFlow AI Core doctor
@@ -33,13 +32,15 @@ async function main() {
   }
 
   const components = await collect();
+  const resolution = components.resolution || null;
   const summary = summarize(components);
 
   const report = {
     artifact: 'DOCTOR_REPORT',
     schema_version: 'fitflow-doctor/v1',
     generated_at: new Date().toISOString(),
-    project_root: FFROOT,
+    project_root: resolution ? resolution.projectRoot : null,
+    ai_core_root: resolution ? resolution.aiCoreRoot : null,
     components,
     summary,
     required_missing: REQUIRED.filter(

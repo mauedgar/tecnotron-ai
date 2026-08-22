@@ -15,22 +15,23 @@ updated: 2026-08-22
 | 2 | `FF-AI-VNEXT-003` | contracts Zod y registries loaders | `DONE` |
 | 3 | `FF-AI-VNEXT-004` | State Machine, events JSONL y SQLite | `DONE` |
 | 4 | `FF-AI-VNEXT-005` | Project Profile y adapters GitHub/OpenSpec | `NEXT` |
-| 5 | `FF-AI-VNEXT-006` | ContextPackager v2 | `READY` |
+| 5 | `FF-AI-VNEXT-006` | ContextPackager v2 | `DONE` |
 | 6 | `FF-AI-VNEXT-007` | Router, Model Resolver y FinOps | `BACKLOG` |
 | 7 | `FF-AI-VNEXT-008` | Explorer y Agent Runtime conformance | `BACKLOG` |
 | 8 | `FF-AI-VNEXT-009` | Agent MVP y documentation sync | `BACKLOG` |
 | 9 | `FF-AI-VNEXT-010` | fitness functions y Workflow Observer | `BACKLOG` |
 | 10 | `FF-AI-VNEXT-011+` | retrieval, MCP y Temporal tras sus gates | `PLANNED` |
 
-`FF-AI-VNEXT-006` fue reactivada: la pausa causada por los defectos de
-`repo-packager` dejo de aplicar al integrarse la reparacion en `tooling`. Esto no
-declara la conformance ContextPackager v2 implementada.
+`FF-AI-VNEXT-006` fue implementada: la reparacion de `repo-packager` se integra
+en `tooling` y el ContextPackager v2 cumple el contrato de telemetria
+determinista. La conformance v2 queda validada en la PR mergeada.
 
 La implementacion de `006` define `ContextPackagerResult` y telemetria
 determinista como contrato estructurado. ContextPackager coordina materializers,
 presupuesto, suficiencia y fallback hacia una fuente primaria; `repo-packager`
 solo materializa la evidencia solicitada y mantiene sus exclusiones sensibles.
-El estado `READY` de la tabla permanece hasta la promocion del desarrollador.
+El estado `DONE` de la tablaqueda confirmado tras la revision y merge del
+desarrollador.
 
 `FF-AI-VNEXT-005` y `FF-AI-VNEXT-006` pueden ejecutarse en paralelo con
 ownership de archivos y contratos no superpuesto. `005` posee Project Profile,

@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 const { run, firstLine, parseVersion, resolveWindowsExtension } = require('./exec');
+const { resolveProject, ProjectResolutionError } = require('../../../src/project-profile');
 
-const FFROOT = path.resolve(__dirname, '..', '..', '..', '..', 'FitFlow');
 
 function exists(candidate) {
   if (!candidate) return false;
@@ -97,10 +97,10 @@ async function probeTool(tool) {
   };
 }
 
-async function probeRepoPackager() {
-  const aiCoreRoot = path.resolve(__dirname, '..', '..', '..');
+async function probeRepoPackager(resolution) {
+  const aiCoreRoot = resolution.aiCoreRoot;
   const venvPython = path.join(aiCoreRoot, 'python', '.venv_tools', 'Scripts', 'python.exe');
-  const packScript = path.join(FFROOT, '.agents', 'skills', 'repo-packager', 'scripts', 'pack.py');
+  const packScript = path.join(aiCoreRoot, '.opencode', 'skills', 'repo-packager', 'scripts', 'pack.py');
   const scriptExists = exists(packScript);
   const venvExists = exists(venvPython);
   if (!scriptExists) {
@@ -170,10 +170,10 @@ async function probeLibreOffice() {
   };
 }
 
-function probeProjectProfile() {
-  const configDir = path.join(FFROOT, '.ai', 'config');
-  const profile = path.join(configDir, 'project-profile.yaml');
-  const contractsDir = path.join(FFROOT, '.ai', 'contracts', 'v2');
+function probeProjectProfile(resolution) {
+  const configDir = resolution.configDir;
+  const profile = resolution.profilePath;
+  const contractsDir = resolution.contractsDir;
   return {
     id: 'project-profile',
     available: exists(profile),
@@ -192,14 +192,23 @@ function probeProjectProfile() {
   };
 }
 
-async function collect() {
+async function collect(options) {
   const results = [];
   for (const tool of TOOLS) {
     results.push(await probeTool(tool));
   }
-  results.push(await probeRepoPackager());
+  let resolution;
+  try {
+    resolution = resolveProject(options);
+  } catch (err) {
+    if (!(err instanceof ProjectResolutionError)) throw err;
+    results.push({ id: 'project-profile', available: false, executable: null, status: 'UNAVAILABLE', capabilities: [], version: null, raw: null, reason: err.message });
+    return results;
+  }
+  results.push(await probeRepoPackager(resolution));
   results.push(await probeLibreOffice());
-  results.push(probeProjectProfile());
+  results.push(probeProjectProfile(resolution));
+  Object.defineProperty(results, 'resolution', { value: resolution });
   return results;
 }
 
@@ -210,4 +219,4 @@ function summarize(results) {
   return { available, unavailable, unreachable, total: results.length };
 }
 
-module.exports = { collect, summarize, TOOLS, FFROOT };
+module.exports = { collect, summarize, TOOLS };

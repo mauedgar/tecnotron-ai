@@ -30,9 +30,9 @@ desarrollador. No se modifican sin ownership de FitFlow.
 
 - `FF-AI-VNEXT-005`: `NEXT`; debe resolver Project Profile, roots portables y
   adapters GitHub/OpenSpec.
-- `FF-AI-VNEXT-006`: `READY`; reactivada tras reparar `repo-packager`. Su
-  implementacion no cambia el estado de la TASK, que conserva autoridad del
-  desarrollador.
+- `FF-AI-VNEXT-006`: `DONE`; implementado ContextPackager v2 con contrato
+  estructurado y telemetria determinista. No cambia el estado de la TASK,
+  que conserva autoridad del desarrollador.
 - Agent Runtime adapter, Router, Model Resolver, Explorer, Agent MVP, Observer,
   retrieval, MCP y Temporal permanecen pendientes segun roadmap.
 

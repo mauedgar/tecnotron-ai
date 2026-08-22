@@ -8,12 +8,24 @@ const os = require('os');
 
 const { StateMachine, InvalidTransitionError, createStateMachineFromOrchestrator } = require('../../src/core/state-machine');
 const { RunStore, SqliteProjection, RunStoreError } = require('../../src/core/run-store');
-const { loadRegistryFile } = require('../../src/registries/index.js');
-
-const CONFIG_DIR = path.resolve(__dirname, '..', '..', '..', '..', 'FitFlow', '.ai', 'config');
-
 function testOrchestrator() {
-  return loadRegistryFile('orchestrator.yaml', CONFIG_DIR);
+  return {
+    control: {
+      terminal_agent_state: 'PENDING_ACCEPTANCE',
+      final_state: 'DONE',
+      final_actor: 'developer',
+    },
+    states: ['BACKLOG', 'READY', 'PLANNING', 'ROUTING', 'REVIEWING', 'PENDING_ACCEPTANCE', 'DONE'],
+    transitions: {
+      BACKLOG: ['READY'],
+      READY: ['PLANNING'],
+      PLANNING: ['ROUTING'],
+      ROUTING: ['PENDING_ACCEPTANCE'],
+      REVIEWING: ['PENDING_ACCEPTANCE'],
+      PENDING_ACCEPTANCE: ['DONE'],
+      DONE: [],
+    },
+  };
 }
 
 function testRunState() {
@@ -64,7 +76,7 @@ function testRunEvent(seq, actor, from, to, type, reason) {
   };
 }
 
-test('state machine builds from real orchestrator config', () => {
+test('state machine builds from an orchestrator contract', () => {
   const sm = createStateMachineFromOrchestrator(testOrchestrator());
   assert.strictEqual(sm.finalState, 'DONE');
   assert.strictEqual(sm.finalActor, 'developer');

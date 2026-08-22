@@ -2,84 +2,56 @@
 document_id: FFAI-ARCH-001
 status: canonical
 machine_context: true
-version: 3.0
+version: 3.1
 updated: 2026-08-21
+owner: fitflow-ai
+type: architecture
+related:
+  - "[[operational-architecture]]"
+  - "[[task-lifecycle]]"
+  - "[[context-strategy]]"
+  - "[[SOURCE_OF_TRUTH]]"
 ---
 
 # Arquitectura de FitFlow-ai
 
-## Limites operativos
+## Invariantes
 
 ```text
-Orca              -> control de workspace y sesion
-Git worktree      -> aislamiento de escritura
-Agent CLI         -> ejecucion intercambiable
-Model Provider    -> inferencia
-AGENTS.md + docs  -> contrato portable
-GitHub            -> planificacion, integracion y validacion
-FitFlow-ai        -> tooling, contexto y policies
-FitFlow           -> producto
-
-FitFlow-ai -> opera sobre -> FitFlow
+FitFlow y FitFlow-ai son repositorios independientes.
+FitFlow-ai opera sobre FitFlow sin crear una dependencia de producto inversa.
 ```
 
-El Folder Workspace de Tecnotron aporta contexto multi-repo. No reemplaza al
-Git worktree como isolation boundary. Restore e hibernation pertenecen a Orca,
-no al AI Core. OpenCode es el Agent CLI actual, pero puede reemplazarse sin
-cambiar los contratos del core.
+- Los contratos portables de proyecto, repositorio y root preceden a cualquier
+  integracion especifica de herramienta.
+- Git worktree es el limite de aislamiento para tareas de escritura; los
+  worktrees de task son normalmente efimeros.
+- Orca es el control plane actual de workspace y sesion, y es reemplazable.
+- OpenCode es el Agent Runtime preferido actual, y es intercambiable.
+- Los providers de modelo solo aportan inferencia.
+- Las implementaciones de tooling no definen arquitectura ni source of truth.
+- Las decisiones y validaciones usan deterministic-first cuando sea posible.
+- `Developer` conserva la autoridad terminal; `Coder` es la familia logica de
+  implementacion y no administra el Task Lifecycle.
 
-## Modulos implementados
+## Limites del AI Core
 
-```text
-src/
-  core/          # State Machine y Run Store
-  contracts/     # Zod y serializers JSON
-  registries/    # loaders y schemas registrados
-scripts/
-  doctor/        # discovery sin installs
-.opencode/skills/
-  repo-packager/ # empaquetador determinista
-tests/
-  contract/
-  core/
-  repo-packager/
-```
+FitFlow-ai es source of truth para la arquitectura generica del AI Core,
+tooling, contexto y contratos operativos. FitFlow conserva el producto, su
+Project Profile, TASK, runs, ADR y configuracion especifica.
 
-`ports/`, adapters GitHub/OpenSpec/Agent Runtime, workflows, observer y Agent
-MVP permanecen pendientes. La existencia del directorio o de una decision de
-arquitectura no se presenta como implementacion.
+Research Knowledge Module queda fuera de la arquitectura de FitFlow-ai. El
+Markdown canonico puede usar frontmatter portable, links explicitos,
+navegacion de indice a detalle, backlinks y lint determinista. Obsidian es una
+proyeccion para Developer, no source of truth ni dependencia runtime.
 
-## Dependencias
+## Documentos de detalle
 
-La direccion objetivo es `workflow -> policies/ports/contracts`. Adapters
-dependen de ports, no al reves. Project Profile entra como datos versionados
-desde FitFlow. Un Model Provider resuelve inferencia; TypeScript conserva la
-autoridad sobre estados, gates y transiciones.
+- [Operational Architecture](operational-architecture.md): responsabilidades y
+  limites operativos.
+- [Task Lifecycle](task-lifecycle.md): estados, ownership y worktrees.
+- [Context Strategy](context-strategy.md): retrieval, telemetria y evaluacion.
+- [Source of Truth](SOURCE_OF_TRUTH.md): precedencia y navegacion canonica.
 
-## Puertos iniciales
-
-`AgentRuntimePort`, `TaskStorePort`, `SpecStorePort`, `ContextPackagerPort`,
-`RunStorePort`, `ValidatorPort`, `ReviewPort`, `DocumentationPort` y
-`QuotaStatePort`.
-
-Estos puertos forman parte del contrato arquitectonico. Solo `RunStorePort` y
-la State Machine tienen hoy implementaciones equivalentes en el core; no existe
-aun una capa completa de ports/adapters.
-
-## Persistencia
-
-FitFlow conserva TASK, eventos y JSON durable bajo su `.ai/runs`. El Run Store
-de FitFlow-ai implementa eventos JSONL, estado JSON y proyeccion SQLite. SQLite
-y caches son regenerables; GitHub no reemplaza la evidencia durable.
-
-## Ownership
-
-FitFlow-ai es Source of Truth de la arquitectura generica del AI Core. FitFlow
-conserva arquitectura y configuracion de producto, Project Profile, ADR de
-adopcion y contratos de intercambio del consumidor. Las copias genericas aun
-presentes en FitFlow quedan pendientes de una migracion con ownership propio.
-
-## Feature flags
-
-Semantic retrieval, MCP, Temporal, orchestrator-workers, optimizer automatico
-y paid API nacen disabled.
+El estado de implementacion pertenece a [Current State](current-state.md) y la
+secuencia de trabajo a [Implementation Roadmap](implementation-roadmap.md).
