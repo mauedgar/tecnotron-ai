@@ -2,8 +2,8 @@
 document_id: FFAI-STATE-001
 status: canonical
 machine_context: true
-version: 1.0
-updated: 2026-08-21
+version: 1.1
+updated: 2026-08-22
 ---
 
 # Estado actual de FitFlow-ai
@@ -16,6 +16,10 @@ updated: 2026-08-21
 - State Machine, eventos JSONL, Run Store y proyeccion SQLite: implementados.
 - `repo-packager`: reparado e integrado en `tooling` por PR #2; tests 4/4
   `PASS` en este worktree.
+- ContextPackager v2: contrato Zod y core implementados. Orquesta materializers
+  inyectados, aplica el budget global, entrega `COMPLETE`/`PARTIAL`/`EMPTY` y
+  emite telemetria determinista por entrega. `repo-packager` permanece como
+  materializer y no recibe decisiones de suficiencia.
 
 La promocion `002-004` consta en el commit FitFlow `52d729c`. Algunos
 run-state/result JSON y el backlog machine-readable de FitFlow conservan
@@ -26,9 +30,9 @@ desarrollador. No se modifican sin ownership de FitFlow.
 
 - `FF-AI-VNEXT-005`: `NEXT`; debe resolver Project Profile, roots portables y
   adapters GitHub/OpenSpec.
-- `FF-AI-VNEXT-006`: `READY`; reactivada tras reparar `repo-packager`.
-- `FF-AI-VNEXT-006` no esta `IN_PROGRESS` ni `DONE`: falta adaptar el resultado
-  al contrato ContextPackager v2 y sus consumers.
+- `FF-AI-VNEXT-006`: `READY`; reactivada tras reparar `repo-packager`. Su
+  implementacion no cambia el estado de la TASK, que conserva autoridad del
+  desarrollador.
 - Agent Runtime adapter, Router, Model Resolver, Explorer, Agent MVP, Observer,
   retrieval, MCP y Temporal permanecen pendientes segun roadmap.
 
@@ -46,12 +50,13 @@ runtime Orca; no se presentan como implementaciones de FitFlow-ai.
 
 ## Evidencia y limitaciones
 
-Validacion ejecutada el 2026-08-21:
+Validacion ejecutada el 2026-08-22:
 
 | Comando | Resultado |
 | --- | --- |
 | `node --test scripts/doctor/tests/doctor.test.js` | 6/6 `PASS` |
 | `python tests/repo-packager/pack.test.py` | 4/4 `PASS` |
+| `node --test tests/core/context-packager.test.js` | `NOT_RUN`: falta la dependencia declarada `zod`; no se instalaron dependencias |
 | contracts/registries/core Node tests | `NOT_RUN`: el reviewer no produjo una nueva ejecucion reproducible; dependencias no instaladas |
 | `node scripts/doctor/bin/ffai-doctor.js` | tools externos disponibles; roots cross-repo incorrectos |
 
@@ -67,6 +72,15 @@ Reducir contexto y optimizar calidad/token continua siendo prioridad. Explorer
 debe pedir evidencia minima suficiente y `repo-packager` debe empaquetar la
 solicitud sin decidir suficiencia. Calidad, privacidad y reduccion de retrabajo
 preceden a minimizar tokens de forma aislada.
+
+ContextPackager v2 registra `budget_tokens`, tokens entregados, paths y evidence
+requested/included/omitted/missing, cobertura, fallback y providers. Cuando no
+se inyecta un tokenizer exacto, usa `characters_divided_by_4` y declara que es
+una aproximacion frente al tokenizer del modelo objetivo. La cobertura se deriva
+solo de evidence requirements, nunca del conteo de tokens.
+
+No existian consumidores de ContextPackager en este repositorio para adaptar;
+el core exporta el resultado v2 estructurado para los consumidores posteriores.
 
 ## Ownership pendiente
 

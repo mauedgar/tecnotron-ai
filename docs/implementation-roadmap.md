@@ -2,8 +2,8 @@
 document_id: FFAI-ROADMAP-001
 status: canonical
 machine_context: true
-version: 2.0
-updated: 2026-08-21
+version: 2.1
+updated: 2026-08-22
 ---
 
 # Secuencia de implementacion
@@ -25,6 +25,12 @@ updated: 2026-08-21
 `FF-AI-VNEXT-006` fue reactivada: la pausa causada por los defectos de
 `repo-packager` dejo de aplicar al integrarse la reparacion en `tooling`. Esto no
 declara la conformance ContextPackager v2 implementada.
+
+La implementacion de `006` define `ContextPackagerResult` y telemetria
+determinista como contrato estructurado. ContextPackager coordina materializers,
+presupuesto, suficiencia y fallback hacia una fuente primaria; `repo-packager`
+solo materializa la evidencia solicitada y mantiene sus exclusiones sensibles.
+El estado `READY` de la tabla permanece hasta la promocion del desarrollador.
 
 `FF-AI-VNEXT-005` y `FF-AI-VNEXT-006` pueden ejecutarse en paralelo con
 ownership de archivos y contratos no superpuesto. `005` posee Project Profile,
