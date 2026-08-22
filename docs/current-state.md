@@ -2,15 +2,23 @@
 document_id: FFAI-STATE-001
 status: canonical
 machine_context: true
-version: 1.0
+version: 1.1
 updated: 2026-08-21
+owner: fitflow-ai
+type: state
+related:
+  - "[[architecture]]"
+  - "[[operational-architecture]]"
+  - "[[task-lifecycle]]"
+  - "[[context-strategy]]"
+  - "[[implementation-roadmap]]"
 ---
 
 # Estado actual de FitFlow-ai
 
 ## Implementacion confirmada
 
-- `FF-AI-VNEXT-001` a `004`: `DONE` por promocion del desarrollador.
+- `FF-AI-VNEXT-001` a `004`: `DONE` por promocion del `Developer`.
 - Doctor y discovery sin installs: implementados.
 - Contracts Zod y registries loaders: implementados.
 - State Machine, eventos JSONL, Run Store y proyeccion SQLite: implementados.
@@ -24,11 +32,23 @@ desarrollador. No se modifican sin ownership de FitFlow.
 
 ## Siguiente trabajo
 
-- `FF-AI-VNEXT-005`: `NEXT`; debe resolver Project Profile, roots portables y
-  adapters GitHub/OpenSpec.
+- Operational Architecture: `DEFINED` / canonical; no es una implementacion por
+  estar documentada.
+- Task Lifecycle architecture: `DEFINED` / canonical; su automatizacion no esta
+  implementada.
+- Context Strategy: `DEFINED` / canonical; su telemetria no esta implementada.
+- `FF-AI-VNEXT-005`: `NEXT`; portable Project Profile/root resolution es la
+  siguiente area de implementacion. Sus adapters GitHub/OpenSpec siguen
+  pendientes.
+- La telemetria minima determinista de contexto esta planificada a corto plazo;
+  no esta implementada.
 - `FF-AI-VNEXT-006`: `READY`; reactivada tras reparar `repo-packager`.
 - `FF-AI-VNEXT-006` no esta `IN_PROGRESS` ni `DONE`: falta adaptar el resultado
   al contrato ContextPackager v2 y sus consumers.
+- Codebase-Memory es candidato de Code Intelligence para evaluacion/piloto; no
+  es source of truth ni una implementacion confirmada.
+- La automatizacion de Task Lifecycle esta planificada; no hay evidencia de una
+  implementacion de ese lifecycle.
 - Agent Runtime adapter, Router, Model Resolver, Explorer, Agent MVP, Observer,
   retrieval, MCP y Temporal permanecen pendientes segun roadmap.
 
@@ -41,7 +61,7 @@ desarrollador. No se modifican sin ownership de FitFlow.
 - Otros Agent CLI pueden operar bajo Orca sin cambiar la arquitectura.
 - Model Provider aporta inferencia; no gobierna workflow ni estados.
 
-Estas son capacidades de plataforma confirmadas por el desarrollador y por el
+Estas son capacidades de plataforma confirmadas por el `Developer` y por el
 runtime Orca; no se presentan como implementaciones de FitFlow-ai.
 
 ## Evidencia y limitaciones
