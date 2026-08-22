@@ -2,8 +2,16 @@
 document_id: FFAI-ROADMAP-001
 status: canonical
 machine_context: true
-version: 2.0
+version: 2.1
 updated: 2026-08-21
+owner: fitflow-ai
+type: roadmap
+related:
+  - "[[architecture]]"
+  - "[[operational-architecture]]"
+  - "[[task-lifecycle]]"
+  - "[[context-strategy]]"
+  - "[[current-state]]"
 ---
 
 # Secuencia de implementacion
@@ -26,11 +34,34 @@ updated: 2026-08-21
 `repo-packager` dejo de aplicar al integrarse la reparacion en `tooling`. Esto no
 declara la conformance ContextPackager v2 implementada.
 
-`FF-AI-VNEXT-005` y `FF-AI-VNEXT-006` pueden ejecutarse en paralelo con
-ownership de archivos y contratos no superpuesto. `005` posee Project Profile,
-descubrimiento y resolucion portable de roots. `006` consume el root resuelto a
-traves del contrato correspondiente y no implementa un resolver alternativo ni
-hardcodea una topologia cross-repo.
+`FF-AI-VNEXT-005` posee Project Profile, descubrimiento y resolucion portable de
+roots. `FF-AI-VNEXT-006` consume el root resuelto a traves del contrato
+correspondiente y no implementa un resolver alternativo ni hardcodea una
+topologia cross-repo; por ello su trabajo de conformance sigue a la entrega de
+ese contrato.
+
+## Orden futuro por gates
+
+Los IDs existentes `FF-AI-VNEXT-007+` no se renumeran desde esta documentacion.
+La asignacion de esos IDs y cualquier cambio de scope requiere decision del
+`Developer`. La colocacion propuesta para trabajo futuro es:
+
+1. Infraestructura y contratos portables de proyecto, repositorio y root
+   (`FF-AI-VNEXT-005`).
+2. Telemetria minima determinista de contexto: tokens delivered/budget, paths y
+   evidence requested/included/omitted, coverage, fallback y provider.
+3. ContextPackager v2 (`FF-AI-VNEXT-006`).
+4. Piloto de Code Intelligence adapter y benchmark A/B contra la seleccion
+   actual graph/PageRank de `repo-packager`.
+5. Simplificacion de `repo-packager` solo si el benchmark demuestra que procede.
+6. Adopcion de Ragas, Promptfoo u otro framework solo si persiste un gap medido;
+   preferir comparacion determinista cuando existan evidence IDs o scope
+   esperado.
+7. Automatizacion determinista de Task Lifecycle despues de los contratos
+   portables y en el stage que el Developer asigne al backlog.
+
+Codebase-Memory es un candidato de piloto, no source of truth. La existencia
+del graph/PageRank actual no autoriza su retiro antes del benchmark.
 
 ## Autoridad y pendientes cross-repo
 

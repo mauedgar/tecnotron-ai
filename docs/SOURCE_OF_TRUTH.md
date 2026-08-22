@@ -1,0 +1,36 @@
+---
+status: canonical
+owner: fitflow-ai
+type: reference
+updated: 2026-08-21
+related:
+  - "[[architecture]]"
+  - "[[operational-architecture]]"
+  - "[[task-lifecycle]]"
+  - "[[context-strategy]]"
+  - "[[current-state]]"
+  - "[[implementation-roadmap]]"
+---
+
+# Source Of Truth
+
+This is the deterministic navigation and precedence index for canonical
+FitFlow-ai documentation. Derived indexes, generated packages, caches, agent
+sessions, workspace metadata, and Obsidian views are not source of truth.
+
+| Document | Authority |
+| --- | --- |
+| [Architecture](architecture.md) | Stable AI Core architectural invariants and repository boundary. |
+| [Operational Architecture](operational-architecture.md) | Operational responsibilities, replaceable implementations, and control-plane boundaries. |
+| [Task Lifecycle](task-lifecycle.md) | Logical lifecycle, worktree policy, acceptance, integration, and cleanup contracts. |
+| [Context Strategy](context-strategy.md) | Context objective, retrieval policy, telemetry, and evaluation gates. |
+| [Current State](current-state.md) | Confirmed implementation reality and validation evidence only. |
+| [Implementation Roadmap](implementation-roadmap.md) | Sequencing and planned implementation work. |
+| [Compatibility Baseline](compatibility-baseline.md) | Observed tool compatibility and reproducible baseline evidence. |
+| [Development Pipeline Adapter](development-pipeline-adapter.md) | Canonical adapter boundary and current adapter status. |
+| Role registry v2 | Concrete role IDs, permissions, and role attributes. The executable schema is [`src/registries/schemas/roles.js`](../src/registries/schemas/roles.js); the active `roles.yaml` is owned by FitFlow. |
+
+When documents disagree, resolve by subject authority in this table. Current
+State does not promote planned architecture to implementation; Roadmap does not
+override architectural invariants; the executable role registry controls
+concrete role IDs.
