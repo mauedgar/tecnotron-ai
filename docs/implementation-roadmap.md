@@ -17,7 +17,7 @@ updated: 2026-08-22
 | 4 | `FF-AI-VNEXT-005` | Project Profile y adapters GitHub/OpenSpec | `DONE` |
 | 5 | `FF-AI-VNEXT-006` | ContextPackager v2 | `DONE` |
 | 6 | `FF-AI-VNEXT-007` | Router, Model Resolver y FinOps | `DONE` |
-| 7 | `FF-AI-VNEXT-008` | Explorer y Agent Runtime conformance | `BACKLOG` |
+| 7 | `FF-AI-VNEXT-008` | Explorer y Agent Runtime conformance | `READY` |
 | 8 | `FF-AI-VNEXT-009` | Agent MVP y documentation sync | `BACKLOG` |
 | 9 | `FF-AI-VNEXT-010` | fitness functions y Workflow Observer | `BACKLOG` |
 | 10 | `FF-AI-VNEXT-011+` | retrieval, MCP y Temporal tras sus gates | `PLANNED` |

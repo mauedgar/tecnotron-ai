@@ -22,7 +22,7 @@ related:
 | Campo | Valor |
 | --- | --- |
 | Task ID | `FF-AI-VNEXT-008` |
-| Estado | `BACKLOG` |
+| Estado | `READY` |
 | Baseline | `tooling` en `4a10ebd` |
 | Task type / area / scope | `feature` / `ai_tooling` / `backend` |
 | Lane / risk / priority | `ai_orchestrated` / `low` / `P1` |
@@ -34,7 +34,7 @@ La futura materializacion machine-readable valida contra `fitflow-task/v2` y con
 path:src/agent-runtime/**
 path:src/explorer/**
 path:src/contracts/runtime-identity.js
-doc:docs/tasks/FF-AI-VNEXT-008.md
+doc:docs/tasks/FF-AI-VNEXT-008/TASK.md
 ```
 
 ## Objetivo
@@ -134,7 +134,7 @@ tests/core/agent-runtime.test.js
 tests/core/explorer.test.js
 tests/contract/runtime-identity.test.js
 tests/integration/runtime-conformance.test.js
-docs/tasks/FF-AI-VNEXT-008.md
+docs/tasks/FF-AI-VNEXT-008/TASK.md
 docs/current-state.md                        (solo evidencia posterior)
 docs/implementation-roadmap.md               (solo estado posterior a aceptacion)
 ```
