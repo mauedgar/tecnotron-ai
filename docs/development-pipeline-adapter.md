@@ -2,8 +2,8 @@
 document_id: FFAI-ADAPTER-001
 status: canonical
 machine_context: true
-version: 3.0
-updated: 2026-08-21
+version: 3.1
+updated: 2026-08-22
 ---
 
 # Adapter del pipeline
@@ -11,8 +11,18 @@ updated: 2026-08-21
 ## Entrada
 
 El core consume configuracion, contracts v2, TASK/Run State y Project Profile
-desde `<FitFlow-root>`. No mantiene copias editables. La resolucion portable de
-ese root y los adapters de entrada pertenecen a `FF-AI-VNEXT-005`.
+desde `<FitFlow-root>`. No mantiene copias editables. `resolveProject` es el
+unico boundary cross-repo: recibe `FF_PROJECT_PROFILE` o `FF_PROJECT_ROOT` y
+opcionalmente `FF_AI_CORE_ROOT`; nunca deduce un checkout por directorios
+hermanos. El Profile permanece propiedad de FitFlow.
+
+## Distribucion de contratos
+
+`src/contracts` es la unica fuente editable de `@mauedgar/contracts`. El
+paquete declara version fija, exports publicos para `require` e `import`, y no
+se replica en consumidores. `node src/contracts/validate-package.js` ejecuta
+dos `npm pack --dry-run` y falla si su metadata no es determinista. El smoke de
+carga CJS/ESM se ejecuta cuando las dependencias declaradas estan disponibles.
 
 ## Agent Runtime
 
@@ -26,14 +36,14 @@ suite permanecen pendientes; disponibilidad del CLI no equivale a conformance.
 
 ## GitHub adapter
 
-Sincroniza Issue/TASK, Project macrostate, PR summary y Actions checks. Debe ser
-idempotente y respetar la autoridad de los artifacts del run en FitFlow. Esta
-implementacion forma parte de `FF-AI-VNEXT-005` y no existe aun.
+Sincroniza de forma mecanica e idempotente la referencia Issue/TASK, macrostate
+de Project, resumen de PR y checks de Actions. Respeta la autoridad de los
+artifacts del run en FitFlow, no acepta estados terminales y no hace merge.
 
 ## OpenSpec adapter
 
-Consulta specs/deltas funcionales. No altera TASK, State Machine o ADR.
-Tambien permanece pendiente en `FF-AI-VNEXT-005`.
+Consulta specs/deltas funcionales como evidencia de solo lectura. No altera
+TASK, RunState, State Machine, ADR ni decisiones del desarrollador.
 
 ## Conformance
 

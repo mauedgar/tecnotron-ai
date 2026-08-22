@@ -1,0 +1,25 @@
+{
+  "name": "@mauedgar/contracts",
+  "version": "1.0.0",
+  "description": "Contratos canonicos de FitFlow-ai",
+  "type": "commonjs",
+  "main": "./index.js",
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "*.js",
+    "*.mjs"
+  ],
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "scripts": {
+    "build": "node ./validate-package.js",
+    "pack:check": "node ./validate-package.js"
+  }
+}
