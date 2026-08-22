@@ -3,7 +3,7 @@ document_id: FFAI-STATE-001
 status: canonical
 machine_context: true
 version: 1.1
-updated: 2026-08-21
+updated: 2026-08-22
 owner: fitflow-ai
 type: state
 related:
@@ -18,10 +18,15 @@ related:
 
 ## Implementacion confirmada
 
-- `FF-AI-VNEXT-001` a `004`: `DONE` por promocion del `Developer`.
-- Doctor y discovery sin installs: implementados.
+- `FF-AI-VNEXT-001` a `004`: `DONE` por promocion del desarrollador.
+- Doctor y discovery sin installs: implementados con roots portables.
 - Contracts Zod y registries loaders: implementados.
 - State Machine, eventos JSONL, Run Store y proyeccion SQLite: implementados.
+- `resolveProject` concentra la resolucion de FitFlow/FitFlow-ai desde Project
+  Profile o roots explicitos; no usa topologia de directorios hermanos.
+- Los adapters GitHub y OpenSpec estan implementados como limites acotados:
+  GitHub sincroniza referencias/macroestado y consulta PR/checks; OpenSpec solo
+  produce evidencia de lectura.
 - `repo-packager`: reparado e integrado en `tooling` por PR #2; tests 4/4
   `PASS` en este worktree.
 
@@ -37,9 +42,9 @@ desarrollador. No se modifican sin ownership de FitFlow.
 - Task Lifecycle architecture: `DEFINED` / canonical; su automatizacion no esta
   implementada.
 - Context Strategy: `DEFINED` / canonical; su telemetria no esta implementada.
-- `FF-AI-VNEXT-005`: `NEXT`; portable Project Profile/root resolution es la
-  siguiente area de implementacion. Sus adapters GitHub/OpenSpec siguen
-  pendientes.
+- `FF-AI-VNEXT-005`: implementacion integrada en `tooling`; conserva `NEXT`
+  hasta la aceptacion del desarrollador. Roots portables y adapters GitHub/
+  OpenSpec estan implementados dentro de su limite acotado.
 - La telemetria minima determinista de contexto esta planificada a corto plazo;
   no esta implementada.
 - `FF-AI-VNEXT-006`: `READY`; reactivada tras reparar `repo-packager`.
@@ -66,20 +71,23 @@ runtime Orca; no se presentan como implementaciones de FitFlow-ai.
 
 ## Evidencia y limitaciones
 
-Validacion ejecutada el 2026-08-21:
+Validacion ejecutada el 2026-08-22:
 
 | Comando | Resultado |
 | --- | --- |
-| `node --test scripts/doctor/tests/doctor.test.js` | 6/6 `PASS` |
+| `node --test scripts/doctor/tests/doctor.test.js tests/adapters/providers.test.js` | 10/10 `PASS` |
+| `node src/contracts/validate-package.js` | `PASS`; `npm pack --dry-run` repetido produce el mismo integrity |
+| `FF_PROJECT_ROOT="C:/Proyectos Web/FitFlow" node scripts/doctor/bin/ffai-doctor.js` | `PASS`; Project Profile y roots activos resueltos |
 | `python tests/repo-packager/pack.test.py` | 4/4 `PASS` |
-| contracts/registries/core Node tests | `NOT_RUN`: el reviewer no produjo una nueva ejecucion reproducible; dependencias no instaladas |
-| `node scripts/doctor/bin/ffai-doctor.js` | tools externos disponibles; roots cross-repo incorrectos |
+| `node --test tests/contract/contracts.test.js tests/contract/registries.test.js tests/contracts/package-modes.test.js tests/core/state-machine.test.js` | 20/20 `PASS`; incluye carga CJS/ESM de `@mauedgar/contracts` |
 
-No se instalaron dependencias ni se promovieron las suites `NOT_RUN` a `PASS`.
+Las dependencias locales `zod` y `yaml` ya estan disponibles; la carga y las
+suites que las requieren se revalidaron sin modificar dependencias.
 La evidencia historica de `001-004` permanece en TASK, VALIDATION, REVIEW y
-RESULT de FitFlow. El doctor actual deriva un root que no representa al
-worktree FitFlow activo y aun busca `repo-packager` en su ubicacion anterior;
-esta limitacion queda para `FF-AI-VNEXT-005`.
+RESULT de FitFlow. Doctor requiere `FF_PROJECT_ROOT` o `FF_PROJECT_PROFILE`
+cuando no se lo invoca desde el checkout de producto. `repo-packager` se ubica
+en el AI Core; su entorno discovery puede reportar `UNREACHABLE` sin alterar
+la resolucion de roots.
 
 ## Prioridades
 

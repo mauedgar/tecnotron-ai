@@ -23,5 +23,13 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com"
+  },
+  "scripts": {
+    "test": "node --test tests/**/*.test.js scripts/doctor/tests/**/*.test.js",
+    "contracts:check": "node src/contracts/validate-package.js"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true,
+    "sqlite3@6.0.1": true
   }
 }

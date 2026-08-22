@@ -22,7 +22,7 @@ related:
 | 1 | `FF-AI-VNEXT-002` | doctor y compatibilidad sin installs | `DONE` |
 | 2 | `FF-AI-VNEXT-003` | contracts Zod y registries loaders | `DONE` |
 | 3 | `FF-AI-VNEXT-004` | State Machine, events JSONL y SQLite | `DONE` |
-| 4 | `FF-AI-VNEXT-005` | Project Profile y adapters GitHub/OpenSpec | `NEXT` |
+| 4 | `FF-AI-VNEXT-005` | Project Profile y adapters GitHub/OpenSpec | `NEXT`; implementacion en worktree, pendiente aceptacion |
 | 5 | `FF-AI-VNEXT-006` | ContextPackager v2 | `READY` |
 | 6 | `FF-AI-VNEXT-007` | Router, Model Resolver y FinOps | `BACKLOG` |
 | 7 | `FF-AI-VNEXT-008` | Explorer y Agent Runtime conformance | `BACKLOG` |
