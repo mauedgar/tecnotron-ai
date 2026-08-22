@@ -3,6 +3,10 @@
 const { z } = require('zod');
 const { TaskId, Timestamp, Baseline } = require('./common');
 
+const TaskType = z.enum(['use_case', 'feature', 'fix', 'refactor', 'audit', 'test', 'docs', 'tooling', 'migration']);
+const TaskArea = z.enum(['backend', 'frontend', 'infra', 'docs', 'ai_tooling', 'mixed']);
+const TaskRisk = z.enum(['low', 'medium', 'high']);
+
 const Task = z
   .object({
     artifact: z.literal('TASK'),
@@ -10,11 +14,11 @@ const Task = z
     task_id: TaskId,
     title: z.string().min(3).max(180),
     status: z.enum(['BACKLOG', 'READY', 'PLANNING', 'EXECUTING', 'VALIDATING', 'REVIEWING', 'PENDING_ACCEPTANCE', 'WAITING_DEVELOPER', 'DONE', 'BLOCKED', 'CANCELLED']),
-    task_type: z.enum(['use_case', 'feature', 'fix', 'refactor', 'audit', 'test', 'docs', 'tooling', 'migration']),
-    area: z.enum(['backend', 'frontend', 'infra', 'docs', 'ai_tooling', 'mixed']),
+    task_type: TaskType,
+    area: TaskArea,
     scope: z.enum(['backend', 'frontend', 'mixed', 'docs_tooling']),
     lane: z.enum(['developer', 'ai_orchestrated', 'mixed', 'undecided']),
-    risk: z.enum(['low', 'medium', 'high']),
+    risk: TaskRisk,
     priority: z.enum(['P0', 'P1', 'P2', 'P3', 'P4', 'P5']),
     created_at: Timestamp,
     author_role: z.enum(['developer', 'planner_ai']),
@@ -43,4 +47,8 @@ const Task = z
   })
   .strict();
 
-module.exports = { Task };
+const TaskRoutingInput = z
+  .object({ task_type: TaskType, area: TaskArea, risk: TaskRisk })
+  .strict();
+
+module.exports = { Task, TaskType, TaskArea, TaskRisk, TaskRoutingInput };

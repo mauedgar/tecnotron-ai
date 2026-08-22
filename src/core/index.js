@@ -3,6 +3,7 @@
 const { StateMachine, InvalidTransitionError, createStateMachineFromOrchestrator, State } = require('./state-machine');
 const { RunStore, SqliteProjection, RunStoreError } = require('./run-store');
 const { ContextPackager, defaultTokenizer, ESTIMATOR_LIMITATION } = require('./context-packager');
+const { appendRouteEvidence } = require('./routing-evidence');
 
 module.exports = {
   StateMachine,
@@ -15,4 +16,5 @@ module.exports = {
   ContextPackager,
   defaultTokenizer,
   ESTIMATOR_LIMITATION,
+  appendRouteEvidence,
 };

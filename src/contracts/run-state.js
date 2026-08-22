@@ -2,6 +2,7 @@
 
 const { z } = require('zod');
 const { TaskId, RunId, Timestamp, State, Actor, Baseline, ArtifactRef, Hash } = require('./common');
+const { ModelResolutionArtifactRef } = require('./model-resolution');
 
 const RetryCounters = z.object({
   context: z.number().int().min(0),
@@ -32,7 +33,7 @@ const RunState = z
     sequence: z.number().int().min(0),
     retry_counters: RetryCounters,
     context_deliveries: z.array(ContextDelivery),
-    route_history: z.array(ArtifactRef),
+    route_history: z.array(ModelResolutionArtifactRef),
     validation_history: z.array(ArtifactRef),
     review_history: z.array(ArtifactRef),
     blocked_by: z.array(z.string()),

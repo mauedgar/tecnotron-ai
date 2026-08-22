@@ -2,7 +2,7 @@
 document_id: FFAI-STATE-001
 status: canonical
 machine_context: true
-version: 1.1
+version: 1.3
 updated: 2026-08-22
 ---
 
@@ -20,6 +20,14 @@ updated: 2026-08-22
   inyectados, aplica el budget global, entrega `COMPLETE`/`PARTIAL`/`EMPTY` y
   emite telemetria determinista por entrega. `repo-packager` permanece como
   materializer y no recibe decisiones de suficiencia.
+- `FF-AI-VNEXT-005`: Project Profile, resolucion portable de roots y adapters
+  implementados y aceptados en el baseline previo.
+- `FF-AI-VNEXT-007`: Router, Model Resolver y FinOps v1 implementados como MVP
+  determinista y aceptados por el desarrollador (`DONE`). Model Registry v3 y
+  Role Registry v3
+  son los unicos formatos activos; v2 falla con errores estables. Router deriva
+  rol y requisitos desde policy; Resolver solo propone provider/runtime y no
+  ejecuta modelos ni runtimes. Paid API permanece deshabilitada.
 
 La promocion `002-004` consta en el commit FitFlow `52d729c`. Algunos
 run-state/result JSON y el backlog machine-readable de FitFlow conservan
@@ -28,13 +36,14 @@ desarrollador. No se modifican sin ownership de FitFlow.
 
 ## Siguiente trabajo
 
-- `FF-AI-VNEXT-005`: `NEXT`; debe resolver Project Profile, roots portables y
-  adapters GitHub/OpenSpec.
 - `FF-AI-VNEXT-006`: `DONE`; implementado ContextPackager v2 con contrato
   estructurado y telemetria determinista. No cambia el estado de la TASK,
   que conserva autoridad del desarrollador.
-- Agent Runtime adapter, Router, Model Resolver, Explorer, Agent MVP, Observer,
-  retrieval, MCP y Temporal permanecen pendientes segun roadmap.
+- `FF-AI-VNEXT-007`: `DONE`; aceptado por el desarrollador tras revision
+  independiente con veredicto `ACCEPT_WITH_NON_BLOCKING_FINDINGS`.
+- Agent Runtime, effective runtime identity y Explorer pertenecen a
+  `FF-AI-VNEXT-008`. Agent MVP, Observer, retrieval, MCP y Temporal permanecen
+  pendientes segun roadmap.
 
 ## Plataforma operativa
 
@@ -50,21 +59,21 @@ runtime Orca; no se presentan como implementaciones de FitFlow-ai.
 
 ## Evidencia y limitaciones
 
-Validacion ejecutada el 2026-08-22:
+Validacion MVP ejecutada el 2026-08-22:
 
 | Comando | Resultado |
 | --- | --- |
 | `node --test scripts/doctor/tests/doctor.test.js` | 6/6 `PASS` |
 | `python tests/repo-packager/pack.test.py` | 4/4 `PASS` |
-| `node --test tests/core/context-packager.test.js` | `NOT_RUN`: falta la dependencia declarada `zod`; no se instalaron dependencias |
-| contracts/registries/core Node tests | `NOT_RUN`: el reviewer no produjo una nueva ejecucion reproducible; dependencias no instaladas |
-| `node scripts/doctor/bin/ffai-doctor.js` | tools externos disponibles; roots cross-repo incorrectos |
+| `node --test tests/core/routing.test.js` | Router, Resolver, FinOps y evidencia determinista `PASS` |
+| `node --test tests/contract/registries.test.js tests/contract/contracts.test.js` | schemas v3, rechazo v2 y contratos discriminados `PASS` |
+| `node --test tests/core/state-machine.test.js` | StateMachine y transiciones estrictas `PASS` |
+| test de integracion con overrides `FF_PROJECT_*` | Project Profile y configuracion FitFlow activa `PASS`; propuesta local, sin runtime execution |
 
-No se instalaron dependencias ni se promovieron las suites `NOT_RUN` a `PASS`.
+No se instalaron dependencias.
 La evidencia historica de `001-004` permanece en TASK, VALIDATION, REVIEW y
-RESULT de FitFlow. El doctor actual deriva un root que no representa al
-worktree FitFlow activo y aun busca `repo-packager` en su ubicacion anterior;
-esta limitacion queda para `FF-AI-VNEXT-005`.
+RESULT de FitFlow. Los worktrees coordinados se resuelven por variables de
+entorno explicitas; los paths temporales no se persisten en Project Profile.
 
 ## Prioridades
 
@@ -86,7 +95,7 @@ el core exporta el resultado v2 estructurado para los consumidores posteriores.
 
 FitFlow aun contiene documentacion generica de AI Core y el backlog/config
 machine-readable. No mover automaticamente esos artefactos. Permanecen
-`PENDING` hasta identificar y adaptar consumers en `FF-AI-VNEXT-005`:
+`PENDING` para una task con ownership explicito:
 
 - backlog vNext y su sincronizacion con GitHub/TASK;
 - publicacion o ubicacion de contracts JSON;
