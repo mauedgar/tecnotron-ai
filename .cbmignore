@@ -1,0 +1,8 @@
+# Historial y evidencia de tasks; no deben contaminar búsquedas estructurales
+/docs/archive/
+/docs/tasks/
+
+# Artefactos locales
+/coverage/
+/tmp/
+**/.cache/
