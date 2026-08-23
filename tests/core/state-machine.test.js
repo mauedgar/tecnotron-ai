@@ -8,12 +8,34 @@ const os = require('os');
 
 const { StateMachine, InvalidTransitionError, createStateMachineFromOrchestrator } = require('../../src/core/state-machine');
 const { RunStore, SqliteProjection, RunStoreError } = require('../../src/core/run-store');
-const { loadRegistryFile } = require('../../src/registries/index.js');
-
-const CONFIG_DIR = path.resolve(__dirname, '..', '..', '..', '..', 'FitFlow', '.ai', 'config');
-
 function testOrchestrator() {
-  return loadRegistryFile('orchestrator.yaml', CONFIG_DIR);
+  return {
+    schema_version: 'fitflow-orchestrator/v2',
+    baseline: 'test',
+    runtime: { port: 'AgentRuntimePort', preferred_adapter: 'none', adapter_status: 'disabled' },
+    control: {
+      planner: 'developer',
+      terminal_agent_state: 'PENDING_ACCEPTANCE',
+      final_state: 'DONE',
+      final_actor: 'developer',
+      commits_by_agents: false,
+      dependency_changes_by_agents: false,
+    },
+    states: ['BACKLOG', 'READY', 'PLANNING', 'ROUTING', 'EXPLORING', 'REVIEWING', 'PENDING_ACCEPTANCE', 'DONE'],
+    transitions: {
+      BACKLOG: ['READY'],
+      READY: ['PLANNING'],
+      PLANNING: ['ROUTING'],
+      ROUTING: ['EXPLORING', 'PENDING_ACCEPTANCE'],
+      EXPLORING: ['PENDING_ACCEPTANCE'],
+      REVIEWING: ['PENDING_ACCEPTANCE'],
+      PENDING_ACCEPTANCE: ['DONE'],
+      DONE: [],
+    },
+    limits: { context_expansions: 1, implementation_attempts: 1, review_attempts: 1 },
+    parallelism: { enabled: false, require_disjoint_ownership_keys: true, single_writer_per_key: true },
+    artifacts: { task_root: '.ai/tasks', run_root: '.ai/runs', local_root: '.ai/local', schema_root: '.ai/contracts/v2' },
+  };
 }
 
 function testRunState() {
@@ -64,7 +86,7 @@ function testRunEvent(seq, actor, from, to, type, reason) {
   };
 }
 
-test('state machine builds from real orchestrator config', () => {
+test('state machine builds from an orchestrator contract', () => {
   const sm = createStateMachineFromOrchestrator(testOrchestrator());
   assert.strictEqual(sm.finalState, 'DONE');
   assert.strictEqual(sm.finalActor, 'developer');
@@ -93,6 +115,21 @@ test('unknown states throw InvalidTransitionError', () => {
   const sm = createStateMachineFromOrchestrator(testOrchestrator());
   assert.throws(() => sm.canTransition('NOPE', 'READY'), InvalidTransitionError);
   assert.throws(() => sm.canTransition('READY', 'NOPE'), InvalidTransitionError);
+});
+
+test('configuration rejects unknown transition origins and targets', () => {
+  const unknownOrigin = testOrchestrator();
+  unknownOrigin.transitions.NOPE = ['READY'];
+  assert.throws(() => new StateMachine(unknownOrigin), /transition origin not in states/);
+  const unknownTarget = testOrchestrator();
+  unknownTarget.transitions.READY = ['NOPE'];
+  assert.throws(() => new StateMachine(unknownTarget));
+});
+
+test('configuration rejects an invalid routing transition', () => {
+  const config = testOrchestrator();
+  config.transitions.ROUTING = ['PENDING_ACCEPTANCE'];
+  assert.throws(() => new StateMachine(config), /invalid routing transition/);
 });
 
 test('run store appends events and writes state to filesystem', () => {

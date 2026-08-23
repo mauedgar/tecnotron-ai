@@ -1,6 +1,7 @@
 'use strict';
 
 const { State } = require('../contracts/common');
+const { Orchestrator } = require('../registries/schemas/orchestrator');
 
 class InvalidTransitionError extends Error {
   constructor(from, to, reason) {
@@ -22,28 +23,30 @@ function buildTransitionMap(transitions) {
 
 class StateMachine {
   constructor(config) {
-    this.config = config;
-    this.states = new Set(config.states);
-    this.transitions = buildTransitionMap(config.transitions);
-    this.finalState = config.control.final_state;
-    this.finalActor = config.control.final_actor;
-    this.terminalAgentState = config.control.terminal_agent_state;
+    this.config = Orchestrator.parse(config);
+    this.states = new Set(this.config.states);
+    this.transitions = buildTransitionMap(this.config.transitions);
+    this.finalState = this.config.control.final_state;
+    this.finalActor = this.config.control.final_actor;
+    this.terminalAgentState = this.config.control.terminal_agent_state;
     this._validate();
   }
 
   _validate() {
-    for (const state of this.states) {
-      if (!this.transitions[state]) {
-        continue;
-      }
+    for (const [state, targets] of Object.entries(this.transitions)) {
       if (!this.states.has(state)) {
         throw new InvalidTransitionError(state, null, 'transition origin not in states');
       }
-      for (const target of this.transitions[state]) {
+      for (const target of targets) {
         if (!this.states.has(target)) {
           throw new InvalidTransitionError(state, target, 'transition target not in states');
         }
       }
+    }
+    const entersRouting = this.transitions.PLANNING?.has('ROUTING');
+    const leavesRouting = this.transitions.ROUTING?.has('EXPLORING') || this.transitions.ROUTING?.has('EXECUTING');
+    if (!entersRouting || !leavesRouting) {
+      throw new InvalidTransitionError('ROUTING', null, 'invalid routing transition');
     }
   }
 
@@ -54,7 +57,7 @@ class StateMachine {
     if (!this.states.has(to)) {
       throw new InvalidTransitionError(from, to, 'unknown target state');
     }
-    if (!this.transitions[from].has(to)) {
+    if (!this.transitions[from] || !this.transitions[from].has(to)) {
       return false;
     }
     if (to === this.finalState) {

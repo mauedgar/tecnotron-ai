@@ -4,11 +4,10 @@ const path = require('path');
 const { loadRegistry, listRegistries, RegistryLoadError } = require('./registry');
 const { Orchestrator } = require('./schemas/orchestrator');
 const { RoleRegistry } = require('./schemas/roles');
-const { ModelRegistry } = require('./schemas/models');
+const { ModelRegistry, MODEL_REGISTRY_VERSION } = require('./schemas/models');
 const { ProjectProfile } = require('./schemas/project-profile');
 const { FinOps } = require('./schemas/finops');
-
-const DEFAULT_CONFIG_DIR = path.resolve(__dirname, '..', '..', '..', 'FitFlow', '.ai', 'config');
+const { ROLE_REGISTRY_VERSION } = require('./schemas/roles');
 
 const REGISTRY_SCHEMAS = {
   'orchestrator.yaml': Orchestrator,
@@ -18,7 +17,16 @@ const REGISTRY_SCHEMAS = {
   'finops.yaml': FinOps,
 };
 
-function loadRegistries(configDir = DEFAULT_CONFIG_DIR, names) {
+const VERSION_REQUIREMENTS = {
+  'models.yaml': { version: MODEL_REGISTRY_VERSION, versionError: 'UNSUPPORTED_MODEL_REGISTRY_VERSION' },
+  'roles.yaml': { version: ROLE_REGISTRY_VERSION, versionError: 'UNSUPPORTED_ROLE_REGISTRY_VERSION' },
+};
+
+function defaultConfigDir() {
+  return require('../project-profile').resolveProject().configDir;
+}
+
+function loadRegistries(configDir = defaultConfigDir(), names) {
   const targets = names || listRegistries(configDir);
   const loaded = {};
   const errors = [];
@@ -30,7 +38,7 @@ function loadRegistries(configDir = DEFAULT_CONFIG_DIR, names) {
       continue;
     }
     try {
-      loaded[name] = loadRegistry(filePath, schema);
+      loaded[name] = loadRegistry(filePath, schema, VERSION_REQUIREMENTS[name]);
     } catch (err) {
       errors.push(err);
     }
@@ -41,10 +49,10 @@ function loadRegistries(configDir = DEFAULT_CONFIG_DIR, names) {
   return loaded;
 }
 
-function loadRegistryFile(name, configDir = DEFAULT_CONFIG_DIR) {
+function loadRegistryFile(name, configDir = defaultConfigDir()) {
   const schema = REGISTRY_SCHEMAS[name];
   if (!schema) throw new RegistryLoadError(`no schema registered for ${name}`);
-  return loadRegistry(path.join(configDir, name), schema);
+  return loadRegistry(path.join(configDir, name), schema, VERSION_REQUIREMENTS[name]);
 }
 
-module.exports = { loadRegistries, loadRegistryFile, REGISTRY_SCHEMAS, RegistryLoadError, DEFAULT_CONFIG_DIR };
+module.exports = { loadRegistries, loadRegistryFile, REGISTRY_SCHEMAS, VERSION_REQUIREMENTS, RegistryLoadError, defaultConfigDir };
