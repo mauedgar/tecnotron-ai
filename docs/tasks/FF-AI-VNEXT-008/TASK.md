@@ -22,7 +22,7 @@ related:
 | Campo | Valor |
 | --- | --- |
 | Task ID | `FF-AI-VNEXT-008` |
-| Estado | `READY` |
+| Estado | `DONE` |
 | Baseline | `tooling` en `4a10ebd` |
 | Task type / area / scope | `feature` / `ai_tooling` / `backend` |
 | Lane / risk / priority | `ai_orchestrated` / `low` / `P1` |

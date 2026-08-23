@@ -41,9 +41,10 @@ desarrollador. No se modifican sin ownership de FitFlow.
   que conserva autoridad del desarrollador.
 - `FF-AI-VNEXT-007`: `DONE`; aceptado por el desarrollador tras revision
   independiente con veredicto `ACCEPT_WITH_NON_BLOCKING_FINDINGS`.
-- Agent Runtime, effective runtime identity y Explorer pertenecen a
-  `FF-AI-VNEXT-008`. Agent MVP, Observer, retrieval, MCP y Temporal permanecen
-  pendientes segun roadmap.
+- `FF-AI-VNEXT-008`: Explorer, Agent Runtime y effective runtime identity
+  implementados y validados; review independiente `ACCEPT`, aceptados por el
+  Developer (`DONE`). Agent MVP, Observer,
+  retrieval, MCP y Temporal permanecen pendientes segun roadmap.
 
 ## Plataforma operativa
 

@@ -1,4 +1,4 @@
 import contracts from './index.js';
 
-export const { common, task, runEvent, runState, validation, contextPackager, route, modelResolution } = contracts;
+export const { common, task, runEvent, runState, validation, contextPackager, route, modelResolution, runtimeIdentity } = contracts;
 export default contracts;
