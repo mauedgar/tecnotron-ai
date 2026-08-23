@@ -9,4 +9,5 @@ module.exports = {
   contextPackager: require('./context-packager'),
   route: require('./route'),
   modelResolution: require('./model-resolution'),
+  runtimeIdentity: require('./runtime-identity'),
 };
