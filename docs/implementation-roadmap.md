@@ -2,8 +2,8 @@
 document_id: FFAI-ROADMAP-001
 status: canonical
 machine_context: true
-version: 2.3
-updated: 2026-08-22
+version: 2.4
+updated: 2026-08-24
 ---
 
 # Secuencia de implementacion
@@ -18,7 +18,7 @@ updated: 2026-08-22
 | 5 | `FF-AI-VNEXT-006` | ContextPackager v2 | `DONE` |
 | 6 | `FF-AI-VNEXT-007` | Router, Model Resolver y FinOps | `DONE` |
 | 7 | `FF-AI-VNEXT-008` | Explorer y Agent Runtime conformance | `DONE` |
-| 8 | `FF-AI-VNEXT-009` | Agent MVP y documentation sync | `BACKLOG` |
+| 8 | `FF-AI-VNEXT-009` | Agent MVP y documentation sync | `DONE` |
 | 9 | `FF-AI-VNEXT-010` | fitness functions y Workflow Observer | `BACKLOG` |
 | 10 | `FF-AI-VNEXT-011+` | retrieval, MCP y Temporal tras sus gates | `PLANNED` |
 
@@ -46,6 +46,44 @@ ownership de archivos y contratos no superpuesto. `005` posee Project Profile,
 descubrimiento y resolucion portable de roots. `006` consume el root resuelto a
 traves del contrato correspondiente y no implementa un resolver alternativo ni
 hardcodea una topologia cross-repo.
+
+## Implementación FF-AI-VNEXT-009 (Agent MVP)
+
+Implementado composition root determinista en `src/agent-mvp/index.js` con factory
+`createAgentMvp(deps)` que valida `contextPackager` y `adapter` inyectados,
+inyecta defaults opcionales para router/modelResolver/explorer/agentRuntime, y
+expone `execute(input)` que secuencia: Router -> ModelResolver+FinOps ->
+ContextPackager -> Explorer -> AgentRuntime. Cada etapa valida precondicion
+(`ROUTED`, `SELECTED`, `PROCEED`); short-circuit con `stopped_at` y `cause`
+estable si falla. Explorer regla: `PARTIAL` => `ESCALATE` (nunca `PROCEED`);
+solo `COMPLETE` con cobertura total permite `PROCEED` y alcanza runtime.
+
+**Boundary validation M1 (RESOLVED tras re-review independiente):**
+- `STAGE.INPUT` como primera etapa explícita
+- Código de error estable `INVALID_AGENT_MVP_INPUT`
+- Array determinista `validation_errors` con detalle por campo
+- Reutiliza `TaskRoutingInput.safeParse` y `EvidenceRequirement.safeParse` — **sin duplicar registry-policy**
+- Fail-closed en `STAGE.INPUT` sin invocar dependencias inyectadas
+
+Retorna `{ stopped_at, reachedRuntime, stages, status, reason_code, identity,
+runEvent, cause }` mapeando `status/reason_code` top-level desde
+`runtimeResult.identity` o `runtimeResult` directo.
+
+Tests unitarios: **24/24 PASS** (`tests/core/agent-mvp.test.js`: 10 orchestration + 14 M1 boundary). Integracion local
+con componentes reales y materializer determinista: 1/1 PASS
+(`tests/integration/agent-mvp.test.js`). Validación externa mediante comando explícito a través de `tests/integration/routing.test.js`, `runtime-conformance.test.js`, y `agent-mvp.test.js`: **5/5 PASS, 0 SKIP** con registries v3 activas y `paid_api_enabled: false`. Integracion externa con `FF_PROJECT_*` sin env vars: SKIP (requiere Project Profile real).
+Regresion completa suite: **133 tests, 130 PASS, 3 SKIP, 0 FAIL**. Validaciones
+deterministas adicionales: `validate-package.js` PASS, `repo-packager` 4/4 PASS,
+`git diff --check` PASS, manifiestos sin cambios. Instalacion de dependencias
+autorizada por Developer sin diff en lockfile. **`opencode.json` era un cambio
+pre-existente en el feature worktree; `tooling` ya contiene la version canonica
+valida con `$schema`, por lo que queda aislado intencionalmente de 009 y no debe
+ser atribuido ni reapicado por el squash merge.** Estado: **`DONE`** (aceptado
+explicitamente por el Developer; review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`, M1
+`RESOLVED`). Reconciliacion contra `tooling`, validacion final de integracion y
+limpieza del worktree son **pendientes del Task Cycle deterministico**, aun no
+completadas; no se afirma squash merge, validacion final de tooling, commit ni
+limpieza.
 
 ## Autoridad y pendientes cross-repo
 
