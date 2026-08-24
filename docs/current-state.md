@@ -2,8 +2,8 @@
 document_id: FFAI-STATE-001
 status: canonical
 machine_context: true
-version: 1.3
-updated: 2026-08-22
+version: 1.4
+updated: 2026-08-24
 ---
 
 # Estado actual de FitFlow-ai
@@ -28,6 +28,29 @@ updated: 2026-08-22
   son los unicos formatos activos; v2 falla con errores estables. Router deriva
   rol y requisitos desde policy; Resolver solo propone provider/runtime y no
   ejecuta modelos ni runtimes. Paid API permanece deshabilitada.
+- `FF-AI-VNEXT-008`: Explorer, Agent Runtime y effective runtime identity
+  implementados y validados; review independiente `ACCEPT`, aceptados por el
+  Developer (`DONE`). Agent MVP, Observer,
+  retrieval, MCP y Temporal permanecen pendientes segun roadmap.
+- `FF-AI-VNEXT-009`: **Agent MVP composition root implementado, validado y
+  aceptado explicitamente por el Developer como `DONE`** (con gaps documentados
+  y orden de integracion registrado). Composition root en `src/agent-mvp/index.js`
+  orquesta Router -> ModelResolver/FinOps -> ContextPackager -> Explorer ->
+  AgentRuntime con dependencias inyectadas. **Boundary validation M1 (RESOLVED
+  tras re-review):** `STAGE.INPUT` con `INVALID_AGENT_MVP_INPUT`,
+  `validation_errors` determinista, reutiliza `TaskRoutingInput`/
+  `EvidenceRequirement`, sin duplicar registry-policy. Tests unitarios **24/24
+  PASS** (10 orchestration + 14 M1 boundary) y test de integracion local (1/1
+  PASS) confirman flujo completo con adapters simulados. Test de integracion
+  externo requiere `FF_PROJECT_*` (SKIP sin env vars). Regresion completa: **133
+  tests, 130 PASS, 3 SKIP, 0 FAIL**. Evidencia registrada en
+  `docs/tasks/FF-AI-VNEXT-009/RESULT.md`. Excepcion historica: base real
+  `main@ceae62a`, destino de integracion `tooling`. `opencode.json` era cambio
+  pre-existente en el feature worktree y `tooling` ya contiene la version canonica
+  valida con `$schema`; queda aislado intencionalmente de 009 y no debe ser
+  atribuido ni reapicado por el squash merge. Reconciliacion contra `tooling`,
+  validacion final de integracion y limpieza del worktree son **pendientes del
+  Task Cycle deterministico**, aun no completadas.
 
 La promocion `002-004` consta en el commit FitFlow `52d729c`. Algunos
 run-state/result JSON y el backlog machine-readable de FitFlow conservan
@@ -41,10 +64,11 @@ desarrollador. No se modifican sin ownership de FitFlow.
   que conserva autoridad del desarrollador.
 - `FF-AI-VNEXT-007`: `DONE`; aceptado por el desarrollador tras revision
   independiente con veredicto `ACCEPT_WITH_NON_BLOCKING_FINDINGS`.
-- `FF-AI-VNEXT-008`: Explorer, Agent Runtime y effective runtime identity
-  implementados y validados; review independiente `ACCEPT`, aceptados por el
-  Developer (`DONE`). Agent MVP, Observer,
-  retrieval, MCP y Temporal permanecen pendientes segun roadmap.
+- `FF-AI-VNEXT-008`: `DONE`; aceptado por el Developer.
+- `FF-AI-VNEXT-009`: `DONE`; aceptado explicitamente por el Developer tras review
+  independiente `ACCEPT_WITH_NON_BLOCKING_FINDINGS` (M1 `RESOLVED`).
+  Reconciliacion contra `tooling`, validacion final de integracion y limpieza del
+  worktree pendientes del Task Cycle deterministico (no completadas).
 
 ## Plataforma operativa
 
@@ -60,21 +84,36 @@ runtime Orca; no se presentan como implementaciones de FitFlow-ai.
 
 ## Evidencia y limitaciones
 
-Validacion MVP ejecutada el 2026-08-22:
+Validacion MVP ejecutada el 2026-08-24:
 
 | Comando | Resultado |
 | --- | --- |
-| `node --test scripts/doctor/tests/doctor.test.js` | 6/6 `PASS` |
-| `python tests/repo-packager/pack.test.py` | 4/4 `PASS` |
 | `node --test tests/core/routing.test.js` | Router, Resolver, FinOps y evidencia determinista `PASS` |
 | `node --test tests/contract/registries.test.js tests/contract/contracts.test.js` | schemas v3, rechazo v2 y contratos discriminados `PASS` |
 | `node --test tests/core/state-machine.test.js` | StateMachine y transiciones estrictas `PASS` |
-| test de integracion con overrides `FF_PROJECT_*` | Project Profile y configuracion FitFlow activa `PASS`; propuesta local, sin runtime execution |
+| `node --test tests/integration/routing.test.js tests/integration/runtime-conformance.test.js tests/integration/agent-mvp.test.js` | **5/5 PASS, 0 SKIP** (external integration command across routing.test.js, runtime-conformance.test.js, agent-mvp.test.js) |
+| `node --test tests/core/agent-runtime.test.js tests/core/explorer.test.js tests/contract/runtime-identity.test.js` | **PASS** (core 008 components: agent-runtime, explorer, runtime-identity) |
+| `node --test tests/core/agent-mvp.test.js` | **24/24 PASS** (10 orchestration + 14 M1 boundary validation) |
+| `node --test tests/integration/agent-mvp.test.js` | **1 PASS, 1 SKIP** (local e2e PASS; external SKIP sin FF_PROJECT_*) |
+| `node --test` (suite completa / `npm test`) | **133 tests: 130 PASS, 3 SKIP, 0 FAIL** |
+| `node src/contracts/validate-package.js` | **PASS** |
+| `python tests/repo-packager/pack.test.py` | **4/4 PASS** |
+| `git diff --check` | **PASS** (warning LF/CRLF en opencode.json, no errores) |
+| `git diff package.json package-lock.json` | **VACÍO** (sin cambios en manifiestos) |
+| test de integracion con overrides `FF_PROJECT_*` | Project Profile y configuracion FitFlow activa `PASS`; declared runtime simulation completed with active v3 registries and paid API false |
 
-No se instalaron dependencias.
+No se instalaron dependencias nuevas en manifiesto; instalacion de `node_modules` autorizada por Developer sin diff en lockfile.
+
 La evidencia historica de `001-004` permanece en TASK, VALIDATION, REVIEW y
 RESULT de FitFlow. Los worktrees coordinados se resuelven por variables de
 entorno explicitas; los paths temporales no se persisten en Project Profile.
+
+### Limitaciones conocidas
+
+- El test de integracion externo (`active v3 registries complete a declared simulation with paid API disabled`) queda `SKIP` sin variables `FF_PROJECT_*`; no se reporta `PASS` ni `FAIL` sin evidencia real.
+- Cobertura de grafo: archivos nuevos de esta task no indexados al momento de verificacion; evidencia basada en source read directo y ejecucion de comandos.
+- Review semantica independiente: `COMPLETED` / veredicto `ACCEPT_WITH_NON_BLOCKING_FINDINGS` (M1 `RESOLVED` tras re-review).
+- Divergencia baseline `ceae62a` vs `tooling` owned by Task Lifecycle; no resuelta en esta task. **Baseline de integracion faltante:** commits `e75e930` (package publication), `daae49d` (package.json), `de300da` (.gitignore, compatibility, task-lifecycle baseline policy) — prerequisito de integracion para Task Cycle tras validacion Developer, **no bloquea** validacion worktree actual, **no autoriza** rebase/merge ahora.
 
 ## Prioridades
 
@@ -103,5 +142,5 @@ machine-readable. No mover automaticamente esos artefactos. Permanecen
 - defaults reutilizables frente a configuracion activa de producto;
 - links y roots entre repositorios.
 
-El Project Profile, TASK, runs, ADR y configuracion especifica del producto
+El Project Profile, TASK, runs y configuracion especifica del producto
 permanecen en FitFlow.

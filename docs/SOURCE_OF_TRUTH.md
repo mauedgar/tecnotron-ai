@@ -27,6 +27,7 @@ sessions, workspace metadata, and Obsidian views are not source of truth.
 | [Current State](current-state.md) | Confirmed implementation reality and validation evidence only. |
 | [Implementation Roadmap](implementation-roadmap.md) | Sequencing and planned implementation work. |
 | [Task FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Explorer and Agent Runtime conformance. |
+| [Task FF-AI-VNEXT-009](tasks/FF-AI-VNEXT-009/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Agent MVP composition root and documentation sync. |
 | [Compatibility Baseline](compatibility-baseline.md) | Observed tool compatibility and reproducible baseline evidence. |
 | [Development Pipeline Adapter](development-pipeline-adapter.md) | Canonical adapter boundary and current adapter status. |
 | Role registry v3 | Current role IDs and fixed deterministic routing policy. Version v2 is unsupported. The executable schema is [`src/registries/schemas/roles.js`](../src/registries/schemas/roles.js); active `roles.yaml` is owned by FitFlow. |

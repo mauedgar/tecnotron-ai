@@ -1,5 +1,5 @@
 {
-  "name": "@mauedgar/contracts",
+  "name": "@tecnotron-ai/contracts",
   "version": "1.0.0",
   "description": "Contratos canonicos de FitFlow-ai",
   "type": "commonjs",
@@ -15,11 +15,20 @@
     "*.js",
     "*.mjs"
   ],
+  "publishConfig": {
+    "registry": "https://github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mauedgar/tecnotron-ai.git",
+    "directory": "src/contracts"
+  },
   "dependencies": {
     "zod": "^4.4.3"
   },
   "scripts": {
     "build": "node ./validate-package.js",
-    "pack:check": "node ./validate-package.js"
+    "pack:check": "node ./validate-package.js",
+    "prepublishOnly": "npm run pack:check"
   }
 }
