@@ -2,7 +2,7 @@
 status: canonical
 owner: fitflow-ai
 type: workflow
-updated: 2026-08-21
+updated: 2026-08-24
 related:
   - "[[operational-architecture]]"
   - "[[context-strategy]]"
@@ -191,7 +191,16 @@ verify expected task/worktree
 -> update Project state
 ```
 
-Merge policy remains separately configurable.
+### 10.1 Active integration baseline
+
+`tooling` is the active integration baseline. Feature branches start from
+`tooling` and return to `tooling` through Pull Requests using task-scoped
+worktrees.
+
+`main` is not a daily integration branch. It receives accepted milestones only
+through deliberate `tooling` to `main` Pull Requests merged with merge commits.
+
+Commit messages are written in Spanish.
 
 Task Lifecycle must not silently force-merge unrelated histories or bypass branch protections.
 

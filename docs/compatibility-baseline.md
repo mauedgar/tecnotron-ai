@@ -2,8 +2,8 @@
 document_id: FFAI-COMPAT-001
 status: canonical
 machine_context: true
-version: 3.1
-updated: 2026-08-22
+version: 3.2
+updated: 2026-08-24
 ---
 
 # Baseline de compatibilidad
@@ -11,7 +11,7 @@ updated: 2026-08-22
 | Componente | Observacion 2026-08-21 | Decision |
 | --- | --- | --- |
 | Orca | runtime `1.4.185`; worktrees FitFlow-ai/FitFlow y Folder Workspace visibles | control de workspace/sesion; Folder Workspace no aisla escritura |
-| Git | `2.39.0`; branch de integracion `tooling` | nuevas tasks desde `origin/tooling`; `master` transitoria |
+| Git | `2.39.0`; `tooling` es el baseline de integracion activo | nuevas tasks desde `origin/tooling`; `main` recibe solo hitos por PR `tooling` a `main` con merge commit |
 | Node | `22.18.0` | disponible |
 | npm | `11.19.0` | disponible |
 | Repomix | `1.18.0` | disponible; mantener sin upgrade |
@@ -20,7 +20,7 @@ updated: 2026-08-22
 | Otros Agent CLI | soportados por Orca como runtimes externos | no declarar conformance del AI Core sin tests propios |
 | OpenSpec CLI | `1.9.0` | adapter de lectura acotada implementado |
 | GitHub CLI | `2.97.0`; PR #2 verificable | adapter mecanico e idempotente implementado |
-| Python | `3.13.6` del sistema ejecuto tests de repo-packager | `python/.venv_tools` no es entorno oficial |
+| Python | `3.13.6` del sistema ejecuto tests de repo-packager | `scripts/.venv_tools` no es entorno oficial |
 | SQLite | dependencias declaradas en `package.json`; Run Store implementado | validacion local bloqueada sin dependencias instaladas |
 
 Evidencia ejecutada desde este worktree:
