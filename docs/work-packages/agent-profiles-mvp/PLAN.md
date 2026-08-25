@@ -17,8 +17,11 @@ related:
   - "[[milestones/document-governance-v1/PLAN]]"
   - "[[tasks/FF-AI-AGENT-001/TASK]]"
   - "[[tasks/FF-AI-AGENT-001/PLAN]]"
+  - "[[tasks/FF-AI-AGENT-002/TASK]]"
+  - "[[tasks/FF-AI-AGENT-002/PLAN]]"
   - "[[architecture/agent-role-contracts]]"
   - "[[architecture/agent-profile-matrix]]"
+  - "[[architecture/agent-profile-conformance]]"
 ---
 
 # Work Package Plan: Agent Profiles MVP
@@ -45,15 +48,15 @@ Cumplido por `FF-AI-DOC-001` (foundation artifacts: Developer-accepted + integra
 
 **Scope exacto**: 5 archivos nuevos + 4 archivos modificados (ver ownership keys en TASK).
 
-### Wave 2 — FF-AI-AGENT-002 (PROPOSED / DISCOVERED)
+### Wave 2 — FF-AI-AGENT-002 (PENDING_ACCEPTANCE)
 
-**Estado**: Propuesta en este WP; **no se crea TASK/PLAN ahora**; sin autorización OpenCode presente.
+**Estado**: TASK/PLAN materializados; conformance documental en draft, validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`, pendiente aceptación Developer/integración; sin autorización OpenCode presente.
 
-**Objetivo futuro**: Perfiles mínimos y conformance (adapters, permisos efectivos, verificación descubrimiento/invocación, read-only/ownership, skills permitidas/denegadas, profundidad delegación, formato handoffs).
+**Objetivo**: Conformance documental de perfiles mínimos (adapter descriptors, permisos efectivos, verificación descubrimiento/invocación, read-only/ownership, skills permitidas/denegadas, profundidad delegación, formato handoffs).
 
-**Gate serial de AGENT001**: CUMPLIDO. La materialización de AGENT002 aún requiere nuevo TASK/PLAN con ownership explícito y Developer gate propio.
+**Gate serial de AGENT001**: CUMPLIDO. AGENT002 mantiene Developer gate propio antes de promoción canónica.
 
-**Nota**: Requiere nuevo TASK/PLAN con ownership explícito y Developer gate propio.
+**Scope Wave 2**: 3 archivos nuevos + 5 modificados, exactos en TASK002. No crea perfiles/adapters ejecutables.
 
 ## Resultados esperados
 
@@ -78,7 +81,7 @@ Cumplido por `FF-AI-DOC-001` (foundation artifacts: Developer-accepted + integra
 - Modificaciones a `src/`, `tests/`, `FitFlow/`, contratos ejecutables, registries.
 - Cambios a `opencode.json`, `.opencode/package*.json`.
 - Creación de archivos de perfil (`.opencode/profile/*.md` u equivalentes).
-- Task `FF-AI-AGENT-002` (solo propuesta en este WP).
+- Perfiles OpenCode, adapters ejecutables y verificación runtime de `FF-AI-AGENT-002`.
 - WP2–WP6 del milestone `document-governance-v1` (ejecución no prerrequisito).
 
 ## Owner
@@ -124,6 +127,16 @@ Cumplido por `FF-AI-DOC-001` (foundation artifacts: Developer-accepted + integra
 
 - **Gate Wave 1**: CUMPLIDO; Developer aceptó `agent-role-contracts.md` y `agent-profile-matrix.md` el 2026-08-25 y ambos documentos fueron promovidos de `draft` a `canonical`.
 - **Gate Wave 2**: Prerrequisito AGENT001 `DONE` + `ACCEPTED` + `INTEGRATED` CUMPLIDO; aún requiere ownership explícito y Developer gate propio.
+
+## Ownership keys Wave 2 (exactos, 8 paths)
+
+**Nuevos (3)**: TASK002, PLAN002 y `docs/architecture/agent-profile-conformance.md`.
+
+**Modificados (5)**: este WP, `SOURCE_OF_TRUTH.md`, `current-state.md`, `implementation-roadmap.md` y Milestone PLAN.
+
+## Stop Conditions (Wave 2)
+
+La task `FF-AI-AGENT-002` se detiene ante cambios en OpenCode, manifests, `src/`, `tests/`, FitFlow, registries/runtime, perfiles/adapters ejecutables, model bindings, fallback/ranking o cualquier path fuera de sus ocho ownership keys.
 
 ## Stop Conditions (Wave 1)
 
