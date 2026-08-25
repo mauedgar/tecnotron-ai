@@ -3,9 +3,19 @@ document_id: FFAI-RESULT-009
 status: canonical
 owner: fitflow-ai
 type: evidence
-version: 1.0
-updated: 2026-08-24
+version: 1.2
+updated: 2026-08-25
 machine_context: true
+validation: PASS
+review_verdict: ACCEPT_WITH_NON_BLOCKING_FINDINGS
+developer_acceptance: ACCEPTED
+accepted_at: 2026-08-24
+integration:
+  status: INTEGRATED
+  target: tooling
+  sha: 590ecfe58d27e8c95b2d80ee1c9d3287313a7093
+  integrated_at: 2026-08-24
+lifecycle_status: DONE
 related:
   - "[[tasks/FF-AI-VNEXT-009/TASK]]"
   - "[[tasks/FF-AI-VNEXT-009/PLAN]]"
@@ -97,10 +107,10 @@ Tras implementar validación básica, 3 tests adicionales de gap fallaron:
 ✔ M1: null roleRegistry fails closed at input
 ✔ M1: null modelRegistry fails closed at input
 ✔ M1: null finops fails closed at input
-✔ M1: budget_tokens as negative integer fails closed at input
-✔ M1: budget_tokens as non-integer fails closed at input
-✔ M1: requested_paths not an array of strings fails closed at input
-✔ M1: requested_evidence violating EvidenceRequirement contract fails closed at input
+✖ M1: budget_tokens as negative integer fails closed at input
+✖ M1: budget_tokens as non-integer fails closed at input
+✖ M1: requested_paths not an array of strings fails closed at input
+✖ M1: requested_evidence violating EvidenceRequirement contract fails closed at input
 ✔ M1: valid input without requested_paths/requested_evidence reaches runtime (absence allowed)
 ✔ M1: execute(null) fails closed at input without throwing (config resolution after validation)
 ✔ M1: requested_paths null fails closed at input
@@ -181,8 +191,23 @@ La divergencia entre el baseline observado (`ceae62a`) y el baseline de integrac
 ## No Claimed
 
 - **Si** se reivindica aceptacion explicita del Developer y estado `DONE` (aceptacion terminal y explicita, no inferida).
-- **No** se reivindica squash merge, validacion final de integracion en `tooling`, commit, PR, ni limpieza del worktree: estas son **operaciones pendientes del Task Cycle deterministico**, aun no completadas.
+- **Nota historica al 2026-08-24:** **No** se reivindica squash merge, validacion final de integracion en `tooling`, commit, PR, ni limpieza del worktree: estas son **operaciones pendientes del Task Cycle deterministico**, aun no completadas.
 - **No** se modificaron capas estables de 007/008.
 - **No** se alteró configuración activa de FitFlow. `opencode.json` era un cambio pre-existente en el feature worktree; `tooling` ya contiene la version canonica valida con `$schema`, por lo que queda **aislado intencionalmente de 009** y no debe ser atribuido ni reapicado por el squash merge.
 - **No** se inventaron tipos JS ni archivos factory separados (`types.js`, `factory.js` no existen; todo está en `index.js`).
 - **No** se contactó provider, modelo, MCP, retrieval, Temporal, ni API paid en ninguna validación.
+
+## Cierre documental append-only (2026-08-25)
+
+Este cierre es **metadata documental**; no cambia comandos, resultados, findings, ni veredicto original del review.
+
+- **Aceptación Developer:** `ACCEPTED` (explícita, terminal) — `2026-08-24`.
+- **Integration:** `{status: INTEGRATED, target: tooling, sha: 590ecfe58d27e8c95b2d80ee1c9d3287313a7093, integrated_at: 2026-08-24}`.
+- **Promotion main:** SHA `8b946906800eab3dbb9c6e407f691beea4b2af0e` (evidencia secundaria, no colapsada con integración en tooling).
+- **Reconciliation:** SHA `41088a413d06ed1d58d63d92320e38d4b44b86ea` (evidencia secundaria, no colapsada con integración en tooling).
+- **Review verdict:** `ACCEPT_WITH_NON_BLOCKING_FINDINGS` (M1 `RESOLVED` tras re-review).
+- **Validation:** `PASS` (UNAVAILABLE/SKIP históricos conservados por prueba; 130 PASS, 3 SKIP, 0 FAIL).
+- **opencode.json ruling:** `UNKNOWN/PRE-EXISTING` (origen histórico no atribuible a esta task; fuera de scope automático; `tooling` ya contiene versión canónica con `$schema`).
+- **Baseline histórico:** `main@ceae62a` mantenido.
+- **Normalización de resumen:** Frases que colapsaban "integración completada" se normalizan a "integración en `tooling` completada (SHA/date); promoción `main` y reconciliación registradas como evidencia secundaria" — sin reinterpretar tests ni evidencia técnica.
+- **Cleanup worktree:** No se afirma que haya ocurrido; es posterior y separado del cierre documental.

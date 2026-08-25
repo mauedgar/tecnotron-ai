@@ -2,8 +2,8 @@
 document_id: FFAI-STATE-001
 status: canonical
 machine_context: true
-version: 1.4
-updated: 2026-08-24
+version: 1.5
+updated: 2026-08-25
 ---
 
 # Estado actual de FitFlow-ai
@@ -48,7 +48,7 @@ updated: 2026-08-24
   `main@ceae62a`, destino de integracion `tooling`. `opencode.json` era cambio
   pre-existente en el feature worktree y `tooling` ya contiene la version canonica
   valida con `$schema`; queda aislado intencionalmente de 009 y no debe ser
-  atribuido ni reapicado por el squash merge. Reconciliacion contra `tooling`,
+  atribuido ni reapicado por el squash merge. **Nota historica al 2026-08-24:** Reconciliacion contra `tooling`,
   validacion final de integracion y limpieza del worktree son **pendientes del
   Task Cycle deterministico**, aun no completadas.
 
@@ -67,8 +67,10 @@ desarrollador. No se modifican sin ownership de FitFlow.
 - `FF-AI-VNEXT-008`: `DONE`; aceptado por el Developer.
 - `FF-AI-VNEXT-009`: `DONE`; aceptado explicitamente por el Developer tras review
   independiente `ACCEPT_WITH_NON_BLOCKING_FINDINGS` (M1 `RESOLVED`).
-  Reconciliacion contra `tooling`, validacion final de integracion y limpieza del
+  **Nota historica al 2026-08-24:** Reconciliacion contra `tooling`, validacion final de integracion y limpieza del
   worktree pendientes del Task Cycle deterministico (no completadas).
+  Estado posterior: integracion en `tooling` completada; promocion y reconciliacion
+  registradas como evidencia secundaria. Cleanup no confirmado y separado.
 
 ## Plataforma operativa
 
@@ -144,3 +146,17 @@ machine-readable. No mover automaticamente esos artefactos. Permanecen
 
 El Project Profile, TASK, runs y configuracion especifica del producto
 permanecen en FitFlow.
+
+---
+
+### Ruling posterior / Cierre documental append-only (2026-08-25)
+
+La sección "Limitaciones conocidas" arriba conserva el estado **histórico al 2026-08-24** (snapshot previo al cierre). El cierre documental append-only resuelve lo pendiente:
+
+- **Integración en `tooling` completada**: `integration {status: INTEGRATED, target: tooling, sha: 590ecfe58d27e8c95b2d80ee1c9d3287313a7093, integrated_at: 2026-08-24}`.
+- **Promoción `main`** SHA `8b946906800eab3dbb9c6e407f691beea4b2af0e` y **reconciliación** SHA `41088a413d06ed1d58d63d92320e38d4b44b86ea` registradas como evidencia secundaria (no colapsadas con integración en tooling).
+- **Dimensiones finales**: `validation PASS` (UNAVAILABLE/SKIP históricos conservados), `review_verdict ACCEPT_WITH_NON_BLOCKING_FINDINGS` (M1 RESOLVED), `developer_acceptance ACCEPTED` (2026-08-24), `integration INTEGRATED`, `lifecycle_status DONE`.
+- **`opencode.json` ruling**: `UNKNOWN/PRE-EXISTING` (no atribuible, fuera de scope automático).
+- **Baseline histórico** `main@ceae62a` mantenido.
+- **Cleanup worktree** posterior y separado; no se afirma que haya ocurrido.
+- La divergencia baseline y claims "pendientes del Task Cycle" arriba son **snapshot histórico**; resueltos por este cierre.

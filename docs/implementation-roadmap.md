@@ -2,8 +2,8 @@
 document_id: FFAI-ROADMAP-001
 status: canonical
 machine_context: true
-version: 2.4
-updated: 2026-08-24
+version: 2.5
+updated: 2026-08-25
 ---
 
 # Secuencia de implementacion
@@ -75,12 +75,13 @@ con componentes reales y materializer determinista: 1/1 PASS
 Regresion completa suite: **133 tests, 130 PASS, 3 SKIP, 0 FAIL**. Validaciones
 deterministas adicionales: `validate-package.js` PASS, `repo-packager` 4/4 PASS,
 `git diff --check` PASS, manifiestos sin cambios. Instalacion de dependencias
-autorizada por Developer sin diff en lockfile. **`opencode.json` era un cambio
+autorizada por Developer sin diff en lockfile. **Nota historica al 2026-08-24:**
+**`opencode.json` era un cambio
 pre-existente en el feature worktree; `tooling` ya contiene la version canonica
 valida con `$schema`, por lo que queda aislado intencionalmente de 009 y no debe
 ser atribuido ni reapicado por el squash merge.** Estado: **`DONE`** (aceptado
 explicitamente por el Developer; review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`, M1
-`RESOLVED`). Reconciliacion contra `tooling`, validacion final de integracion y
+`RESOLVED`). **Nota historica al 2026-08-24:** Reconciliacion contra `tooling`, validacion final de integracion y
 limpieza del worktree son **pendientes del Task Cycle deterministico**, aun no
 completadas; no se afirma squash merge, validacion final de tooling, commit ni
 limpieza.
@@ -101,3 +102,17 @@ Tambien quedan `PENDING`:
 - resolver paths entre repos sin asumir una ubicacion fisica.
 
 `project-profile.yaml`, TASK, runs y configuracion activa permanecen en FitFlow.
+
+---
+
+### Nota histórica al 2026-08-24 / Ruling posterior / Cierre documental append-only (2026-08-25)
+
+El párrafo anterior "Reconciliacion contra `tooling`, validacion final de integracion y limpieza del worktree son **pendientes del Task Cycle deterministico**, aun no completadas..." conserva el estado **histórico al 2026-08-24** (snapshot previo al cierre). El cierre documental append-only resuelve lo pendiente:
+
+- **Integración en `tooling` completada**: `integration {status: INTEGRATED, target: tooling, sha: 590ecfe58d27e8c95b2d80ee1c9d3287313a7093, integrated_at: 2026-08-24}`.
+- **Promoción `main`** SHA `8b946906800eab3dbb9c6e407f691beea4b2af0e` y **reconciliación** SHA `41088a413d06ed1d58d63d92320e38d4b44b86ea` registradas como evidencia secundaria (no colapsadas con integración en tooling).
+- **Dimensiones finales**: `validation PASS` (UNAVAILABLE/SKIP históricos conservados), `review_verdict ACCEPT_WITH_NON_BLOCKING_FINDINGS` (M1 RESOLVED), `developer_acceptance ACCEPTED` (2026-08-24), `integration INTEGRATED`, `lifecycle_status DONE`.
+- **`opencode.json` ruling**: `UNKNOWN/PRE-EXISTING` (no atribuible, fuera de scope automático).
+- **Baseline histórico** `main@ceae62a` mantenido.
+- **Cleanup worktree** posterior y separado; no se afirma que haya ocurrido.
+- Los claims "pendientes del Task Cycle" arriba son **snapshot histórico**; resueltos por este cierre.

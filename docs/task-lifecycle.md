@@ -2,12 +2,13 @@
 status: canonical
 owner: fitflow-ai
 type: workflow
-updated: 2026-08-24
+updated: 2026-08-25
 related:
-  - "[[operational-architecture]]"
-  - "[[context-strategy]]"
+  - "[[architecture/operational-architecture]]"
+  - "[[architecture/context-strategy]]"
   - "[[current-state]]"
   - "[[implementation-roadmap]]"
+  - "[[decisions/ADR-001-document-authority-and-layout]]"
 ---
 
 # Task Lifecycle
@@ -25,7 +26,7 @@ Task administration is deterministic whenever possible.
 Semantic work belongs to the appropriate reasoning role.
 Mechanical state transitions, Git operations, and provider updates belong to Task Lifecycle.
 
-## 3. Lifecycle
+## 3. Lifecycle — Secuencia Canónica
 
 ```text
 DISCOVERED
@@ -40,11 +41,13 @@ VALIDATED
     |
 PENDING_ACCEPTANCE
     |
-Developer gate
-    |
-ACCEPTED
+Developer gate (ACCEPTED)
     |
 INTEGRATING
+    |
+integración verificada
+    |
+DOC_SYNC / documentación sincronizada
     |
 DONE
     |
@@ -53,7 +56,26 @@ CLEANUP
 
 A concrete implementation may use provider-specific status names, but it must preserve the semantic meaning of these transitions.
 
-## 4. Responsibility split
+## 4. Dimensiones de Estado Independientes (por Task)
+
+Cada Task canónica lleva **cinco dimensiones ortogonales** — no un solo enum colapsado:
+
+| Dimensión | Valores Permitidos | Notas |
+|---|---|---|
+| `validation` | `PASS` \| `FAIL` \| `UNAVAILABLE` \| `NOT_RUN` | Evidencia determinista; `UNAVAILABLE` ≠ `PASS`. Herramienta no disponible no se reporta como PASS. |
+| `review_verdict` | `ACCEPT` \| `ACCEPT_WITH_NON_BLOCKING_FINDINGS` \| `CHANGES_REQUIRED` \| *(ausente / no emitido antes de review)* | **No inventar `PENDING`**. Antes del review, esta dimensión puede no existir / estar ausente. |
+| `developer_acceptance` | `PENDING` \| `ACCEPTED` \| `REJECTED` | Autoridad terminal; **no se infiere** de `validation PASS` ni de `review_verdict ACCEPT`. |
+| `integration` | `NOT_INTEGRATED` \| `INTEGRATED` (siempre con `target` y `sha` cuando `INTEGRATED`) | Gestionado por Task Lifecycle. |
+| `lifecycle_status` | `DISCOVERED` \| `READY` \| `STARTED` \| `WORKING` \| `VALIDATED` \| `PENDING_ACCEPTANCE` \| `ACCEPTED` \| `INTEGRATING` \| `DOC_SYNC` \| `DONE` \| `CLEANUP` | Secuencia canónica arriba. `DONE` solo tras: `validation PASS` + `review_verdict != CHANGES_REQUIRED` + `developer_acceptance ACCEPTED` + `integration INTEGRATED` + `DOC_SYNC` completado. |
+
+### Reglas Clave de Dimensiones
+
+- **`review_verdict` puede estar ausente** antes de que se emita el review; no se inventa un valor `PENDING`.
+- **`developer_acceptance` no se infiere** de `validation PASS` ni de `review_verdict ACCEPT`.
+- **`merge` (git) no prueba aceptación**; **`reviewer ACCEPT` no hace `DONE`**; **aceptación sin integración no hace `DONE`**.
+- **`DONE` requiere** las 5 dimensiones alineadas: validación PASS, `review_verdict != CHANGES_REQUIRED`, aceptación Developer explícita, integración verificada (INTEGRATED), documentación sincronizada.
+
+## 5. Responsibility Split
 
 ### Deterministic Task Lifecycle
 
@@ -105,7 +127,7 @@ Owns:
 - exceptional overrides;
 - rejection or acceptance of work before integration when a gate is required.
 
-## 5. Worktree policy
+## 6. Worktree Policy
 
 A write task owns one task-scoped Git worktree per repository it writes.
 
@@ -117,7 +139,7 @@ A multi-repo task may use paired worktrees, one in each repository, correlated b
 
 An Orca Folder Workspace may be used for read/context coordination across repositories but does not replace the worktrees.
 
-## 6. Task start contract
+## 7. Task Start Contract
 
 Conceptual input:
 
@@ -141,7 +163,7 @@ provider_state: STARTED
 
 Project/repository/root resolution must use the portable infrastructure defined by the Project Profile and related contracts. Task Lifecycle must not hardcode workstation-specific sibling paths.
 
-## 7. Work contract
+## 8. Work Contract
 
 The Coder receives:
 - task content;
@@ -153,7 +175,7 @@ The Coder receives:
 
 The Coder should not be required to reconstruct workspace topology or planning-provider state.
 
-## 8. Validation contract
+## 9. Validation Contract
 
 Validation evidence must distinguish:
 - `PASS`;
@@ -165,7 +187,7 @@ An unavailable tool or dependency must not be reported as PASS.
 
 Task-specific deterministic validation should be executed before acceptance when feasible.
 
-## 9. Acceptance gate
+## 10. Acceptance Gate
 
 `PENDING_ACCEPTANCE` means implementation and available validation are complete but integration is not yet authorized.
 
@@ -177,7 +199,7 @@ The Developer may:
 
 No automatic merge is implied by Coder completion.
 
-## 10. Integration contract
+## 11. Integration Contract
 
 After acceptance, deterministic operations may perform:
 
@@ -191,20 +213,17 @@ verify expected task/worktree
 -> update Project state
 ```
 
-### 10.1 Active integration baseline
+### 11.1 Active Integration Baseline
 
-`tooling` is the active integration baseline. Feature branches start from
-`tooling` and return to `tooling` through Pull Requests using task-scoped
-worktrees.
+`tooling` is the active integration baseline. Feature branches start from `tooling` and return to `tooling` through Pull Requests using task-scoped worktrees.
 
-`main` is not a daily integration branch. It receives accepted milestones only
-through deliberate `tooling` to `main` Pull Requests merged with merge commits.
+`main` is not a daily integration branch. It receives accepted milestones only through deliberate `tooling` to `main` Pull Requests merged with merge commits.
 
 Commit messages are written in Spanish.
 
 Task Lifecycle must not silently force-merge unrelated histories or bypass branch protections.
 
-## 11. Cleanup contract
+## 12. Cleanup Contract
 
 Cleanup may remove:
 - task-scoped worktree;
@@ -220,7 +239,7 @@ Cleanup must not delete:
 
 Derived-tool cleanup belongs to the adapter that owns the derived state.
 
-## 12. GitHub integration
+## 13. GitHub Integration
 
 GitHub is the current planning/integration provider.
 
@@ -235,7 +254,7 @@ An LLM or MCP agent is not required for mechanical GitHub operations that can be
 
 If a future provider or LLM+MCP implementation replaces part of this workflow, it must preserve the same Task Lifecycle contract.
 
-## 13. Semantic transformation
+## 14. Semantic Transformation
 
 A model may be used when unstructured input must be transformed semantically, for example:
 - draft task title;
@@ -246,7 +265,7 @@ Model output must be validated against a deterministic schema before provider wr
 
 The model does not gain ownership of Task Lifecycle by performing this transformation.
 
-## 14. Observability
+## 15. Observability
 
 Each lifecycle run should eventually expose enough structured evidence to reconstruct:
 - task id;
@@ -262,10 +281,32 @@ Each lifecycle run should eventually expose enough structured evidence to recons
 
 The exact persistence mechanism is an implementation concern.
 
-## 15. Implementation status
+## 16. Implementation Status
 
 This document defines the canonical logical lifecycle.
 
 Automation of the lifecycle is planned and should be implemented only after the portable project/root contracts are available.
 
 The implementation should remain small and use existing Git, GitHub, and workspace capabilities rather than replacing them.
+
+## 17. Clasificación de Dirty State
+
+Tres categorías mutuamente excluyentes para cambios en el worktree:
+
+| Categoría | Definición | Acción |
+|---|---|---|
+| `task_dirty` | Cambios **deliberados dentro del scope** de la task actual. | Commitear tras acceptance gate + validación. |
+| `ambient_dirty` | Cambios **automáticos de OpenCode/Orca/tooling**. Fuera de scope. **No commitear automáticamente**; requieren decisión explícita del Developer si deben integrarse. | No leer causa, no editar, no restaurar, no incluir en scope/evidencia. |
+| `unexpected_dirty` | Cambios **desconocidos en producto/contratos/otro owner**. | Investigar; no commitear hasta resolver. |
+
+### Archivos `ambient_dirty` Conocidos (MVP)
+
+- `.opencode/package.json`
+- `.opencode/package-lock.json`
+
+Estos archivos son conocidos como `ambient_dirty` durante el MVP. No son causados por la task activa, no deben leerse como causa, no deben editarse, no deben restaurarse, y **no se incluyen en scope/evidencia** de la task. No se commitean automáticamente por el Task Cycle.
+
+## 18. Referencias Cross-Repo y Source-Material
+
+- **Cross-repo boundary:** FitFlow-ai no asume ubicación física de otros repositorios. La resolución portable de roots pertenece al Project Profile (`FF_PROJECT_*`). No hay paths hardcodeados cross-repo en contratos ni código canónico.
+- **Source-material:** `docs/archive/source-material/` contiene material de diseño previo. Puede curarse/moverse bajo TASK documental explícita; sigue **no canónico** y **excluido por defecto**. No se indexa como source of truth.
