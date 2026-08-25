@@ -2,7 +2,7 @@
 document_id: FFAI-TASK-AGENT-002
 status: canonical
 machine_context: true
-version: 1.0
+version: 1.1
 updated: 2026-08-25
 owner: fitflow-ai
 type: workflow
@@ -23,13 +23,13 @@ ownership_keys:
   - "doc:docs/milestones/document-governance-v1/PLAN.md"
 validation: PASS
 review_verdict: ACCEPT_WITH_NON_BLOCKING_FINDINGS
-developer_acceptance: PENDING
-accepted_at: null
+developer_acceptance: ACCEPTED
+accepted_at: 2026-08-25
 integration:
   status: NOT_INTEGRATED
   target: tooling
   sha: null
-lifecycle_status: PENDING_ACCEPTANCE
+lifecycle_status: ACCEPTED
 related:
   - "[[tasks/FF-AI-AGENT-002/PLAN]]"
   - "[[work-packages/agent-profiles-mvp/PLAN]]"

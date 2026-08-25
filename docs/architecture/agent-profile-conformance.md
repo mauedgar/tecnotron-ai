@@ -1,8 +1,8 @@
 ---
 document_id: FFAI-ARCH-AGENT-PROFILE-CONFORMANCE
-status: draft
+status: canonical
 machine_context: true
-version: 0.1
+version: 1.0
 updated: 2026-08-25
 owner: fitflow-ai
 type: architecture
@@ -17,7 +17,7 @@ related:
 
 # Agent Profile Conformance
 
-> **Status**: Draft pendiente de review y aceptación Developer. Es una especificación documental; no es schema, registry, adapter ni perfil ejecutable.
+> **Status**: Canónico. Aceptado y promovido por decisión del Developer (2026-08-25). Es una especificación documental; no es schema, registry, adapter ni perfil ejecutable.
 
 ## Límites Normativos
 
