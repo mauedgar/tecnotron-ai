@@ -42,8 +42,8 @@ related:
 ### Fase 3: Actualizar 4 archivos existentes
 
 6. `docs/SOURCE_OF_TRUTH.md` — Añadir WP, TASK001 y ambos architecture docs; AGENT002 solo proposed en WP, sin link a task inexistente.
-7. `docs/current-state.md` — DOC001 done; Agent Profiles WP active, AGENT001 `ACCEPTED` docs-only pendiente integración, AGENT002 proposed/not created; explícitamente no profiles/registry/runtime capability.
-8. `docs/implementation-roadmap.md` — Sección follow-up con 001 `ACCEPTED` pendiente integración y 002 `PROPOSED`, gate serial.
+7. `docs/current-state.md` — DOC001 done; Agent Profiles WP active, AGENT001 `DONE`/`ACCEPTED`/`INTEGRATED`, AGENT002 proposed/not created; explícitamente no profiles/registry/runtime capability.
+8. `docs/implementation-roadmap.md` — Sección follow-up con 001 `DONE` y 002 `PROPOSED`, gate serial satisfecho para materializar su TASK/PLAN con Developer gate propio.
 9. `docs/milestones/document-governance-v1/PLAN.md` — Actualizar Follow-up: WP materialized active tras gate; link; statuses; no parte WP1–WP6.
 
 ### Fase 4: Validación determinista (comandos git)
@@ -110,4 +110,6 @@ Sí. Review semántico independiente requerido antes de Developer acceptance. El
 - Staged area: vacía.
 - Paths prohibidos: ninguno.
 - Review independiente: `ACCEPT_WITH_NON_BLOCKING_FINDINGS`; las dos aclaraciones no bloqueantes fueron aplicadas.
-- Developer gate: `ACCEPTED` el 2026-08-25; ambos architecture docs promovidos de `draft` a `canonical`; integración aún pendiente.
+- Developer gate: `ACCEPTED` el 2026-08-25; ambos architecture docs promovidos de `draft` a `canonical`.
+- Integración: PR #12, merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc` en `tooling`.
+- `DOC_SYNC`: completado por el cierre posterior a integración; `lifecycle_status: DONE`.

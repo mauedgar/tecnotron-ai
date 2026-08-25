@@ -2,7 +2,7 @@
 document_id: FFAI-TASK-AGENT-001
 status: canonical
 machine_context: true
-version: 1.2
+version: 1.3
 updated: 2026-08-25
 owner: fitflow-ai
 type: workflow
@@ -27,10 +27,11 @@ review_verdict: ACCEPT_WITH_NON_BLOCKING_FINDINGS
 developer_acceptance: ACCEPTED
 accepted_at: 2026-08-25
 integration:
-  status: NOT_INTEGRATED
+  status: INTEGRATED
   target: tooling
-  sha: null
-lifecycle_status: ACCEPTED
+  sha: 3d5d8b85a316233eae029963a3f5d14400fcd7fc
+  integrated_at: 2026-08-25
+lifecycle_status: DONE
 related:
   - "[[decisions/ADR-001-document-authority-and-layout]]"
   - "[[work-packages/agent-profiles-mvp/PLAN]]"
@@ -55,16 +56,17 @@ related:
 | `review_verdict` | ACCEPT_WITH_NON_BLOCKING_FINDINGS (dos aclaraciones no bloqueantes resueltas) |
 | `developer_acceptance` | ACCEPTED |
 | `accepted_at` | 2026-08-25 |
-| `integration.status` | NOT_INTEGRATED |
+| `integration.status` | INTEGRATED |
 | `integration.target` | tooling |
-| `integration.sha` | null |
-| `lifecycle_status` | ACCEPTED |
+| `integration.sha` | 3d5d8b85a316233eae029963a3f5d14400fcd7fc |
+| `integration.integrated_at` | 2026-08-25 |
+| `lifecycle_status` | DONE |
 
 ## Objetivo
 
 Producir **solo documentación**: contratos normativos para los 7 roles iniciales (`agent-role-contracts.md`) y una matriz de perfiles propuestos con tabla deferred (`agent-profile-matrix.md`). Ambos documentos fueron aceptados explícitamente por el Developer y promovidos de `draft` a `canonical` el 2026-08-25. Sin implementación, runtime, adapters, registros ejecutables, selección automática, ranking, fallback ni model policy.
 
-Implementación, validación determinista y review independiente completados. El Developer aceptó explícitamente la task y ambos entregables el 2026-08-25; la integración sigue `NOT_INTEGRATED` y no está `DONE`.
+Implementación, validación determinista y review independiente completados. El Developer aceptó explícitamente la task y ambos entregables el 2026-08-25. PR #12 integró la task en `tooling` mediante merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc`; este cierre completa `DOC_SYNC` y establece `lifecycle_status: DONE`.
 
 ## Ownership Keys (exactos, 9 paths)
 
@@ -95,7 +97,7 @@ Implementación, validación determinista y review independiente completados. El
 
 6. **Source provenance only**: `docs/archive/source-material/roles-and-context-governance-source-material.md` referenciado como provenance, no canónico.
 
-7. **SoT/current/roadmap/milestone updated**: índices y estado reflejan WP activo, AGENT001 `ACCEPTED` docs-only pendiente integración, AGENT002 proposed/no creado, sin perfiles/registry/runtime capability.
+7. **SoT/current/roadmap/milestone updated**: índices y estado reflejan AGENT001 `DONE`, `ACCEPTED` e `INTEGRATED`, AGENT002 proposed/no creado, sin perfiles/registry/runtime capability.
 
 8. **Scope exactly 5 new + 4 modified**: git diff confirma solo los 9 ownership keys; sin archivos extra.
 
@@ -127,3 +129,12 @@ No se crean archivos `RESULT.md` ni `REVIEW.md` en esta ejecución.
 - `Coder` → implementa los 9 archivos documentales.
 - `Reviewer` → review independiente read-only (fase posterior, no en esta ejecución).
 - `Doc Curator` → normalización formato/navegación/metadata (parte de implementación).
+
+## Cierre Task Lifecycle
+
+- `validation: PASS`
+- `review_verdict: ACCEPT_WITH_NON_BLOCKING_FINDINGS` (dos aclaraciones no bloqueantes resueltas)
+- `developer_acceptance: ACCEPTED` (`2026-08-25`)
+- `integration: INTEGRATED` en `tooling` mediante PR #12, merge SHA `3d5d8b85a316233eae029963a3f5d14400fcd7fc`
+- `DOC_SYNC`: completado por esta actualización de cierre
+- `lifecycle_status: DONE`
