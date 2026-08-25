@@ -2,7 +2,7 @@
 document_id: FFAI-PLAN-AGENT-002
 status: canonical
 machine_context: true
-version: 1.1
+version: 1.2
 updated: 2026-08-25
 task_ref: FFAI-TASK-AGENT-002
 work_package: agent-profiles-mvp
@@ -72,4 +72,6 @@ Sí. Review semántico independiente obligatorio antes de aceptación Developer.
 - Project Profile: `UNAVAILABLE`; no es required_missing y no se usó para afirmar capacidades.
 - Review independiente (re-ejecutado en HEAD con handoff incluido): `ACCEPT_WITH_NON_BLOCKING_FINDINGS`; AC1–AC12 PASS, sin findings bloqueantes.
 - Developer ruling (2026-08-25): `ACCEPTED`; inclusión autorizada del commit de handoff `a485430` (`docs/archive/prompt/FF-AI-AGENT-002/2026-08-25-start.md`) en el PR de integración.
-- Developer acceptance: `ACCEPTED`; el draft se promueve a `canonical` en esta ejecución. Integración y DOC_SYNC ocurren en ciclos posteriores; no declarar `DONE` antes.
+- Developer acceptance: `ACCEPTED`; el draft se promovió a `canonical` en esta ejecución.
+- Integración: PR #15, merge `6c1effd9c6cc45d2f802672a124efa4ff15f93f5` en `tooling`.
+- `DOC_SYNC`: completado por el cierre posterior a integración; `lifecycle_status: DONE`.

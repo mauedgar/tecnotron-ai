@@ -104,7 +104,7 @@ Tras la **aceptación e integración en `tooling` de los artefactos de fundació
 - **Diferidos post-MVP**: `coder_strong_a` y demás roles post-MVP marcados **DEFERRED**.
 - **Tasks**:
   - `FF-AI-AGENT-001`: Contratos y matriz de perfiles (docs-only) — **DONE / ACCEPTED / INTEGRATED**; PR #12, merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc`; `DOC_SYNC` completado.
-  - `FF-AI-AGENT-002`: Conformance documental de perfiles mínimos — **PENDING_ACCEPTANCE**; validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`, pendiente aceptación Developer/integración; **sin autorización OpenCode presente**.
+  - `FF-AI-AGENT-002`: Conformance documental de perfiles mínimos — **DONE / ACCEPTED / INTEGRATED**; PR #15, merge `6c1effd9c6cc45d2f802672a124efa4ff15f93f5`; `DOC_SYNC` completado.
 
 ## Referencias
 
