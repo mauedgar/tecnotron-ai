@@ -15,6 +15,9 @@ related:
   - "[[work-packages/agent-profiles-mvp/PLAN]]"
   - "[[tasks/FF-AI-AGENT-001/TASK]]"
   - "[[tasks/FF-AI-AGENT-001/PLAN]]"
+  - "[[tasks/FF-AI-AGENT-002/TASK]]"
+  - "[[tasks/FF-AI-AGENT-002/PLAN]]"
+  - "[[architecture/agent-profile-conformance]]"
   - "[[architecture/agent-role-contracts]]"
   - "[[architecture/agent-profile-matrix]]"
 ---
@@ -101,7 +104,7 @@ Tras la **aceptación e integración en `tooling` de los artefactos de fundació
 - **Diferidos post-MVP**: `coder_strong_a` y demás roles post-MVP marcados **DEFERRED**.
 - **Tasks**:
   - `FF-AI-AGENT-001`: Contratos y matriz de perfiles (docs-only) — **DONE / ACCEPTED / INTEGRATED**; PR #12, merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc`; `DOC_SYNC` completado.
-  - `FF-AI-AGENT-002`: Perfiles mínimos y conformance — **PROPOSED / not created**; prerrequisito serial AGENT001 cumplido; aún requiere TASK/PLAN, ownership explícito y Developer gate propio; **sin autorización OpenCode presente**.
+  - `FF-AI-AGENT-002`: Conformance documental de perfiles mínimos — **PENDING_ACCEPTANCE**; validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`, pendiente aceptación Developer/integración; **sin autorización OpenCode presente**.
 
 ## Referencias
 

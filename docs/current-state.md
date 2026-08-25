@@ -76,7 +76,7 @@ desarrollador. No se modifican sin ownership de FitFlow.
 
 - **WP activo**: `docs/work-packages/agent-profiles-mvp/PLAN.md` (canonical, follow-up post-fundación, no parte WP1–WP6).
 - **`FF-AI-AGENT-001`**: `DONE` / `ACCEPTED` / `INTEGRATED` — contratos de 7 roles + matriz perfiles, solo documentación; validación PASS, review completado y aceptación Developer explícita. Integrada en `tooling` por PR #12, merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc`; `DOC_SYNC` completado. Artefactos canónicos: `agent-role-contracts.md`, `agent-profile-matrix.md`.
-- **`FF-AI-AGENT-002`**: `PROPOSED` / **not created** — perfiles mínimos y conformance. Prerrequisito serial AGENT001 cumplido; aún requiere TASK/PLAN, ownership explícito y Developer gate propio. Sin autorización OpenCode presente.
+- **`FF-AI-AGENT-002`**: `PENDING_ACCEPTANCE` — TASK/PLAN materializados con ocho ownership keys; conformance documental de perfiles mínimos en draft; validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`, pendiente aceptación Developer e integración. Sin autorización OpenCode; discovery/invocation runtime no verificados.
 - **Perfiles/Registry/Runtime capability**: **Cero creados**. Esta fase solo define contratos y matriz documentales. No ejecutables, no selection, no ranking, no fallback, no model policy.
 
 ## Plataforma operativa
