@@ -2,7 +2,7 @@
 document_id: FFAI-TASK-DOC-001
 status: canonical
 machine_context: true
-version: 1.3
+version: 1.4
 updated: 2026-08-25
 owner: fitflow-ai
 type: workflow
@@ -32,10 +32,11 @@ review_verdict: ACCEPT_WITH_NON_BLOCKING_FINDINGS
 developer_acceptance: ACCEPTED
 accepted_at: 2026-08-25
 integration:
-  status: NOT_INTEGRATED
+  status: INTEGRATED
   target: tooling
-  sha: null
-lifecycle_status: ACCEPTED
+  sha: 51821e21be9a63d7aabff9598114a75850b20792
+  integrated_at: 2026-08-25
+lifecycle_status: DONE
 related:
   - "[[decisions/ADR-001-document-authority-and-layout]]"
   - "[[milestones/document-governance-v1/PLAN]]"
@@ -55,7 +56,7 @@ related:
 | Campo | Valor |
 |---|---|
 | Task ID | `FF-AI-DOC-001` |
-| Estado | `ACCEPTED` |
+| Estado | `DONE` |
 | Baseline principal (main) | `main@41088a413d06ed1d58d63d92320e38d4b44b86ea` |
 | Task base (tooling) | `tooling@c88c17406f603292f0496188fc74c7cd31cc9e0a` |
 | Integration target | `tooling` |
@@ -70,10 +71,10 @@ related:
 | **review_verdict** | `ACCEPT_WITH_NON_BLOCKING_FINDINGS` (review independiente; findings F1-F11 resueltos) |
 | **developer_acceptance** | `ACCEPTED` |
 | **accepted_at** | `2026-08-25` |
-| **integration** | `{status: NOT_INTEGRATED, target: tooling, sha: null}` |
-| **lifecycle_status** | `ACCEPTED` |
+| **integration** | `{status: INTEGRATED, target: tooling, sha: 51821e21be9a63d7aabff9598114a75850b20792, integrated_at: 2026-08-25}` |
+| **lifecycle_status** | `DONE` |
 
-Validación y review completados; el Developer aceptó explícitamente la task el 2026-08-25. Aún no está integrada ni `DONE`.
+Validación y review completados; el Developer aceptó explícitamente la task el 2026-08-25. La fundación se integró en `tooling` mediante PR #10 y este cierre completa `DOC_SYNC`.
 
 La futura materialización machine-readable valida contra `fitflow-task/v2` y conserva estos ownership keys (solo paths permitidos en esta ejecución — 16 archivos):
 
@@ -130,7 +131,7 @@ Ejecutar **exclusivamente** la fundación aprobada y Wave 1 documental:
 | **AC-7** | `SOURCE_OF_TRUTH.md` actualizado: `updated: 2026-08-25`, sección precedencia exacta + regla contradicción, indexa **9 entradas exactas** (ADR-001, Milestone, 6 WPs, Task DOC-001) en categorías correctas; paths arquitectura en `docs/architecture/`, guía en `docs/guides/system-guide.md`, `indexing-pipeline.md` en Reference/Non-Canonical | Lectura directa; tabla de autoridad incluye 9 entradas (ADR + Milestone + 6 WPs + Task); paths movidos correctamente referenciados |
 | **AC-8** | **Sin cambios productivos/contratos/FitFlow**: `git status --short` clasifica 16 archivos task_dirty (6 modified + 10 untracked) + 2 staged ambient_dirty (`.opencode/package*.json`). `.opencode/package*.json` y `opencode.json` **no** aparecen en unstaged. | `git diff --name-only` → 6 modified; `git ls-files --others --exclude-standard` → 10 untracked; `git diff --cached --name-only` → 2 ambient_dirty |
 | **AC-9** | Validación documental: `git diff --check` PASS (sin whitespace errors). | Ejecución comando |
-| **AC-10** | Tras validación/review la task pasó por `PENDING_ACCEPTANCE`; el ruling explícito del Developer la promueve a `ACCEPTED`. No promover a `DONE` sin integración y `DOC_SYNC`. | Frontmatter TASK.md |
+| **AC-10** | La task recorrió `PENDING_ACCEPTANCE` → `ACCEPTED` → `INTEGRATING` → `DOC_SYNC` → `DONE`; integración verificada en PR #10 / merge SHA `51821e21be9a63d7aabff9598114a75850b20792`. | Frontmatter TASK.md y evidencia GitHub |
 | **AC-11** | ADR-001 §9 materializa separaciones exactas: role contract vs manual OpenCode profile vs runtime-selectable role vs model binding vs skill/tool binding vs task-specific permissions; contexto minimum sufficient/verifiable; capacidades contratos estables; bindings reemplazables; asignaciones LLM observaciones no ranking; no fallback automático; catálogo inicial (planner_ai, architect, explorer, coder_a, coder_b, reviewer, doc_curator) y deferred (coder_strong_a post-MVP); Future WP Agent Profiles MVP gated post-fundación; tasks propuestas FF-AI-AGENT-001/002 solo gated; no perfiles/registries/fallback/ranking en esta fase; task 002 sin autorización para modificar OpenCode. | Lectura directa ADR-001 §9; Milestone Follow-up section; no archivos FF-AI-AGENT-* ni perfiles creados. |
 
 ## Short-circuit
@@ -184,3 +185,13 @@ La implementación se detiene y escala al Developer inmediatamente si:
 - Lifecycle: `docs/task-lifecycle.md`
 - SoT: `docs/SOURCE_OF_TRUTH.md`
 - Cierre 009: `docs/tasks/FF-AI-VNEXT-009/{TASK.md,RESULT.md}`, `docs/current-state.md`, `docs/implementation-roadmap.md`
+
+## Cierre Task Lifecycle
+
+- `validation: PASS`
+- `review_verdict: ACCEPT_WITH_NON_BLOCKING_FINDINGS` (findings resueltos; re-review final `ACCEPT`)
+- `developer_acceptance: ACCEPTED` (`2026-08-25`)
+- `integration: INTEGRATED` en `tooling` mediante PR #10, merge SHA `51821e21be9a63d7aabff9598114a75850b20792`
+- `DOC_SYNC`: completado por esta actualización de cierre
+- `lifecycle_status: DONE`
+- `.opencode/package.json` y `.opencode/package-lock.json`: `ambient_dirty`, excluidos de ambos commits de la task

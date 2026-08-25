@@ -96,7 +96,7 @@ related:
 ## Task Asociada
 
 - `FF-AI-DOC-001` (`docs/tasks/FF-AI-DOC-001/TASK.md`, `PLAN.md`)
-- `lifecycle_status: ACCEPTED` (Developer ruling 2026-08-25; pendiente integración)
+- `lifecycle_status: DONE` (Developer ruling 2026-08-25; PR #10 integrado en `tooling`, merge `51821e21be9a63d7aabff9598114a75850b20792`; `DOC_SYNC` completado)
 - `wave: 1`
 - `work_package: WP1-authority-reconciliation`
 - `milestone: document-governance-v1`
@@ -110,4 +110,4 @@ related:
   4. `SOURCE_OF_TRUTH.md` con precedencia e índice completo.
   5. Task `FF-AI-DOC-001` TASK/PLAN canónicos.
   6. Validación documental PASS (`git diff --check`, sin cambios fuera de lista).
-- Solo tras aceptación Developer → `lifecycle_status: PENDING_ACCEPTANCE` → `ACCEPTED` → `INTEGRATING` → `DONE` (gestión Task Lifecycle).
+- Solo tras aceptación Developer → `lifecycle_status: PENDING_ACCEPTANCE` → `ACCEPTED` → `INTEGRATING` → `DOC_SYNC` → `DONE` (gestión Task Lifecycle).
