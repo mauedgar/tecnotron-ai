@@ -33,7 +33,7 @@ Establecer la autoridad documental, precedencia, layout objetivo, jerarquía de 
 
 | WP | Nombre | Wave | Task asociada | Estado inicial |
 |---|---|---|---|---|
-| **WP1** | Authority Reconciliation | 1 | `FF-AI-DOC-001` | `ACCEPTED` (pendiente integración) |
+| **WP1** | Authority Reconciliation | 1 | `FF-AI-DOC-001` | `DONE` (PR #10, tooling@51821e2) |
 | **WP2** | Document Topology | 2 | `FF-AI-DOC-002` | `PLANNED` |
 | **WP3** | Planning Hierarchy | 2 | `FF-AI-DOC-003` | `PLANNED` |
 | **WP4** | System Guide | 3 | `FF-AI-DOC-004` | `PLANNED` |
@@ -52,7 +52,7 @@ Establecer la autoridad documental, precedencia, layout objetivo, jerarquía de 
 
 1. ADR-001 canónico, aceptado por Developer, indexado en SoT.
 2. 6 WP Plans canónicos, aceptados por Developer, indexados en SoT.
-3. Task `FF-AI-DOC-001` (TASK.md + PLAN.md) canónica, `lifecycle_status: ACCEPTED` tras ruling explícito del Developer, indexada en SoT y pendiente integración.
+3. Task `FF-AI-DOC-001` (TASK.md + PLAN.md) canónica, `lifecycle_status: DONE` tras aceptación, integración en `tooling` (PR #10, merge `51821e2`) y `DOC_SYNC`, indexada en SoT.
 4. `task-lifecycle.md` actualizado con 5 dimensiones, secuencia canónica, clasificación `ambient_dirty`, y los dos archivos conocidos MVP.
 5. Cierre documental append-only de `FF-AI-VNEXT-009` registrado en TASK, RESULT, current-state, roadmap (sin reinterpretar evidencia técnica ni editar REVIEW).
 6. `SOURCE_OF_TRUTH.md` actualizado con precedencia exacta, ADR, Milestone, 6 WPs, Task DOC-001.

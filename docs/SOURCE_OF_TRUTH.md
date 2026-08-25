@@ -63,7 +63,7 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 | [WP4: System Guide](work-packages/system-guide/PLAN.md) | Guía futura `docs/guides/system-guide.md` explicativo, no policy. Task FF-AI-DOC-004 Wave3. |
 | [WP5: Research Archive](work-packages/research-archive/PLAN.md) | Consolidación archive/research con READMEs; policy indexación; reclasificación indexing-pipeline. Task FF-AI-DOC-005 Wave3. |
 | [WP6: Document Conformance](work-packages/document-conformance/PLAN.md) | Validación conformancia completa corpus canónico (layout docs/architecture, docs/guides). Task FF-AI-DOC-006 Wave4 (serial tras WP1-5). |
-| [Task FF-AI-DOC-001](tasks/FF-AI-DOC-001/TASK.md) | Fundación + Wave1 + cierre 009. Milestone document-governance-v1, WP1, Wave1, ACCEPTED; pendiente integración en tooling. |
+| [Task FF-AI-DOC-001](tasks/FF-AI-DOC-001/TASK.md) | Fundación + Wave1 + cierre 009. WP1 `DONE`; integrada en `tooling` por PR #10, merge `51821e21be9a63d7aabff9598114a75850b20792`; `DOC_SYNC` completado. |
 | [Task FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Explorer and Agent Runtime conformance. |
 | [Task FF-AI-VNEXT-009](tasks/FF-AI-VNEXT-009/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Agent MVP composition root and documentation sync. |
 
