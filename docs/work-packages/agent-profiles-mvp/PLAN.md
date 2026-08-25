@@ -48,13 +48,13 @@ Cumplido por `FF-AI-DOC-001` (foundation artifacts: Developer-accepted + integra
 
 **Scope exacto**: 5 archivos nuevos + 4 archivos modificados (ver ownership keys en TASK).
 
-### Wave 2 — FF-AI-AGENT-002 (PENDING_ACCEPTANCE)
+### Wave 2 — FF-AI-AGENT-002 (DONE / ACCEPTED / INTEGRATED)
 
-**Estado**: TASK/PLAN materializados; conformance documental en draft, validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`, pendiente aceptación Developer/integración; sin autorización OpenCode presente.
+**Estado**: TASK/PLAN materializados; conformance documental canónica; validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`. Integrada en `tooling` por PR #15, merge `6c1effd9c6cc45d2f802672a124efa4ff15f93f5`; `DOC_SYNC` completado.
 
 **Objetivo**: Conformance documental de perfiles mínimos (adapter descriptors, permisos efectivos, verificación descubrimiento/invocación, read-only/ownership, skills permitidas/denegadas, profundidad delegación, formato handoffs).
 
-**Gate serial de AGENT001**: CUMPLIDO. AGENT002 mantiene Developer gate propio antes de promoción canónica.
+**Gate serial de AGENT001**: CUMPLIDO. AGENT002 completó su Developer gate propio (ACCEPTED 2026-08-25) y está `DONE` / `INTEGRATED`.
 
 **Scope Wave 2**: 3 archivos nuevos + 5 modificados, exactos en TASK002. No crea perfiles/adapters ejecutables.
 

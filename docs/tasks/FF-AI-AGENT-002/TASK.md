@@ -2,7 +2,7 @@
 document_id: FFAI-TASK-AGENT-002
 status: canonical
 machine_context: true
-version: 1.1
+version: 1.2
 updated: 2026-08-25
 owner: fitflow-ai
 type: workflow
@@ -26,10 +26,11 @@ review_verdict: ACCEPT_WITH_NON_BLOCKING_FINDINGS
 developer_acceptance: ACCEPTED
 accepted_at: 2026-08-25
 integration:
-  status: NOT_INTEGRATED
+  status: INTEGRATED
   target: tooling
-  sha: null
-lifecycle_status: ACCEPTED
+  sha: 6c1effd9c6cc45d2f802672a124efa4ff15f93f5
+  integrated_at: 2026-08-25
+lifecycle_status: DONE
 related:
   - "[[tasks/FF-AI-AGENT-002/PLAN]]"
   - "[[work-packages/agent-profiles-mvp/PLAN]]"
@@ -96,3 +97,12 @@ Esta task no crea perfiles OpenCode ni adapters ejecutables, no modifica registr
 - `Doc Curator`: metadata, navegación y consistencia dentro del mismo scope.
 - `Reviewer`: revisión independiente read-only; findings y veredicto, sin correcciones.
 - `Developer`: única autoridad de aceptación y promoción canónica del entregable draft.
+
+## Cierre Task Lifecycle
+
+- `validation: PASS`
+- `review_verdict: ACCEPT_WITH_NON_BLOCKING_FINDINGS` (AC1–AC12 PASS; findings restantes LOW/INFO no bloqueantes)
+- `developer_acceptance: ACCEPTED` (`2026-08-25`)
+- `integration: INTEGRATED` en `tooling` mediante PR #15, merge SHA `6c1effd9c6cc45d2f802672a124efa4ff15f93f5`
+- `DOC_SYNC`: completado por esta actualización de cierre
+- `lifecycle_status: DONE`
