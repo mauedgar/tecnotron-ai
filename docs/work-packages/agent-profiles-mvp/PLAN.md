@@ -33,11 +33,11 @@ Cumplido por `FF-AI-DOC-001` (foundation artifacts: Developer-accepted + integra
 
 ## Waves
 
-### Wave 1 — FF-AI-AGENT-001 (ACCEPTED, pending integration)
+### Wave 1 — FF-AI-AGENT-001 (DONE / ACCEPTED / INTEGRATED)
 
 **Objetivo**: Contratos de roles normativos (`agent-role-contracts.md`) y matriz de perfiles (`agent-profile-matrix.md`) — **solo documentación**.
 
-**Task asociada**: `FF-AI-AGENT-001` (medium criticality, P1, ACCEPTED; pending integration)
+**Task asociada**: `FF-AI-AGENT-001` (medium criticality, P1, DONE; ACCEPTED e INTEGRATED en `tooling` por PR #12, merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc`)
 
 **Entregables**:
 - `docs/architecture/agent-role-contracts.md` — 7 contratos de roles normativos (canonical; aceptado por Developer el 2026-08-25)
@@ -51,7 +51,7 @@ Cumplido por `FF-AI-DOC-001` (foundation artifacts: Developer-accepted + integra
 
 **Objetivo futuro**: Perfiles mínimos y conformance (adapters, permisos efectivos, verificación descubrimiento/invocación, read-only/ownership, skills permitidas/denegadas, profundidad delegación, formato handoffs).
 
-**Gate**: Serial tras `FF-AI-AGENT-001` `DONE` + `ACCEPTED` + `INTEGRATED`.
+**Gate serial de AGENT001**: CUMPLIDO. La materialización de AGENT002 aún requiere nuevo TASK/PLAN con ownership explícito y Developer gate propio.
 
 **Nota**: Requiere nuevo TASK/PLAN con ownership explícito y Developer gate propio.
 
@@ -123,7 +123,7 @@ Cumplido por `FF-AI-DOC-001` (foundation artifacts: Developer-accepted + integra
 ## Gates
 
 - **Gate Wave 1**: CUMPLIDO; Developer aceptó `agent-role-contracts.md` y `agent-profile-matrix.md` el 2026-08-25 y ambos documentos fueron promovidos de `draft` a `canonical`.
-- **Gate Wave 2**: Requiere `FF-AI-AGENT-001` `DONE` + `ACCEPTED` + `INTEGRATED`; ownership explícito; Developer gate propio.
+- **Gate Wave 2**: Prerrequisito AGENT001 `DONE` + `ACCEPTED` + `INTEGRATED` CUMPLIDO; aún requiere ownership explícito y Developer gate propio.
 
 ## Stop Conditions (Wave 1)
 

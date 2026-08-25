@@ -100,8 +100,8 @@ Tras la **aceptación e integración en `tooling` de los artefactos de fundació
 - **Perfiles iniciales** (según ADR-001 §9.5): `planner_ai`, `architect`, `explorer`, `coder_a`, `coder_b`, `reviewer`, `doc_curator`.
 - **Diferidos post-MVP**: `coder_strong_a` y demás roles post-MVP marcados **DEFERRED**.
 - **Tasks**:
-  - `FF-AI-AGENT-001`: Contratos y matriz de perfiles (docs-only) — **ACCEPTED**; entregables canonical, pendiente integración en `tooling`.
-  - `FF-AI-AGENT-002`: Perfiles mínimos y conformance — **PROPOSED / not created**; gate serial tras AGENT001 `DONE` + `ACCEPTED` + `INTEGRATED`; ownership explícito; Developer gate propio; **sin autorización OpenCode presente**.
+  - `FF-AI-AGENT-001`: Contratos y matriz de perfiles (docs-only) — **DONE / ACCEPTED / INTEGRATED**; PR #12, merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc`; `DOC_SYNC` completado.
+  - `FF-AI-AGENT-002`: Perfiles mínimos y conformance — **PROPOSED / not created**; prerrequisito serial AGENT001 cumplido; aún requiere TASK/PLAN, ownership explícito y Developer gate propio; **sin autorización OpenCode presente**.
 
 ## Referencias
 

@@ -111,8 +111,8 @@ Habilitado tras **aceptación e integración en `tooling` de los artefactos de f
 
 | Task | Entregable | Estado | Gate |
 |---|---|---|---|
-| `FF-AI-AGENT-001` | Contratos 7 roles + matriz perfiles (docs-only) | `ACCEPTED` | Validación/review completados; Developer acceptance explícita; entregables canonical; pendiente integración en `tooling` |
-| `FF-AI-AGENT-002` | Perfiles mínimos y conformance (adapters, permisos, verificación) | `PROPOSED` | **Serial** tras `FF-AI-AGENT-001` `DONE` + `ACCEPTED` + `INTEGRATED`; ownership explícito; Developer gate propio; **sin autorización OpenCode presente** |
+| `FF-AI-AGENT-001` | Contratos 7 roles + matriz perfiles (docs-only) | `DONE` | `ACCEPTED` e `INTEGRATED` en `tooling` por PR #12, merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc`; `DOC_SYNC` completado |
+| `FF-AI-AGENT-002` | Perfiles mínimos y conformance (adapters, permisos, verificación) | `PROPOSED` | Prerrequisito serial AGENT001 cumplido; requiere TASK/PLAN, ownership explícito y Developer gate propio; **sin autorización OpenCode presente** |
 
 **Scope AGENT001**: 5 nuevos + 4 modificados = 9 paths exactos (ver TASK ownership keys). Solo documentación. Sin implementación, runtime, adapters, registros ejecutables, selección automática, ranking, fallback, model policy.
 
