@@ -72,6 +72,13 @@ desarrollador. No se modifican sin ownership de FitFlow.
   Estado posterior: integracion en `tooling` completada; promocion y reconciliacion
   registradas como evidencia secundaria. Cleanup no confirmado y separado.
 
+## Work Package Agent Profiles MVP (docs-only)
+
+- **WP activo**: `docs/work-packages/agent-profiles-mvp/PLAN.md` (canonical, follow-up post-fundación, no parte WP1–WP6).
+- **`FF-AI-AGENT-001`**: `ACCEPTED` — contratos de 7 roles + matriz perfiles, solo documentación; validación PASS, review completado y aceptación Developer explícita. Artefactos canónicos: `agent-role-contracts.md`, `agent-profile-matrix.md`. Pendiente integración en `tooling`.
+- **`FF-AI-AGENT-002`**: `PROPOSED` / **not created** — perfiles mínimos y conformance. Requiere gate serial tras AGENT001 `DONE` + `ACCEPTED` + `INTEGRATED`. Sin autorización OpenCode presente.
+- **Perfiles/Registry/Runtime capability**: **Cero creados**. Esta fase solo define contratos y matriz documentales. No ejecutables, no selection, no ranking, no fallback, no model policy.
+
 ## Plataforma operativa
 
 - Orca controla workspace, sesion, restore e hibernation.

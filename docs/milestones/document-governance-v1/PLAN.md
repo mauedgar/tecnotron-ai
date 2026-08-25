@@ -12,6 +12,11 @@ related:
   - "[[task-lifecycle]]"
   - "[[implementation-roadmap]]"
   - "[[current-state]]"
+  - "[[work-packages/agent-profiles-mvp/PLAN]]"
+  - "[[tasks/FF-AI-AGENT-001/TASK]]"
+  - "[[tasks/FF-AI-AGENT-001/PLAN]]"
+  - "[[architecture/agent-role-contracts]]"
+  - "[[architecture/agent-profile-matrix]]"
 ---
 
 # Milestone Plan: document-governance-v1
@@ -84,19 +89,19 @@ Establecer la autoridad documental, precedencia, layout objetivo, jerarquía de 
 - **Gate de Milestone:** Developer acepta el milestone completo tras validación de que **todos los WPs 1–6** han pasado su gate individual y la documentación de cierre de 009 es correcta. El criterio de fundación/Wave 1 (WP1) es distinto del criterio de cierre total del milestone (WP1–WP6).
 - **Paths guide/layout exactos:** `docs/guides/system-guide.md` (WP4), movimientos WP2 según ADR-001 §3.
 
-## Follow-up gated post-fundación
+## Follow-up gated post-fundación (Materialized)
 
-Tras la **aceptación e integración en `tooling` de los artefactos de fundación de `FF-AI-DOC-001`** (ADR-001, Milestone, 6 WP Plans, TASK/PLAN DOC001, SoT actualizado, task-lifecycle actualizado, cierre 009), se habilita el **Future Work Package `Agent Profiles MVP`** con gate separado:
+Tras la **aceptación e integración en `tooling` de los artefactos de fundación de `FF-AI-DOC-001`** (ADR-001, Milestone, 6 WP Plans, TASK/PLAN DOC001, SoT actualizado, task-lifecycle actualizado, cierre 009), se habilita el **Work Package `Agent Profiles MVP`** (materialized, active) con gate separado:
 
+- **WP Plan**: `docs/work-packages/agent-profiles-mvp/PLAN.md` (canonical, follow-up post-fundación, **no parte WP1–WP6**).
 - **Gate exacto**: solo después de que los artefactos de fundación de `FF-AI-DOC-001` estén **Developer-accepted y integrados en `tooling`**. Los 6 WP Plans son artefactos creados por DOC001; la **ejecución/completación/integración de WP2–WP6 NO es prerrequisito**. Evitar implicar que el milestone completo deba cerrarse.
-- **Owner/gate**: Requiere ownership explícito y Developer gate propio; **no** es WP1–WP6 ni se materializa antes de integración de foundation.
+- **Owner/gate**: Requiere ownership explícito y Developer gate propio; **no** es WP1–WP6.
 - **No fallback/ranking/registries ejecutables**: Esta fase solo define contratos y matriz; no implementa selección automática ni ranking de modelos.
 - **Perfiles iniciales** (según ADR-001 §9.5): `planner_ai`, `architect`, `explorer`, `coder_a`, `coder_b`, `reviewer`, `doc_curator`.
 - **Diferidos post-MVP**: `coder_strong_a` y demás roles post-MVP marcados **DEFERRED**.
-- **Tasks propuestas** (requieren nuevo TASK/gate; no se crean ahora):
-  - `FF-AI-AGENT-001`: Contratos y matriz de perfiles.
-  - `FF-AI-AGENT-002`: Perfiles mínimos y conformance.
-- La task `FF-AI-AGENT-002` **no tiene autorización presente** para modificar OpenCode.
+- **Tasks**:
+  - `FF-AI-AGENT-001`: Contratos y matriz de perfiles (docs-only) — **ACCEPTED**; entregables canonical, pendiente integración en `tooling`.
+  - `FF-AI-AGENT-002`: Perfiles mínimos y conformance — **PROPOSED / not created**; gate serial tras AGENT001 `DONE` + `ACCEPTED` + `INTEGRATED`; ownership explícito; Developer gate propio; **sin autorización OpenCode presente**.
 
 ## Referencias
 
