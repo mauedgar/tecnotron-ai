@@ -18,9 +18,14 @@ related:
   - "[[work-packages/system-guide/PLAN]]"
   - "[[work-packages/research-archive/PLAN]]"
   - "[[work-packages/document-conformance/PLAN]]"
+  - "[[work-packages/agent-profiles-mvp/PLAN]]"
   - "[[tasks/FF-AI-DOC-001/TASK]]"
   - "[[tasks/FF-AI-VNEXT-008/TASK]]"
   - "[[tasks/FF-AI-VNEXT-009/TASK]]"
+  - "[[tasks/FF-AI-AGENT-001/TASK]]"
+  - "[[tasks/FF-AI-AGENT-001/PLAN]]"
+  - "[[architecture/agent-role-contracts]]"
+  - "[[architecture/agent-profile-matrix]]"
 ---
 
 # Source Of Truth
@@ -55,6 +60,8 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 | [Current State](current-state.md) | Confirmed implementation reality and validation evidence only. |
 | [Implementation Roadmap](implementation-roadmap.md) | Sequencing and planned implementation work. |
 | [Compatibility Baseline](compatibility-baseline.md) | Observed tool compatibility and reproducible baseline evidence. |
+| [Agent Role Contracts](architecture/agent-role-contracts.md) | Contratos canónicos para los 7 roles iniciales; autoridad, inputs, outputs, límites, contexto, capacidades y permisos. No declara perfiles ejecutables. |
+| [Agent Profile Matrix](architecture/agent-profile-matrix.md) | Matriz canónica que separa role contract, perfil manual propuesto, runtime selection, model/skill bindings y permisos task-specific. |
 | [ADR-001: Document Authority and Layout](decisions/ADR-001-document-authority-and-layout.md) | Precedencia, layout objetivo, jerarquía Roadmap→Milestone→WP→Task, 5 dimensiones de estado, opencode.json origin, ambient_dirty policy, cross-repo boundary, source-material, **gobierna separaciones role/profile/runtime/model/skill/permissions**. |
 | [Milestone: document-governance-v1](milestones/document-governance-v1/PLAN.md) | Baseline main@41088a4, tooling@c88c174, integration target tooling, promotion target main, 6 WPs (WP1 Wave1, WP2-3 Wave2, WP4-5 Wave3, WP6 Wave4), paralelismo y gates. |
 | [WP1: Authority Reconciliation](work-packages/authority-reconciliation/PLAN.md) | ADR-001, task-lifecycle.md 5 dimensiones, cierre 009 append-only, SoT update. Task FF-AI-DOC-001 Wave1. |
@@ -63,9 +70,11 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 | [WP4: System Guide](work-packages/system-guide/PLAN.md) | Guía futura `docs/guides/system-guide.md` explicativo, no policy. Task FF-AI-DOC-004 Wave3. |
 | [WP5: Research Archive](work-packages/research-archive/PLAN.md) | Consolidación archive/research con READMEs; policy indexación; reclasificación indexing-pipeline. Task FF-AI-DOC-005 Wave3. |
 | [WP6: Document Conformance](work-packages/document-conformance/PLAN.md) | Validación conformancia completa corpus canónico (layout docs/architecture, docs/guides). Task FF-AI-DOC-006 Wave4 (serial tras WP1-5). |
+| [WP: Agent Profiles MVP](work-packages/agent-profiles-mvp/PLAN.md) | Follow-up post-fundación; WP activo, no parte WP1–WP6. Task FF-AI-AGENT-001 `ACCEPTED`, pendiente integración. |
 | [Task FF-AI-DOC-001](tasks/FF-AI-DOC-001/TASK.md) | Fundación + Wave1 + cierre 009. WP1 `DONE`; integrada en `tooling` por PR #10, merge `51821e21be9a63d7aabff9598114a75850b20792`; `DOC_SYNC` completado. |
 | [Task FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Explorer and Agent Runtime conformance. |
 | [Task FF-AI-VNEXT-009](tasks/FF-AI-VNEXT-009/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Agent MVP composition root and documentation sync. |
+| [Task FF-AI-AGENT-001](tasks/FF-AI-AGENT-001/TASK.md) | Contratos de 7 roles + matriz perfiles (docs-only). `validation PASS`, review completado, `ACCEPTED`; pendiente integración en `tooling`. |
 
 ## Reference / Non-Canonical
 

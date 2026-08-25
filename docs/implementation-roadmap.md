@@ -105,6 +105,21 @@ Tambien quedan `PENDING`:
 
 ---
 
+## Follow-up: Agent Profiles MVP (Post-Foundation)
+
+Habilitado tras **aceptación e integración en `tooling` de los artefactos de fundación de `FF-AI-DOC-001`** (ADR-001, Milestone, 6 WP Plans, TASK/PLAN DOC001, SoT actualizado, task-lifecycle actualizado, cierre 009). La ejecución/completación/integración de WP2–WP6 **NO es prerrequisito**.
+
+| Task | Entregable | Estado | Gate |
+|---|---|---|---|
+| `FF-AI-AGENT-001` | Contratos 7 roles + matriz perfiles (docs-only) | `ACCEPTED` | Validación/review completados; Developer acceptance explícita; entregables canonical; pendiente integración en `tooling` |
+| `FF-AI-AGENT-002` | Perfiles mínimos y conformance (adapters, permisos, verificación) | `PROPOSED` | **Serial** tras `FF-AI-AGENT-001` `DONE` + `ACCEPTED` + `INTEGRATED`; ownership explícito; Developer gate propio; **sin autorización OpenCode presente** |
+
+**Scope AGENT001**: 5 nuevos + 4 modificados = 9 paths exactos (ver TASK ownership keys). Solo documentación. Sin implementación, runtime, adapters, registros ejecutables, selección automática, ranking, fallback, model policy.
+
+**Scope AGENT002**: Diferido. Requiere nuevo TASK/PLAN con ownership explícito y Developer gate. No se crea ahora.
+
+---
+
 ### Nota histórica al 2026-08-24 / Ruling posterior / Cierre documental append-only (2026-08-25)
 
 El párrafo anterior "Reconciliacion contra `tooling`, validacion final de integracion y limpieza del worktree son **pendientes del Task Cycle deterministico**, aun no completadas..." conserva el estado **histórico al 2026-08-24** (snapshot previo al cierre). El cierre documental append-only resuelve lo pendiente:
