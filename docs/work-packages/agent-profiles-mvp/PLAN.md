@@ -40,8 +40,8 @@ Cumplido por `FF-AI-DOC-001` (foundation artifacts: Developer-accepted + integra
 **Task asociada**: `FF-AI-AGENT-001` (medium criticality, P1, ACCEPTED; pending integration)
 
 **Entregables**:
-- `docs/architecture/agent-role-contracts.md` — 7 contratos de roles normativos (borrador pendiente aceptación Developer)
-- `docs/architecture/agent-profile-matrix.md` — Matriz con 7 roles iniciales + tabla deferred (borrador pendiente aceptación Developer)
+- `docs/architecture/agent-role-contracts.md` — 7 contratos de roles normativos (canonical; aceptado por Developer el 2026-08-25)
+- `docs/architecture/agent-profile-matrix.md` — Matriz con 7 roles iniciales + tabla deferred (canonical; aceptada por Developer el 2026-08-25)
 
 **Scope exacto**: 5 archivos nuevos + 4 archivos modificados (ver ownership keys en TASK).
 
@@ -122,7 +122,7 @@ Cumplido por `FF-AI-DOC-001` (foundation artifacts: Developer-accepted + integra
 
 ## Gates
 
-- **Gate Wave 1**: Developer acepta `agent-role-contracts.md` y `agent-profile-matrix.md` (status draft → canonical tras aceptación).
+- **Gate Wave 1**: CUMPLIDO; Developer aceptó `agent-role-contracts.md` y `agent-profile-matrix.md` el 2026-08-25 y ambos documentos fueron promovidos de `draft` a `canonical`.
 - **Gate Wave 2**: Requiere `FF-AI-AGENT-001` `DONE` + `ACCEPTED` + `INTEGRATED`; ownership explícito; Developer gate propio.
 
 ## Stop Conditions (Wave 1)

@@ -350,7 +350,7 @@ Documentation-only writes: normalize format, navigation, metadata, links; drift 
 
 ### Minimum Output / Deliverable
 - Modified documentation files within ownership keys
-- Updated navigation indices (SOURCES_OF_TRUTH, cross-links)
+- Updated navigation indices (`SOURCE_OF_TRUTH.md`, cross-links)
 - Metadata normalized (frontmatter, document_id, status, version, updated)
 - Drift classification report (if applicable)
 

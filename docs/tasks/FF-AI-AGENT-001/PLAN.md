@@ -36,14 +36,14 @@ related:
 1. `docs/work-packages/agent-profiles-mvp/PLAN.md` — WP Plan (ya creado en esta ejecución).
 2. `docs/tasks/FF-AI-AGENT-001/TASK.md` — Task definition (ya creado en esta ejecución).
 3. `docs/tasks/FF-AI-AGENT-001/PLAN.md` — Este archivo.
-4. `docs/architecture/agent-role-contracts.md` — 7 role contracts normativos (borrador, status draft).
-5. `docs/architecture/agent-profile-matrix.md` — Matriz 7 roles + deferred (borrador, status draft).
+4. `docs/architecture/agent-role-contracts.md` — 7 role contracts normativos (creado inicialmente como `draft`; aceptado y promovido a `canonical` el 2026-08-25).
+5. `docs/architecture/agent-profile-matrix.md` — Matriz 7 roles + deferred (creada inicialmente como `draft`; aceptada y promovida a `canonical` el 2026-08-25).
 
 ### Fase 3: Actualizar 4 archivos existentes
 
-6. `docs/SOURCE_OF_TRUTH.md` — Añadir WP, TASK001, ambos architecture docs (draft pending acceptance); AGENT002 solo proposed en WP, sin link a task inexistente.
-7. `docs/current-state.md` — DOC001 done; Agent Profiles WP active, AGENT001 WORKING docs-only, AGENT002 proposed/not created; explícitamente no profiles/registry/runtime capability.
-8. `docs/implementation-roadmap.md` — Sección follow-up con 001 WORKING y 002 PROPOSED, gate serial.
+6. `docs/SOURCE_OF_TRUTH.md` — Añadir WP, TASK001 y ambos architecture docs; AGENT002 solo proposed en WP, sin link a task inexistente.
+7. `docs/current-state.md` — DOC001 done; Agent Profiles WP active, AGENT001 `ACCEPTED` docs-only pendiente integración, AGENT002 proposed/not created; explícitamente no profiles/registry/runtime capability.
+8. `docs/implementation-roadmap.md` — Sección follow-up con 001 `ACCEPTED` pendiente integración y 002 `PROPOSED`, gate serial.
 9. `docs/milestones/document-governance-v1/PLAN.md` — Actualizar Follow-up: WP materialized active tras gate; link; statuses; no parte WP1–WP6.
 
 ### Fase 4: Validación determinista (comandos git)
@@ -78,7 +78,7 @@ Reportar salida de todos los comandos de validación. No hacer `git add/commit/p
 ## Validación Determinista
 
 - **Comandos válidos en git**: Todos los comandos de Fase 4 son comandos git estándar.
-- **Tracked modificados esperados**: 4 archivos (SOURCES_OF_TRUTH, current-state, implementation-roadmap, milestone PLAN).
+- **Tracked modificados esperados**: 4 archivos (SOURCE_OF_TRUTH, current-state, implementation-roadmap, milestone PLAN).
 - **Untracked nuevos esperados**: 5 archivos (WP PLAN, TASK, PLAN, agent-role-contracts, agent-profile-matrix).
 - **Staged**: Debe estar vacío (worktree clean al inicio, sin `git add`).
 - **Búsquedas de prohibidos**: Deben retornar "OK" (sin matches).

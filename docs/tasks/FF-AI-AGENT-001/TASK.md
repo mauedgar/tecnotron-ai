@@ -62,7 +62,7 @@ related:
 
 ## Objetivo
 
-Producir **solo documentación**: borradores normativos de contratos para los 7 roles iniciales (`agent-role-contracts.md`) y una matriz de perfiles propuestos con tabla deferred (`agent-profile-matrix.md`). Permanecen draft hasta aceptación explícita del Developer. Sin implementación, runtime, adapters, registros ejecutables, selección automática, ranking, fallback ni model policy.
+Producir **solo documentación**: contratos normativos para los 7 roles iniciales (`agent-role-contracts.md`) y una matriz de perfiles propuestos con tabla deferred (`agent-profile-matrix.md`). Ambos documentos fueron aceptados explícitamente por el Developer y promovidos de `draft` a `canonical` el 2026-08-25. Sin implementación, runtime, adapters, registros ejecutables, selección automática, ranking, fallback ni model policy.
 
 Implementación, validación determinista y review independiente completados. El Developer aceptó explícitamente la task y ambos entregables el 2026-08-25; la integración sigue `NOT_INTEGRATED` y no está `DONE`.
 
@@ -95,7 +95,7 @@ Implementación, validación determinista y review independiente completados. El
 
 6. **Source provenance only**: `docs/archive/source-material/roles-and-context-governance-source-material.md` referenciado como provenance, no canónico.
 
-7. **SoT/current/roadmap/milestone updated**: índices y estado reflejan WP activo, AGENT001 WORKING docs-only, AGENT002 proposed/no creado, sin perfiles/registry/runtime capability.
+7. **SoT/current/roadmap/milestone updated**: índices y estado reflejan WP activo, AGENT001 `ACCEPTED` docs-only pendiente integración, AGENT002 proposed/no creado, sin perfiles/registry/runtime capability.
 
 8. **Scope exactly 5 new + 4 modified**: git diff confirma solo los 9 ownership keys; sin archivos extra.
 
