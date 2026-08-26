@@ -2,11 +2,11 @@
 document_id: FFAI-WP-ORCA-OPERATIONAL-ADAPTER
 status: canonical
 machine_context: true
-version: 1.0
+version: 1.1
 updated: 2026-08-26
 owner: fitflow-ai
 type: work-package
-lifecycle_status: ACCEPTED
+lifecycle_status: DONE
 related:
   - "[[tasks/FF-AI-ORCA-001/TASK]]"
   - "[[tasks/FF-AI-ORCA-001/PLAN]]"
