@@ -20,8 +20,8 @@ Independent Big Pickle reviews were executed read-only through OpenCode.
 - Changed Developer Superuser `edit` and `task` permissions from `allow` to
   `ask`.
 - Declared Coder B web access as denied.
-- Classified preexisting `.opencode/package*.json` changes as ambient and out of
-  task ownership.
+- Reconciled `.opencode/package*.json` as Orca-managed metadata explicitly
+  accepted into task ownership by the Developer.
 - Recorded project discovery and bounded zero-cost invocation evidence.
 
 ## Accepted reviews

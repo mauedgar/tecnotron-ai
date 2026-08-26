@@ -34,7 +34,8 @@ result: PASS
 
 ## Scope and postflight
 
-`.opencode/package.json` and `.opencode/package-lock.json` were ambient dirty
-before this task and are excluded from its ownership and result. Global symlink
-creation remains a post-integration Developer gate; no global configuration was
-mutated during validation.
+`.opencode/package.json` and `.opencode/package-lock.json` are Orca/OpenCode
+managed metadata. The Developer authorized keeping their observed update, so
+they are included in ownership and the commit. Global symlink creation remains
+a post-integration Developer gate; no global configuration was mutated during
+validation.

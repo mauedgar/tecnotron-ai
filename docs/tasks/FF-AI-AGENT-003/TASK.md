@@ -47,6 +47,8 @@ ownership_keys:
   - "config:.opencode/agents/doc_curator.md"
   - "config:.opencode/agents/prompt_generator.md"
   - "config:.opencode/agents/developer_superuser.md"
+  - "config:.opencode/package.json"
+  - "config:.opencode/package-lock.json"
   - "tool:scripts/opencode/install-global-agents.ps1"
 related:
   - "[[tasks/FF-AI-AGENT-003/PLAN]]"
@@ -80,8 +82,9 @@ Crear ademas dos perfiles primarios exclusivos del Developer:
 - Orca Run: `run_9eb35245e53f`.
 - Orca orchestration task: `task_cfa38b865814`.
 - `FF-AI-AGENT-001` y `002`: `DONE`, `ACCEPTED`, `INTEGRATED`.
-- Ambient dirty preexistente y fuera de ownership: `.opencode/package.json` y
-  `.opencode/package-lock.json`; no se modifican, revierten ni atribuyen a esta task.
+- `.opencode/package.json` y `.opencode/package-lock.json` son metadata
+  administrada por Orca/OpenCode. El Developer decidio versionar su actualizacion
+  observada junto con esta task; no se clasifican como dirty ajeno.
 
 ## Criterios de aceptacion
 
@@ -114,10 +117,10 @@ Crear ademas dos perfiles primarios exclusivos del Developer:
     escalamiento explicito, conserva ceiling MEDIUM y no habilita delegacion HIGH.
 13. El inventario OpenCode/Orca y la nota preflight/postflight quedan en
     investigacion no normativa, sin claims en current-state funcional.
-14. No hay cambios en `src/`, `tests/`, registries, manifests, FitFlow ni
-    configuracion global fuera del repositorio.
-15. `git diff --check` PASS y el diff task-scoped contiene solo ownership keys;
-    el ambient dirty preexistente queda identificado y excluido.
+14. No hay cambios en `src/`, `tests/`, registries, FitFlow ni configuracion
+    global. Los dos manifests `.opencode` administrados por Orca forman parte del
+    ownership explicito.
+15. `git diff --check` PASS y el diff task-scoped contiene solo ownership keys.
 
 ## Ruling de modelo 2026-08-26
 
