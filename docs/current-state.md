@@ -2,8 +2,8 @@
 document_id: FFAI-STATE-001
 status: canonical
 machine_context: true
-version: 1.5
-updated: 2026-08-25
+version: 1.6
+updated: 2026-08-26
 ---
 
 # Estado actual de FitFlow-ai
@@ -79,6 +79,20 @@ desarrollador. No se modifican sin ownership de FitFlow.
 - **`FF-AI-AGENT-002`**: `DONE` / `ACCEPTED` / `INTEGRATED` — conformance documental de perfiles mínimos (canonical); validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`. Integrada en `tooling` por PR #15, merge `6c1effd9c6cc45d2f802672a124efa4ff15f93f5`; `DOC_SYNC` completado. Sin autorización OpenCode; discovery/invocation runtime no verificados.
 - **Perfiles/Registry/Runtime capability**: **Cero creados**. Esta fase solo define contratos y matriz documentales. No ejecutables, no selection, no ranking, no fallback, no model policy.
 
+## Task activa FF-AI-AGENT-003
+
+- `FF-AI-AGENT-003`: `ACCEPTED`, `validation PASS`, aceptacion `ACCEPTED`,
+  integracion `NOT_INTEGRATED`; PR
+  `https://github.com/mauedgar/tecnotron-ai/pull/20` abierto.
+- Worktree administrado por Orca desde `tooling@141174b`; Run
+  `run_9eb35245e53f` y task de orquestacion `task_cfa38b865814` creados.
+- Scope: perfiles manuales OpenCode y distribucion global enlazada. No afirma
+  discovery global PASS; discovery de proyecto e invocaciones acotadas si estan
+  verificadas. El ruling del 2026-08-26 habilita `planner_ai` y `coder_strong_a`;
+  este ultimo solo como escalamiento MEDIUM explicito.
+- La investigacion preflight/postflight permanece no normativa y diferida hasta
+  despues de `FF-AI-VNEXT-011+`.
+
 ## Plataforma operativa
 
 - Orca controla workspace, sesion, restore e hibernation.
@@ -90,6 +104,19 @@ desarrollador. No se modifican sin ownership de FitFlow.
 
 Estas son capacidades de plataforma confirmadas por el desarrollador y por el
 runtime Orca; no se presentan como implementaciones de FitFlow-ai.
+
+`FF-AI-ORCA-001` esta `ACCEPTED` como task documental para fijar el boundary y la
+guia del adapter Orca. Worktree, Run `ORCA001/adoption-baseline`
+(`run_08ee9964ca9d`) y Orca Task `ORCA001/documentation`
+(`task_6443fa97d31f`) fueron creados; no existe adapter runtime implementado ni se
+ha migrado o limpiado estado historico. El primer Developer gate resolvio
+`REQUEST_CHANGES`: review visible dentro del worktree e identidad de Task en el
+gate. El cambio fue incorporado: `REVIEW.md` y la terminal reviewer estan
+visibles en el worktree. El segundo gate resolvio `REQUEST_CHANGES`: permitir
+busquedas multi-patron y pipelines observacionales bounded sin habilitar
+composicion write-capable. AC18 y la revision dirigida pasan; conformance del
+dispatch Orca permanece `UNAVAILABLE`. Contrato, guia y REVIEW son canonicos por
+aceptacion del Developer. Integracion y cleanup permanecen pendientes.
 
 ## Evidencia y limitaciones
 
