@@ -29,17 +29,19 @@ related:
 
 | role_id | role_contract_ref | manual_profile_status | runtime_selectable | model_binding | skill_tool_binding | task_permission_ceiling | terminal_authority | lifecycle_catalog_state |
 |---|---|---|---|---|---|---|---|---|
-| `planner_ai` | `agent-role-contracts.md#planner_ai` | MATERIALIZED_UNVERIFIED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | WP planning only; read roadmap/milestone/SoT/ADRs; no write to src/tests/FitFlow/contracts/registries/OpenCode config | NONE | ENABLED |
-| `architect` | `agent-role-contracts.md#architect` | MATERIALIZED_UNVERIFIED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | TASK/PLAN creation; read WP/evidence/ADRs/policies; no write to src/tests/FitFlow/contracts/registries/OpenCode config | NONE | ENABLED |
-| `explorer` | `agent-role-contracts.md#explorer` | MATERIALIZED_UNVERIFIED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Read-only all repo files; write: NONE; no secrets/env/runtime/external | NONE | ENABLED |
-| `coder_a` | `agent-role-contracts.md#coder_a` | MATERIALIZED_UNVERIFIED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Write ONLY ownership keys from TASK; read ownership scope/contracts/evidence; no write to opencode.json/.opencode/package manifests | NONE | ENABLED |
-| `coder_b` | `agent-role-contracts.md#coder_b` | MATERIALIZED_UNVERIFIED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Write ONLY ownership keys from TASK; read ownership scope; no write to opencode.json/.opencode/package manifests | NONE | ENABLED |
-| `coder_strong_a` | `agent-role-contracts.md#coder_strong_a` | MATERIALIZED_UNVERIFIED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Explicit complex escalation, ceiling MEDIUM; write ONLY ownership keys; no HIGH work | NONE | ENABLED |
-| `reviewer` | `agent-role-contracts.md#reviewer` | MATERIALIZED_UNVERIFIED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Read-only task artifacts/sources/diff/evidence; repository write: NONE; findings/verdict returned to Task Lifecycle | NONE | ENABLED |
-| `doc_curator` | `agent-role-contracts.md#doc_curator` | MATERIALIZED_UNVERIFIED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Write ONLY docs ownership keys from TASK; read all docs/SoT/ADRs; no write to src/tests/FitFlow/contracts/registries/OpenCode config | NONE | ENABLED |
+| `planner_ai` | `agent-role-contracts.md#planner_ai` | GLOBALLY_DISCOVERED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | WP planning only; read roadmap/milestone/SoT/ADRs; no write to src/tests/FitFlow/contracts/registries/OpenCode config | NONE | ENABLED |
+| `architect` | `agent-role-contracts.md#architect` | GLOBALLY_DISCOVERED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | TASK/PLAN creation; read WP/evidence/ADRs/policies; no write to src/tests/FitFlow/contracts/registries/OpenCode config | NONE | ENABLED |
+| `explorer` | `agent-role-contracts.md#explorer` | GLOBALLY_DISCOVERED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Read-only all repo files; write: NONE; no secrets/env/runtime/external | NONE | ENABLED |
+| `coder_a` | `agent-role-contracts.md#coder_a` | GLOBALLY_DISCOVERED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Write ONLY ownership keys from TASK; read ownership scope/contracts/evidence; no write to opencode.json/.opencode/package manifests | NONE | ENABLED |
+| `coder_b` | `agent-role-contracts.md#coder_b` | GLOBALLY_DISCOVERED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Write ONLY ownership keys from TASK; read ownership scope; no write to opencode.json/.opencode/package manifests | NONE | ENABLED |
+| `coder_strong_a` | `agent-role-contracts.md#coder_strong_a` | GLOBALLY_DISCOVERED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Explicit complex escalation, ceiling MEDIUM; write ONLY ownership keys; no HIGH work | NONE | ENABLED |
+| `reviewer` | `agent-role-contracts.md#reviewer` | GLOBALLY_DISCOVERED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Read-only task artifacts/sources/diff/evidence; repository write: NONE; findings/verdict returned to Task Lifecycle | NONE | ENABLED |
+| `doc_curator` | `agent-role-contracts.md#doc_curator` | GLOBALLY_DISCOVERED | FALSE | UNSPECIFIED/NON_CANONICAL | TASK_SCOPED/REPLACEABLE | Write ONLY docs ownership keys from TASK; read all docs/SoT/ADRs; no write to src/tests/FitFlow/contracts/registries/OpenCode config | NONE | ENABLED |
 
-`MATERIALIZED_UNVERIFIED` means a versioned OpenCode profile exists in active
-Task `FF-AI-AGENT-003`, but global discovery and invocation are not yet proven.
+`GLOBALLY_DISCOVERED` means a versioned OpenCode profile is linked from the
+stable checkout and appears in global discovery from FitFlow. It does not imply
+runtime selection by the AI Core. A bounded global invocation is separately
+verified for `prompt_generator`, which is not an AI Core role in this matrix.
 
 ## Deferred Roles (Post-MVP)
 
@@ -62,7 +64,7 @@ Task `FF-AI-AGENT-003`, but global discovery and invocation are not yet proven.
 ## Conformance Invariants
 
 1. **role_contract_ref** must resolve to a section in `agent-role-contracts.md` for all eight enabled roles.
-2. `coder_strong_a` is materialized but global discovery remains unverified; remaining deferred roles are NOT_PROPOSED.
+2. `coder_strong_a` is globally discovered with an explicit MEDIUM ceiling; remaining deferred roles are NOT_PROPOSED.
 3. **runtime_selectable** = FALSE for all rows (manual profile ≠ runtime selectable).
 4. **model_binding** = UNSPECIFIED/NON_CANONICAL (observations only, no benchmark/ranking/policy).
 5. **skill_tool_binding** = TASK_SCOPED/REPLACEABLE (bindings per TASK/PLAN, not role identity).
@@ -75,8 +77,9 @@ Task `FF-AI-AGENT-003`, but global discovery and invocation are not yet proven.
 ## Operational Follow-up State
 
 - Exact `roles.yaml` / registry data: **Unknown** — FitFlow ownership, not defined here.
-- OpenCode manual profile files (`.opencode/agents/*.md`): materialized by active
-  Task `FF-AI-AGENT-003`; global discovery and invocation remain unverified.
+- OpenCode manual profile files (`.opencode/agents/*.md`): materialized by
+  completed Task `FF-AI-AGENT-003`; global discovery is verified for all ten
+  managed profiles and bounded invocation is verified for `prompt_generator`.
 - Model Resolver integration: **Not defined** — this phase is contracts + matrix only.
 - Current runtime executability of any role: **Unknown** — belongs to registry/config in FitFlow.
 

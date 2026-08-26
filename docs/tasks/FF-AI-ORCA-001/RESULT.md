@@ -8,10 +8,12 @@ task_id: FF-AI-ORCA-001
 validation: PASS
 review_verdict: ACCEPT
 developer_acceptance: ACCEPTED
-integration: INTEGRATED
-integration_target: tooling
-integration_revision: ae118431712a297447b09fbc9eecde795ea7588b
-pull_request: https://github.com/mauedgar/tecnotron-ai/pull/22
+integration:
+  status: INTEGRATED
+  target: tooling
+  sha: ae118431712a297447b09fbc9eecde795ea7588b
+  integrated_at: 2026-08-26
+  pull_request: https://github.com/mauedgar/tecnotron-ai/pull/22
 lifecycle_status: DONE
 ---
 
