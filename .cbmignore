@@ -6,3 +6,15 @@
 /coverage/
 /tmp/
 **/.cache/
+
+# Entornos y dependencias (AGENTS.md: no indexar entornos)
+/node_modules/
+**/node_modules/
+/python/.venv_tools/
+
+# Datos, runtime y salidas (AGENTS.md: no indexar storage, exports, logs)
+/storage/
+/data/derived/
+/logs/
+/exports/
+/MCP-shop-client/
