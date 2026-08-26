@@ -74,7 +74,7 @@ desarrollador. No se modifican sin ownership de FitFlow.
 
 ## Work Package Agent Profiles MVP (docs-only)
 
-- **WP activo**: `docs/work-packages/agent-profiles-mvp/PLAN.md` (canonical, follow-up post-fundación, no parte WP1–WP6).
+- **WP Agent Profiles MVP**: `DONE` — `docs/work-packages/agent-profiles-mvp/PLAN.md` (canonical, follow-up post-fundación, no parte WP1–WP6). Ambas waves integradas; WP cerrado por ruling del Developer el 2026-08-25.
 - **`FF-AI-AGENT-001`**: `DONE` / `ACCEPTED` / `INTEGRATED` — contratos de 7 roles + matriz perfiles, solo documentación; validación PASS, review completado y aceptación Developer explícita. Integrada en `tooling` por PR #12, merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc`; `DOC_SYNC` completado. Artefactos canónicos: `agent-role-contracts.md`, `agent-profile-matrix.md`.
 - **`FF-AI-AGENT-002`**: `DONE` / `ACCEPTED` / `INTEGRATED` — conformance documental de perfiles mínimos (canonical); validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`. Integrada en `tooling` por PR #15, merge `6c1effd9c6cc45d2f802672a124efa4ff15f93f5`; `DOC_SYNC` completado. Sin autorización OpenCode; discovery/invocation runtime no verificados.
 - **Perfiles/Registry/Runtime capability**: **Cero creados**. Esta fase solo define contratos y matriz documentales. No ejecutables, no selection, no ranking, no fallback, no model policy.

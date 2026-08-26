@@ -20,12 +20,23 @@ related:
   - "[[work-packages/document-conformance/PLAN]]"
   - "[[work-packages/agent-profiles-mvp/PLAN]]"
   - "[[tasks/FF-AI-DOC-001/TASK]]"
+  - "[[tasks/FF-AI-DOC-001/RESULT]]"
+  - "[[tasks/FF-AI-DOC-001/REVIEW]]"
   - "[[tasks/FF-AI-VNEXT-008/TASK]]"
+  - "[[tasks/FF-AI-VNEXT-008/RESULT]]"
+  - "[[tasks/FF-AI-VNEXT-008/REVIEW]]"
   - "[[tasks/FF-AI-VNEXT-009/TASK]]"
+  - "[[tasks/FF-AI-VNEXT-009/RESULT]]"
+  - "[[tasks/FF-AI-VNEXT-009/REVIEW]]"
   - "[[tasks/FF-AI-AGENT-001/TASK]]"
   - "[[tasks/FF-AI-AGENT-001/PLAN]]"
+  - "[[tasks/FF-AI-AGENT-001/RESULT]]"
+  - "[[tasks/FF-AI-AGENT-001/REVIEW]]"
   - "[[tasks/FF-AI-AGENT-002/TASK]]"
   - "[[tasks/FF-AI-AGENT-002/PLAN]]"
+  - "[[tasks/FF-AI-AGENT-002/RESULT]]"
+  - "[[tasks/FF-AI-AGENT-002/REVIEW]]"
+  - "[[tasks/FF-AI-DOC-CLOSURE-001/TASK]]"
   - "[[architecture/agent-role-contracts]]"
   - "[[architecture/agent-profile-matrix]]"
   - "[[architecture/agent-profile-conformance]]"
@@ -74,12 +85,23 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 | [WP4: System Guide](work-packages/system-guide/PLAN.md) | Guía futura `docs/guides/system-guide.md` explicativo, no policy. Task FF-AI-DOC-004 Wave3. |
 | [WP5: Research Archive](work-packages/research-archive/PLAN.md) | Consolidación archive/research con READMEs; policy indexación; reclasificación indexing-pipeline. Task FF-AI-DOC-005 Wave3. |
 | [WP6: Document Conformance](work-packages/document-conformance/PLAN.md) | Validación conformancia completa corpus canónico (layout docs/architecture, docs/guides). Task FF-AI-DOC-006 Wave4 (serial tras WP1-5). |
-| [WP: Agent Profiles MVP](work-packages/agent-profiles-mvp/PLAN.md) | Follow-up post-fundación; WP activo, no parte WP1–WP6. AGENT001 `DONE`, `ACCEPTED` e `INTEGRATED`; AGENT002 `DONE`, `ACCEPTED` e `INTEGRATED`. |
+| [WP: Agent Profiles MVP](work-packages/agent-profiles-mvp/PLAN.md) | Follow-up post-fundación; no parte WP1–WP6. `DONE`: AGENT001 y AGENT002 `DONE`, `ACCEPTED` e `INTEGRATED`; WP cerrado por ruling del Developer (2026-08-25). |
 | [Task FF-AI-DOC-001](tasks/FF-AI-DOC-001/TASK.md) | Fundación + Wave1 + cierre 009. WP1 `DONE`; integrada en `tooling` por PR #10, merge `51821e21be9a63d7aabff9598114a75850b20792`; `DOC_SYNC` completado. |
+| [Result FF-AI-DOC-001](tasks/FF-AI-DOC-001/RESULT.md) | Evidencia de cierre retrospectivo; conserva el resultado aceptado de la task. |
+| [Review FF-AI-DOC-001](tasks/FF-AI-DOC-001/REVIEW.md) | Registro retrospectivo del veredicto independiente ya emitido; no es una nueva revisión. |
 | [Task FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Explorer and Agent Runtime conformance. |
+| [Result FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/RESULT.md) | Evidencia de validación aceptada de la task completada. |
+| [Review FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/REVIEW.md) | Revisión independiente de aceptación registrada. |
 | [Task FF-AI-VNEXT-009](tasks/FF-AI-VNEXT-009/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Agent MVP composition root and documentation sync. |
+| [Result FF-AI-VNEXT-009](tasks/FF-AI-VNEXT-009/RESULT.md) | Evidencia de validación y cierre documental append-only. |
+| [Review FF-AI-VNEXT-009](tasks/FF-AI-VNEXT-009/REVIEW.md) | Revisión independiente de aceptación registrada. |
 | [Task FF-AI-AGENT-001](tasks/FF-AI-AGENT-001/TASK.md) | Contratos de 7 roles + matriz perfiles (docs-only). `validation PASS`, review completado, `ACCEPTED`, integrada en `tooling` por PR #12, merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc`; `DOC_SYNC` completado y lifecycle `DONE`. |
+| [Result FF-AI-AGENT-001](tasks/FF-AI-AGENT-001/RESULT.md) | Evidencia de cierre retrospectivo; conserva el resultado aceptado de la task. |
+| [Review FF-AI-AGENT-001](tasks/FF-AI-AGENT-001/REVIEW.md) | Registro retrospectivo del veredicto independiente ya emitido; no es una nueva revisión. |
 | [Task FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/TASK.md) | Conformance documental de perfiles mínimos (canonical). Validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`; `ACCEPTED` (2026-08-25), integrada en `tooling` por PR #15, merge `6c1effd9c6cc45d2f802672a124efa4ff15f93f5`; `DOC_SYNC` completado y lifecycle `DONE`. |
+| [Result FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/RESULT.md) | Evidencia de cierre retrospectivo; conserva el resultado aceptado de la task. |
+| [Review FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/REVIEW.md) | Registro retrospectivo del veredicto independiente ya emitido; no es una nueva revisión. |
+| [Task FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/TASK.md) | Curación documental en curso para completar RESULT/REVIEW de tasks ya terminadas. |
 
 ## Reference / Non-Canonical
 

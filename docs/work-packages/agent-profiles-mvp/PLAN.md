@@ -2,10 +2,11 @@
 document_id: FFAI-WP-AGENT-PROFILES-MVP
 status: canonical
 machine_context: true
-version: 1.0
+version: 1.1
 updated: 2026-08-25
 owner: fitflow-ai
 type: work-package
+lifecycle_status: DONE
 related:
   - "[[decisions/ADR-001-document-authority-and-layout]]"
   - "[[SOURCE_OF_TRUTH]]"
@@ -126,7 +127,11 @@ Cumplido por `FF-AI-DOC-001` (foundation artifacts: Developer-accepted + integra
 ## Gates
 
 - **Gate Wave 1**: CUMPLIDO; Developer aceptó `agent-role-contracts.md` y `agent-profile-matrix.md` el 2026-08-25 y ambos documentos fueron promovidos de `draft` a `canonical`.
-- **Gate Wave 2**: Prerrequisito AGENT001 `DONE` + `ACCEPTED` + `INTEGRATED` CUMPLIDO; aún requiere ownership explícito y Developer gate propio.
+- **Gate Wave 2**: CUMPLIDO. AGENT002 completó su Developer gate propio (`ACCEPTED` 2026-08-25) y fue integrada en `tooling` por PR #15.
+
+## Cierre del WP
+
+Ambas waves están `DONE`, `ACCEPTED` e `INTEGRATED` en `tooling` con `DOC_SYNC` completado. Con ruling del Developer (2026-08-25), el Work Package se declara `DONE`. No quedan entregables pendientes en este WP; los perfiles OpenCode ejecutables y la verificación runtime permanecen fuera de alcance para una futura task con ownership ejecutable explícito.
 
 ## Ownership keys Wave 2 (exactos, 8 paths)
 
