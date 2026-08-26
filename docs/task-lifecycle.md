@@ -281,6 +281,20 @@ Each lifecycle run should eventually expose enough structured evidence to recons
 
 The exact persistence mechanism is an implementation concern.
 
+### 15.1 Documentary Closure Records
+
+For a canonical task that reaches `DONE`, its task directory must contain a
+canonical `RESULT.md` and `REVIEW.md` record. The RESULT records accepted
+validation and integration evidence; the REVIEW records the independent review
+verdict that preceded Developer acceptance. Neither record grants acceptance
+or changes lifecycle state.
+
+If an older completed task lacks either record, a Developer-authorized
+retrospective closure may add it. The record must copy only evidence already
+preserved by the task, identify itself as retrospective, and must not invent a
+reviewer, reissue a semantic verdict, change command results, or reinterpret
+findings.
+
 ## 16. Implementation Status
 
 This document defines the canonical logical lifecycle.

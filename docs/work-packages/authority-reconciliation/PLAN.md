@@ -20,7 +20,7 @@ related:
 
 - **Wave:** 1
 - **Task:** `FF-AI-DOC-001` (`docs/tasks/FF-AI-DOC-001/TASK.md`, `PLAN.md`)
-- **Estado inicial task:** `WORKING`
+- **Estado inicial task:** `WORKING` (histórico); estado final `DONE` (ver Task Asociada).
 
 ## Resultado acotado (Definition of Done del WP)
 
@@ -92,6 +92,11 @@ related:
 ## Paralelismo
 
 - **Ninguno** — WP1 es secuencial y prerrequisito para WP2–WP6.
+
+## Estado del WP
+
+- **DoD del WP1**: CUMPLIDO. Los cinco resultados acotados fueron entregados por `FF-AI-DOC-001` (`DONE`; PR #10, merge `51821e21be9a63d7aabff9598114a75850b20792`) y aceptados por el Developer.
+- **Pendiente explícito (fuera de este WP)**: la estructura de documentación objetivo del ADR-001 §3 (los seis movimientos exactos de archivos) **no está implementada**. Su ejecución corresponde a `WP2 — Document Topology` (`FF-AI-DOC-002`, `PLANNED`). El layout actual del corpus sigue siendo el pre-existing hasta que WP2 se ejecute e integre.
 
 ## Task Asociada
 
