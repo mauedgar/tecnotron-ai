@@ -28,10 +28,11 @@ review_verdict: ACCEPT_WITH_NON_BLOCKING_FINDINGS
 developer_acceptance: ACCEPTED
 accepted_at: 2026-08-25
 integration:
-  status: NOT_INTEGRATED
+  status: INTEGRATED
   target: tooling
-  sha: null
-lifecycle_status: ACCEPTED
+  sha: 2f94422a64b7d86edf8abebdc10b13be87c1d10a
+  integrated_at: 2026-08-25
+lifecycle_status: DONE
 related:
   - "[[task-lifecycle]]"
   - "[[SOURCE_OF_TRUTH]]"
@@ -75,3 +76,13 @@ implemented (pending under WP2 / FF-AI-DOC-002).
 - `doc_curator`: metadata, navigation, and closure language.
 - `reviewer`: checks no reviewer, verdict, evidence, or acceptance is invented.
 - `Developer`: terminal acceptance.
+
+## Cierre Task Lifecycle
+
+- `validation: PASS` (`git diff --check`; scope exacto = 13 ownership keys)
+- `review_verdict: ACCEPT_WITH_NON_BLOCKING_FINDINGS` (findings restantes LOW/INFO no bloqueantes)
+- `developer_acceptance: ACCEPTED` (`2026-08-25`)
+- `integration: INTEGRATED` en `tooling` mediante PR #17, merge SHA `2f94422a64b7d86edf8abebdc10b13be87c1d10a`
+- `DOC_SYNC`: completado por esta actualización de cierre
+- `lifecycle_status: DONE`
+- Deuda conocida registrada: el texto "active" del WP Agent Profiles en el milestone PLAN queda stale; corrección diferida a la próxima task documental con ownership sobre ese archivo.

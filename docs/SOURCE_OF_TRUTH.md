@@ -101,7 +101,9 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 | [Task FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/TASK.md) | Conformance documental de perfiles mínimos (canonical). Validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`; `ACCEPTED` (2026-08-25), integrada en `tooling` por PR #15, merge `6c1effd9c6cc45d2f802672a124efa4ff15f93f5`; `DOC_SYNC` completado y lifecycle `DONE`. |
 | [Result FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/RESULT.md) | Evidencia de cierre retrospectivo; conserva el resultado aceptado de la task. |
 | [Review FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/REVIEW.md) | Registro retrospectivo del veredicto independiente ya emitido; no es una nueva revisión. |
-| [Task FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/TASK.md) | Curación documental en curso para completar RESULT/REVIEW de tasks ya terminadas. |
+| [Task FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/TASK.md) | Cierre documental de evidencia: RESULT/REVIEW retrospectivos, WP Agent Profiles MVP `DONE`, layout ADR pendiente bajo WP2. `DONE`; integrada por PR #17, merge `2f94422a64b7d86edf8abebdc10b13be87c1d10a`. |
+| [Result FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/RESULT.md) | Evidencia aceptada del cierre documental. |
+| [Review FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/REVIEW.md) | Revisión independiente del cierre; ACCEPT_WITH_NON_BLOCKING_FINDINGS. |
 
 ## Reference / Non-Canonical
 
