@@ -107,6 +107,7 @@ Crear ademas dos perfiles primarios exclusivos del Developer:
 7. Coders y Doc Curator declaran que ownership de TASK limita cualquier permiso
    tecnico mas amplio; detienen scope expansion.
 8. El instalador crea enlaces por archivo en el directorio global de agentes,
+   prefiere symlink y usa hard link cuando Windows niega privilegios de symlink;
    preserva agentes globales no administrados y rechaza destinos conflictivos.
 9. El instalador rechaza como fuente un worktree efimero y ofrece dry-run.
 10. La mutacion de `~/.config/opencode/opencode.json` queda fuera de ejecucion
