@@ -2,8 +2,8 @@
 document_id: FFAI-STATE-001
 status: canonical
 machine_context: true
-version: 1.5
-updated: 2026-08-25
+version: 1.6
+updated: 2026-08-26
 ---
 
 # Estado actual de FitFlow-ai
@@ -90,6 +90,19 @@ desarrollador. No se modifican sin ownership de FitFlow.
 
 Estas son capacidades de plataforma confirmadas por el desarrollador y por el
 runtime Orca; no se presentan como implementaciones de FitFlow-ai.
+
+`FF-AI-ORCA-001` esta `ACCEPTED` como task documental para fijar el boundary y la
+guia del adapter Orca. Worktree, Run `ORCA001/adoption-baseline`
+(`run_08ee9964ca9d`) y Orca Task `ORCA001/documentation`
+(`task_6443fa97d31f`) fueron creados; no existe adapter runtime implementado ni se
+ha migrado o limpiado estado historico. El primer Developer gate resolvio
+`REQUEST_CHANGES`: review visible dentro del worktree e identidad de Task en el
+gate. El cambio fue incorporado: `REVIEW.md` y la terminal reviewer estan
+visibles en el worktree. El segundo gate resolvio `REQUEST_CHANGES`: permitir
+busquedas multi-patron y pipelines observacionales bounded sin habilitar
+composicion write-capable. AC18 y la revision dirigida pasan; conformance del
+dispatch Orca permanece `UNAVAILABLE`. Contrato, guia y REVIEW son canonicos por
+aceptacion del Developer. Integracion y cleanup permanecen pendientes.
 
 ## Evidencia y limitaciones
 

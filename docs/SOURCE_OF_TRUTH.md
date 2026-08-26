@@ -2,7 +2,7 @@
 status: canonical
 owner: fitflow-ai
 type: reference
-updated: 2026-08-25
+updated: 2026-08-26
 related:
   - "[[architecture]]"
   - "[[operational-architecture]]"
@@ -37,6 +37,10 @@ related:
   - "[[tasks/FF-AI-AGENT-002/RESULT]]"
   - "[[tasks/FF-AI-AGENT-002/REVIEW]]"
   - "[[tasks/FF-AI-DOC-CLOSURE-001/TASK]]"
+  - "[[work-packages/orca-operational-adapter/PLAN]]"
+  - "[[tasks/FF-AI-ORCA-001/TASK]]"
+  - "[[tasks/FF-AI-ORCA-001/PLAN]]"
+  - "[[tasks/FF-AI-ORCA-001/REVIEW]]"
   - "[[architecture/agent-role-contracts]]"
   - "[[architecture/agent-profile-matrix]]"
   - "[[architecture/agent-profile-conformance]]"
@@ -104,6 +108,12 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 | [Task FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/TASK.md) | Cierre documental de evidencia: RESULT/REVIEW retrospectivos, WP Agent Profiles MVP `DONE`, layout ADR pendiente bajo WP2. `DONE`; integrada por PR #17, merge `2f94422a64b7d86edf8abebdc10b13be87c1d10a`. |
 | [Result FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/RESULT.md) | Evidencia aceptada del cierre documental. |
 | [Review FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/REVIEW.md) | Revisión independiente del cierre; ACCEPT_WITH_NON_BLOCKING_FINDINGS. |
+| [WP: Orca Operational Adapter](work-packages/orca-operational-adapter/PLAN.md) | Baseline documental para Orca como adapter operativo reemplazable. `ACCEPTED`, integracion pendiente. |
+| [Task FF-AI-ORCA-001](tasks/FF-AI-ORCA-001/TASK.md) | Boundary, guia de ejecucion, adopcion incremental y secuencia con AGENT003. Validation `PASS`, review final `ACCEPT`, Developer `ACCEPTED`, no integrada. |
+| [Result FF-AI-ORCA-001](tasks/FF-AI-ORCA-001/RESULT.md) | Resultado aceptado previo a integracion. |
+| [Review FF-AI-ORCA-001](tasks/FF-AI-ORCA-001/REVIEW.md) | Revision independiente y resolucion del follow-up AC18. |
+| [Orca Adapter Contract](architecture/orca-adapter-contract.md) | Boundary canonico de Orca como adapter operativo reemplazable. |
+| [Orca Task Cycle Guide](guides/orca-task-cycle.md) | Guia derivada del ciclo operativo Orca; no reemplaza lifecycle ni source of truth. |
 
 ## Reference / Non-Canonical
 
