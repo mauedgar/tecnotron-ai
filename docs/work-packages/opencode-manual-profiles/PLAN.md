@@ -2,11 +2,11 @@
 document_id: FFAI-WP-OPENCODE-MANUAL-PROFILES
 status: canonical
 machine_context: true
-version: 1.0
+version: 1.1
 updated: 2026-08-26
 owner: fitflow-ai
 type: work-package
-lifecycle_status: ACCEPTED
+lifecycle_status: DONE
 related:
   - "[[tasks/FF-AI-AGENT-003/TASK]]"
   - "[[tasks/FF-AI-AGENT-003/PLAN]]"
@@ -52,7 +52,7 @@ no roles de AI Core, no son runtime-selectable y no ingresan al Role Registry.
 
 ## Wave 1 - FF-AI-AGENT-003
 
-Estado: `ACCEPTED`; integracion y postflight global pendientes.
+Estado: `DONE`; integracion y postflight global verificados.
 
 Entregables:
 

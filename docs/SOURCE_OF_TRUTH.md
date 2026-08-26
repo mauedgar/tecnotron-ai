@@ -106,16 +106,16 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 | [Result FF-AI-AGENT-001](tasks/FF-AI-AGENT-001/RESULT.md) | Evidencia de cierre retrospectivo; conserva el resultado aceptado de la task. |
 | [Review FF-AI-AGENT-001](tasks/FF-AI-AGENT-001/REVIEW.md) | Registro retrospectivo del veredicto independiente ya emitido; no es una nueva revisión. |
 | [Task FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/TASK.md) | Conformance documental de perfiles mínimos (canonical). Validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`; `ACCEPTED` (2026-08-25), integrada en `tooling` por PR #15, merge `6c1effd9c6cc45d2f802672a124efa4ff15f93f5`; `DOC_SYNC` completado y lifecycle `DONE`. |
-| [WP: OpenCode Manual Profiles](work-packages/opencode-manual-profiles/PLAN.md) | Materializacion manual y distribucion global de perfiles OpenCode; separado de runtime y registries. `ACCEPTED`, postflight pendiente. |
-| [Task FF-AI-AGENT-003](tasks/FF-AI-AGENT-003/TASK.md) | Perfiles versionados de ocho roles y dos perfiles primarios exclusivos del Developer. Planner y Coder Strong A habilitados; validation `PASS`, review `ACCEPT`, Developer `ACCEPTED`, no integrado. |
+| [WP: OpenCode Manual Profiles](work-packages/opencode-manual-profiles/PLAN.md) | Materializacion manual y distribucion global de perfiles OpenCode; separado de runtime y registries. Integracion y postflight verificados; `DONE`. |
+| [Task FF-AI-AGENT-003](tasks/FF-AI-AGENT-003/TASK.md) | Perfiles versionados de ocho roles y dos perfiles primarios exclusivos del Developer. Planner y Coder Strong A habilitados; validation `PASS`, review `ACCEPT`, Developer `ACCEPTED`, PR 20 y follow-up PR 23 integrados; discovery global PASS y lifecycle `DONE`. |
 | [Result FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/RESULT.md) | Evidencia de cierre retrospectivo; conserva el resultado aceptado de la task. |
 | [Review FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/REVIEW.md) | Registro retrospectivo del veredicto independiente ya emitido; no es una nueva revisión. |
 | [Task FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/TASK.md) | Cierre documental de evidencia: RESULT/REVIEW retrospectivos, WP Agent Profiles MVP `DONE`, layout ADR pendiente bajo WP2. `DONE`; integrada por PR #17, merge `2f94422a64b7d86edf8abebdc10b13be87c1d10a`. |
 | [Result FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/RESULT.md) | Evidencia aceptada del cierre documental. |
 | [Review FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/REVIEW.md) | Revisión independiente del cierre; ACCEPT_WITH_NON_BLOCKING_FINDINGS. |
-| [WP: Orca Operational Adapter](work-packages/orca-operational-adapter/PLAN.md) | Baseline documental para Orca como adapter operativo reemplazable. `ACCEPTED`, integracion pendiente. |
-| [Task FF-AI-ORCA-001](tasks/FF-AI-ORCA-001/TASK.md) | Boundary, guia de ejecucion, adopcion incremental y secuencia con AGENT003. Validation `PASS`, review final `ACCEPT`, Developer `ACCEPTED`, no integrada. |
-| [Result FF-AI-ORCA-001](tasks/FF-AI-ORCA-001/RESULT.md) | Resultado aceptado previo a integracion. |
+| [WP: Orca Operational Adapter](work-packages/orca-operational-adapter/PLAN.md) | Baseline documental para Orca como adapter operativo reemplazable. Integrado por PR 22; `DONE`. |
+| [Task FF-AI-ORCA-001](tasks/FF-AI-ORCA-001/TASK.md) | Boundary, guia de ejecucion, adopcion incremental y secuencia con AGENT003. Validation `PASS`, review final `ACCEPT`, Developer `ACCEPTED`, integrada en `tooling` y lifecycle `DONE`. |
+| [Result FF-AI-ORCA-001](tasks/FF-AI-ORCA-001/RESULT.md) | Resultado aceptado e integrado por PR 22. |
 | [Review FF-AI-ORCA-001](tasks/FF-AI-ORCA-001/REVIEW.md) | Revision independiente y resolucion del follow-up AC18. |
 | [Orca Adapter Contract](architecture/orca-adapter-contract.md) | Boundary canonico de Orca como adapter operativo reemplazable. |
 | [Orca Task Cycle Guide](guides/orca-task-cycle.md) | Guia derivada del ciclo operativo Orca; no reemplaza lifecycle ni source of truth. |

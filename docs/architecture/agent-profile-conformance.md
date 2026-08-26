@@ -33,7 +33,7 @@ related:
 |---|---|
 | `role_id` | Debe resolver a uno de los ocho contratos canónicos. |
 | `role_contract_ref` | Link a una sección de `agent-role-contracts.md`. |
-| `manual_profile_status` | `MATERIALIZED_UNVERIFIED`; existe archivo versionado pero no implica discovery global. |
+| `manual_profile_status` | `MATERIALIZED_UNVERIFIED` o `GLOBALLY_DISCOVERED`; el segundo exige discovery global PASS, pero no implica runtime selection del AI Core. |
 | `runtime_selectable` | `FALSE` en esta fase. |
 | `adapter_descriptor` | Identificador documental `REPLACEABLE/NOT_IMPLEMENTED`; no implementación. |
 | `effective_read_scope` | Scope permitido por TASK, excluyendo secretos, env y runtime state. |

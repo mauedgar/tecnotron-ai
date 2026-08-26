@@ -2,7 +2,7 @@
 document_id: FFAI-VALIDATION-AGENT-003
 status: evidence
 machine_context: true
-version: 1.0
+version: 1.1
 updated: 2026-08-26
 task_id: FF-AI-AGENT-003
 result: PASS
@@ -37,7 +37,18 @@ result: PASS
 `.opencode/package.json` and `.opencode/package-lock.json` are Orca/OpenCode
 managed metadata. The Developer authorized keeping their observed update, so
 they are included in ownership and the commit as `task_dirty`; ADR-001 and Task
-Lifecycle no longer list them as known ambient dirt. Global link creation
-remains a post-integration Developer gate. The installer prefers symlinks and
-falls back to per-file hard links when Windows denies symlink privileges; no
-global configuration was mutated during task validation.
+Lifecycle no longer list them as known ambient dirt. The installer prefers
+symlinks and falls back to per-file hard links when Windows denies symlink
+privileges.
+
+## Post-integration checks
+
+- Stable source `C:/Proyectos-Web/Tecnotron-ai/.opencode/agents`: PASS.
+- Ten global profiles linked as per-file hard links: PASS.
+- Idempotent installer rerun, ten `OK HardLink` results: PASS.
+- Global discovery of all ten profiles from FitFlow: PASS.
+- Bounded global invocation of `prompt_generator`, exact output `PROFILE_OK`:
+  PASS.
+- Backup created before removing the eight managed inline definitions: PASS,
+  `C:/Users/maued/.config/opencode/backups/opencode-20260826-200338.json`.
+- Providers, permissions and unrelated built-ins preserved: PASS.

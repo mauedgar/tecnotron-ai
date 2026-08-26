@@ -26,8 +26,8 @@ updated: 2026-08-26
 
 | Orden | Task | Entregable | Estado | Gate |
 |---:|---|---|---|---|
-| 1 | `FF-AI-ORCA-001` | Boundary y guia de ejecucion del adapter Orca | `INTEGRATED` | DOC_SYNC y cleanup pendientes |
-| 2 | `FF-AI-AGENT-003` | Perfiles manuales OpenCode y distribucion global | `ACCEPTED` | Integracion y postflight global pendientes |
+| 1 | `FF-AI-ORCA-001` | Boundary y guia de ejecucion del adapter Orca | `DONE` | Integracion y DOC_SYNC completos |
+| 2 | `FF-AI-AGENT-003` | Perfiles manuales OpenCode y distribucion global | `DONE` | Integracion, discovery e invocacion global completos |
 
 Esta secuencia no cancela WP2-WP6 de `document-governance-v1`. ORCA001 y
 AGENT003 se integran serialmente por compartir indices documentales; despues
@@ -37,8 +37,9 @@ continuan WP2/WP3 y las waves restantes segun sus gates. Temporal permanece en
 `AGENT003` aplica la linea zero-cost observada por uso y aprobada por el
 Developer. El resto del bloque inline se trata como mock. La task habilita
 `planner_ai` y `coder_strong_a` como perfil de escalamiento MEDIUM explicito; no
-convierte perfiles manuales en runtime-selectable. La investigacion
-preflight/postflight se difiere hasta despues de `FF-AI-VNEXT-011+`.
+convierte perfiles manuales en runtime-selectable. El postflight de instalacion
+de AGENT003 esta completo; la investigacion sobre un protocolo durable generico
+se difiere hasta despues de `FF-AI-VNEXT-011+`.
 
 `FF-AI-VNEXT-006` fue implementada: la reparacion de `repo-packager` se integra
 en `tooling` y el ContextPackager v2 cumple el contrato de telemetria

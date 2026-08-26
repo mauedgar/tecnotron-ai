@@ -2,7 +2,7 @@
 document_id: FFAI-TASK-AGENT-003
 status: canonical
 machine_context: true
-version: 1.4
+version: 1.5
 updated: 2026-08-26
 owner: fitflow-ai
 type: workflow
@@ -16,9 +16,14 @@ validation: PASS
 review_verdict: ACCEPT
 developer_acceptance: ACCEPTED
 integration:
-  status: NOT_INTEGRATED
+  status: INTEGRATED
+  target: tooling
+  sha: 5ab5f94684f72013cbb8c047115795e213f55306
+  integrated_at: 2026-08-26
   pull_request: https://github.com/mauedgar/tecnotron-ai/pull/20
-lifecycle_status: ACCEPTED
+  follow_up_sha: 20db129a07a73138028b26b4550af259f92c9585
+  follow_up_pull_request: https://github.com/mauedgar/tecnotron-ai/pull/23
+lifecycle_status: DONE
 orchestration:
   run_id: run_9eb35245e53f
   task_id: task_cfa38b865814

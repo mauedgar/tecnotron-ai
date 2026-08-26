@@ -440,7 +440,7 @@ No model binding is declared by this document. Current assignments, if any, rema
 
 - Current runtime executability belongs to registry/config in FitFlow and is not conferred by this contract.
 - Exact `roles.yaml` / registry data: **Unknown** — FitFlow ownership, not defined here.
-- OpenCode profile files are materialized by active Task `FF-AI-AGENT-003`; global discovery remains unverified.
+- OpenCode profile files are materialized by completed Task `FF-AI-AGENT-003`; global discovery is verified, without conferring AI Core runtime selection.
 - Model Resolver integration: **Not defined** — this phase is contracts + matrix only.
 
 **Do NOT assert current runtime executability or exact registry data.** Authority for executable roles resides in FitFlow registry/config.

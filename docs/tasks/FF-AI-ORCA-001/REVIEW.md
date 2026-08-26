@@ -12,7 +12,8 @@ developer_acceptance: ACCEPTED
 integration:
   status: INTEGRATED
   target: tooling
-  revision: ae118431712a297447b09fbc9eecde795ea7588b
+  sha: ae118431712a297447b09fbc9eecde795ea7588b
+  integrated_at: 2026-08-26
   pull_request: https://github.com/mauedgar/tecnotron-ai/pull/22
 lifecycle_status: DONE
 orchestration:
