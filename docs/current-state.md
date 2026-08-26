@@ -2,8 +2,8 @@
 document_id: FFAI-STATE-001
 status: canonical
 machine_context: true
-version: 1.5
-updated: 2026-08-25
+version: 1.6
+updated: 2026-08-26
 ---
 
 # Estado actual de FitFlow-ai
@@ -78,6 +78,19 @@ desarrollador. No se modifican sin ownership de FitFlow.
 - **`FF-AI-AGENT-001`**: `DONE` / `ACCEPTED` / `INTEGRATED` — contratos de 7 roles + matriz perfiles, solo documentación; validación PASS, review completado y aceptación Developer explícita. Integrada en `tooling` por PR #12, merge `3d5d8b85a316233eae029963a3f5d14400fcd7fc`; `DOC_SYNC` completado. Artefactos canónicos: `agent-role-contracts.md`, `agent-profile-matrix.md`.
 - **`FF-AI-AGENT-002`**: `DONE` / `ACCEPTED` / `INTEGRATED` — conformance documental de perfiles mínimos (canonical); validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`. Integrada en `tooling` por PR #15, merge `6c1effd9c6cc45d2f802672a124efa4ff15f93f5`; `DOC_SYNC` completado. Sin autorización OpenCode; discovery/invocation runtime no verificados.
 - **Perfiles/Registry/Runtime capability**: **Cero creados**. Esta fase solo define contratos y matriz documentales. No ejecutables, no selection, no ranking, no fallback, no model policy.
+
+## Task activa FF-AI-AGENT-003
+
+- `FF-AI-AGENT-003`: `ACCEPTED`, `validation PASS`, aceptacion `ACCEPTED`,
+  integracion `NOT_INTEGRATED`.
+- Worktree administrado por Orca desde `tooling@141174b`; Run
+  `run_9eb35245e53f` y task de orquestacion `task_cfa38b865814` creados.
+- Scope: perfiles manuales OpenCode y distribucion global enlazada. No afirma
+  discovery global PASS; discovery de proyecto e invocaciones acotadas si estan
+  verificadas. El ruling del 2026-08-26 habilita `planner_ai` y `coder_strong_a`;
+  este ultimo solo como escalamiento MEDIUM explicito.
+- La investigacion preflight/postflight permanece no normativa y diferida hasta
+  despues de `FF-AI-VNEXT-011+`.
 
 ## Plataforma operativa
 

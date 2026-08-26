@@ -36,6 +36,9 @@ related:
   - "[[tasks/FF-AI-AGENT-002/PLAN]]"
   - "[[tasks/FF-AI-AGENT-002/RESULT]]"
   - "[[tasks/FF-AI-AGENT-002/REVIEW]]"
+  - "[[work-packages/opencode-manual-profiles/PLAN]]"
+  - "[[tasks/FF-AI-AGENT-003/TASK]]"
+  - "[[tasks/FF-AI-AGENT-003/PLAN]]"
   - "[[tasks/FF-AI-DOC-CLOSURE-001/TASK]]"
   - "[[architecture/agent-role-contracts]]"
   - "[[architecture/agent-profile-matrix]]"
@@ -74,7 +77,7 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 | [Current State](current-state.md) | Confirmed implementation reality and validation evidence only. |
 | [Implementation Roadmap](implementation-roadmap.md) | Sequencing and planned implementation work. |
 | [Compatibility Baseline](compatibility-baseline.md) | Observed tool compatibility and reproducible baseline evidence. |
-| [Agent Role Contracts](architecture/agent-role-contracts.md) | Contratos canónicos para los 7 roles iniciales; autoridad, inputs, outputs, límites, contexto, capacidades y permisos. No declara perfiles ejecutables. |
+| [Agent Role Contracts](architecture/agent-role-contracts.md) | Contratos canónicos para ocho roles habilitados; `coder_strong_a` es escalamiento MEDIUM explícito. No declara perfiles ejecutables. |
 | [Agent Profile Matrix](architecture/agent-profile-matrix.md) | Matriz canónica que separa role contract, perfil manual propuesto, runtime selection, model/skill bindings y permisos task-specific. |
 | [Agent Profile Conformance](architecture/agent-profile-conformance.md) | Conformance documental canónica para perfiles mínimos; sin perfiles/adapters/runtime ejecutables. Aceptada por el Developer (2026-08-25). |
 | [ADR-001: Document Authority and Layout](decisions/ADR-001-document-authority-and-layout.md) | Precedencia, layout objetivo, jerarquía Roadmap→Milestone→WP→Task, 5 dimensiones de estado, opencode.json origin, ambient_dirty policy, cross-repo boundary, source-material, **gobierna separaciones role/profile/runtime/model/skill/permissions**. |
@@ -99,6 +102,8 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 | [Result FF-AI-AGENT-001](tasks/FF-AI-AGENT-001/RESULT.md) | Evidencia de cierre retrospectivo; conserva el resultado aceptado de la task. |
 | [Review FF-AI-AGENT-001](tasks/FF-AI-AGENT-001/REVIEW.md) | Registro retrospectivo del veredicto independiente ya emitido; no es una nueva revisión. |
 | [Task FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/TASK.md) | Conformance documental de perfiles mínimos (canonical). Validación PASS y review `ACCEPT_WITH_NON_BLOCKING_FINDINGS`; `ACCEPTED` (2026-08-25), integrada en `tooling` por PR #15, merge `6c1effd9c6cc45d2f802672a124efa4ff15f93f5`; `DOC_SYNC` completado y lifecycle `DONE`. |
+| [WP: OpenCode Manual Profiles](work-packages/opencode-manual-profiles/PLAN.md) | Materializacion manual y distribucion global de perfiles OpenCode; separado de runtime y registries. `ACCEPTED`, postflight pendiente. |
+| [Task FF-AI-AGENT-003](tasks/FF-AI-AGENT-003/TASK.md) | Perfiles versionados de ocho roles y dos perfiles primarios exclusivos del Developer. Planner y Coder Strong A habilitados; validation `PASS`, review `ACCEPT`, Developer `ACCEPTED`, no integrado. |
 | [Result FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/RESULT.md) | Evidencia de cierre retrospectivo; conserva el resultado aceptado de la task. |
 | [Review FF-AI-AGENT-002](tasks/FF-AI-AGENT-002/REVIEW.md) | Registro retrospectivo del veredicto independiente ya emitido; no es una nueva revisión. |
 | [Task FF-AI-DOC-CLOSURE-001](tasks/FF-AI-DOC-CLOSURE-001/TASK.md) | Cierre documental de evidencia: RESULT/REVIEW retrospectivos, WP Agent Profiles MVP `DONE`, layout ADR pendiente bajo WP2. `DONE`; integrada por PR #17, merge `2f94422a64b7d86edf8abebdc10b13be87c1d10a`. |
@@ -111,6 +116,7 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 |---|---|
 | [Indexing Pipeline](indexing-pipeline.md) | Futuro destino: `docs/research/semantic-retrieval.md` (reclasificado research no normativo; movimiento por WP2). |
 | [Archive Source Material](archive/source-material/) | Histórico; puede curarse por TASK explícita; no canónico. |
+| [OpenCode and Orca Agent Operations](research/opencode-orca-agent-operations.md) | Inventario observado y protocolo auditable diferido; research no normativo. |
 
 ## Registros Activos (Executable Sources)
 

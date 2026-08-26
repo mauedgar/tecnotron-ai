@@ -2,8 +2,8 @@
 document_id: FFAI-ADR-001
 status: canonical
 machine_context: true
-version: 1.2
-updated: 2026-08-25
+version: 1.3
+updated: 2026-08-26
 accepted_by: Developer
 accepted_at: 2026-08-25
 related:
@@ -199,6 +199,12 @@ Este ADR establece separaciones normativas que rigen cualquier trabajo futuro so
 | `doc_curator` | Propuesto |
 | `coder_strong_a` | **DEFERRED** (post-MVP) |
 | Otros post-MVP | **DEFERRED** |
+
+**Ruling superseding 2026-08-26**: `planner_ai` y `coder_strong_a` quedan
+habilitados. Coder Strong A representa escalamiento complejo con autorizacion
+explicita y ceiling MEDIUM; no habilita trabajo HIGH, fallback automatico,
+ranking de modelos ni autoridad terminal. Los demas roles post-MVP permanecen
+`DEFERRED`.
 
 **9.6 Future Work Package `Agent Profiles MVP`**
 

@@ -2,8 +2,8 @@
 document_id: FFAI-ARCH-AGENT-ROLE-CONTRACTS
 status: canonical
 machine_context: true
-version: 1.0
-updated: 2026-08-25
+version: 1.1
+updated: 2026-08-26
 owner: fitflow-ai
 type: architecture
 related:
@@ -28,7 +28,7 @@ related:
 ## Global Invariants
 
 1. **Developer sole acceptance authority**: Ningún rol, modelo, skill ni perfil confiere autoridad de aceptación. Solo el Developer decide `developer_acceptance`; Task Lifecycle administra integración y transiciones, y solo puede alcanzar `DONE` cuando todos los gates están satisfechos.
-2. **Manual profile != runtime selectable**: La existencia de un perfil manual de OpenCode no implica que Router/Model Resolver pueda seleccionarlo ni que Agent Runtime pueda ejecutarlo. Columna `runtime_selectable` = FALSE para todos los 7 roles iniciales.
+2. **Manual profile != runtime selectable**: La existencia de un perfil manual de OpenCode no implica que Router/Model Resolver pueda seleccionarlo ni que Agent Runtime pueda ejecutarlo. Columna `runtime_selectable` = FALSE para los ocho roles habilitados.
 3. **Model/skill bindings replaceable**: Asignaciones de modelo y bindings de skills/herramientas son reemplazables sin cambiar el contrato del rol. No confieren identidad ni autoridad.
 4. **Task permission subset**: Permisos efectivos por TASK/PLAN son subconjunto del techo de capacidades del rol; nunca lo superan.
 5. **Unavailable → UNAVAILABLE → manual Developer override**: Sin fallback automático por rol. Si modelo/skill no disponible, se declara `UNAVAILABLE` y el Developer decide retry/cambio manual (registrado como override).
@@ -43,6 +43,7 @@ related:
 | `code_discovery` | Locate symbols, consumers, references, sources; evaluate index coverage; declare gaps |
 | `evidence_pack` | Produce minimal evidence pack with paths, symbols, coverage, index state, missing items |
 | `implementation_medium` | Primary implementation of medium complexity/criticality within authorized ceiling; TDD when required |
+| `implementation_complex_medium` | Explicit escalation for complex implementation that remains within a MEDIUM criticality ceiling |
 | `implementation_low` | Mechanical/low-criticality changes; stop on semantic ambiguity |
 | `review_semantic` | Independent semantic review; findings by severity, AC gaps, scope, architecture; verdict; no fixes |
 | `doc_curation` | Authorized docs writing only; normalize format, navigation, metadata, links; drift classification |
@@ -384,16 +385,48 @@ Documentation-only writes: normalize format, navigation, metadata, links; drift 
 
 ---
 
-## Deferred: coder_strong_a
+## coder_strong_a
 
-> **Not one of the seven canonical roles.** Deferred per ADR-001 §9.5 and source material §5.6/§11/§12.
->
-> - **Proposed/Not Closed**: Represents escalation for complex work only if verifiable operational difference from `coder_a` is demonstrated.
-> - Name does not prove greater capacity; must not derive from observed model.
-> - May remain without specific activation until real case exists.
-> - **No contract defined in this document.** Will be addressed in post-MVP Wave 2 (`FF-AI-AGENT-002`) if authorized.
->
-> **Current LLM assignment observations** (non-canonical, non-binding): None — role not activated.
+### Purpose
+Escalate complex implementation only after explicit Developer or Architect
+authorization when `coder_a` cannot complete it within the same MEDIUM ceiling.
+
+### Required Inputs
+- Canonical TASK and PLAN with exact ownership and deterministic validation
+- Explicit escalation authorization and evidence of the complexity gap
+- Relevant contracts and minimum sufficient evidence
+
+### Minimum Output / Deliverable
+- Diff restricted to TASK ownership
+- Tests and validation evidence required by the PLAN
+- Explicit gaps, failed checks and stop condition, without hidden fallback
+
+### Boundaries
+- Criticality ceiling remains **MEDIUM**; the role is not eligible for HIGH work
+- Does not decide architecture, expand scope, delegate, accept or integrate work
+- Activation is an explicit escalation, not automatic fallback from `coder_a`
+
+### Context Minimum Sufficient / Verifiable
+- TASK, PLAN, escalation evidence, relevant contracts and focused source context
+- Verifiable through ownership diff and the validation commands declared by PLAN
+
+### Capability Ceiling
+`implementation_complex_medium`
+
+### Task Permission Ceiling
+- Write: only exact ownership keys from the active TASK
+- Read: authorized scope, contracts and evidence required for implementation
+- No write to unrelated configuration, global OpenCode config or lifecycle records
+
+### Delegation / Handoff
+- Does not delegate
+- Returns implementation and evidence to Reviewer through Task Lifecycle
+
+### Stop Conditions
+- Risk or required criticality is HIGH
+- No explicit escalation authorization or no verifiable difference from `coder_a`
+- Architectural decision, scope expansion or unavailable capability is required
+- A required validation fails
 
 ---
 
@@ -405,9 +438,9 @@ No model binding is declared by this document. Current assignments, if any, rema
 
 ## Unknowns / Executable Authority (Registry/Config in FitFlow)
 
-- Current runtime executability of any role: **Unknown** — belongs to registry/config in FitFlow (out of scope).
+- Current runtime executability belongs to registry/config in FitFlow and is not conferred by this contract.
 - Exact `roles.yaml` / registry data: **Unknown** — FitFlow ownership, not defined here.
-- OpenCode profile files: **Not created** — manual profiles ≠ runtime selectable.
+- OpenCode profile files are materialized by active Task `FF-AI-AGENT-003`; global discovery remains unverified.
 - Model Resolver integration: **Not defined** — this phase is contracts + matrix only.
 
 **Do NOT assert current runtime executability or exact registry data.** Authority for executable roles resides in FitFlow registry/config.

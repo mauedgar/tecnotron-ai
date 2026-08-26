@@ -2,8 +2,8 @@
 document_id: FFAI-ROADMAP-001
 status: canonical
 machine_context: true
-version: 2.5
-updated: 2026-08-25
+version: 2.6
+updated: 2026-08-26
 ---
 
 # Secuencia de implementacion
@@ -21,6 +21,18 @@ updated: 2026-08-25
 | 8 | `FF-AI-VNEXT-009` | Agent MVP y documentation sync | `DONE` |
 | 9 | `FF-AI-VNEXT-010` | fitness functions y Workflow Observer | `BACKLOG` |
 | 10 | `FF-AI-VNEXT-011+` | retrieval, MCP y Temporal tras sus gates | `PLANNED` |
+
+## Follow-up: OpenCode Manual Profiles
+
+| Task | Entregable | Estado | Gate |
+|---|---|---|---|
+| `FF-AI-AGENT-003` | Perfiles OpenCode versionados, perfiles primarios exclusivos del Developer y distribucion global enlazada | `ACCEPTED` | PR, integracion y postflight global pendientes; sin integracion runtime/Temporal |
+
+`AGENT003` aplica la linea zero-cost observada por uso y aprobada por el Developer. El
+resto del bloque inline se trata como mock. La task habilita `planner_ai` y
+`coder_strong_a` como perfil de escalamiento MEDIUM explicito; no convierte
+perfiles manuales en runtime-selectable. La investigacion preflight/postflight se
+difiere hasta despues de `FF-AI-VNEXT-011+`.
 
 `FF-AI-VNEXT-006` fue implementada: la reparacion de `repo-packager` se integra
 en `tooling` y el ContextPackager v2 cumple el contrato de telemetria
