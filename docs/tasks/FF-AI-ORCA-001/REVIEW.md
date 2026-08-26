@@ -2,7 +2,7 @@
 document_id: FFAI-REVIEW-ORCA-001
 status: canonical
 machine_context: true
-version: 1.1
+version: 1.2
 updated: 2026-08-26
 owner: fitflow-ai
 type: review
@@ -10,8 +10,11 @@ validation: PASS
 review_verdict: ACCEPT
 developer_acceptance: ACCEPTED
 integration:
-  status: NOT_INTEGRATED
-lifecycle_status: ACCEPTED
+  status: INTEGRATED
+  target: tooling
+  revision: ae118431712a297447b09fbc9eecde795ea7588b
+  pull_request: https://github.com/mauedgar/tecnotron-ai/pull/22
+lifecycle_status: DONE
 orchestration:
   task_alias: ORCA001/review
   task_id: task_8d882687805d
