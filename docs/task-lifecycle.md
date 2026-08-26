@@ -2,7 +2,7 @@
 status: canonical
 owner: fitflow-ai
 type: workflow
-updated: 2026-08-25
+updated: 2026-08-26
 related:
   - "[[architecture/operational-architecture]]"
   - "[[architecture/context-strategy]]"
@@ -310,15 +310,16 @@ Tres categorías mutuamente excluyentes para cambios en el worktree:
 | Categoría | Definición | Acción |
 |---|---|---|
 | `task_dirty` | Cambios **deliberados dentro del scope** de la task actual. | Commitear tras acceptance gate + validación. |
-| `ambient_dirty` | Cambios **automáticos de OpenCode/Orca/tooling**. Fuera de scope. **No commitear automáticamente**; requieren decisión explícita del Developer si deben integrarse. | No leer causa, no editar, no restaurar, no incluir en scope/evidencia. |
+| `ambient_dirty` | Cambios generados fuera del scope o sin correlacion con la task actual. | No restaurar ni descartar silenciosamente; clasificar y pedir decision Developer antes de integrar. |
 | `unexpected_dirty` | Cambios **desconocidos en producto/contratos/otro owner**. | Investigar; no commitear hasta resolver. |
 
-### Archivos `ambient_dirty` Conocidos (MVP)
+### Metadata administrada por Orca/OpenCode
 
-- `.opencode/package.json`
-- `.opencode/package-lock.json`
-
-Estos archivos son conocidos como `ambient_dirty` durante el MVP. No son causados por la task activa, no deben leerse como causa, no deben editarse, no deben restaurarse, y **no se incluyen en scope/evidencia** de la task. No se commitean automáticamente por el Task Cycle.
+`.opencode/package.json` y `.opencode/package-lock.json` son metadata versionada.
+Cuando Orca/OpenCode los actualiza durante una task autorizada, el cambio se
+declara en ownership, se valida y se commitea como `task_dirty`. Si aparecen sin
+correlacion con la task, se conservan hasta clasificarlos; no se restauran ni se
+descartan automaticamente.
 
 ## 18. Referencias Cross-Repo y Source-Material
 

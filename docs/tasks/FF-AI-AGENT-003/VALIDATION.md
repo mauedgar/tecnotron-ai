@@ -36,6 +36,7 @@ result: PASS
 
 `.opencode/package.json` and `.opencode/package-lock.json` are Orca/OpenCode
 managed metadata. The Developer authorized keeping their observed update, so
-they are included in ownership and the commit. Global symlink creation remains
+they are included in ownership and the commit as `task_dirty`; ADR-001 and Task
+Lifecycle no longer list them as known ambient dirt. Global symlink creation remains
 a post-integration Developer gate; no global configuration was mutated during
 validation.

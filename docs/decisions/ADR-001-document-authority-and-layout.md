@@ -2,7 +2,7 @@
 document_id: FFAI-ADR-001
 status: canonical
 machine_context: true
-version: 1.3
+version: 1.4
 updated: 2026-08-26
 accepted_by: Developer
 accepted_at: 2026-08-25
@@ -138,13 +138,17 @@ Cada Task canónica lleva **cinco dimensiones independientes** (no un solo enum)
 - **Authority:** **No arquitectura**, **no source of truth** para FitFlow-ai, **no scope automático** para tasks de FitFlow.
 - **Política:** Cualquier cambio en `opencode.json` requiere autorización explícita del Developer en la task correspondiente; no se incluye por defecto en scope de tasks de FitFlow.
 
-### 7. `.opencode/package*.json` — `ambient_dirty` policy
+### 7. `.opencode/package*.json` — managed metadata policy
 
-- **Definición:** Cambios ambientales pre-existentes en el worktree que no son causados por la task actual, no deben ser leídos como causa, no deben editarse, no deben restaurarse, y **no se incluyen en scope/evidencia** de la task.
-- **No se commitean automáticamente** por el Task Cycle; requieren decisión explícita del Developer si deben integrarse.
+- `.opencode/package.json` y `.opencode/package-lock.json` son metadata
+  versionada y administrada por Orca/OpenCode. Una actualizacion observada dentro
+  de una task autorizada se incluye en ownership, validacion y commit como
+  `task_dirty`; no se clasifica como suciedad ambiental por ser automatica.
+- Un cambio no correlacionado con la task sigue requiriendo clasificacion antes
+  de integrarse; no se restaura ni se descarta silenciosamente.
 - **Clasificación de dirty (ruling):**
   - `task_dirty`: Cambios deliberados dentro del scope de la task actual.
-  - `ambient_dirty`: Cambios automáticos de OpenCode/Orca/tooling; conocidos durante MVP: `.opencode/package.json`, `.opencode/package-lock.json`.
+  - `ambient_dirty`: Cambios generados fuera del scope o sin correlacion con la task actual; requieren decision explícita del Developer.
   - `unexpected_dirty`: Cambios desconocidos en producto/contratos/otro owner; investigar, no commitear.
 
 ### 8. Cross-repo boundary y source-material
