@@ -59,7 +59,8 @@ Entregables:
 1. TASK/PLAN y evidencia de capacidades observadas.
 2. Ocho perfiles manuales de roles canonicos.
 3. Dos perfiles primarios exclusivos del Developer.
-4. Instalador determinista de enlaces globales con modo dry-run y fail-closed.
+4. Instalador determinista de enlaces globales con modo dry-run y fail-closed;
+   symlink preferido y hard link por archivo como fallback sin privilegios.
 5. Verificacion de discovery e invocacion manual.
 6. Plan de retiro de definiciones inline mock sin tocar providers, modelos no
    relacionados ni configuracion de terceros.

@@ -55,11 +55,13 @@ foreach ($agent in $managedAgents) {
 
     if (Test-Path $target) {
         $item = Get-Item $target -Force
-        $resolvedTarget = @($item.Target)[0]
-        if ($item.LinkType -ne "SymbolicLink" -or $resolvedTarget -ne $source) {
+        $resolvedTargets = @($item.Target)
+        $managedLink = ($item.LinkType -eq "SymbolicLink" -or $item.LinkType -eq "HardLink") -and
+            ($resolvedTargets -contains $source)
+        if (-not $managedLink) {
             throw "Refusing to replace unmanaged or mismatched destination: $target"
         }
-        Write-Output "OK $target -> $source"
+        Write-Output "OK $($item.LinkType) $target -> $source"
         continue
     }
 
@@ -70,10 +72,15 @@ foreach ($agent in $managedAgents) {
 
     try {
         New-Item -ItemType SymbolicLink -Path $target -Target $source | Out-Null
+        Write-Output "LINKED SymbolicLink $target -> $source"
     }
     catch {
-        throw "Could not create $target. Enable Windows Developer Mode or run with symlink privileges. $($_.Exception.Message)"
+        try {
+            New-Item -ItemType HardLink -Path $target -Target $source | Out-Null
+            Write-Output "LINKED HardLink $target -> $source"
+        }
+        catch {
+            throw "Could not create a symbolic or hard link for $target. $($_.Exception.Message)"
+        }
     }
-
-    Write-Output "LINKED $target -> $source"
 }
