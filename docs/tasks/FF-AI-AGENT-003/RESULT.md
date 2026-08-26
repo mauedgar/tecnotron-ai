@@ -8,6 +8,7 @@ task_id: FF-AI-AGENT-003
 validation: PASS
 developer_acceptance: ACCEPTED
 integration: NOT_INTEGRATED
+pull_request: https://github.com/mauedgar/tecnotron-ai/pull/20
 ---
 
 # Result FF-AI-AGENT-003

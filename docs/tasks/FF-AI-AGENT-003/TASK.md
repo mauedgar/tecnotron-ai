@@ -17,6 +17,7 @@ review_verdict: ACCEPT
 developer_acceptance: ACCEPTED
 integration:
   status: NOT_INTEGRATED
+  pull_request: https://github.com/mauedgar/tecnotron-ai/pull/20
 lifecycle_status: ACCEPTED
 orchestration:
   run_id: run_9eb35245e53f
@@ -151,3 +152,5 @@ exacta a `C:/Users/maued/.config/opencode/opencode.json`:
 
 La aceptacion no declara integracion, links globales ni `DONE`; esos estados se
 registran solo despues del PR y del postflight verificable.
+
+PR abierto: https://github.com/mauedgar/tecnotron-ai/pull/20

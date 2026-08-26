@@ -82,7 +82,8 @@ desarrollador. No se modifican sin ownership de FitFlow.
 ## Task activa FF-AI-AGENT-003
 
 - `FF-AI-AGENT-003`: `ACCEPTED`, `validation PASS`, aceptacion `ACCEPTED`,
-  integracion `NOT_INTEGRATED`.
+  integracion `NOT_INTEGRATED`; PR
+  `https://github.com/mauedgar/tecnotron-ai/pull/20` abierto.
 - Worktree administrado por Orca desde `tooling@141174b`; Run
   `run_9eb35245e53f` y task de orquestacion `task_cfa38b865814` creados.
 - Scope: perfiles manuales OpenCode y distribucion global enlazada. No afirma
