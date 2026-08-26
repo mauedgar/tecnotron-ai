@@ -27,7 +27,7 @@ function failedOutcome(proposal, details) {
   };
 }
 
-function executeRuntime({ routeDecision, modelResolution, adapter, identityArtifact, eventMetadata, orchestrator }) {
+function executeRuntime({ routeDecision, modelResolution, adapter, identityArtifact, identityWriter, eventMetadata, orchestrator, task = null, context = null }) {
   if (routeDecision.status !== 'ROUTED') {
     return {
       status: 'BLOCKED',
@@ -89,6 +89,8 @@ function executeRuntime({ routeDecision, modelResolution, adapter, identityArtif
     execution = adapter.execute({
       route: routeDecision,
       proposal: modelResolution.selected,
+      task,
+      context,
     });
   } catch (error) {
     const details = error instanceof Error
@@ -155,6 +157,17 @@ function executeRuntime({ routeDecision, modelResolution, adapter, identityArtif
     },
     details: mismatch ? 'Effective runtime differs from proposal' : null,
   });
+  let resolvedIdentityArtifact = identityArtifact;
+  if (typeof identityWriter === 'function') {
+    try {
+      resolvedIdentityArtifact = identityWriter(identity);
+    } catch (error) {
+      return failedOutcome(modelResolution.selected, `Runtime identity persistence failed: ${error.message}`);
+    }
+  }
+  if (!ArtifactRef.safeParse(resolvedIdentityArtifact).success) {
+    return failedOutcome(modelResolution.selected, 'Runtime identity artifact is invalid');
+  }
   const event = RunEvent.parse({
     artifact: 'RUN_EVENT',
     schema_version: 'fitflow-run-event/v2',
@@ -165,7 +178,7 @@ function executeRuntime({ routeDecision, modelResolution, adapter, identityArtif
     state_to: EXECUTION_TO,
     reason_code: reasonCode,
     inputs: [],
-    outputs: [identityArtifact, ...execution.outputs],
+    outputs: [resolvedIdentityArtifact, ...execution.outputs],
   });
 
   return { identity, event };

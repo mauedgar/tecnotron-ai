@@ -47,6 +47,7 @@ function readProfile(profilePath) {
 
 /**
  * Resuelve roots desde informacion declarada, nunca desde topologia de worktrees.
+ * Las opciones explicitas tienen precedencia sobre variables heredadas.
  * La ruta del perfil identifica el checkout de producto activo; sus campos roots
  * son fallbacks para ejecuciones fuera de un worktree de producto.
  */
@@ -56,7 +57,8 @@ function resolveProject(options = {}) {
     'Root de FitFlow-ai'
   );
   const explicitProjectRoot = options.projectRoot || process.env.FF_PROJECT_ROOT;
-  const explicitProfilePath = options.profilePath || process.env.FF_PROJECT_PROFILE;
+  const explicitProfilePath = options.profilePath
+    || (options.projectRoot ? null : process.env.FF_PROJECT_PROFILE);
   const profilePath = explicitProfilePath
     ? path.resolve(explicitProfilePath)
     : explicitProjectRoot
