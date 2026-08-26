@@ -71,7 +71,19 @@ test('resolver usa un Project Profile explicito fuera de topologia hermana', () 
     '  reusable_discovery_env: none',
     '  official_ai_core_env: null',
   ].join('\n'));
-  const resolution = resolveProject({ projectRoot: productRoot, aiCoreRoot: path.resolve(__dirname, '..', '..', '..') });
+  const previousRoot = process.env.FF_PROJECT_ROOT;
+  const previousProfile = process.env.FF_PROJECT_PROFILE;
+  process.env.FF_PROJECT_ROOT = path.join(productRoot, 'stale-root');
+  process.env.FF_PROJECT_PROFILE = path.join(productRoot, 'stale-profile.yaml');
+  let resolution;
+  try {
+    resolution = resolveProject({ projectRoot: productRoot, aiCoreRoot: path.resolve(__dirname, '..', '..', '..') });
+  } finally {
+    if (previousRoot === undefined) delete process.env.FF_PROJECT_ROOT;
+    else process.env.FF_PROJECT_ROOT = previousRoot;
+    if (previousProfile === undefined) delete process.env.FF_PROJECT_PROFILE;
+    else process.env.FF_PROJECT_PROFILE = previousProfile;
+  }
   assert.strictEqual(resolution.projectRoot, productRoot);
   assert.strictEqual(resolution.projectId, 'profile-test');
 });

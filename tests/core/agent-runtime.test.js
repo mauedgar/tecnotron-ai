@@ -163,6 +163,34 @@ test('agent-runtime: declared simulation emits valid effective identity and exec
   assert.deepStrictEqual(result.event.outputs, [identityArtifact]);
 });
 
+test('agent-runtime: passes Task and bounded context and persists the observed identity', () => {
+  const task = { task_id: 'FF-AI-OPS-TEST' };
+  const context = { status: 'COMPLETE', included_evidence: [{ evidence_id: 'one' }] };
+  let received;
+  let persisted;
+  const result = executeRuntime({
+    routeDecision,
+    modelResolution,
+    task,
+    context,
+    adapter: {
+      execute(input) {
+        received = input;
+        return { mode: 'simulated', provider: 'local', runtime_id: 'simulator-v1', outputs: [] };
+      },
+    },
+    identityWriter(identity) {
+      persisted = identity;
+      return identityArtifact;
+    },
+    eventMetadata,
+  });
+  assert.deepStrictEqual(received.task, task);
+  assert.deepStrictEqual(received.context, context);
+  assert.deepStrictEqual(persisted, result.identity);
+  assert.deepStrictEqual(result.event.outputs, [identityArtifact]);
+});
+
 test('agent-runtime: controlled real execution confirms the observed runtime identity', () => {
   const adapter = {
     execute: () => ({

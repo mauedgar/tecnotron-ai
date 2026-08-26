@@ -17,11 +17,7 @@ const { RunEvent } = require('../../src/contracts/run-event');
 const { resolveProject } = require('../../src/project-profile');
 const { loadRegistries } = require('../../src/registries');
 
-const hasExternalProjectResolution = Boolean(
-  process.env.FF_PROJECT_ROOT
-  || process.env.FF_PROJECT_PROFILE
-  || process.env.FF_AI_CORE_ROOT,
-);
+const externalProjectEnabled = process.env.FF_TEST_EXTERNAL_PROJECT === '1';
 
 function orchestratorFixture() {
   return {
@@ -269,7 +265,7 @@ test('local end-to-end composition with real components and deterministic fake m
   assert.strictEqual(result.runEvent.actor, 'adapter');
 });
 
-test('active v3 registries complete a declared simulation with paid API disabled', { skip: !hasExternalProjectResolution }, () => {
+test('active v3 registries complete a declared simulation with paid API disabled', { skip: externalProjectEnabled ? false : 'set FF_TEST_EXTERNAL_PROJECT=1' }, () => {
   const resolution = resolveProject();
   if (process.env.FF_PROJECT_ROOT) {
     assert.strictEqual(resolution.projectRoot, path.resolve(process.env.FF_PROJECT_ROOT));

@@ -121,6 +121,30 @@ const RUN_INPUT = {
   budget_tokens: 1024,
 };
 
+const TASK = {
+  artifact: 'TASK',
+  schema_version: 'fitflow-task/v2',
+  task_id: 'FF-AI-OPS-TEST',
+  title: 'Exercise runtime context handoff',
+  status: 'EXECUTING',
+  task_type: 'feature',
+  area: 'ai_tooling',
+  scope: 'mixed',
+  lane: 'ai_orchestrated',
+  risk: 'low',
+  priority: 'P1',
+  created_at: '2026-08-26T00:00:00Z',
+  author_role: 'developer',
+  baseline: { revision: 'abc123', fingerprint_status: 'unavailable', working_tree_fingerprint: null, fingerprint_reason: 'test baseline' },
+  github_issue: null,
+  openspec_change: null,
+  objective: 'Verify that the canonical Task and bounded context reach the runtime.',
+  in_scope: ['runtime handoff'],
+  out_of_scope: [],
+  acceptance_criteria: [{ id: 'AC-1', criterion: 'Task and context reach runtime' }],
+  ownership_keys: ['path:src/agent-mvp/index.js'],
+};
+
 test('factory requires an adapter dependency', () => {
   assert.throws(
     () => createAgentMvp({ contextPackager: { package: () => COMPLETE_CONTEXT } }),
@@ -240,6 +264,15 @@ test('COMPLETE context with PROCEED reaches executeRuntime and propagates identi
   assert.strictEqual(result.stages.context, COMPLETE_CONTEXT);
   assert.strictEqual(result.stages.explorer, PROCEED);
   assert.strictEqual(result.stages.runtime, RUNTIME_RESULT);
+});
+
+test('Agent MVP delivers the canonical Task and bounded context to Agent Runtime', () => {
+  const agentRuntime = spy(() => RUNTIME_RESULT);
+  const agent = createAgentMvp(fullDeps({ agentRuntime }));
+  const result = agent.execute({ ...RUN_INPUT, task: TASK });
+  assert.strictEqual(result.reachedRuntime, true);
+  assert.deepStrictEqual(agentRuntime.calls[0][0].task, TASK);
+  assert.strictEqual(agentRuntime.calls[0][0].context, COMPLETE_CONTEXT);
 });
 
 const ACTUAL_RUNTIME_RESULT = {

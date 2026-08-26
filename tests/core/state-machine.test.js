@@ -5,9 +5,18 @@ const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const crypto = require('crypto');
 
 const { StateMachine, InvalidTransitionError, createStateMachineFromOrchestrator } = require('../../src/core/state-machine');
-const { RunStore, SqliteProjection, RunStoreError } = require('../../src/core/run-store');
+const { RunStore, SqliteProjection, RunStoreError, RunStoreConflictError } = require('../../src/core/run-store');
+
+let sqliteAvailable = true;
+try {
+  require('better-sqlite3');
+} catch {
+  sqliteAvailable = false;
+}
+const sqliteSkip = sqliteAvailable ? false : 'UNAVAILABLE: better-sqlite3 not installed';
 function testOrchestrator() {
   return {
     schema_version: 'fitflow-orchestrator/v2',
@@ -156,7 +165,94 @@ test('run store rejects invalid events', () => {
   assert.throws(() => store.appendEvent({ artifact: 'nope' }), RunStoreError);
 });
 
-test('sqlite projection persists runs and events', () => {
+test('run store rejects run_id that escapes root', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fitflow-runstore-'));
+  const store = new RunStore({ root: tmp });
+  const evt = testRunEvent(1, 'system', 'PLANNING', 'EXECUTING', 'EXECUTION_COMPLETED', 'IMPLEMENTED');
+  evt.run_id = '../../escape';
+  assert.throws(() => store.appendEvent(evt), RunStoreError);
+  assert.throws(() => store.writeRunState(Object.assign({}, testRunState(), { run_id: '/abs/escape' })), RunStoreError);
+  assert.throws(() => store.readRunState('nested/run-id'), RunStoreError);
+  assert.throws(() => store.listEvents('nested\\run-id'), RunStoreError);
+});
+
+test('appendEvent is replay-safe by event_id and idempotency_key', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fitflow-runstore-'));
+  const store = new RunStore({ root: tmp });
+
+  const evt = testRunEvent(1, 'system', 'PLANNING', 'EXECUTING', 'EXECUTION_COMPLETED', 'IMPLEMENTED');
+  const first = store.appendEvent(evt);
+  assert.strictEqual(first.event_id, 'evt-001');
+
+  const replay = store.appendEvent(evt);
+  assert.strictEqual(replay.event_id, 'evt-001');
+  assert.strictEqual(store.listEvents('FF-AI-VNEXT-004-20260818').length, 1);
+
+  const idem = testRunEvent(2, 'system', 'PLANNING', 'EXECUTING', 'EXECUTION_COMPLETED', 'IMPLEMENTED');
+  idem.event_id = 'evt-002-different';
+  const firstIdem = store.appendEvent(idem);
+  assert.strictEqual(store.listEvents('FF-AI-VNEXT-004-20260818').length, 2);
+  const replayIdem = store.appendEvent(idem);
+  assert.strictEqual(replayIdem.event_id, 'evt-002-different');
+  assert.strictEqual(store.listEvents('FF-AI-VNEXT-004-20260818').length, 2);
+});
+
+test('appendEvent throws RunStoreConflictError on content conflict', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fitflow-runstore-'));
+  const store = new RunStore({ root: tmp });
+
+  const evt = testRunEvent(1, 'system', 'PLANNING', 'EXECUTING', 'EXECUTION_COMPLETED', 'IMPLEMENTED');
+  store.appendEvent(evt);
+
+  const conflict = testRunEvent(1, 'reviewer', 'PLANNING', 'REVIEWING', 'REVIEW_COMPLETED', 'APPROVED');
+  assert.throws(() => store.appendEvent(conflict), RunStoreConflictError);
+  assert.strictEqual(store.listEvents('FF-AI-VNEXT-004-20260818').length, 1);
+});
+
+test('writeRunState is atomic (no leftover temp file)', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fitflow-runstore-'));
+  const store = new RunStore({ root: tmp });
+  store.writeRunState(testRunState());
+  const dir = path.join(tmp, 'FF-AI-VNEXT-004-20260818');
+  const leftovers = fs.readdirSync(dir).filter((f) => f.endsWith('.tmp'));
+  assert.strictEqual(leftovers.length, 0);
+  const state = store.readRunState('FF-AI-VNEXT-004-20260818');
+  assert.strictEqual(state.current_state, 'PLANNING');
+});
+
+test('writeArtifact writes atomic JSON and returns sha256 ArtifactRef', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fitflow-runstore-'));
+  const store = new RunStore({ root: tmp });
+
+  const runId = 'FF-AI-VNEXT-004-20260818';
+  const value = { hello: 'world', n: 42 };
+  const ref = store.writeArtifact(runId, 'ctx/package.json', value, 'fitflow-context/v1');
+
+  assert.strictEqual(ref.path, 'artifacts/ctx/package.json');
+  assert.ok(ref.hash.startsWith('sha256:'));
+  assert.strictEqual(ref.schema_version, 'fitflow-context/v1');
+
+  const dir = path.join(tmp, runId, 'artifacts');
+  const leftovers = fs.readdirSync(dir, { recursive: true }).filter((f) => String(f).endsWith('.tmp'));
+  assert.strictEqual(leftovers.length, 0);
+
+  const written = JSON.parse(fs.readFileSync(path.join(dir, 'ctx/package.json'), 'utf8'));
+  assert.deepStrictEqual(written, value);
+
+  const expectedHash = crypto
+    .createHash('sha256')
+    .update(JSON.stringify(value, Object.keys(value).sort()))
+    .digest('hex');
+  assert.strictEqual(ref.hash, `sha256:${expectedHash}`);
+});
+
+test('writeArtifact rejects relative path that escapes root', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fitflow-runstore-'));
+  const store = new RunStore({ root: tmp });
+  assert.throws(() => store.writeArtifact('FF-AI-VNEXT-004-20260818', '../escape.json', { a: 1 }), RunStoreError);
+});
+
+test('sqlite projection persists runs and events', { skip: sqliteSkip }, () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fitflow-sqlite-'));
   const dbPath = path.join(tmp, 'run-state.sqlite');
   const projection = new SqliteProjection(dbPath);
@@ -177,7 +273,7 @@ test('sqlite projection persists runs and events', () => {
   assert.ok(fs.existsSync(dbPath));
 });
 
-test('sqlite projection upsert overwrites run state', () => {
+test('sqlite projection upsert overwrites run state', { skip: sqliteSkip }, () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fitflow-sqlite-'));
   const projection = new SqliteProjection(path.join(tmp, 'run-state.sqlite'));
 

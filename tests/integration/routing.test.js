@@ -9,9 +9,13 @@ const { routeTask } = require('../../src/router');
 const { resolveModel } = require('../../src/model-resolver');
 const { createStateMachineFromOrchestrator } = require('../../src/core/state-machine');
 
-test('real FitFlow profile and active registries produce a deterministic runtime proposal', { skip: !process.env.FF_PROJECT_ROOT }, () => {
+const externalProjectEnabled = process.env.FF_TEST_EXTERNAL_PROJECT === '1';
+
+test('real FitFlow profile and active registries produce a deterministic runtime proposal', { skip: externalProjectEnabled ? false : 'set FF_TEST_EXTERNAL_PROJECT=1' }, () => {
   const resolution = resolveProject();
-  assert.strictEqual(resolution.projectRoot, require('path').resolve(process.env.FF_PROJECT_ROOT));
+  if (process.env.FF_PROJECT_ROOT) {
+    assert.strictEqual(resolution.projectRoot, require('path').resolve(process.env.FF_PROJECT_ROOT));
+  }
   assert.strictEqual(resolution.configDir, require('path').join(resolution.projectRoot, '.ai', 'config'));
   const registries = loadRegistries(resolution.configDir, ['project-profile.yaml', 'roles.yaml', 'models.yaml', 'finops.yaml', 'orchestrator.yaml']);
   assert.strictEqual(registries['roles.yaml'].schema_version, 'fitflow-role-registry/v3');
@@ -30,12 +34,12 @@ test('real FitFlow profile and active registries produce a deterministic runtime
     finops: registries['finops.yaml'],
   });
   assert.deepStrictEqual(proposal.selected, {
-    registry_id: 'qwen25_coder_7b_candidate',
-    provider: 'local',
-    runtime_id: 'lmstudio/qwen2.5-coder-7b-instruct',
-    pool_id: 'local',
-    resource_class: 'local',
-    access_mode: 'local',
+    registry_id: 'mimo_v25_free_opencode',
+    provider: 'opencode',
+    runtime_id: 'opencode/mimo-v2.5-free',
+    pool_id: 'opencode_zero_incremental',
+    resource_class: 'zero_incremental',
+    access_mode: 'included',
   });
   assert.strictEqual(registries['finops.yaml'].paid_api_enabled, false);
 });

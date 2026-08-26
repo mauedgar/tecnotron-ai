@@ -455,6 +455,68 @@ def mode_drill_down(args: argparse.Namespace) -> None:
         print()
 
 
+def mode_exact(args: argparse.Namespace) -> None:
+    root = Path(args.root).resolve()
+    if not root.is_dir():
+        print(json.dumps({"error": f"root not a directory: {args.root}"}))
+        sys.exit(1)
+
+    requested_paths = [p.strip() for p in args.paths.split(",") if p.strip()]
+    budget = args.budget
+
+    exclusion_patterns = load_ignore_patterns(root)
+
+    included_paths: list[str] = []
+    omitted_paths: list[str] = []
+    evidence: list[dict[str, str]] = []
+    total_tokens = 0
+
+    for rel in requested_paths:
+        candidate = (root / rel).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError:
+            omitted_paths.append(rel)
+            continue
+
+        if not candidate.is_file():
+            omitted_paths.append(rel)
+            continue
+
+        normalized = normalize_repo_path(str(candidate), root)
+        if path_matches_exclusion(normalized, exclusion_patterns, root):
+            omitted_paths.append(rel)
+            continue
+
+        try:
+            content = candidate.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            omitted_paths.append(rel)
+            continue
+
+        toks = estimate_tokens(content)
+        if total_tokens + toks > budget:
+            omitted_paths.append(rel)
+            continue
+
+        included_paths.append(rel)
+        total_tokens += toks
+        evidence.append({"path": normalized, "content": content})
+
+    quality_status = "COMPLETE" if not omitted_paths else "PARTIAL"
+
+    output = {
+        "provider": "repo-packager",
+        "quality_status": quality_status,
+        "requested_paths": requested_paths,
+        "included_paths": included_paths,
+        "omitted_paths": omitted_paths,
+        "tokens": total_tokens,
+        "evidence": evidence,
+    }
+    print(json.dumps(output, ensure_ascii=False, separators=(",", ":")))
+
+
 def mode_ampliado(args: argparse.Namespace) -> None:
     requested_paths = [p.strip() for p in args.paths.split(",") if p.strip()]
     if not requested_paths:
@@ -586,6 +648,12 @@ def main() -> None:
         help="Solo firmas + imports",
     )
 
+    # exact
+    p_ex = sub.add_parser("exact", help="Materialización exacta de archivos específicos (JSON stdout)")
+    p_ex.add_argument("--root", required=True, help="Raíz del repositorio")
+    p_ex.add_argument("--paths", required=True, help="Lista separada por comas de paths relativos al root")
+    p_ex.add_argument("--budget", type=int, default=8000, help="Token budget (default 8000)")
+
     # ampliado
     p_amp = sub.add_parser("ampliado", help="Código real de paths concretos (max 10)")
     p_amp.add_argument(
@@ -605,6 +673,8 @@ def main() -> None:
         mode_reducido(args)
     elif args.mode == "drill-down":
         mode_drill_down(args)
+    elif args.mode == "exact":
+        mode_exact(args)
     elif args.mode == "ampliado":
         mode_ampliado(args)
     else:

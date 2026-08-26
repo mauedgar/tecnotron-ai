@@ -1,6 +1,6 @@
 'use strict';
 
-const { TaskRoutingInput } = require('../contracts/task');
+const { Task, TaskRoutingInput } = require('../contracts/task');
 const { EvidenceRequirement } = require('../contracts/context-packager');
 
 const STAGE = {
@@ -91,6 +91,17 @@ function validateAgentMvpInput(input) {
     }
   }
 
+  if (input.task !== undefined) {
+    const parsed = Task.safeParse(input.task);
+    if (!parsed.success) {
+      errors.push({
+        field: 'task',
+        message: 'task must satisfy the canonical fitflow-task/v2 contract',
+        details: parsed.error.issues.map((issue) => issue.message),
+      });
+    }
+  }
+
   return errors;
 }
 
@@ -124,6 +135,7 @@ function createAgentMvp(deps = {}) {
   const adapter = deps.adapter;
   const baseOrchestrator = deps.orchestrator !== undefined ? deps.orchestrator : null;
   const baseIdentityArtifact = deps.identityArtifact !== undefined ? deps.identityArtifact : null;
+  const baseIdentityWriter = deps.identityWriter !== undefined ? deps.identityWriter : null;
   const baseEventMetadata = deps.eventMetadata !== undefined ? deps.eventMetadata : null;
 
   function execute(input = {}) {
@@ -146,6 +158,7 @@ function createAgentMvp(deps = {}) {
 
     const orchestrator = resolveConfig(input.orchestrator, baseOrchestrator);
     const identityArtifact = resolveConfig(input.identityArtifact, baseIdentityArtifact);
+    const identityWriter = resolveConfig(input.identityWriter, baseIdentityWriter);
     const eventMetadata = resolveConfig(input.eventMetadata, baseEventMetadata);
 
     const routeDecision = router(input.routingInput, input.roleRegistry);
@@ -184,8 +197,11 @@ function createAgentMvp(deps = {}) {
       modelResolution,
       adapter,
       identityArtifact,
+      identityWriter,
       eventMetadata,
       orchestrator,
+      task: input.task || null,
+      context: contextResult,
     });
     stages.runtime = runtimeResult;
 
