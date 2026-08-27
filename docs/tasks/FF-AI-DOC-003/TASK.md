@@ -19,6 +19,7 @@ ownership_keys:
   - "doc:docs/implementation-roadmap.md"
   - "doc:docs/milestones/document-governance-v1/PLAN.md"
   - "doc:docs/SOURCE_OF_TRUTH.md"
+  - "doc:docs/architecture/task-lifecycle.md"
 validation: NOT_RUN
 lifecycle_status: READY
 related:

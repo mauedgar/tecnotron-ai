@@ -1,7 +1,7 @@
 ---
 description: Revisa semanticamente una implementacion con independencia y sin modificar producto.
 mode: all
-model: opencode/big-pickle
+model: opencode/nemotron-3-ultra-free
 permission:
   edit: deny
   task: deny

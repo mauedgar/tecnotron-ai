@@ -1,7 +1,7 @@
 ---
 description: Convierte trabajo aprobado en TASK y PLAN con limites, ownership y gates verificables.
 mode: all
-model: opencode/big-pickle
+model: opencode/nemotron-3-ultra-free
 permission:
   edit: ask
   task: allow

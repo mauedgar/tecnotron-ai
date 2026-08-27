@@ -1,7 +1,7 @@
 ---
 description: Ejecuta cambios mecanicos de baja criticidad y se detiene ante ambiguedad semantica.
 mode: all
-model: opencode/mimo-v2.5-free
+model: opencode/nemotron-3.5-lightning-free
 permission:
   edit: ask
   task: deny

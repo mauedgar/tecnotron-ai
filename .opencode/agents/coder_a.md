@@ -1,7 +1,7 @@
 ---
 description: Implementa trabajo de complejidad media dentro del ownership exacto de una TASK.
 mode: all
-model: opencode/big-pickle
+model: opencode/mimo-v2.5-free
 permission:
   edit: ask
   task: deny

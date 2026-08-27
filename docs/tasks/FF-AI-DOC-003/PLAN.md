@@ -2,8 +2,8 @@
 document_id: FFAI-PLAN-DOC-003
 status: canonical
 machine_context: true
-version: 1.0
-created: 2026-08-26
+version: 1.1
+updated: 2026-08-27
 owner: fitflow-ai
 type: workflow
 related:
@@ -11,6 +11,7 @@ related:
   - "[[work-packages/planning-hierarchy/PLAN]]"
   - "[[architecture/task-lifecycle]]"
   - "[[implementation-roadmap]]"
+  - "[[SOURCE_OF_TRUTH]]"
 ---
 
 # Plan FF-AI-DOC-003: Planning Hierarchy

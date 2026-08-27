@@ -1,7 +1,7 @@
 ---
 description: Interpreta roadmap y milestones y propone Work Packages para decision del Developer.
 mode: all
-model: opencode/big-pickle
+model: opencode/nemotron-3-ultra-free
 permission:
   edit: ask
   task: allow

@@ -2,7 +2,7 @@
 status: canonical
 owner: fitflow-ai
 type: reference
-updated: 2026-08-26
+updated: 2026-08-27
 related:
   - "[[architecture/system-architecture]]"
   - "[[architecture/operational-architecture]]"
@@ -19,6 +19,7 @@ related:
   - "[[work-packages/research-archive/PLAN]]"
   - "[[work-packages/document-conformance/PLAN]]"
   - "[[work-packages/agent-profiles-mvp/PLAN]]"
+  - "[[architecture/task-lifecycle#19-planning-hierarchy]]"
   - "[[tasks/FF-AI-DOC-001/TASK]]"
   - "[[tasks/FF-AI-DOC-001/RESULT]]"
   - "[[tasks/FF-AI-DOC-001/REVIEW]]"
@@ -89,6 +90,7 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 | [WP1: Authority Reconciliation](work-packages/authority-reconciliation/PLAN.md) | ADR-001, task-lifecycle.md 5 dimensiones, cierre 009 append-only, SoT update. Task FF-AI-DOC-001 Wave1. |
 | [WP2: Document Topology](work-packages/document-topology/PLAN.md) | 6 movimientos exactos a layout objetivo, links activos, SoT paths movidos. Task FF-AI-DOC-002 Wave2. |
 | [WP3: Planning Hierarchy](work-packages/planning-hierarchy/PLAN.md) | Jerarquía Roadmap→Milestone→WP→Task, plantillas canónicas, gates por nivel. Task FF-AI-DOC-003 Wave2. |
+| [Planning Hierarchy (§19 task-lifecycle.md)](architecture/task-lifecycle.md#19-planning-hierarchy) | Estructura cuatridimensional Roadmap→Milestone→Wave→WP→Task, plantillas canónicas (Milestone/WP/Task), gates por nivel (Task/WP/Milestone). |
 | [WP4: System Guide](work-packages/system-guide/PLAN.md) | Guía futura `docs/guides/system-guide.md` explicativo, no policy. Task FF-AI-DOC-004 Wave3. |
 | [WP5: Research Archive](work-packages/research-archive/PLAN.md) | Consolidación archive/research con READMEs; policy indexación; reclasificación indexing-pipeline. Task FF-AI-DOC-005 Wave3. |
 | [WP6: Document Conformance](work-packages/document-conformance/PLAN.md) | Validación conformancia completa corpus canónico (layout docs/architecture, docs/guides). Task FF-AI-DOC-006 Wave4 (serial tras WP1-5). |

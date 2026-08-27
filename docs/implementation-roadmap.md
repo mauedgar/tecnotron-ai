@@ -44,8 +44,8 @@ Promotion target: `main`.
 
 | WP | Task | Entregable | Estado |
 |---|---|---|---|
-| WP4: System Guide | `FF-AI-DOC-004` | `docs/guides/system-guide.md` | `PLANNED` |
-| WP5: Research Archive | `FF-AI-DOC-005` | Consolidación archive/research | `PLANNED` |
+| WP4: System Guide | `FF-AI-DOC-004` | `docs/guides/system-guide.md` | `READY` |
+| WP5: Research Archive | `FF-AI-DOC-005` | Consolidación archive/research | `READY` |
 
 ### Wave 4 — Document Conformance
 

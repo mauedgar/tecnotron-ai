@@ -2,8 +2,8 @@
 document_id: FFAI-WP-004
 status: canonical
 machine_context: true
-version: 1.0
-updated: 2026-08-25
+version: 1.1
+updated: 2026-08-26
 approved_by: Developer
 approved_at: 2026-08-25
 related:
@@ -21,8 +21,8 @@ related:
 ## Wave / Task
 
 - **Wave:** 3
-- **Task:** `FF-AI-DOC-004` (a crear en Wave 3)
-- **Estado inicial task:** `PLANNED`
+- **Task:** `FF-AI-DOC-004` (a materializar por Architect en Wave 3)
+- **Estado inicial task propuesto:** `READY`
 
 ## Resultado acotado (Definition of Done del WP)
 
@@ -31,7 +31,8 @@ Crear **`docs/guides/system-guide.md`** como guía canónica de navegación y op
 1. **Propósito:** Un punto de entrada único ("front door") que explica:
    - Qué es FitFlow-ai (AI Core orchestration layer).
    - Cómo navegar la documentación canónica (SoT, ADRs, Milestones, WPs, Tasks).
-   - Cómo operar el lifecycle (task-lifecycle.md) — crear task, validar, review, accept, integrar, cleanup.
+   - Cómo operar el lifecycle (`architecture/task-lifecycle.md`) — crear task, validar, review, accept, integrar, cleanup.
+   - Cómo se relacionan el lifecycle lógico, el adapter operativo Orca y los perfiles de agente sin colapsar sus responsabilidades.
    - Qué contratos son vinculantes (Zod schemas, registries v3).
    - Qué herramientas son intercambiables (OpenCode, Orca, Git worktree, MCP, providers).
 2. **Estructura objetivo:**
@@ -64,7 +65,7 @@ Crear **`docs/guides/system-guide.md`** como guía canónica de navegación y op
 ## Owner y Contexto Cualitativo
 
 - **Owner:** `Coder` (redacción de guía explicativa en `docs/guides/system-guide.md`).
-- **Contexto:** `docs/guides/system-guide.md` reduce fricción de onboarding y navegación. Es el único documento clasificado explícitamente como "guía" en el layout canónico. Su autoridad es **explicativa únicamente**.
+- **Contexto:** `docs/guides/system-guide.md` reduce fricción de onboarding y navegación. Es la guía de entrada al sistema; coexiste con `docs/guides/orca-task-cycle.md`, que explica el adapter operativo Orca. Su autoridad es **explicativa únicamente**.
 
 ## Dependencias
 
@@ -87,7 +88,7 @@ Crear **`docs/guides/system-guide.md`** como guía canónica de navegación y op
 
 ## Task Asociada
 
-- `FF-AI-DOC-004` (a crear en `docs/tasks/FF-AI-DOC-004/{TASK.md,PLAN.md}` en Wave 3).
+- `FF-AI-DOC-004` a materializar por Architect en `docs/tasks/FF-AI-DOC-004/{TASK.md,PLAN.md}`.
 - `work_package: WP4-system-guide`
 - `wave: 3`
 - `milestone: document-governance-v1`

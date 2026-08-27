@@ -1,7 +1,7 @@
 ---
 description: Recupera evidencia minima suficiente y declara cobertura y gaps sin modificar archivos.
 mode: subagent
-model: opencode/hy3-free
+model: opencode/nemotron-3.5-lightning-free
 permission:
   edit: deny
   task: deny
