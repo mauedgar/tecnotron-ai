@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-08-27T08:47:45.163804+00:00Z",
+  "check": "lifecycle",
+  "total_checked": 13,
+  "pass": 10,
+  "fail": 3,
+  "warn": 0,
+  "blocker": 0,
+  "details": [
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-001\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-002\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-003\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-001\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-002\\TASK.md",
+      "issues": [
+        "developer_acceptance: invalid None",
+        "integration.status: invalid None"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-003\\TASK.md",
+      "issues": [
+        "developer_acceptance: invalid None",
+        "integration.status: invalid None"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-004\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-005\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-006\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-CLOSURE-001\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-ORCA-001\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-VNEXT-008\\TASK.md",
+      "issues": [
+        "lifecycle_status: invalid None",
+        "validation: invalid None",
+        "developer_acceptance: invalid None",
+        "integration.status: invalid None"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-VNEXT-009\\TASK.md",
+      "status": "PASS"
+    }
+  ]
+}

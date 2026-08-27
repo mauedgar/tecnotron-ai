@@ -1,0 +1,387 @@
+{
+  "timestamp": "2026-08-27T08:45:51.579939+00:00Z",
+  "check": "links",
+  "total_checked": 312,
+  "pass": 300,
+  "fail": 12,
+  "warn": 0,
+  "blocker": 0,
+  "details": {
+    "resolved": [
+      {
+        "file": "docs/architecture\\agent-profile-conformance.md",
+        "target": "tasks/FF-AI-AGENT-002/TASK",
+        "anchor": "",
+        "line": 10
+      },
+      {
+        "file": "docs/architecture\\agent-profile-conformance.md",
+        "target": "tasks/FF-AI-AGENT-002/PLAN",
+        "anchor": "",
+        "line": 11
+      },
+      {
+        "file": "docs/architecture\\agent-profile-conformance.md",
+        "target": "architecture/agent-role-contracts",
+        "anchor": "",
+        "line": 12
+      },
+      {
+        "file": "docs/architecture\\agent-profile-conformance.md",
+        "target": "architecture/agent-profile-matrix",
+        "anchor": "",
+        "line": 13
+      },
+      {
+        "file": "docs/architecture\\agent-profile-conformance.md",
+        "target": "decisions/ADR-001-document-authority-and-layout",
+        "anchor": "",
+        "line": 14
+      },
+      {
+        "file": "docs/architecture\\agent-profile-conformance.md",
+        "target": "SOURCE_OF_TRUTH",
+        "anchor": "",
+        "line": 15
+      },
+      {
+        "file": "docs/architecture\\agent-profile-matrix.md",
+        "target": "decisions/ADR-001-document-authority-and-layout",
+        "anchor": "",
+        "line": 10
+      },
+      {
+        "file": "docs/architecture\\agent-profile-matrix.md",
+        "target": "work-packages/agent-profiles-mvp/PLAN",
+        "anchor": "",
+        "line": 11
+      },
+      {
+        "file": "docs/architecture\\agent-profile-matrix.md",
+        "target": "tasks/FF-AI-AGENT-001/TASK",
+        "anchor": "",
+        "line": 12
+      },
+      {
+        "file": "docs/architecture\\agent-profile-matrix.md",
+        "target": "tasks/FF-AI-AGENT-001/PLAN",
+        "anchor": "",
+        "line": 13
+      },
+      {
+        "file": "docs/architecture\\agent-profile-matrix.md",
+        "target": "architecture/agent-role-contracts",
+        "anchor": "",
+        "line": 14
+      },
+      {
+        "file": "docs/architecture\\agent-profile-matrix.md",
+        "target": "SOURCE_OF_TRUTH",
+        "anchor": "",
+        "line": 15
+      },
+      {
+        "file": "docs/architecture\\agent-profile-matrix.md",
+        "target": "task-lifecycle",
+        "anchor": "",
+        "line": 16
+      },
+      {
+        "file": "docs/architecture\\agent-role-contracts.md",
+        "target": "decisions/ADR-001-document-authority-and-layout",
+        "anchor": "",
+        "line": 10
+      },
+      {
+        "file": "docs/architecture\\agent-role-contracts.md",
+        "target": "work-packages/agent-profiles-mvp/PLAN",
+        "anchor": "",
+        "line": 11
+      },
+      {
+        "file": "docs/architecture\\agent-role-contracts.md",
+        "target": "tasks/FF-AI-AGENT-001/TASK",
+        "anchor": "",
+        "line": 12
+      },
+      {
+        "file": "docs/architecture\\agent-role-contracts.md",
+        "target": "tasks/FF-AI-AGENT-001/PLAN",
+        "anchor": "",
+        "line": 13
+      },
+      {
+        "file": "docs/architecture\\agent-role-contracts.md",
+        "target": "architecture/agent-profile-matrix",
+        "anchor": "",
+        "line": 14
+      },
+      {
+        "file": "docs/architecture\\agent-role-contracts.md",
+        "target": "SOURCE_OF_TRUTH",
+        "anchor": "",
+        "line": 15
+      },
+      {
+        "file": "docs/architecture\\agent-role-contracts.md",
+        "target": "task-lifecycle",
+        "anchor": "",
+        "line": 16
+      },
+      {
+        "file": "docs/architecture\\agent-role-contracts.md",
+        "target": "operational-architecture",
+        "anchor": "",
+        "line": 17
+      },
+      {
+        "file": "docs/architecture\\agent-role-contracts.md",
+        "target": "context-strategy",
+        "anchor": "",
+        "line": 18
+      },
+      {
+        "file": "docs/architecture\\context-strategy.md",
+        "target": "operational-architecture",
+        "anchor": "",
+        "line": 7
+      },
+      {
+        "file": "docs/architecture\\context-strategy.md",
+        "target": "task-lifecycle",
+        "anchor": "",
+        "line": 8
+      },
+      {
+        "file": "docs/architecture\\context-strategy.md",
+        "target": "system-architecture",
+        "anchor": "",
+        "line": 9
+      },
+      {
+        "file": "docs/architecture\\context-strategy.md",
+        "target": "current-state",
+        "anchor": "",
+        "line": 10
+      },
+      {
+        "file": "docs/architecture\\context-strategy.md",
+        "target": "implementation-roadmap",
+        "anchor": "",
+        "line": 11
+      },
+      {
+        "file": "docs/architecture\\operational-architecture.md",
+        "target": "system-architecture",
+        "anchor": "",
+        "line": 7
+      },
+      {
+        "file": "docs/architecture\\operational-architecture.md",
+        "target": "task-lifecycle",
+        "anchor": "",
+        "line": 8
+      },
+      {
+        "file": "docs/architecture\\operational-architecture.md",
+        "target": "context-strategy",
+        "anchor": "",
+        "line": 9
+      },
+      {
+        "file": "docs/architecture\\operational-architecture.md",
+        "target": "current-state",
+        "anchor": "",
+        "line": 10
+      },
+      {
+        "file": "docs/architecture\\operational-architecture.md",
+        "target": "implementation-roadmap",
+        "anchor": "",
+        "line": 11
+      },
+      {
+        "file": "docs/architecture\\operational-architecture.md",
+        "target": "task-lifecycle",
+        "anchor": "",
+        "line": 110
+      },
+      {
+        "file": "docs/architecture\\operational-architecture.md",
+        "target": "context-strategy",
+        "anchor": "",
+        "line": 199
+      },
+      {
+        "file": "docs/architecture\\orca-adapter-contract.md",
+        "target": "operational-architecture",
+        "anchor": "",
+        "line": 10
+      },
+      {
+        "file": "docs/architecture\\orca-adapter-contract.md",
+        "target": "task-lifecycle",
+        "anchor": "",
+        "line": 11
+      },
+      {
+        "file": "docs/architecture\\orca-adapter-contract.md",
+        "target": "tasks/FF-AI-ORCA-001/TASK",
+        "anchor": "",
+        "line": 12
+      },
+      {
+        "file": "docs/architecture\\orca-adapter-contract.md",
+        "target": "guides/orca-task-cycle",
+        "anchor": "",
+        "line": 13
+      },
+      {
+        "file": "docs/architecture\\system-architecture.md",
+        "target": "operational-architecture",
+        "anchor": "",
+        "line": 10
+      },
+      {
+        "file": "docs/architecture\\system-architecture.md",
+        "target": "task-lifecycle",
+        "anchor": "",
+        "line": 11
+      },
+      {
+        "file": "docs/architecture\\system-architecture.md",
+        "target": "context-strategy",
+        "anchor": "",
+        "line": 12
+      },
+      {
+        "file": "docs/architecture\\system-architecture.md",
+        "target": "SOURCE_OF_TRUTH",
+        "anchor": "",
+        "line": 13
+      },
+      {
+        "file": "docs/architecture\\task-lifecycle.md",
+        "target": "architecture/operational-architecture",
+        "anchor": "",
+        "line": 7
+      },
+      {
+        "file": "docs/architecture\\task-lifecycle.md",
+        "target": "architecture/context-strategy",
+        "anchor": "",
+        "line": 8
+      },
+      {
+        "file": "docs/architecture\\task-lifecycle.md",
+        "target": "current-state",
+        "anchor": "",
+        "line": 9
+      },
+      {
+        "file": "docs/architecture\\task-lifecycle.md",
+        "target": "implementation-roadmap",
+        "anchor": "",
+        "line": 10
+      },
+      {
+        "file": "docs/architecture\\task-lifecycle.md",
+        "target": "decisions/ADR-001-document-authority-and-layout",
+        "anchor": "",
+        "line": 11
+      },
+      {
+        "file": "docs/guides\\orca-task-cycle.md",
+        "target": "architecture/orca-adapter-contract",
+        "anchor": "",
+        "line": 10
+      },
+      {
+        "file": "docs/guides\\orca-task-cycle.md",
+        "target": "architecture/task-lifecycle",
+        "anchor": "",
+        "line": 11
+      },
+      {
+        "file": "docs/guides\\orca-task-cycle.md",
+        "target": "tasks/FF-AI-ORCA-001/TASK",
+        "anchor": "",
+        "line": 12
+      }
+    ],
+    "unresolved": [
+      {
+        "file": "docs/architecture\\agent-profile-matrix.md",
+        "target": "archive/source-material/roles-and-context-governance-source-material",
+        "anchor": "",
+        "line": 17
+      },
+      {
+        "file": "docs/architecture\\agent-role-contracts.md",
+        "target": "archive/source-material/roles-and-context-governance-source-material",
+        "anchor": "",
+        "line": 19
+      },
+      {
+        "file": "docs/architecture\\context-strategy.md",
+        "target": "document",
+        "anchor": "",
+        "line": 315
+      },
+      {
+        "file": "docs/architecture\\operational-architecture.md",
+        "target": "other-document",
+        "anchor": "",
+        "line": 259
+      },
+      {
+        "file": "docs/guides\\system-guide.md",
+        "target": "...",
+        "anchor": "",
+        "line": 72
+      },
+      {
+        "file": "docs/guides\\system-guide.md",
+        "target": "...",
+        "anchor": "",
+        "line": 142
+      },
+      {
+        "file": "docs/tasks\\FF-AI-DOC-006\\PLAN.md",
+        "target": "...",
+        "anchor": "",
+        "line": 53
+      },
+      {
+        "file": "docs/tasks\\FF-AI-DOC-006\\PLAN.md",
+        "target": "doc",
+        "anchor": "",
+        "line": 54
+      },
+      {
+        "file": "docs/tasks\\FF-AI-ORCA-001\\REVIEW.md",
+        "target": "../../architecture/orca-adapter-contract",
+        "anchor": "",
+        "line": 31
+      },
+      {
+        "file": "docs/tasks\\FF-AI-ORCA-001\\REVIEW.md",
+        "target": "../../guides/orca-task-cycle",
+        "anchor": "",
+        "line": 32
+      },
+      {
+        "file": "docs/work-packages\\research-archive\\PLAN.md",
+        "target": "archive/source-material/roles-and-context-governance-design",
+        "anchor": "",
+        "line": 13
+      },
+      {
+        "file": "docs/work-packages\\research-archive\\PLAN.md",
+        "target": "archive/source-material/roles-and-context-governance-source-material",
+        "anchor": "",
+        "line": 14
+      }
+    ]
+  }
+}

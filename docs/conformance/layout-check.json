@@ -1,0 +1,47 @@
+{
+  "timestamp": "2026-08-27T08:32:01.528876Z",
+  "architecture": {
+    "expected": [
+      "system-architecture.md",
+      "operational-architecture.md",
+      "context-strategy.md",
+      "task-lifecycle.md",
+      "development-pipeline-adapter.md"
+    ],
+    "actual": [
+      "agent-profile-conformance.md",
+      "agent-profile-matrix.md",
+      "agent-role-contracts.md",
+      "context-strategy.md",
+      "development-pipeline-adapter.md",
+      "operational-architecture.md",
+      "orca-adapter-contract.md",
+      "system-architecture.md",
+      "task-lifecycle.md"
+    ],
+    "missing": [],
+    "orphaned": [
+      "agent-profile-conformance.md",
+      "agent-profile-matrix.md",
+      "agent-role-contracts.md",
+      "orca-adapter-contract.md"
+    ],
+    "extra_justified": []
+  },
+  "guides": {
+    "expected": [
+      "system-guide.md"
+    ],
+    "actual": [
+      "orca-task-cycle.md",
+      "system-guide.md"
+    ],
+    "missing": [],
+    "orphaned": [
+      "orca-task-cycle.md"
+    ],
+    "extra_justified": []
+  },
+  "verdict": "FAIL",
+  "details": "Architecture: 4 orphaned, 0 missing. Guides: 1 orphaned, 0 missing."
+}

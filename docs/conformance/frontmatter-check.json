@@ -1,0 +1,1015 @@
+{
+  "timestamp": "2026-08-27T08:33:49.224433+00:00Z",
+  "check": "frontmatter",
+  "total_checked": 61,
+  "pass": 3,
+  "fail": 58,
+  "warn": 0,
+  "blocker": 0,
+  "details": [
+    {
+      "file": "docs/architecture\\agent-profile-conformance.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/architecture\\agent-profile-matrix.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/architecture\\agent-role-contracts.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/architecture\\context-strategy.md",
+      "status": "FAIL",
+      "missing": [
+        "document_id",
+        "machine_context",
+        "version",
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/architecture\\development-pipeline-adapter.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "owner",
+        "type",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status",
+        "related"
+      ]
+    },
+    {
+      "file": "docs/architecture\\operational-architecture.md",
+      "status": "FAIL",
+      "missing": [
+        "document_id",
+        "machine_context",
+        "version",
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/architecture\\orca-adapter-contract.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/architecture\\system-architecture.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/architecture\\task-lifecycle.md",
+      "status": "FAIL",
+      "missing": [
+        "document_id",
+        "machine_context",
+        "version",
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/guides\\orca-task-cycle.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/guides\\system-guide.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/decisions\\ADR-001-document-authority-and-layout.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "owner",
+        "type",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-001\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "type",
+        "risk",
+        "priority",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-001\\RESULT.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-001\\REVIEW.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-001\\TASK.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "milestone"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-002\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "type",
+        "risk",
+        "priority",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-002\\RESULT.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-002\\REVIEW.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-002\\TASK.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "milestone"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-003\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "type",
+        "risk",
+        "priority",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-AGENT-003\\TASK.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "milestone"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-001\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-001\\RESULT.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-001\\REVIEW.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-001\\TASK.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "dependency_gate"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-002\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-002\\TASK.md",
+      "status": "FAIL",
+      "missing": [
+        "developer_acceptance",
+        "integration"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-003\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-003\\TASK.md",
+      "status": "FAIL",
+      "missing": [
+        "developer_acceptance",
+        "integration"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-004\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-004\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-005\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-005\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-006\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-006\\TASK.md",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-CLOSURE-001\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "type",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status",
+        "related"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-CLOSURE-001\\RESULT.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-CLOSURE-001\\REVIEW.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-DOC-CLOSURE-001\\TASK.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-ORCA-001\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "type",
+        "risk",
+        "priority",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-ORCA-001\\REVIEW.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-ORCA-001\\TASK.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "milestone",
+        "dependency_gate"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-VNEXT-008\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-VNEXT-008\\RESULT.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-VNEXT-008\\REVIEW.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-VNEXT-008\\TASK.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-VNEXT-009\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-VNEXT-009\\RESULT.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-VNEXT-009\\REVIEW.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/tasks\\FF-AI-VNEXT-009\\TASK.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys"
+      ]
+    },
+    {
+      "file": "docs/work-packages\\agent-profiles-mvp\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration"
+      ]
+    },
+    {
+      "file": "docs/work-packages\\authority-reconciliation\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "owner",
+        "type",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/work-packages\\document-conformance\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "owner",
+        "type",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/work-packages\\document-topology\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "owner",
+        "type",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/work-packages\\opencode-manual-profiles\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration"
+      ]
+    },
+    {
+      "file": "docs/work-packages\\orca-operational-adapter\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration"
+      ]
+    },
+    {
+      "file": "docs/work-packages\\planning-hierarchy\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "owner",
+        "type",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/work-packages\\research-archive\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "owner",
+        "type",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/work-packages\\system-guide\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "owner",
+        "type",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    },
+    {
+      "file": "docs/milestones\\document-governance-v1\\PLAN.md",
+      "status": "FAIL",
+      "missing": [
+        "created",
+        "owner",
+        "type",
+        "criticality",
+        "risk",
+        "priority",
+        "work_package",
+        "wave",
+        "milestone",
+        "dependency_gate",
+        "ownership_keys",
+        "validation",
+        "developer_acceptance",
+        "integration",
+        "lifecycle_status"
+      ]
+    }
+  ]
+}
