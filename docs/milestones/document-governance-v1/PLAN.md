@@ -42,8 +42,8 @@ Establecer la autoridad documental, precedencia, layout objetivo, jerarquía de 
 | WP | Nombre | Wave | Task asociada | Estado | Fecha DONE |
 |---|---|---|---|---|---|
 | **WP1** | Authority Reconciliation | 1 | `FF-AI-DOC-001` | `DONE` | `2026-08-25` |
-| **WP2** | Document Topology | 2 | `FF-AI-DOC-002` | `PLANNED` | — |
-| **WP3** | Planning Hierarchy | 2 | `FF-AI-DOC-003` | `PLANNED` | — |
+| **WP2** | Document Topology | 2 | `FF-AI-DOC-002` | `IN_PROGRESS` | — |
+| **WP3** | Planning Hierarchy | 2 | `FF-AI-DOC-003` | `IN_PROGRESS` | — |
 | **WP4** | System Guide | 3 | `FF-AI-DOC-004` | `PLANNED` | — |
 | **WP5** | Research Archive | 3 | `FF-AI-DOC-005` | `PLANNED` | — |
 | **WP6** | Document Conformance | 4 | `FF-AI-DOC-006` | `PLANNED` | — |

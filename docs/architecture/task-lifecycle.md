@@ -325,3 +325,100 @@ descartan automaticamente.
 
 - **Cross-repo boundary:** FitFlow-ai no asume ubicación física de otros repositorios. La resolución portable de roots pertenece al Project Profile (`FF_PROJECT_*`). No hay paths hardcodeados cross-repo en contratos ni código canónico.
 - **Source-material:** `docs/archive/source-material/` contiene material de diseño previo. Puede curarse/moverse bajo TASK documental explícita; sigue **no canónico** y **excluido por defecto**. No se indexa como source of truth.
+
+## 19. Planning Hierarchy
+
+### 19.1 Estructura
+
+La planificación sigue una jerarquía cuatridimensional:
+
+```text
+Roadmap (implementation-roadmap.md)
+  └── Milestone (docs/milestones/*/PLAN.md)
+        └── Wave (agrupación lógica de WPs)
+              └── Work Package / WP (docs/work-packages/*/PLAN.md)
+                    └── Task (docs/tasks/*/{TASK.md, PLAN.md})
+```
+
+- **Roadmap**: secuencia global de implementación. Referencia milestones y backlog.
+- **Milestone**: conjunto de WPs que cierran una línea de trabajo. Tiene integration target y promotion target.
+- **Wave**: agrupación lógica de WPs que pueden ejecutarse en paralelo (ownership disjunto) o en serie.
+- **Work Package**: alcance acotado con owner, dependencias, riesgos y paralelismo declarado.
+- **Task**: unidad atómica de trabajo con ownership keys, ACs, stop conditions y 5 dimensiones de estado.
+
+### 19.2 Gates por Nivel
+
+| Nivel | Gate | Condición de cierre |
+|---|---|---|
+| **Task** | Developer acceptance | 5 dimensiones alineadas: `validation PASS` + `review_verdict != CHANGES_REQUIRED` + `developer_acceptance ACCEPTED` + `integration INTEGRATED` + `DOC_SYNC` completado |
+| **WP** | WP gate | Todas las tasks del WP en `DONE` |
+| **Milestone** | Milestone gate | Todos los WPs del milestone en `DONE` + integración verificada en target + promotion aprobada |
+
+Un gate de nivel superior **no se resuelve automáticamente** por la resolución
+de gates inferiores. El Developer mantiene autoridad terminal en cada nivel.
+
+### 19.3 Plantillas Canónicas
+
+#### Milestone Plan (`docs/milestones/*/PLAN.md`)
+
+Campos obligatorios en frontmatter:
+```yaml
+document_id: FFAI-MILESTONE-*
+status: canonical
+machine_context: true
+version: N.N
+updated: YYYY-MM-DD
+```
+
+Cuerpo: baseline, integration target, promotion target, tabla de WPs por wave, dependencias, riesgos, paralelismo, developer gate.
+
+#### WP Plan (`docs/work-packages/*/PLAN.md`)
+
+Campos obligatorios en frontmatter:
+```yaml
+document_id: FFAI-WP-*
+status: canonical
+machine_context: true
+version: N.N
+updated: YYYY-MM-DD
+approved_by: Developer
+approved_at: YYYY-MM-DD
+```
+
+Cuerpo: wave/task asociada, resultado acotado (DoD), frontera (in/out scope), owner, dependencias, riesgos, paralelismo, developer gate.
+
+#### Task TASK (`docs/tasks/*/TASK.md`)
+
+Campos obligatorios en frontmatter:
+```yaml
+document_id: FFAI-TASK-*
+status: canonical
+machine_context: true
+version: N.N
+created: YYYY-MM-DD
+owner: fitflow-ai
+criticality: low|medium|high
+risk: low|medium|high
+priority: P0|P1|P2
+work_package: WP*-*
+wave: N
+milestone: milestone-name
+ownership_keys: [...]
+validation: PASS|FAIL|UNAVAILABLE|NOT_RUN
+lifecycle_status: DISCOVERED|READY|STARTED|WORKING|VALIDATED|PENDING_ACCEPTANCE|ACCEPTED|INTEGRATING|DOC_SYNC|DONE|CLEANUP
+```
+
+Cuerpo: identification table, objetivo, ownership keys, ACs, stop conditions, autoría y entradas, delegación.
+
+#### Task PLAN (`docs/tasks/*/PLAN.md`)
+
+Campos obligatorios en frontmatter:
+```yaml
+document_id: FFAI-PLAN-*
+status: canonical
+machine_context: true
+version: N.N
+created: YYYY-MM-DD
+```
+
+Cuerpo: fases (discover → implement → validate → review → accept).
