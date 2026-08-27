@@ -12,7 +12,7 @@ related:
   - "[[work-packages/authority-reconciliation/PLAN]]"
   - "[[tasks/FF-AI-DOC-001/TASK]]"
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
 ---
 # PLAN FF-AI-DOC-001: Plan de Ejecución - Fundación Documental + Wave 1 + Cierre 009
 
@@ -34,7 +34,7 @@ Ejecutar **exclusivamente** la fundación aprobada (ADR-001, Milestone, 6 WPs) y
 9. docs/tasks/FF-AI-DOC-001/TASK.md
 10. docs/tasks/FF-AI-DOC-001/PLAN.md
 11. docs/SOURCE_OF_TRUTH.md
-12. docs/task-lifecycle.md
+12. docs/architecture/task-lifecycle.md
 13. docs/current-state.md
 14. docs/implementation-roadmap.md
 15. docs/tasks/FF-AI-VNEXT-009/TASK.md
@@ -63,7 +63,7 @@ Ejecutar **exclusivamente** la fundación aprobada (ADR-001, Milestone, 6 WPs) y
   - Worktree actual en `feat-current-state-2` basado en `tooling`.
 3. **Verificar archivos existentes a modificar:**
   - `docs/SOURCE_OF_TRUTH.md` (existe, v2026-08-21)
-  - `docs/task-lifecycle.md` (existe, v2026-08-24)
+  - `docs/architecture/task-lifecycle.md` (existe, v2026-08-24)
   - `docs/current-state.md` (existe, v2026-08-24)
   - `docs/implementation-roadmap.md` (existe, v2026-08-24)
   - `docs/tasks/FF-AI-VNEXT-009/TASK.md` (existe, v2026-08-24)
@@ -93,7 +93,7 @@ Ejecutar **exclusivamente** la fundación aprobada (ADR-001, Milestone, 6 WPs) y
 
 **Objetivo:** Actualizar 6 archivos existentes con cambios precisos.
 
-#### 2.1 `docs/task-lifecycle.md`
+#### 2.1 `docs/architecture/task-lifecycle.md`
 
 - Actualizar `updated: 2026-08-25`.
 - Añadir/separar **5 dimensiones de estado** con valores exactos (validation: PASS|FAIL|UNAVAILABLE|NOT_RUN; review_verdict: ACCEPT|ACCEPT_WITH_NON_BLOCKING_FINDINGS|CHANGES_REQUIRED|ausente; developer_acceptance: PENDING|ACCEPTED|REJECTED; integration: NOT_INTEGRATED|INTEGRATED; lifecycle_status: secuencia canónica).
@@ -223,7 +223,7 @@ Detener y escalar al Developer inmediatamente si:
 | AC-2  | `cat docs/milestones/document-governance-v1/PLAN.md` → baseline main@41088a4, tooling@c88c174, 6 WPs, waves, paralelismo, Owner Developer+Planner, guide paths                                                                                                                                                                                                                                                                                                                                                                                                             |
 | AC-3  | `ls docs/work-packages/*/PLAN.md` → 6 archivos; cada uno con secciones: resultado, frontera, owner, dependencias, riesgos, paralelismo, task, Developer gate                                                                                                                                                                                                                                                                                                                                                                                                               |
 | AC-4  | `cat docs/tasks/FF-AI-DOC-001/TASK.md` → milestone, work_package, wave, dependencies, ownership_keys (16 paths), frontmatter validation/developer_acceptance/integration/lifecycle_status                                                                                                                                                                                                                                                                                                                                                                                  |
-| AC-5  | `cat docs/task-lifecycle.md` → 5 dimensiones, review_verdict ausente permitida, secuencia exacta, 3 dirty types ruling, 2 ambient MVP                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| AC-5  | `cat docs/architecture/task-lifecycle.md` → 5 dimensiones, review_verdict ausente permitida, secuencia exacta, 3 dirty types ruling, 2 ambient MVP                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | AC-6  | `git diff docs/tasks/FF-AI-VNEXT-009/TASK.md docs/tasks/FF-AI-VNEXT-009/RESULT.md docs/current-state.md docs/implementation-roadmap.md` → frontmatter metadata update + body historical content preserved verbatim + final closure appended; no technical evidence/review changed; `integration INTEGRATED` no RECONCILED; `git diff docs/tasks/FF-AI-VNEXT-009/REVIEW.md` → vacío                                                                                                                                                                                         |
 | AC-7  | `cat docs/SOURCE_OF_TRUTH.md` → precedencia exacta, **9 entradas exactas** indexadas (ADR-001, Milestone, 6 WPs, Task DOC-001) en categorías correctas; paths arquitectura en docs/architecture/, guía en docs/guides/, indexing-pipeline en Reference/Non-Canonical                                                                                                                                                                                                                                                                                                       |
 | AC-8  | `git diff --name-only` → 6 modified; `git ls-files --others --exclude-standard` → 10 untracked; `git diff --cached --name-only` → 2 ambient_dirty                                                                                                                                                                                                                                                                                                                                                                                                                          |
@@ -237,6 +237,6 @@ Detener y escalar al Developer inmediatamente si:
 - ADR-001: `docs/decisions/ADR-001-document-authority-and-layout.md`
 - Milestone: `docs/milestones/document-governance-v1/PLAN.md`
 - WP1: `docs/work-packages/authority-reconciliation/PLAN.md`
-- Lifecycle: `docs/task-lifecycle.md`
+- Lifecycle: `docs/architecture/task-lifecycle.md`
 - SoT: `docs/SOURCE_OF_TRUTH.md`
 - Cierre 009 fuente: `docs/tasks/FF-AI-VNEXT-009/{TASK.md,RESULT.md,REVIEW.md}`, `docs/current-state.md`, `docs/implementation-roadmap.md`

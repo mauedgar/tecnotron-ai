@@ -22,7 +22,7 @@ ownership_keys:
   - "doc:docs/tasks/FF-AI-DOC-001/TASK.md"
   - "doc:docs/tasks/FF-AI-DOC-001/PLAN.md"
   - "doc:docs/SOURCE_OF_TRUTH.md"
-  - "doc:docs/task-lifecycle.md"
+  - "doc:docs/architecture/task-lifecycle.md"
   - "doc:docs/current-state.md"
   - "doc:docs/implementation-roadmap.md"
   - "doc:docs/tasks/FF-AI-VNEXT-009/TASK.md"
@@ -42,7 +42,7 @@ related:
   - "[[milestones/document-governance-v1/PLAN]]"
   - "[[work-packages/authority-reconciliation/PLAN]]"
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
   - "[[current-state]]"
   - "[[implementation-roadmap]]"
   - "[[tasks/FF-AI-VNEXT-009/TASK]]"
@@ -90,7 +90,7 @@ doc:docs/work-packages/document-conformance/PLAN.md
 doc:docs/tasks/FF-AI-DOC-001/TASK.md
 doc:docs/tasks/FF-AI-DOC-001/PLAN.md
 doc:docs/SOURCE_OF_TRUTH.md
-doc:docs/task-lifecycle.md
+doc:docs/architecture/task-lifecycle.md
 doc:docs/current-state.md
 doc:docs/implementation-roadmap.md
 doc:docs/tasks/FF-AI-VNEXT-009/TASK.md
@@ -182,7 +182,7 @@ La implementación se detiene y escala al Developer inmediatamente si:
 - ADR-001: `docs/decisions/ADR-001-document-authority-and-layout.md`
 - Milestone: `docs/milestones/document-governance-v1/PLAN.md`
 - WPs: `docs/work-packages/*/PLAN.md`
-- Lifecycle: `docs/task-lifecycle.md`
+- Lifecycle: `docs/architecture/task-lifecycle.md`
 - SoT: `docs/SOURCE_OF_TRUTH.md`
 - Cierre 009: `docs/tasks/FF-AI-VNEXT-009/{TASK.md,RESULT.md}`, `docs/current-state.md`, `docs/implementation-roadmap.md`
 

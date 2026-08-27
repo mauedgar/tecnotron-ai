@@ -8,7 +8,7 @@ owner: fitflow-ai
 type: guide
 related:
   - "[[architecture/orca-adapter-contract]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
   - "[[tasks/FF-AI-ORCA-001/TASK]]"
 ---
 

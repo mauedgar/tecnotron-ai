@@ -8,11 +8,11 @@ accepted_by: Developer
 accepted_at: 2026-08-25
 related:
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
   - "[[implementation-roadmap]]"
   - "[[current-state]]"
-  - "[[operational-architecture]]"
-  - "[[context-strategy]]"
+  - "[[architecture/operational-architecture]]"
+  - "[[architecture/context-strategy]]"
 ---
 
 # ADR-001: Document Authority, Precedence, and Target Layout
@@ -26,7 +26,7 @@ FitFlow-ai ha acumulado documentación en múltiples capas (arquitectura, tareas
 ### 1. Precedencia de autoridad (orden estricto, mayor a menor)
 
 1. **Contratos y schemas ejecutables** (Zod, JSON Schema en `src/contracts/`, `src/registries/schemas/`) — son la única fuente vinculante para validación en tiempo de ejecución y compile-time.
-2. **ADRs y políticas canónicas** (`docs/decisions/ADR-*.md`, `docs/task-lifecycle.md`, `docs/context-strategy.md`, `docs/operational-architecture.md`) — gobiernan decisiones arquitectónicas, lifecycle, estrategia de contexto y límites operativos.
+2. **ADRs y políticas canónicas** (`docs/decisions/ADR-*.md`, `docs/architecture/task-lifecycle.md`, `docs/architecture/context-strategy.md`, `docs/architecture/operational-architecture.md`) — gobiernan decisiones arquitectónicas, lifecycle, estrategia de contexto y límites operativos.
 3. **SOURCE_OF_TRUTH e índices** (`docs/SOURCE_OF_TRUTH.md`) — índice de navegación determinista y regla de contradicción; no introduce policy propia.
 4. **TASK/RESULT/REVIEW aceptados** (`docs/tasks/FF-AI-*/TASK.md`, `RESULT.md`, `REVIEW.md` con `status: canonical`) — evidencia y scope vinculante por tarea aceptada.
 5. **Guías** (derivadas, p.ej. `docs/guides/system-guide.md` futura) — explicativas, no introducen policy; si una guía contradice una capa superior, gana la capa superior.
@@ -238,7 +238,7 @@ ranking de modelos ni autoridad terminal. Los demas roles post-MVP permanecen
 ## Referencias
 
 - `docs/SOURCE_OF_TRUTH.md` (índice actualizado tras este ADR)
-- `docs/task-lifecycle.md` (dimensiones y lifecycle actualizados tras este ADR)
+- `docs/architecture/task-lifecycle.md` (dimensiones y lifecycle actualizados tras este ADR)
 - `docs/milestones/document-governance-v1/PLAN.md` (milestone que agrupa los 6 WPs)
 - `docs/work-packages/*/PLAN.md` (6 WP Plans)
 - `docs/tasks/FF-AI-DOC-001/TASK.md` (task de fundación + Wave 1)

@@ -11,7 +11,7 @@ related:
   - "[[milestones/document-governance-v1/PLAN]]"
   - "[[tasks/FF-AI-DOC-001/TASK]]"
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
 ---
 
 # Work Package Plan: WP1 — Authority Reconciliation

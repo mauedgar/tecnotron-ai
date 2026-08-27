@@ -10,9 +10,9 @@ lifecycle_status: DONE
 related:
   - "[[decisions/ADR-001-document-authority-and-layout]]"
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
-  - "[[operational-architecture]]"
-  - "[[context-strategy]]"
+  - "[[architecture/task-lifecycle]]"
+  - "[[architecture/operational-architecture]]"
+  - "[[architecture/context-strategy]]"
   - "[[current-state]]"
   - "[[implementation-roadmap]]"
   - "[[milestones/document-governance-v1/PLAN]]"

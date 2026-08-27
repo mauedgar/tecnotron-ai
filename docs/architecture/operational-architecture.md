@@ -4,7 +4,7 @@ owner: fitflow-ai
 type: architecture
 updated: 2026-08-21
 related:
-  - "[[architecture]]"
+  - "[[system-architecture]]"
   - "[[task-lifecycle]]"
   - "[[context-strategy]]"
   - "[[current-state]]"

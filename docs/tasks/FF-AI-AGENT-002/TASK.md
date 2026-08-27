@@ -38,7 +38,7 @@ related:
   - "[[architecture/agent-profile-matrix]]"
   - "[[architecture/agent-profile-conformance]]"
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
 ---
 
 # Task FF-AI-AGENT-002: Minimal Profile Conformance (Docs Only)

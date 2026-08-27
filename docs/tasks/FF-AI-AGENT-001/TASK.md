@@ -36,7 +36,7 @@ related:
   - "[[decisions/ADR-001-document-authority-and-layout]]"
   - "[[work-packages/agent-profiles-mvp/PLAN]]"
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
   - "[[current-state]]"
   - "[[implementation-roadmap]]"
   - "[[milestones/document-governance-v1/PLAN]]"

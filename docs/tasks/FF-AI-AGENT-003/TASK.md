@@ -39,7 +39,7 @@ ownership_keys:
   - "doc:docs/architecture/agent-role-contracts.md"
   - "doc:docs/architecture/agent-profile-matrix.md"
   - "doc:docs/decisions/ADR-001-document-authority-and-layout.md"
-  - "doc:docs/task-lifecycle.md"
+  - "doc:docs/architecture/task-lifecycle.md"
   - "doc:docs/SOURCE_OF_TRUTH.md"
   - "doc:docs/current-state.md"
   - "doc:docs/implementation-roadmap.md"

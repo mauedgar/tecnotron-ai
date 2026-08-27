@@ -10,7 +10,7 @@ criticality: low
 risk: low
 priority: P1
 ownership_keys:
-  - "doc:docs/task-lifecycle.md"
+  - "doc:docs/architecture/task-lifecycle.md"
   - "doc:docs/SOURCE_OF_TRUTH.md"
   - "doc:docs/tasks/FF-AI-DOC-001/RESULT.md"
   - "doc:docs/tasks/FF-AI-DOC-001/REVIEW.md"
@@ -34,7 +34,7 @@ integration:
   integrated_at: 2026-08-25
 lifecycle_status: DONE
 related:
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
   - "[[SOURCE_OF_TRUTH]]"
   - "[[tasks/FF-AI-DOC-001/TASK]]"
   - "[[tasks/FF-AI-AGENT-001/TASK]]"

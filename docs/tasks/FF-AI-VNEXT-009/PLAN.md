@@ -8,7 +8,7 @@ updated: 2026-08-24
 machine_context: true
 related:
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
   - "[[tasks/FF-AI-VNEXT-009/TASK]]"
 ---
 

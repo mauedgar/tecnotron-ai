@@ -11,7 +11,7 @@ related:
   - "[[milestones/document-governance-v1/PLAN]]"
   - "[[implementation-roadmap]]"
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
 ---
 
 # Work Package Plan: WP3 — Planning Hierarchy

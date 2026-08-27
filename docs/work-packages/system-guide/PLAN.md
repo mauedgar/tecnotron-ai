@@ -10,10 +10,10 @@ related:
   - "[[decisions/ADR-001-document-authority-and-layout]]"
   - "[[milestones/document-governance-v1/PLAN]]"
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[architecture]]"
-  - "[[operational-architecture]]"
-  - "[[context-strategy]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/system-architecture]]"
+  - "[[architecture/operational-architecture]]"
+  - "[[architecture/context-strategy]]"
+  - "[[architecture/task-lifecycle]]"
 ---
 
 # Work Package Plan: WP4 — System Guide

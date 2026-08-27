@@ -4,10 +4,10 @@ owner: fitflow-ai
 type: reference
 updated: 2026-08-26
 related:
-  - "[[architecture]]"
-  - "[[operational-architecture]]"
-  - "[[task-lifecycle]]"
-  - "[[context-strategy]]"
+  - "[[architecture/system-architecture]]"
+  - "[[architecture/operational-architecture]]"
+  - "[[architecture/task-lifecycle]]"
+  - "[[architecture/context-strategy]]"
   - "[[current-state]]"
   - "[[implementation-roadmap]]"
   - "[[decisions/ADR-001-document-authority-and-layout]]"
@@ -60,7 +60,7 @@ sessions, workspace metadata, and Obsidian views are not source of truth.
 Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 
 1. **Contratos y schemas ejecutables** (`src/contracts/`, `src/registries/schemas/`) — única fuente vinculante para validación runtime y compile-time.
-2. **ADRs y políticas canónicas** (`docs/decisions/ADR-*.md`, `docs/task-lifecycle.md`, `docs/context-strategy.md`, `docs/operational-architecture.md`) — gobiernan decisiones arquitectónicas, lifecycle, contexto, límites operativos.
+2. **ADRs y políticas canónicas** (`docs/decisions/ADR-*.md`, `docs/architecture/task-lifecycle.md`, `docs/architecture/context-strategy.md`, `docs/architecture/operational-architecture.md`) — gobiernan decisiones arquitectónicas, lifecycle, contexto, límites operativos.
 3. **SOURCE_OF_TRUTH e índices** (`docs/SOURCE_OF_TRUTH.md`) — índice de navegación determinista y regla de contradicción; no introduce policy propia.
 4. **TASK/RESULT/REVIEW aceptados** (`docs/tasks/FF-AI-*/TASK.md`, `RESULT.md`, `REVIEW.md` con `status: canonical`) — evidencia y scope vinculante por tarea aceptada.
 5. **Guías** (derivadas, p.ej. `docs/guides/system-guide.md` futura) — explicativas, **no introducen policy**; si una guía contradice una capa superior, gana la capa superior.
@@ -73,11 +73,11 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 
 | Documento | Autoridad |
 |---|---|
-| [Architecture](architecture.md) | Stable AI Core architectural invariants and repository boundary. Futuro: `docs/architecture/system-architecture.md` (WP2). |
-| [Operational Architecture](operational-architecture.md) | Operational responsibilities, replaceable implementations, and control-plane boundaries. Futuro: `docs/architecture/operational-architecture.md` (WP2). |
-| [Task Lifecycle](task-lifecycle.md) | Logical lifecycle, worktree policy, acceptance, integration, and cleanup contracts. Futuro: `docs/architecture/task-lifecycle.md` (WP2). |
-| [Context Strategy](context-strategy.md) | Context objective, retrieval policy, telemetry, and evaluation gates. Futuro: `docs/architecture/context-strategy.md` (WP2). |
-| [Development Pipeline Adapter](development-pipeline-adapter.md) | Canonical adapter boundary and current adapter status. Futuro: `docs/architecture/development-pipeline-adapter.md` (WP2). |
+| [System Architecture](architecture/system-architecture.md) | Stable AI Core architectural invariants and repository boundary. |
+| [Operational Architecture](architecture/operational-architecture.md) | Operational responsibilities, replaceable implementations, and control-plane boundaries. |
+| [Task Lifecycle](architecture/task-lifecycle.md) | Logical lifecycle, worktree policy, acceptance, integration, and cleanup contracts. |
+| [Context Strategy](architecture/context-strategy.md) | Context objective, retrieval policy, telemetry, and evaluation gates. |
+| [Development Pipeline Adapter](architecture/development-pipeline-adapter.md) | Canonical adapter boundary and current adapter status. |
 | [Current State](current-state.md) | Confirmed implementation reality and validation evidence only. |
 | [Implementation Roadmap](implementation-roadmap.md) | Sequencing and planned implementation work. |
 | [Compatibility Baseline](compatibility-baseline.md) | Observed tool compatibility and reproducible baseline evidence. |
@@ -124,7 +124,7 @@ Cuando dos documentos discrepen, gana el de mayor precedencia en esta lista:
 
 | Documento | Nota |
 |---|---|
-| [Indexing Pipeline](indexing-pipeline.md) | Futuro destino: `docs/research/semantic-retrieval.md` (reclasificado research no normativo; movimiento por WP2). |
+| [Semantic Retrieval](research/semantic-retrieval.md) | Research no normativo; movido desde `docs/indexing-pipeline.md` por WP2. |
 | [Archive Source Material](archive/source-material/) | Histórico; puede curarse por TASK explícita; no canónico. |
 | [OpenCode and Orca Agent Operations](research/opencode-orca-agent-operations.md) | Inventario observado y protocolo auditable diferido; research no normativo. |
 

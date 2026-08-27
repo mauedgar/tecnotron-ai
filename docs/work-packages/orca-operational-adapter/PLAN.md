@@ -12,8 +12,8 @@ related:
   - "[[tasks/FF-AI-ORCA-001/PLAN]]"
   - "[[architecture/orca-adapter-contract]]"
   - "[[guides/orca-task-cycle]]"
-  - "[[operational-architecture]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/operational-architecture]]"
+  - "[[architecture/task-lifecycle]]"
 ---
 
 # Work Package Plan: Orca Operational Adapter

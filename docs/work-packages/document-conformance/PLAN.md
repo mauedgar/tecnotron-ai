@@ -10,7 +10,7 @@ related:
   - "[[decisions/ADR-001-document-authority-and-layout]]"
   - "[[milestones/document-governance-v1/PLAN]]"
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
   - "[[work-packages/authority-reconciliation/PLAN]]"
   - "[[work-packages/document-topology/PLAN]]"
   - "[[work-packages/planning-hierarchy/PLAN]]"

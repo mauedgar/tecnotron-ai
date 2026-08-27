@@ -20,9 +20,9 @@ related:
   - "[[SOURCE_OF_TRUTH]]"
   - "[[implementation-roadmap]]"
   - "[[current-state]]"
-  - "[[task-lifecycle]]"
-  - "[[operational-architecture]]"
-  - "[[context-strategy]]"
+  - "[[architecture/task-lifecycle]]"
+  - "[[architecture/operational-architecture]]"
+  - "[[architecture/context-strategy]]"
 ---
 
 # TASK FF-AI-VNEXT-009: Agent MVP y documentation sync

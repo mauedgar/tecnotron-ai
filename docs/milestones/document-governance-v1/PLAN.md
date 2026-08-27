@@ -9,7 +9,7 @@ approved_at: 2026-08-25
 related:
   - "[[decisions/ADR-001-document-authority-and-layout]]"
   - "[[SOURCE_OF_TRUTH]]"
-  - "[[task-lifecycle]]"
+  - "[[architecture/task-lifecycle]]"
   - "[[implementation-roadmap]]"
   - "[[current-state]]"
   - "[[work-packages/agent-profiles-mvp/PLAN]]"
@@ -111,6 +111,6 @@ Tras la **aceptación e integración en `tooling` de los artefactos de fundació
 - ADR: `docs/decisions/ADR-001-document-authority-and-layout.md`
 - WPs: `docs/work-packages/*/PLAN.md`
 - Task Wave 1: `docs/tasks/FF-AI-DOC-001/TASK.md` y `PLAN.md`
-- Lifecycle actualizado: `docs/task-lifecycle.md`
+- Lifecycle actualizado: `docs/architecture/task-lifecycle.md`
 - SoT actualizado: `docs/SOURCE_OF_TRUTH.md`
 - Cierre 009: `docs/tasks/FF-AI-VNEXT-009/TASK.md`, `RESULT.md`, `current-state.md`, `implementation-roadmap.md`

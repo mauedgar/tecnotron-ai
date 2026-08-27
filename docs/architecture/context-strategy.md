@@ -6,7 +6,7 @@ updated: 2026-08-21
 related:
   - "[[operational-architecture]]"
   - "[[task-lifecycle]]"
-  - "[[architecture]]"
+  - "[[system-architecture]]"
   - "[[current-state]]"
   - "[[implementation-roadmap]]"
 ---
