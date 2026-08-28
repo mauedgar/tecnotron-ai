@@ -1,7 +1,7 @@
 ---
 description: Escala implementacion compleja de criticidad media con autorizacion explicita.
 mode: all
-model: opencode/big-pickle
+model: opencode/hy3-free
 permission:
   edit: ask
   task: deny
