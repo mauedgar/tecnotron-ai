@@ -2,7 +2,7 @@
 document_id: FFAI-ROADMAP-001
 status: canonical
 machine_context: true
-version: 2.5
+version: 2.6
 updated: 2026-08-29
 ---
 
@@ -17,15 +17,19 @@ queda como referencia historica sin autoridad operativa sobre este milestone.
 
 | Orden aprobado | Work Package | Estado | Navegacion |
 | ---: | --- | --- | --- |
-| 0 | `WP-000` | `NOT_READY` | [Plan WP-000](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) |
+| 0 | `WP-000` | `DONE` | [Plan WP-000](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) |
 | 1 | `WP-001` | `PLANNING_PENDING_SPEC` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#wp-001--project-scoped-agent-profiles-mvp) |
 | — | `WP-002`–`WP-006` | `PLANNING_PENDING_SPEC` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
 | — | `WP-007` | `PLANNING_PENDING_CONFIRMATION` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#wp-007--non-behavioral-milestone-closeout-boundary) |
 
-`WP-000` precede a `WP-001`. Sus unicas TASKs aprobadas son
+`WP-000` precede a `WP-001` y esta `DONE`: el Developer acepto terminalmente
+`TOF-W0-001` y `TOF-W0-002`, integradas en Tecnotron-ai
+`tools@423714572af5332b2defa7265ff1514d0fd0c81a` y FitFlow
+`develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`. Sus unicas TASKs aprobadas son
 [TOF-W0-001](tasks/TOF-W0-001/TASK.md) y
 [TOF-W0-002](tasks/TOF-W0-002/TASK.md), en ese orden. Esta seccion registra
-planificacion; no declara implementacion, integracion ni aceptacion terminal.
+la planificacion y el estado de integracion; la promocion del milestone a `main`
+permanece sujeta a su gate especifico.
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.
 

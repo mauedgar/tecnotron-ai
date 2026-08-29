@@ -84,7 +84,8 @@ Gate: `spec-5`, `spec-7`, `spec-8`, and `spec-9`.
 2. Run relevant suites and `git diff --check` in both repositories.
 3. Reviewer evaluates isolation, precedence, negative cases, lifecycle impact,
    compatibility, and absence of secret leakage.
-4. Produce sanitized evidence and stop at `PENDING_ACCEPTANCE`.
+4. Produce sanitized evidence and stop at `PENDING_ACCEPTANCE` until the
+   Developer decision; after acceptance, Task Lifecycle may integrate it.
 
 Gate: `spec-10` and explicit Developer decision.
 

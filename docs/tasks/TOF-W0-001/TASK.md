@@ -1,6 +1,6 @@
 ---
 document_id: TOF-TASK-W0-001
-status: planned
+status: DONE
 owner: tecnotron-ai
 type: task
 version: 1.0
@@ -9,9 +9,14 @@ machine_context: true
 task_id: TOF-W0-001
 milestone_id: tecnotron-operational-foundation-v1
 work_package_id: WP-000
-execution_readiness: NOT_READY
+execution_readiness: DONE
 baseline: 41088a413d06ed1d58d63d92320e38d4b44b86ea
 integration_target: tools
+integration:
+  tecnotron_ai: tools@423714572af5332b2defa7265ff1514d0fd0c81a
+  fitflow: develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af
+completed_at: 2026-08-29
+completed_by: Developer
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -74,6 +79,13 @@ This TASK is a coordination contract. Because it crosses repository ownership
 and evidence boundaries, implementation must first assign repository-scoped
 execution slices. This document does not authorize implementation from the
 planning bootstrap worktree.
+
+## Completion
+
+The Developer granted terminal acceptance and promoted this TASK to `DONE` on
+2026-08-29. The accepted changes are integrated in Tecnotron-ai
+`tools@423714572af5332b2defa7265ff1514d0fd0c81a` and FitFlow
+`develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`.
 
 ## 2. In scope
 
@@ -177,8 +189,9 @@ Required evidence:
 - independent `REVIEW.md` findings and verdict;
 - sanitized `RESULT.md` without a duplicated event log.
 
-`PASS` does not imply acceptance or integration. The terminal state available to
-the execution role is `PENDING_ACCEPTANCE`.
+Before Developer acceptance, `PASS` did not imply acceptance or integration and
+the execution role stopped at `PENDING_ACCEPTANCE`. That gate is now resolved;
+see `RESULT.md` and `REVIEW.md` for the accepted evidence.
 
 ## 7. Stop conditions
 

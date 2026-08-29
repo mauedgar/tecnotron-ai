@@ -8,9 +8,12 @@ updated: 2026-08-29
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 work_package_id: WP-000
-execution_status: COMPLETED
+execution_status: DONE
 baseline: 41088a413d06ed1d58d63d92320e38d4b44b86ea
 integration_target: tools
+integration:
+  tecnotron_ai: tools@423714572af5332b2defa7265ff1514d0fd0c81a
+  fitflow: develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -89,17 +92,17 @@ providers, routing, ranking, telemetry, or namespace migration.
 
 | Evidence | Status | Observation |
 | --- | --- | --- |
-| Tecnotron-ai branch, HEAD, and dedicated planning worktree | `PASS` | `feat/TOF-R0-planning-bootstrap` at the milestone baseline and current `tools` HEAD. |
-| FitFlow direct source read for Profile, registries, config README, SoT, and `orca.yaml` | `PASS` | Read from `develop@ff71ae28c9b2e33c8e87f5c0b53af88f1d562dfe`; no write was performed. |
+| Tecnotron-ai integration | `PASS` | Accepted WP-000 changes integrated in `tools@423714572af5332b2defa7265ff1514d0fd0c81a`. |
+| FitFlow integration | `PASS` | Accepted configuration and workspace changes integrated in `develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`. |
 | Prompt-provided Codebase Memory evidence | `PASS` | Indexed evidence is retained as derived evidence, not source authority. |
 | Codebase Memory MCP availability and reindex | `PASS` | Developer-confirmed correction: MCP server v0.10.8 is operational and the project is reindexed; direct source remains authoritative. |
-| Source-level schema/test execution against current FitFlow | `NOT_RUN` | Belongs to WP-000 execution, not this planning bootstrap. |
-| Reproducible environment injection from `orca.yaml` | `UNRESOLVED` | The observed setup copies `.env`; it does not demonstrate injection of the three required variables. |
-| FitFlow configuration write | `NOT_RUN` | Implementation is outside this planning execution. |
+| Source-level schema/test execution against current FitFlow | `PASS` | Active configuration loaded in cross-repo conformance; task evidence records positive and negative results. |
+| Reproducible environment injection from `orca.yaml` | `PASS` | Fresh-worktree smoke demonstrated all three `FF_*` values through the supported `defaultTabs[].command` surface. |
+| FitFlow configuration write | `PASS` | Minimal Profile and configuration documentation alignment integrated with the accepted WP-000 changes. |
 
-The historical `ARCHITECT_REVISION_STATUS: PARTIAL` remains unchanged. Direct
-reads above improve planning evidence but do not substitute for conformance in
-dedicated execution worktrees.
+The historical `ARCHITECT_REVISION_STATUS: PARTIAL` was superseded for WP-000 by
+the completed task reviews and Developer acceptance. The source-level conformance
+evidence is recorded in the two TASK `RESULT.md` and `REVIEW.md` files.
 
 ## 3. Approved sequence
 
@@ -182,19 +185,19 @@ review; no local compatibility patch is permitted.
 
 ## 7. Work Package acceptance checklist
 
-- [ ] Project identity, authority, product ownership, AI Core ownership, and
+- [x] Project identity, authority, product ownership, AI Core ownership, and
       environment ownership are explicit and source-validated.
-- [ ] Product and AI Core roots resolve without sibling-directory inference.
-- [ ] Active registry versions and ownership are consistent and validated.
-- [ ] The three environment variables are injected reproducibly in fresh
+- [x] Product and AI Core roots resolve without sibling-directory inference.
+- [x] Active registry versions and ownership are consistent and validated.
+- [x] The three environment variables are injected reproducibly in fresh
       worktrees without reading or modifying secrets.
-- [ ] Positive and negative cross-repo conformance tests pass or are reported
+- [x] Positive and negative cross-repo conformance tests pass or are reported
       accurately as `FAIL`, `UNAVAILABLE`, or `NOT_RUN`.
-- [ ] FitFlow and Tecnotron-ai have independent validation and integration gates.
-- [ ] Existing `fitflow-*` contracts remain compatible and no new schema or
+- [x] FitFlow and Tecnotron-ai have independent validation and integration gates.
+- [x] Existing `fitflow-*` contracts remain compatible and no new schema or
       contract was introduced without approval.
-- [ ] Independent review is complete.
-- [ ] Developer acceptance is explicit.
+- [x] Independent review is complete.
+- [x] Developer acceptance is explicit and both repository integrations are complete.
 
 ## 8. Materialization decisions
 

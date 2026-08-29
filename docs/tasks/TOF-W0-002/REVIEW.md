@@ -60,7 +60,10 @@ All ten `spec-*` requirements are evidenced and reproducible. The implementation
 - **Verified**: Sanitized resolver output in fresh worktree matches RESULT.md (keys present, paths correct, `projectId: fitflow`)
 - **Verified**: Negative smoke with keys removed returns `{"projectInputs":"missing","result":"rejected"}` — no fallback to main checkout
 - **Verified**: All spec checkboxes mapped to evidence in RESULT.md table
-- **Verified**: Pre-existing changes (`.cbmignore`, Profile root update) correctly attributed to TOF-W0-001 and excluded from TOF-W0-002 rollback scope
+   - **Verified**: El Profile root update corresponde a TOF-W0-001 y queda
+     excluido del rollback TOF-W0-002. `.cbmignore` era preexistente y no es
+     propiedad de WP-000, aunque fue arrastrado en el commit FitFlow de
+     integracion; permanece fuera de la atribucion y rollback de ambas TASKs.
 
 ## Minor Observations (Non-Blocking)
 
@@ -75,7 +78,12 @@ The implementation satisfies all acceptance criteria:
 - ✅ Fail-closed resolver with explicit precedence
 - ✅ Positive and negative cross-repo conformance
 - ✅ Independent repository gates
-- ✅ No scope creep (schemas, contracts, product, secrets, globals unchanged)
+   - Sin cambios de schemas, contratos, producto, secretos ni configuracion
+     global; `.cbmignore` es una excepcion preexistente de trazabilidad del commit
+     FitFlow, no un entregable WP-000
 - ✅ Evidence complete and sanitized
 
-**Status**: `PASS` — Ready for Developer terminal acceptance.
+**Status**: `PASS` — Developer terminal acceptance granted; TASK promoted to
+`DONE` and integrated in Tecnotron-ai
+`tools@423714572af5332b2defa7265ff1514d0fd0c81a` and FitFlow
+`develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`.

@@ -1,11 +1,14 @@
 ---
 document_id: TOF-RESULT-W0-002
-status: ACCEPTED
+status: DONE
 task_id: TOF-W0-002
 updated: 2026-08-29
 terminal_acceptance: Developer
 accepted_at: 2026-08-29
 accepted_by: Developer
+integration:
+  tecnotron_ai: tools@423714572af5332b2defa7265ff1514d0fd0c81a
+  fitflow: develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af
 ---
 
 # RESULT TOF-W0-002
@@ -18,9 +21,10 @@ FitFlow y se demostro conformidad positiva y negativa desde un worktree Orca
 nuevo. No se cambiaron schemas, contratos, registries, routing, producto ni
 politica de lifecycle.
 
-El resultado queda en `PENDING_ACCEPTANCE`. Las validaciones deterministas son
-`PASS`; el Reviewer independiente permanece `UNAVAILABLE` y debe completar
-`REVIEW.md` antes de la aceptacion terminal.
+El Developer otorgo aceptacion terminal, el Reviewer independiente completo su
+gate con `PASS` y la TASK fue promovida a `DONE`. Los cambios aceptados estan
+integrados en Tecnotron-ai `tools@423714572af5332b2defa7265ff1514d0fd0c81a` y
+FitFlow `develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`.
 
 ## Baselines, estado previo y ownership
 
@@ -34,11 +38,11 @@ directa en FitFlow sin branch o worktree separado. Ningun cambio preexistente se
 sobrescribio. Los worktrees usados solo para el smoke fueron efimeros y se
 eliminaron junto con sus branches de fixture al terminar.
 
-La integracion de cada repositorio permanece independiente y requiere aceptacion
-del Developer. El rollback FitFlow elimina solo `defaultTabs` y la seccion de
-inyeccion agregada al README; el rollback Tecnotron-ai revierte solo resolver,
-test nuevo y evidencia TOF-W0-002. Ninguno incluye `.cbmignore`, Profile o tests
-preexistentes de TOF-W0-001.
+La integracion de cada repositorio se completo tras la aceptacion del Developer.
+El rollback FitFlow elimina solo `defaultTabs` y la seccion de inyeccion agregada
+al README; el rollback Tecnotron-ai revierte solo resolver, test nuevo y evidencia
+TOF-W0-002. El commit FitFlow tambien arrastro `.cbmignore` como cambio
+preexistente no atribuido a WP-000; no forma parte de ninguno de estos rollback.
 
 ## Cambios implementados
 
@@ -120,7 +124,7 @@ No hubo fallback al checkout principal ni inferencia de un repositorio hermano.
 | `PASS` | Integracion desde fresh worktree sobre contract/routing/runtime/agent MVP | 13/13, 0 skip; paid API deshabilitada |
 | `PASS` | `git diff --check` | exit 0; solo warnings informativos LF/CRLF |
 | `NOT_RUN` | Provider/model execution | prohibido; solo simulaciones declaradas |
-| `UNAVAILABLE` | Reviewer independiente | el Implementer no representa autocontrol como revision independiente |
+| `PASS` | Reviewer independiente | Revision completada con `PASS`; ver `REVIEW.md` |
 
 ## Requisitos `spec-*`
 
@@ -135,11 +139,12 @@ No hubo fallback al checkout principal ni inferencia de un repositorio hermano.
 | spec-7 | `PASS` | Profile sin paths temporales y sin cambio de configuracion global |
 | spec-8 | `PASS` | Gates FitFlow y Tecnotron-ai reportados por separado con estados permitidos |
 | spec-9 | `PASS` | Suites completas pasan; no cambio a `fitflow-*`, Task v2 o lifecycle |
-| spec-10 | `UNAVAILABLE` | Pendiente Reviewer independiente en `REVIEW.md` |
+| spec-10 | `PASS` | Reviewer independiente completo el gate; ver `REVIEW.md` |
 
 ## Estado final
 
-`PENDING_ACCEPTANCE`. No se creo commit de entrega ni integracion local porque
-el gate independiente sigue pendiente. Los commits efimeros usados solo para
-producir el fresh-worktree fueron eliminados con su branch. No se ejecuto
-`git push` y no se inicio WP-001.
+`DONE`. El Developer acepto terminalmente e integro la TASK en
+Tecnotron-ai `tools@423714572af5332b2defa7265ff1514d0fd0c81a` y FitFlow
+`develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`. Los commits efimeros usados
+solo para producir el fresh-worktree fueron eliminados con su branch. WP-001 no
+se inicio.

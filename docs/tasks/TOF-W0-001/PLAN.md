@@ -80,7 +80,8 @@ Gate: `spec-7`. A failure is not relaxed or relabeled.
 1. Reviewer checks source citations, ownership, compatibility, negative tests,
    and both diffs.
 2. Produce a sanitized result and repository-separated validation matrix.
-3. Leave both repositories at `PENDING_ACCEPTANCE`; do not commit or integrate.
+3. Leave both repositories at `PENDING_ACCEPTANCE` until the Developer decision;
+   after acceptance, Task Lifecycle may commit and integrate them.
 
 Gate: `spec-8` and explicit Developer decision.
 

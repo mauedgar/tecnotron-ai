@@ -2,8 +2,8 @@
 document_id: FFAI-STATE-001
 status: canonical
 machine_context: true
-version: 1.4
-updated: 2026-08-24
+version: 1.5
+updated: 2026-08-29
 ---
 
 # Estado actual de FitFlow-ai
@@ -47,10 +47,18 @@ updated: 2026-08-24
   `docs/tasks/FF-AI-VNEXT-009/RESULT.md`. Excepcion historica: base real
   `main@ceae62a`, destino de integracion `tooling`. `opencode.json` era cambio
   pre-existente en el feature worktree y `tooling` ya contiene la version canonica
-  valida con `$schema`; queda aislado intencionalmente de 009 y no debe ser
-  atribuido ni reapicado por el squash merge. Reconciliacion contra `tooling`,
-  validacion final de integracion y limpieza del worktree son **pendientes del
-  Task Cycle deterministico**, aun no completadas.
+   valida con `$schema`; queda aislado intencionalmente de 009 y no debe ser
+   atribuido ni reapicado por el squash merge. Reconciliacion contra `tooling`,
+   validacion final de integracion y limpieza del worktree son **pendientes del
+   Task Cycle deterministico**, aun no completadas.
+- `WP-000`: **DONE** tras aceptacion terminal del Developer. `TOF-W0-001` y
+  `TOF-W0-002` integran el Profile y configuracion activa de FitFlow, inyeccion
+  reproducible de `FF_PROJECT_ROOT`, `FF_PROJECT_PROFILE` y `FF_AI_CORE_ROOT`,
+  y resolucion fail-closed sin inferencia de repositorios hermanos. Las
+  integraciones son Tecnotron-ai
+  `tools@423714572af5332b2defa7265ff1514d0fd0c81a` y FitFlow
+  `develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`. La evidencia focalizada
+  confirma resolver/doctor 15/15 y registries 8/8 `PASS`.
 
 La promocion `002-004` consta en el commit FitFlow `52d729c`. Algunos
 run-state/result JSON y el backlog machine-readable de FitFlow conservan

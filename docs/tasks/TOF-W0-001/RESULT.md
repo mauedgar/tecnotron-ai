@@ -1,11 +1,14 @@
 ---
 document_id: TOF-RESULT-W0-001
-status: ACCEPTED
+status: DONE
 task_id: TOF-W0-001
 updated: 2026-08-29
 terminal_acceptance: Developer
 accepted_at: 2026-08-29
 accepted_by: Developer
+integration:
+  tecnotron_ai: tools@423714572af5332b2defa7265ff1514d0fd0c81a
+  fitflow: develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af
 ---
 
 # RESULT TOF-W0-001
@@ -17,8 +20,10 @@ se documento ownership sin ampliar el schema aprobado y se reforzo la
 conformidad positiva y negativa desde Tecnotron-ai. No se modificaron schemas,
 loaders, runtime, Router, Model Resolver, contratos ni producto.
 
-El resultado queda en `PENDING_ACCEPTANCE`. El gate de Reviewer independiente
-permanece `UNAVAILABLE`; `PASS` en las validaciones no implica aceptacion.
+El Developer otorgo aceptacion terminal, el Reviewer independiente completo su
+gate con `PASS` y la TASK fue promovida a `DONE`. Los cambios aceptados estan
+integrados en Tecnotron-ai `tools@423714572af5332b2defa7265ff1514d0fd0c81a` y
+FitFlow `develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`.
 
 ## Baselines, aislamiento y ownership
 
@@ -31,8 +36,8 @@ El ruling del Developer autorizo escritura directa en ambos checkouts y dejo sin
 efecto para esta ejecucion el gate de branch/worktree separado. No hubo inferencia
 por directorios hermanos. FitFlow posee configuracion de producto; Tecnotron-ai
 posee AI Core y conformidad; el workspace inyecta `FF_PROJECT_ROOT`,
-`FF_AI_CORE_ROOT` y `FF_PROJECT_PROFILE`; el Developer conserva autoridad
-terminal.
+`FF_AI_CORE_ROOT` y `FF_PROJECT_PROFILE`; el Developer ejercio la autoridad
+terminal al aceptar e integrar la TASK.
 
 ## Cambios
 
@@ -49,6 +54,11 @@ terminal.
   ejecuta YAML realmente invalido y se agrego rechazo de versiones no soportadas
   de Profile, FinOps y orchestrator. Los errores estables de role/model legacy se
   conservan en lineas 107-117.
+
+El commit de integracion FitFlow tambien contiene `.cbmignore`, que era un cambio
+preexistente y no es entregable ni propiedad de TOF-W0-001. Se conserva como
+contexto historico del commit y queda excluido de la atribucion y rollback de la
+TASK.
 
 ## Matriz de fuente directa
 
@@ -91,7 +101,7 @@ terminal.
 | `PASS` | `FF_PROJECT_ROOT=... FF_AI_CORE_ROOT=... FF_PROJECT_PROFILE=... node --test tests/**/*.test.js` | 128/128, 0 skip; incluye Task v2 y configuracion activa |
 | `PASS` | `env -u FF_PROJECT_ROOT -u FF_AI_CORE_ROOT -u FF_PROJECT_PROFILE npm test` | 132 pass, 0 fail, 3 skip externos esperados |
 | `PASS` | `git diff --check` | Sin errores; solo warnings informativos de normalizacion LF/CRLF |
-| `UNAVAILABLE` | Reviewer independiente | No se delego ni se represento autocontrol como review independiente; ver `REVIEW.md` |
+| `PASS` | Reviewer independiente | Revision completada con `PASS`; ver `REVIEW.md` |
 
 Un diagnostico adicional de `npm test` con los tres `FF_*` heredados produjo
 `FAIL` (134 pass, 1 fail): el fixture de doctor aporta un `projectRoot` temporal
@@ -110,9 +120,11 @@ Cambiar precedencias o conflicto de inputs pertenece a TOF-W0-002 y no se inicio
 | spec-5 | `PASS` | Paid API false, namespaces `fitflow-*` y Task v2 preservados |
 | spec-6 | `PASS` | Dos cambios FitFlow minimos; `.cbmignore` preexistente preservado |
 | spec-7 | `PASS` | Resultados positivos y negativos separados por repositorio con estados permitidos |
-| spec-8 | `UNAVAILABLE` | Falta Reviewer independiente; requerido antes de aceptacion terminal |
+| spec-8 | `PASS` | Reviewer independiente completo el gate; ver `REVIEW.md` |
 
 ## Estado final
 
-`PENDING_ACCEPTANCE`. No se crearon commits, merges ni integraciones locales y
-no se ejecuto `git push`. TOF-W0-002 y WP-001 permanecen fuera de scope.
+`DONE`. El Developer acepto terminalmente e integro la TASK en
+Tecnotron-ai `tools@423714572af5332b2defa7265ff1514d0fd0c81a` y FitFlow
+`develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`. TOF-W0-002 y WP-001
+permanecen fuera del scope de esta TASK.

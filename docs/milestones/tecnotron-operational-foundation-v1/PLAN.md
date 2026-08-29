@@ -129,8 +129,9 @@ No additional dependency edges or waves are approved by this plan.
 ### WP-000 — Cross-repo Project Profile baseline
 
 ```yaml
-status: NOT_READY
+status: DONE
 result: Reproducible and source-validated FitFlow/Tecnotron-ai project baseline
+integration: Tecnotron-ai tools@423714572af5332b2defa7265ff1514d0fd0c81a; FitFlow develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af
 boundary: Project Profile, active registries, ownership, roots, environment injection, cross-repo conformance, compatibility, and per-repository gates
 complexity: high
 criticality: high

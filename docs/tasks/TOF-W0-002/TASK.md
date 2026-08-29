@@ -1,6 +1,6 @@
 ---
 document_id: TOF-TASK-W0-002
-status: planned
+status: DONE
 owner: tecnotron-ai
 type: task
 version: 1.0
@@ -9,9 +9,14 @@ machine_context: true
 task_id: TOF-W0-002
 milestone_id: tecnotron-operational-foundation-v1
 work_package_id: WP-000
-execution_readiness: NOT_READY
+execution_readiness: DONE
 baseline: 41088a413d06ed1d58d63d92320e38d4b44b86ea
 integration_target: tools
+integration:
+  tecnotron_ai: tools@423714572af5332b2defa7265ff1514d0fd0c81a
+  fitflow: develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af
+completed_at: 2026-08-29
+completed_by: Developer
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -78,6 +83,13 @@ The active values must identify the execution worktrees and real FitFlow Profile
 Tecnotron-ai must resolve them through the existing `resolveProject` boundary,
 load the active configuration, and pass positive and negative cross-repo
 conformance without assuming sibling paths.
+
+## Completion
+
+The Developer granted terminal acceptance and promoted this TASK to `DONE` on
+2026-08-29. The accepted changes are integrated in Tecnotron-ai
+`tools@423714572af5332b2defa7265ff1514d0fd0c81a` and FitFlow
+`develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`.
 
 ## 2. Preconditions
 
@@ -186,9 +198,9 @@ key presence and resolved paths (never secret values), resolver output, registry
 load results, positive and negative test commands, per-repository diffs,
 `git diff --check`, independent review, and sanitized final result.
 
-No full event log is duplicated in `RESULT.md`. The execution role stops at
-`PENDING_ACCEPTANCE`; integration remains a later Developer-authorized lifecycle
-operation.
+No full event log is duplicated in `RESULT.md`. Before Developer acceptance, the
+execution role stopped at `PENDING_ACCEPTANCE`; the later acceptance and
+integration are recorded in `RESULT.md` and `REVIEW.md`.
 
 ## 8. Stop conditions
 

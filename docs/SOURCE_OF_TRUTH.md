@@ -27,7 +27,7 @@ sessions, workspace metadata, and Obsidian views are not source of truth.
 | [Current State](current-state.md) | Confirmed implementation reality and validation evidence only. |
 | [Implementation Roadmap](implementation-roadmap.md) | Sequencing and planned implementation work. |
 | [Milestone tecnotron-operational-foundation-v1](milestones/tecnotron-operational-foundation-v1/PLAN.md) | Accepted milestone planning at baseline `41088a4`; integrates through `tools` and promotes accepted milestones to `main`. |
-| [WP-000 Cross-repo Project Profile Baseline](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) | Accepted non-implementation plan for the mandatory Project Profile, environment injection, and cross-repo conformance predecessor. |
+| [WP-000 Cross-repo Project Profile Baseline](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) | Completed mandatory Project Profile, environment injection, and cross-repo conformance predecessor; integrated in FitFlow `develop` and Tecnotron-ai `tools`. |
 | [Task TOF-W0-001](tasks/TOF-W0-001/TASK.md) | Scope contract for FitFlow Project Profile and active configuration planning. |
 | [Task TOF-W0-002](tasks/TOF-W0-002/TASK.md) | Scope contract for project resolution, environment injection, and cross-repo conformance planning. |
 | [Task FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Explorer and Agent Runtime conformance. |
