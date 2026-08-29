@@ -19,6 +19,14 @@ function existingDirectory(candidate, label) {
   return path.resolve(candidate);
 }
 
+function samePath(left, right) {
+  const normalizedLeft = path.resolve(left);
+  const normalizedRight = path.resolve(right);
+  return process.platform === 'win32'
+    ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
+    : normalizedLeft === normalizedRight;
+}
+
 function readProfile(profilePath) {
   if (!fs.existsSync(profilePath)) {
     throw new ProjectResolutionError(`Project Profile no encontrado: ${profilePath}`);
@@ -47,35 +55,37 @@ function readProfile(profilePath) {
 
 /**
  * Resuelve roots desde informacion declarada, nunca desde topologia de worktrees.
- * La ruta del perfil identifica el checkout de producto activo; sus campos roots
- * son fallbacks para ejecuciones fuera de un worktree de producto.
+ * Root y Profile forman un conjunto coherente; opciones explicitas sustituyen
+ * las coordenadas de proyecto heredadas del entorno como una sola unidad.
  */
 function resolveProject(options = {}) {
   const aiCoreRoot = existingDirectory(
     options.aiCoreRoot || process.env.FF_AI_CORE_ROOT || path.resolve(__dirname, '..', '..'),
     'Root de FitFlow-ai'
   );
-  const explicitProjectRoot = options.projectRoot || process.env.FF_PROJECT_ROOT;
-  const explicitProfilePath = options.profilePath || process.env.FF_PROJECT_PROFILE;
-  const profilePath = explicitProfilePath
-    ? path.resolve(explicitProfilePath)
-    : explicitProjectRoot
-      ? path.join(path.resolve(explicitProjectRoot), PROFILE_RELATIVE_PATH)
-      : null;
-  const profile = readProfile(profilePath || path.join(aiCoreRoot, PROFILE_RELATIVE_PATH));
+  const hasExplicitProjectOptions = Boolean(options.projectRoot || options.profilePath);
+  const projectRootInput = hasExplicitProjectOptions ? options.projectRoot : process.env.FF_PROJECT_ROOT;
+  const profilePathInput = hasExplicitProjectOptions ? options.profilePath : process.env.FF_PROJECT_PROFILE;
+  if (!projectRootInput && !profilePathInput) {
+    throw new ProjectResolutionError('Se requiere Project Root o Project Profile explicito');
+  }
+  const profilePath = path.resolve(
+    profilePathInput || path.join(path.resolve(projectRootInput), PROFILE_RELATIVE_PATH),
+  );
   const projectRoot = existingDirectory(
-    explicitProjectRoot || (profilePath && path.resolve(profilePath, '..', '..', '..')) || profile.roots.product,
+    projectRootInput || path.resolve(profilePath, '..', '..', '..'),
     'Root de FitFlow'
   );
-  const resolvedProfilePath = path.join(projectRoot, PROFILE_RELATIVE_PATH);
-  if (!fs.existsSync(resolvedProfilePath)) {
-    throw new ProjectResolutionError(`El root de FitFlow no contiene su Project Profile: ${resolvedProfilePath}`);
+  const expectedProfilePath = path.join(projectRoot, PROFILE_RELATIVE_PATH);
+  if (!samePath(profilePath, expectedProfilePath)) {
+    throw new ProjectResolutionError(`El Root de FitFlow y el Project Profile no coinciden: ${projectRoot} <> ${profilePath}`);
   }
+  const profile = readProfile(profilePath);
 
   return Object.freeze({
     projectId: profile.project_id,
     profile,
-    profilePath: resolvedProfilePath,
+    profilePath,
     projectRoot,
     aiCoreRoot,
     repositories: Object.freeze({ fitflow: projectRoot, 'fitflow-ai': aiCoreRoot }),

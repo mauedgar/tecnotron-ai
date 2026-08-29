@@ -10,6 +10,8 @@ const { resolveProject } = require('../../src/project-profile');
 const { ModelRegistry } = require('../../src/registries/schemas/models');
 const { RoleRegistry } = require('../../src/registries/schemas/roles');
 const { FinOps, CLASS_ACCESS } = require('../../src/registries/schemas/finops');
+const { Orchestrator } = require('../../src/registries/schemas/orchestrator');
+const { ProjectProfile } = require('../../src/registries/schemas/project-profile');
 
 const PRODUCT_ROOT = fs.mkdtempSync(path.join(require('os').tmpdir(), 'fitflow-profile-'));
 const CONFIG_DIR = path.join(PRODUCT_ROOT, '.ai', 'config');
@@ -58,38 +60,22 @@ test('resuelve perfil sin depender de repositorios hermanos', () => {
   assert.strictEqual(RESOLUTION.projectRoot, PRODUCT_ROOT);
 });
 
-test('rejects malformed registry', () => {
-  const malformed = {
-    artifact: 'TASK',
-    schema_version: 'fitflow-task/v2',
-    task_id: 'FF-AI-VNEXT-003',
-    title: 'x',
-    status: 'READY',
-    task_type: 'tooling',
-    area: 'ai_tooling',
-    scope: 'docs_tooling',
-    lane: 'ai_orchestrated',
-    risk: 'low',
-    priority: 'P0',
-    created_at: '2026-08-18T16:00:00-03:00',
-    author_role: 'developer',
-    baseline: { revision: 'a', fingerprint_status: 'unavailable', working_tree_fingerprint: null, fingerprint_reason: 'x'.repeat(3) },
-    github_issue: null,
-    openspec_change: null,
-    objective: 'x',
-    in_scope: ['x'],
-    out_of_scope: [],
-    acceptance_criteria: [{ id: 'AC-1', criterion: 'x'.repeat(5) }],
-    ownership_keys: ['path:x'],
-  };
+test('loader rejects malformed YAML deterministically', () => {
+  fs.writeFileSync(path.join(CONFIG_DIR, 'models.yaml'), 'schema_version: [\n');
   assert.throws(() => {
-    loadRegistryFile('does-not-exist.yaml', CONFIG_DIR);
-  }, RegistryLoadError);
+    loadRegistryFile('models.yaml', CONFIG_DIR);
+  }, (error) => error instanceof RegistryLoadError && error.code === 'REGISTRY_LOAD_FAILED');
 });
 
 test('strict registry schemas require model and role registry v3', () => {
   assert.strictEqual(ModelRegistry.safeParse({ schema_version: 'fitflow-model-registry/v2' }).success, false);
   assert.strictEqual(RoleRegistry.safeParse({ schema_version: 'fitflow-role-registry/v2' }).success, false);
+});
+
+test('active profile, FinOps, and orchestrator schemas reject unsupported versions', () => {
+  assert.strictEqual(ProjectProfile.safeParse({ schema_version: 'fitflow-project-profile/v2' }).success, false);
+  assert.strictEqual(FinOps.safeParse({ schema_version: 'fitflow-finops/v2' }).success, false);
+  assert.strictEqual(Orchestrator.safeParse({ schema_version: 'fitflow-orchestrator/v1' }).success, false);
 });
 
 test('strict model and role registry v3 instances validate directly', () => {
