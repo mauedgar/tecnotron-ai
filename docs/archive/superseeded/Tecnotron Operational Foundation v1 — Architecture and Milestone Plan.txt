@@ -1,0 +1,958 @@
+# Tecnotron Operational Foundation v1 — Architecture and Milestone Plan
+
+## A. Verified baseline
+
+Verificación mediante comandos Git de sólo lectura:
+
+| Control | Esperado | Observado |
+|---|---|---|
+| Repository root | Tecnotron-ai | `C:/Proyectos-Web/Tecnotron-ai` |
+| Origin | repositorio Tecnotron-ai | `https://github.com/mauedgar/tecnotron-ai` |
+| Rama actual | `tools` | `tools` |
+| Tracking | `origin/tools` | `origin/tools` |
+| `HEAD` | `41088a413...` | `41088a413...` |
+| `origin/main` | `41088a413...` | `41088a413...` |
+| `origin/tools` | `41088a413...` | `41088a413...` |
+| `origin/tooling` | `b2d07f8ae...` | `b2d07f8ae...` |
+| Merge base `tools`/`origin/main` | baseline esperado | `41088a413...` |
+| Worktree actual | limpio | limpio |
+| Tag anotado | apunta a `b2d07f8ae...` | tag object `a1c809b...`; peeled commit `b2d07f8ae...` |
+| Stash | `2aa61ec55...` | `2aa61ec55...`; no leído ni alterado |
+
+No se detectó `BASELINE_CHANGED`.
+
+### Worktrees observados
+
+Además del checkout activo existen:
+
+- `task/FF-AI-DOC-004@719c43f...`
+- `task/FF-AI-DOC-005@b03624e...`
+- `mauedgar/FF-AI-DOC-006@9809f09...`
+
+No se consultó su contenido ni se propone limpiarlos. Son recursos históricos sin autoridad para el milestone nuevo.
+
+### Condición no verificable
+
+La ausencia de un PR remoto para el milestone es `UNAVAILABLE`: verificarla exigiría consultar GitHub, mientras esta ejecución no usa web. No existe evidencia local de un PR nuevo, pero eso no prueba su ausencia remota.
+
+---
+
+## B. Evidence coverage
+
+### Baseline vigente consultado
+
+- `AGENTS.md`
+- `docs/SOURCE_OF_TRUTH.md`
+- `docs/{current-state,implementation-roadmap,architecture,operational-architecture,context-strategy,task-lifecycle}.md`
+- `docs/compatibility-baseline.md`
+- `docs/development-pipeline-adapter.md`
+- TASK/PLAN/RESULT/REVIEW de `FF-AI-VNEXT-008` y `009`
+- Contratos:
+  - `common`, `task`, `route`, `model-resolution`
+  - `context-packager`, `runtime-identity`
+  - `run-state`, `run-event`, `validation`
+- Componentes:
+  - Project Profile y registries
+  - Router, Model Resolver y FinOps
+  - ContextPackager, Explorer
+  - Agent Runtime, Agent MVP
+  - State Machine y Run Store
+- Configuración: `opencode.json`, `orca.yaml`, `package.json`, `.opencode/`
+
+### Evidencia histórica consultada
+
+Sólo desde `tooling`, cuyo commit coincide con el tag archivado:
+
+- milestone y ADR históricos;
+- contratos/matriz/conformance de perfiles;
+- Task Lifecycle con dimensiones ortogonales;
+- investigación OpenCode/Orca;
+- perfiles OpenCode de muestra;
+- instalador de perfiles;
+- Orca adapter contract y guía;
+- operational runner y sus tests.
+
+Se usaron como evidencia comparativa, no como autoridad ni fuente para copiar.
+
+### Herramientas
+
+- Agentes delegados: ninguno.
+- Codebase Memory: `NOT_RUN`; el daemon no estaba disponible y no era necesario para las conclusiones.
+- repo-packager: `NOT_RUN`.
+- Web/model research: `NOT_RUN`.
+- Validaciones funcionales: `NOT_RUN`; esta ejecución sólo auditó fuentes.
+
+### Elementos `UNAVAILABLE`
+
+1. PR remoto del milestone.
+2. Project Profile activo y configuración FitFlow: no se recibió `FF_PROJECT_ROOT` ni `FF_PROJECT_PROFILE`; no se infirió un sibling.
+3. `roles.yaml`, `models.yaml`, `finops.yaml` y `orchestrator.yaml` activos.
+4. Conformance actual de `opencode run`: el baseline no contiene launcher ni evidencia vigente.
+5. TASK/PLAN/RESULT/REVIEW de `FF-AI-VNEXT-005`, `006` y `007`: no existen en este baseline. Current State y Roadmap resumen su estado, pero no sustituyen los artefactos ausentes.
+
+---
+
+## C. Decision reconciliation
+
+| Tema | Fuente vigente | Evidencia histórica | Decisión recomendada | Autoridad | Acción |
+|---|---|---|---|---|---|
+| Orca | Operational Architecture: workspace/sesión reemplazable | Adapter contract y guía supervisada | **Adaptar conceptos**, no recuperar implementación | Arquitectura + Developer | W2 lo usa como control plane temporal |
+| Worktrees | Task Lifecycle vigente | Política histórica consistente | **Conservar**, cambiando `tooling` por `tools` | Task Lifecycle | Una task, un worktree por repo escrito |
+| Branch model | Ruling actual | Historia usa `tooling` | **Reemplazar referencias históricas** | Developer | `tools` integra; `main` recibe milestone |
+| Task Lifecycle | Documento lógico vigente | Cinco dimensiones independientes | **Adaptar de forma aditiva** | ADR/lifecycle/contratos | No colapsar workflow y bookkeeping |
+| Estados | `State`, `Task.status` y lifecycle documental no coinciden plenamente | Modelo histórico ortogonal | **Separar contratos** | Contratos + Developer | No romper `fitflow-task/v2` |
+| `opencode run` | Sin launcher actual | Observado históricamente, sin contrato actual | **Redescubrir y reconstruir** | WP SPEC + adapter | Conformance local antes de usar |
+| Contrato de respuesta | RunEvent, RuntimeIdentity, Agent MVP | Summary y orchestration event históricos | **Crear envelope mínimo separado** | Contrato canónico | No copiar operational runner |
+| SPEC | No existe en baseline | Historia sólo tenía PLAN/WP | **Adoptar SDD aprobado** | Developer + SPEC | SPEC por capacidad |
+| Validator | ValidationResult y rol determinista | Consistente históricamente | **Conservar externo y obligatorio** | Contrato/lifecycle | Nunca acepta |
+| Reviewer | ReviewResult y lifecycle | Triggers históricos útiles | **Adaptar a triggers aprobados** | Task policy | No siempre obligatorio |
+| Perfiles | Contratos actuales contienen `coder_*`; no hay perfiles operativos | Ocho perfiles, modelos inline y web demasiado amplia | **Reemplazar** | Nueva SPEC + Developer | Nueve perfiles nuevos; un implementer |
+| Modelos | Resolver/registry v3; config activa externa | Bindings concretos archivados | **Conservar separación; descartar bindings** | Registry/Resolver | Sólo `model_hint` no vinculante |
+| Contexto | ContextPackager v2 implementado | Límites numéricos históricos locales | **Reutilizar contrato; diferir policy universal** | Context Strategy | Budget por TASK/WP |
+| Evidencia de ejecución | `usage_record_id`, RuntimeIdentity, Context telemetry | Sin contrato completo vigente | **Extender mínimamente** | Nuevo contrato W3 | Sin ranking ni fitness |
+| Documentación | Layout plano y enlaces wikilink | Layout histórico parcialmente ejecutado | **Reconstruir progresivamente** | ADR nuevo | No copiar corpus archivado |
+| System Guide | No existe | Guía histórica | **Reescribir desde fuentes vigentes** | Derivada | No introducir policy |
+
+### Hallazgos contractuales relevantes
+
+- `RunEvent` ya reserva `usage_record_id` y exige Developer para emitir `DONE`.
+- `RuntimeIdentity` separa propuesta y runtime efectivo.
+- `ContextPackager` distingue tokenizer exacto de estimación.
+- `RunState` ya conserva context deliveries, route, validation/review refs y retries.
+- `Task.status` mezcla estados de planificación/ejecución y no representa por sí solo aceptación, integración ni doc sync.
+- `ProjectProfile` y `resolveProject` siguen nombrando FitFlow y `FF_PROJECT_*`. Cambiarlos sin ruling puede romper consumidores externos.
+- El Router sólo acepta roles `actor_type: model`; esto no debe usarse como definición de los nuevos perfiles operativos.
+- Los perfiles históricos incluían modelos y, en algunos casos, web. Eso contradice las decisiones nuevas.
+
+---
+
+## D. Canonical authority model
+
+No se establece una precedencia lineal universal. La autoridad se resuelve por responsabilidad:
+
+| Responsabilidad | Autoridad |
+|---|---|
+| Invariantes, estados válidos, schemas, interoperabilidad | Contratos y ADR canónicos |
+| Comportamiento esperado de una capacidad | `SPEC.md` aprobada |
+| Solución técnica y división del WP | WP `PLAN.md` |
+| Autorización operativa y RF asignados | `TASK.md` |
+| Estrategia local | Task `PLAN.md` |
+| Evidencia observada | `RESULT.md`, Run Store y artifacts |
+| Revisión semántica | `REVIEW.md` |
+| Aceptación | Developer |
+| Secuencia macro | Roadmap |
+| Realidad implementada confirmada | Current State |
+| Navegación | Source of Truth |
+| Explicación operativa | Guides, siempre derivadas |
+| Hipótesis | Research |
+| Historia | Archive/tag |
+
+### Resolución de conflictos
+
+1. Identificar qué responsabilidad está en conflicto.
+2. Si una SPEC contradice un contrato o ADR, detener y pedir ruling.
+3. Si PLAN o TASK cambia comportamiento, actualizar y aprobar primero la SPEC.
+4. Si Task PLAN amplía TASK, detener.
+5. Si RESULT contradice la expectativa, conservar la evidencia y no reescribirla.
+6. Si una guía contradice una fuente canónica, corregir o superseder la guía.
+7. Ningún índice, runtime o provider resuelve conflictos de autoridad.
+
+---
+
+## E. Documentation architecture
+
+### Estructura objetivo progresiva
+
+```text
+docs/
+├── SOURCE_OF_TRUTH.md
+├── current-state.md
+├── implementation-roadmap.md
+├── compatibility-baseline.md
+├── architecture/
+├── decisions/
+├── guides/
+├── milestones/
+├── work-packages/
+├── tasks/
+├── research/
+└── archive/
+```
+
+No deben crearse directorios hasta que una task cree contenido real.
+
+### Clasificación
+
+- **Canonical:** contratos, ADR, SPEC aprobadas, arquitectura, lifecycle y estado.
+- **Guide:** explicación no normativa.
+- **Research:** observaciones e hipótesis.
+- **Archive:** referencias históricas excluidas del contexto cotidiano.
+- **Derived:** ledger, índices semánticos y packages regenerables.
+
+### Metadata mínima
+
+```yaml
+document_id:
+type:
+status: draft | proposed | approved | canonical | superseded | research | archived | derived
+owner:
+updated:
+milestone:
+work_package:
+spec:
+requirements: []
+tasks: []
+supersedes: []
+```
+
+Usar links Markdown relativos. Los wikilinks pueden mantenerse transitoriamente, pero no deben ser el único mecanismo de navegación.
+
+### Principio de movimientos
+
+Los seis movimientos históricos coinciden con el layout solicitado y pueden reutilizarse como propuesta de paths, no como decisión heredada. Deben ejecutarse bajo una task mecánica separada, con validación de todos los enlaces.
+
+TASK/PLAN/RESULT/REVIEW aceptados de 008/009 permanecen en sus paths estables.
+
+---
+
+## F. Milestone Plan
+
+```yaml
+id: TOF-V1
+name: Tecnotron Operational Foundation v1
+slug: tecnotron-operational-foundation-v1
+status: PROPOSED
+milestone_baseline: 41088a413d06ed1d58d63d92320e38d4b44b86ea
+integration_target: tools
+promotion_target: main
+```
+
+### Objetivo
+
+Establecer un flujo vertical sostenible que permita especificar una capacidad, derivar tasks, ejecutar un perfil mediante OpenCode, validar, revisar según riesgo, obtener aceptación del Developer, integrar por squash en `tools` y conservar evidencia mínima útil.
+
+### Resultado terminal
+
+Al menos una capacidad representativa completa:
+
+```text
+SPEC aprobada
+→ WP PLAN
+→ TASK/PLAN
+→ worktree feat/*
+→ perfil operativo
+→ launcher OpenCode
+→ contexto acotado
+→ evidencia de runtime
+→ Validator
+→ Reviewer según riesgo
+→ Developer gate
+→ squash a tools
+→ trazabilidad documental
+```
+
+El milestone queda documentado y listo para promoción deliberada a `main`.
+
+### Límites
+
+**Incluye**
+
+- perfiles operativos;
+- launchers deterministas;
+- SDD;
+- Task Lifecycle Lite;
+- evidencia mínima;
+- guía y navegación;
+- cierre y promoción.
+
+**Excluye**
+
+- ranking de modelos;
+- bindings permanentes;
+- selección basada en fitness;
+- provider research;
+- FinOps avanzado;
+- telemetría extensa;
+- Temporal, MCP y retrieval nuevos;
+- modificación de FitFlow;
+- recuperación automática del milestone archivado.
+
+### Waves y WPs
+
+| Wave | WP | Capacidad |
+|---|---|---|
+| W1 | WP-001 | Operational Profile Contracts |
+| W1 | WP-002 | Deterministic OpenCode Launchers |
+| W2 | WP-003 | SDD Authority and Artifacts |
+| W2 | WP-004 | Governed Task Cycle Lite |
+| W3 | WP-005 | Execution Observation Baseline |
+| W4 | WP-006 | System Guide and Navigation |
+| W4 | WP-007 | Milestone Closure and Promotion |
+
+W4 se divide en dos WPs porque guía y cierre tienen resultado, ownership y gate distintos.
+
+### Gates
+
+- **G0:** Developer resuelve namespace/compatibilidad FitFlow–Tecnotron.
+- **G1:** SPEC y contrato de perfiles aprobados.
+- **G2:** perfiles y launcher pasan smokes positivos/negativos.
+- **G3:** SDD y dimensiones lifecycle aceptadas.
+- **G4:** ciclo manual vertical completado sobre una task real.
+- **G5:** observation contract enlazado sin duplicar estados.
+- **G6:** System Guide y navegación validados.
+- **G7:** todos los WPs aceptados e integrados; promoción autorizada.
+
+### Cierre y promoción
+
+`tools -> main` sólo si:
+
+- todos los WPs están cerrados;
+- no hay RF sin disposición;
+- Validator pasa;
+- reviews requeridos están completos;
+- aceptación Developer está registrada;
+- integración de cada task es verificable;
+- documentación y links están sincronizados;
+- no hay cambios FitFlow ni artefactos históricos recuperados;
+- el diff de milestone está libre de cambios no declarados.
+
+---
+
+## G. Work Package proposals
+
+### Modelo sugerido común
+
+Las recomendaciones siguientes no son bindings ni ranking:
+
+```yaml
+model_hint:
+  primary:
+    provider: openai
+    model_id: openai/gpt-5.6-sol
+    reasoning_effort: high
+  alternatives: []
+  evidence_basis: observed
+```
+
+El ID está disponible en esta ejecución. No se infieren alternativas ausentes de configuración.
+
+### WP-001 — Operational Profile Contracts
+
+- **Wave:** W1
+- **Resultado:** nueve perfiles con identidad, responsabilidad, permisos y fronteras independientes del modelo.
+- **SPEC:** requerida.
+- **Owner:** Architect/Developer sobre semántica; Implementer sobre schema/config.
+- **Inputs:** decisiones aprobadas, Operational Architecture, Task Lifecycle.
+- **Outputs:** SPEC, role contracts, profile registry/schema, conformance estática.
+- **RF:** RF-001–RF-006.
+- **Context:** medium.
+- **Riesgos:** mezclar roles con Router v3; duplicar identidad en OpenCode.
+- **Paralelismo:** no hasta aprobar contrato.
+- **Gate:** Developer aprueba SPEC; Validator prueba set exacto y permisos.
+- **Modelo SPEC/PLAN:** Sol, `high`.
+- **Stop:** cualquier binding de modelo, segundo implementer o dependencia FitFlow.
+
+### WP-002 — Deterministic OpenCode Launchers
+
+- **Wave:** W1
+- **Resultado:** iniciar un perfil project-scoped mediante launcher reproducible y obtener un resultado normalizado.
+- **SPEC:** requerida.
+- **Owner:** Implementer; Reviewer obligatorio por permisos/runtime.
+- **Dependencia:** WP-001.
+- **Outputs:** nueve adapters OpenCode, launcher, response contract y smokes.
+- **RF:** RF-101–RF-106.
+- **Context:** large por conformance CLI.
+- **Riesgos:** sintaxis/versiones desconocidas; modificar perfiles personales.
+- **Gate:** ejecución local positiva y controles negativos.
+- **Modelo:** Sol, `high`.
+- **Stop:** global config mutation, modelo obligatorio no separable o permisos no comprobables.
+
+### WP-003 — SDD Authority and Artifacts
+
+- **Wave:** W2
+- **Resultado:** SPEC/WP/TASK/RESULT/REVIEW tienen responsabilidades y validación inequívocas.
+- **SPEC:** requerida.
+- **Owner:** Developer + Architect; Doc Curator escribe.
+- **Outputs:** ADR, SDD policy, templates y lint.
+- **RF:** RF-201–RF-207.
+- **Context:** medium.
+- **Riesgos:** sobre-documentación o autoridad paralela.
+- **Gate:** fixtures válidos/negativos y aprobación Developer.
+- **Modelo:** Sol, `xhigh`.
+- **Stop:** conflicto con contrato o creación de `design.md`, `tasks.md`, `apply`.
+
+### WP-004 — Governed Task Cycle Lite
+
+- **Wave:** W2
+- **Resultado:** ciclo manual verificable desde READY hasta integración en `tools`.
+- **SPEC:** requerida.
+- **Owner:** Task Lifecycle; Developer mantiene gates.
+- **Dependencias:** WP-002 y WP-003.
+- **RF:** RF-301–RF-309.
+- **Context:** large.
+- **Riesgos:** colapsar estados; automatizar antes de observar el flujo.
+- **Gate:** una task real completa el ciclo con evidencia.
+- **Modelo:** Sol, `xhigh`.
+- **Stop:** romper `fitflow-task/v2`, escribir FitFlow o integrar sin aceptación.
+
+### WP-005 — Execution Observation Baseline
+
+- **Wave:** W3
+- **Resultado:** evidencia mínima estructurada, correlacionada e inmutable.
+- **SPEC:** requerida.
+- **Owner:** contracts/Run Store.
+- **Dependencia:** WP-004.
+- **RF:** RF-401–RF-407.
+- **Context:** medium.
+- **Riesgos:** duplicar Run State; presentar estimaciones como mediciones.
+- **Gate:** schema, persistencia, correlación y casos `UNAVAILABLE`.
+- **Modelo:** Sol, `high`.
+- **Stop:** ranking, fitness o captura extensa.
+
+### WP-006 — System Guide and Navigation
+
+- **Wave:** W4
+- **Resultado:** guía no normativa y navegación SPEC→RF→TASK→RESULT.
+- **SPEC:** requerida porque define una capacidad de navegación verificable.
+- **Owner:** Doc Curator.
+- **Dependencias:** WP-001–005.
+- **RF:** RF-501–RF-505.
+- **Context:** large.
+- **Riesgos:** semantic drift.
+- **Gate:** links, source attribution y ausencia de policy propia.
+- **Modelo:** Sol, `medium`.
+- **Stop:** cualquier afirmación no enlazada o promoción de research.
+
+### WP-007 — Milestone Closure and Promotion
+
+- **Wave:** W4
+- **Resultado:** paquete verificable para el gate `tools -> main`.
+- **SPEC:** no requerida; no introduce comportamiento, ejecuta gates del Milestone Plan.
+- **Owner:** Task Lifecycle + Developer.
+- **Dependencia:** WP-001–006.
+- **Context:** medium.
+- **Gate:** conformance global y ruling Developer.
+- **Modelo PLAN:** Sol, `high`.
+- **Stop:** blocker, worktree inesperadamente dirty, RF incompleto o PR/base divergente.
+
+---
+
+## H. SPEC plans
+
+### WP-001 SPEC — Operational Profiles
+
+**Actores:** Developer, perfiles operativos, Validator.
+
+**Casos de uso:** seleccionar responsabilidad; limitar permisos; rechazar perfil retirado.
+
+**RF candidatos**
+
+- **RF-001:** el sistema debe reconocer exactamente `spec_analyst`, `planner`, `architect`, `explorer`, `implementer`, `doc_curator`, `reviewer`, `researcher` y `auditor`.
+- **RF-002:** sólo `implementer` puede escribir source y siempre bajo ownership de TASK.
+- **RF-003:** ningún perfil debe incorporar provider o modelo a su identidad.
+- **RF-004:** delegación debe estar denegada para todos.
+- **RF-005:** web debe estar denegada salvo para `researcher`.
+- **RF-006:** perfiles personales del Developer deben permanecer fuera del registry canónico.
+
+**RNF-001:** deny-by-default.  
+**RNF-002:** definición portable y validable sin ejecutar un modelo.
+
+**Edge cases:** ID histórico, perfil duplicado, write scope vacío, researcher sin research task.
+
+**Out:** Router, Model Resolver, fallback y ranking.
+
+**Completion:** schema + set exacto + pruebas negativas + aprobación Developer.
+
+**Pregunta abierta:** namespace del schema (`tecnotron-*` o compatibilidad `fitflow-*`).
+
+**Workload:** specification/high/high/fit/medium/medium.
+
+### WP-002 SPEC — Launchers
+
+- **RF-101:** el launcher debe recibir perfil, task/worktree y parámetros de ejecución explícitos.
+- **RF-102:** debe validar perfil, cwd, ownership y permisos antes de invocar OpenCode.
+- **RF-103:** un `model_hint` puede influir en la solicitud, pero no modifica el perfil.
+- **RF-104:** debe distinguir modelo solicitado, resuelto y observado.
+- **RF-105:** debe producir un envelope normalizado con status, exit code, artifacts y runtime identity.
+- **RF-106:** debe fallar cerrado ante CLI no disponible, salida inválida, permiso denegado o perfil retirado.
+
+**RNF:** determinismo, Windows/CI, stdout estructurado, stderr diagnóstico.
+
+**Edge:** ausencia de modelo, timeout, salida parcial, OpenCode cambia flags.
+
+**Pregunta:** formato real soportado por la versión local de `opencode run`.
+
+**Workload:** specification/high/high/fit/high/large.
+
+### WP-003 SPEC — SDD
+
+- **RF-201:** toda capacidad debe tener SPEC aprobada salvo excepción justificada.
+- **RF-202:** requisitos deben usar IDs estables RF/RNF.
+- **RF-203:** WP PLAN sólo define HOW.
+- **RF-204:** TASK asigna RF sin reproducir la SPEC.
+- **RF-205:** `scope_fit: split_required` impide READY.
+- **RF-206:** cambios de comportamiento actualizan primero la SPEC.
+- **RF-207:** no existen autoridades `design.md`, `tasks.md` o `apply`.
+
+**Edge:** una TASK que constituye una capacidad independiente; requisito mecánico sin SPEC propia.
+
+**Completion:** templates y validación de ejemplos válidos/invalidos.
+
+**Workload:** specification/high/high/fit/medium/medium.
+
+### WP-004 SPEC — Task Cycle Lite
+
+- **RF-301:** registrar `milestone_baseline`, `task_base`, integration y promotion targets.
+- **RF-302:** cada task de escritura usa `feat/<task-id>` y worktree propio.
+- **RF-303:** checkpoints sólo viven en la feature branch.
+- **RF-304:** Validator se ejecuta siempre.
+- **RF-305:** Reviewer se ejecuta según triggers aprobados.
+- **RF-306:** aceptación, validación, review, integración y lifecycle son dimensiones separadas.
+- **RF-307:** sólo Developer autoriza integración.
+- **RF-308:** integración usa squash hacia `tools`.
+- **RF-309:** documentos `DONE` conservan path estable.
+
+**RNF:** replay/auditoría, provider-neutral, manual antes de automatización completa.
+
+**Edge:** acceptance con check `UNAVAILABLE`, review `NOT_RUN`, cambio ambient, task base stale.
+
+**Pregunta:** contrato aditivo de lifecycle y namespace.
+
+**Workload:** specification/high/high/fit/high/large.
+
+### WP-005 SPEC — Execution Observation
+
+- **RF-401:** distinguir hint, request, resolution, observation y aceptación.
+- **RF-402:** usar `null`/`UNAVAILABLE` para datos ausentes.
+- **RF-403:** registrar `usage_source`.
+- **RF-404:** enlazar desde `RunEvent.usage_record_id`.
+- **RF-405:** no duplicar la autoridad de Run State.
+- **RF-406:** evidencia aceptada es inmutable.
+- **RF-407:** RESULT resume y referencia, no reescribe el registro.
+
+**Edge:** provider sin usage, tokenizer estimado, runtime mismatch, retry, reviewer no requerido.
+
+**Workload:** specification/high/high/fit/medium/medium.
+
+### WP-006 SPEC — System Guide
+
+- **RF-501:** explicar el sistema de Roadmap a ejecución y aceptación.
+- **RF-502:** enlazar toda política importante.
+- **RF-503:** distinguir existente, planificado y diferido.
+- **RF-504:** exponer trazabilidad SPEC/RF/TASK/RESULT.
+- **RF-505:** declarar criterio de actualización y supersesión.
+
+**RNF:** portable Markdown, sin dependencia Obsidian, sin policy propia.
+
+**Workload:** documentation/medium/medium/fit/low/large.
+
+### WP-007
+
+Sin SPEC propia. Sus criterios provienen del Milestone Plan y de las SPEC aceptadas.
+
+---
+
+## I. Executable TASK proposals
+
+### Contrato común futuro
+
+Cada TASK deberá completar al pasar a READY:
+
+```yaml
+task_base: <sha vigente de tools>
+branch: feat/<task-id>
+worktree: task-scoped
+integration_target: tools
+promotion_target: main
+```
+
+No se fija ahora un `task_base`, porque `tools` cambiará tras cada squash.
+
+| ID | WP | Resultado y paths candidatos | Review | Workload |
+|---|---|---|---|---|
+| `TOF-W1-001` | WP-001 | SPEC, role contracts, `src/contracts/agent-profile.js`, registry portable y tests | requerido: contracts/permisos | specification+implementation, high/high/fit/medium/large |
+| `TOF-W1-002` | WP-002 | nueve `.opencode/agents/*.md` sin modelos; pruebas estáticas de permisos | requerido: seguridad | implementation, medium/high/fit/medium/medium |
+| `TOF-W1-003` | WP-002 | launcher, launch-result contract y conformance `opencode run` | requerido: runtime/permisos | implementation, high/high/fit/high/large |
+| `TOF-W2-001` | WP-003 | ADR SDD, SPEC/WP/TASK templates y lint | requerido: autoridad | documentation, high/high/fit/medium/large |
+| `TOF-W2-002` | WP-004 | lifecycle contract aditivo, policy manual y test de dimensiones | requerido: schema/state/lifecycle | implementation, high/high/fit/high/large |
+| `TOF-W3-001` | WP-005 | execution-observation schema y fixtures | requerido: contract | implementation, high/high/fit/medium/medium |
+| `TOF-W3-002` | WP-005 | persistencia/correlación con RunStore, RunEvent y RESULT | requerido: evidence lifecycle | implementation, high/high/fit/medium/large |
+| `TOF-W4-001` | WP-006 | movimientos documentales y reparación de links | requerido: autoridad/layout | documentation, medium/medium/fit/medium/large |
+| `TOF-W4-002` | WP-006 | System Guide y navegación RF | `NOT_RUN` permitido si sólo deriva policy y Validator confirma links; justificar | documentation, medium/medium/fit/low/large |
+| `TOF-W4-003` | WP-007 | conformance global y paquete de promoción | requerido: operaciones Git | validation+git, high/high/fit/medium/large |
+
+### AC y validaciones mínimas
+
+**TOF-W1-001**
+
+- Set exacto de nueve perfiles.
+- Un solo implementer.
+- Sin campos provider/model.
+- IDs históricos rechazados.
+- Tests contractuales y full regression.
+- STOP si requiere cambiar Router/Role Registry v3.
+
+**TOF-W1-002**
+
+- Delegación denegada en los nueve.
+- Web sólo researcher.
+- Read-only efectivo en perfiles no escritores.
+- Implementer y Doc Curator limitados por TASK.
+- No modificación de config personal/global.
+- Smokes estáticos y revisión de diff.
+
+**TOF-W1-003**
+
+- Discovery local y help de CLI observados.
+- Dry-run reproducible.
+- Perfil válido ejecuta smoke acotado.
+- ID retirado, cwd incorrecto, write fuera de scope y salida inválida fallan cerrados.
+- Resultado valida contra response contract.
+- Sin paid API ni model binding permanente.
+
+**TOF-W2-001**
+
+- Templates expresan workload y `model_hint`.
+- `scope_fit: split_required` no valida como READY.
+- SPEC contiene WHAT/WHY; PLAN HOW.
+- No se crean autoridades paralelas.
+- Links y frontmatter pasan lint.
+
+**TOF-W2-002**
+
+- Contrato aditivo: no rompe `fitflow-task/v2`.
+- Validation/review/acceptance/integration/lifecycle probados como dimensiones separadas.
+- `DONE` no resulta de PASS ni review.
+- Branch model usa exclusivamente `tools`.
+- Una task real demuestra el ciclo manual.
+
+**TOF-W3-001/002**
+
+- Schema acepta medición, estimación y unavailable.
+- Runtime proposal/effective se reutiliza.
+- `usage_record_id` correlaciona.
+- Registro inmutable y hash verificable.
+- No se crean ranking ni recomendaciones derivadas.
+
+**TOF-W4-001/002**
+
+- Todos los links reparados.
+- TASKs DONE no se mueven.
+- Guide enlaza fuentes y no introduce policy.
+- Trazabilidad RF visible.
+
+**TOF-W4-003**
+
+- Full suite, schemas, links, diff y ownership pasan.
+- Todos los WPs cerrados.
+- No cambios FitFlow.
+- Estado remoto/PR se vuelve verificable antes de promoción.
+- Developer autoriza `tools -> main`.
+
+### Model hints para TASKs
+
+Todas pueden usar `openai/gpt-5.6-sol` como sugerencia no vinculante. `reasoning_effort`:
+
+- `xhigh`: TOF-W2-001, TOF-W2-002.
+- `high`: W1, W3 y cierre.
+- `medium`: movimientos documentales y guía.
+
+No hay alternativas propuestas por falta de evidencia vigente exacta.
+
+---
+
+## J. Task Lifecycle and tool boundaries
+
+| Componente | Responsabilidad | No posee |
+|---|---|---|
+| Developer | SPEC, estrategia, rulings, aceptación y promoción | ejecución mecánica |
+| Orca | workspace, sesión, terminal y presentación | autoridad, aceptación, routing |
+| OpenCode | ejecutar perfil/modelo | Git lifecycle, source of truth |
+| Router | derivar rol ejecutable y requirements desde policy | perfil manual, modelo, ejecución |
+| Model Resolver | propuesta provider/runtime elegible | ejecución o identidad efectiva |
+| ContextPackager | retrieval, budget, coverage, fallback metadata | suficiencia final |
+| Explorer | localizar/evaluar evidencia según contrato | materialización, aceptación |
+| Agent Runtime | ejecutar adapter y observar identidad | rerouting, aceptación |
+| Validator | schema, tests, diff, ownership y RF | review o aceptación |
+| Reviewer | revisión semántica según riesgo | fixes, integración, aceptación |
+| Run Store | eventos/artifacts/proyección | política o verdad documental |
+| GitHub Projects | coordinación y estado provider | canonical TASK/SPEC |
+| Task Lifecycle | branch, worktree, transiciones e integración | implementación semántica |
+
+### Reconciliación de estados
+
+No se debe ampliar directamente `State` con estados administrativos. Mantener:
+
+1. **Workflow state:** routing, exploring, executing, validating, reviewing.
+2. **Validation result:** PASS/FAIL/UNAVAILABLE/NOT_RUN.
+3. **Review decision:** semantic verdict o NOT_RUN justificado.
+4. **Developer acceptance:** pending/accepted/rejected.
+5. **Integration:** target/SHA/status.
+6. **Lifecycle bookkeeping:** discovered→ready→…→done→cleanup.
+
+El contrato nuevo debe ser aditivo y no reinterpretar `fitflow-task/v2`.
+
+---
+
+## K. Model evidence plan
+
+### Campos existentes reutilizables
+
+| Evidencia | Fuente existente |
+|---|---|
+| `run_id`, `task_id` | RunEvent/RunState |
+| rol propuesto | RouteDecision/RunEvent actor |
+| modelo resuelto/provider | ModelResolutionResult |
+| modelo observado | RuntimeIdentity.effective |
+| context pack/tokens | ContextPackagerResult y ContextDelivery |
+| retries | RunState.retry_counters |
+| Validator/Reviewer refs | RunState histories |
+| aceptación | `DEVELOPER_DECISION` RunEvent |
+| correlación | `RunEvent.usage_record_id` |
+
+### Campos nuevos mínimos
+
+- model requested y reasoning effort;
+- provider usage tokens y `usage_source`;
+- latency;
+- context expansions;
+- instruction violations;
+- unsupported claims;
+- reusable output;
+- Developer interventions/rework;
+- first-pass acceptance;
+- final execution disposition.
+
+### Ubicación recomendada
+
+- Raw/derived runtime evidence: Run Store con root explícitamente inyectado.
+- Registro sanitizado candidato:  
+  `docs/tasks/<task-id>/evidence/<usage-record-id>.json`
+- `RESULT.md`: resumen y hash/ref, no copia completa.
+
+No crear el directorio `evidence/` si la task no produce un registro.
+
+### Inmutabilidad y estados
+
+El observation record se finaliza una vez antes del acceptance gate. La aceptación y la integración posteriores se conservan en sus eventos/lifecycle records; no se reescribe retrospectivamente la observación.
+
+`final_disposition` debe describir el resultado de la ejecución, no sustituir `developer_acceptance` ni `integration`.
+
+### Medición versus estimación
+
+- `usage_source: provider`: sólo si el runtime entrega cifras.
+- `estimated`: exige algoritmo y limitación.
+- `unavailable`: valores de tokens `null`.
+- Los tokens de ContextPackager no deben presentarse como usage del provider.
+
+---
+
+## L. System Guide plan
+
+### Path
+
+```text
+docs/guides/system-guide.md
+```
+
+### Autoridad
+
+Derivada, no normativa. Debe declarar fuentes, versión, owner, criterio de actualización y supersesión.
+
+### Índice previsto
+
+1. Propósito y límites.
+2. Autoridad documental.
+3. Roadmap, Milestone, WP y SPEC.
+4. TASK/PLAN/RESULT/REVIEW.
+5. Branches y worktrees.
+6. Orca.
+7. Perfiles y permisos.
+8. OpenCode y launchers.
+9. Router y Model Resolver.
+10. ContextPackager y Explorer.
+11. Agent Runtime y Run Store.
+12. Validator y Reviewer.
+13. Developer acceptance.
+14. Integración y promoción.
+15. Evidencia de modelos.
+16. Troubleshooting.
+17. Ledger de capacidades.
+18. Actualización y supersesión.
+
+### Secciones diferidas
+
+- ranking de modelos;
+- fitness routing;
+- providers definitivos;
+- Temporal/MCP/retrieval operativo;
+- FinOps avanzado.
+
+---
+
+## M. Exact file plan
+
+### Create
+
+```text
+docs/decisions/ADR-002-authority-by-responsibility-and-sdd.md
+docs/decisions/ADR-003-operational-profile-boundaries.md
+docs/decisions/ADR-004-task-lifecycle-dimensions.md
+docs/milestones/tecnotron-operational-foundation-v1/PLAN.md
+
+docs/work-packages/WP-001-operational-profile-contracts/{SPEC,PLAN}.md
+docs/work-packages/WP-002-deterministic-opencode-launchers/{SPEC,PLAN}.md
+docs/work-packages/WP-003-sdd-authority/{SPEC,PLAN}.md
+docs/work-packages/WP-004-task-cycle-lite/{SPEC,PLAN}.md
+docs/work-packages/WP-005-execution-observation/{SPEC,PLAN}.md
+docs/work-packages/WP-006-system-guide/{SPEC,PLAN}.md
+docs/work-packages/WP-007-milestone-closure/PLAN.md
+
+docs/templates/{SPEC,WP-PLAN,TASK,TASK-PLAN,RESULT,REVIEW}.md
+docs/guides/system-guide.md
+docs/guides/task-cycle-lite.md
+docs/archive/README.md
+
+docs/tasks/TOF-W*/{TASK,PLAN,RESULT}.md
+docs/tasks/TOF-W*/REVIEW.md             # sólo cuando requerido
+
+src/contracts/agent-profile.js
+src/contracts/agent-launch.js
+src/contracts/task-lifecycle-record.js
+src/contracts/execution-observation.js
+config/agent-profiles.yaml
+
+.opencode/agents/spec_analyst.md
+.opencode/agents/planner.md
+.opencode/agents/architect.md
+.opencode/agents/explorer.md
+.opencode/agents/implementer.md
+.opencode/agents/doc_curator.md
+.opencode/agents/reviewer.md
+.opencode/agents/researcher.md
+.opencode/agents/auditor.md
+
+scripts/opencode/bin/tecnotron-run-profile.js
+tests/contract/agent-profile.test.js
+tests/contract/agent-launch.test.js
+tests/contract/task-lifecycle-record.test.js
+tests/contract/execution-observation.test.js
+tests/integration/opencode-launcher.test.js
+tests/integration/execution-observation.test.js
+```
+
+### Modify
+
+- `AGENTS.md`
+- `README.md`
+- `docs/SOURCE_OF_TRUTH.md`
+- `docs/current-state.md`
+- `docs/implementation-roadmap.md`
+- `docs/compatibility-baseline.md`
+- arquitectura/lifecycle movidos;
+- contract exports;
+- Run Store y Run Event sólo para correlación W3;
+- tests de regresión afectados.
+
+### Move, bajo TOF-W4-001
+
+```text
+docs/architecture.md
+  -> docs/architecture/system-architecture.md
+docs/operational-architecture.md
+  -> docs/architecture/operational-architecture.md
+docs/context-strategy.md
+  -> docs/architecture/context-strategy.md
+docs/task-lifecycle.md
+  -> docs/architecture/task-lifecycle.md
+docs/development-pipeline-adapter.md
+  -> docs/architecture/development-pipeline-adapter.md
+docs/indexing-pipeline.md
+  -> docs/research/semantic-retrieval.md
+```
+
+### Archive
+
+No copiar contenido de `tooling`. `docs/archive/README.md` sólo registraría:
+
+- existencia del tag;
+- SHA;
+- condición superseded;
+- procedimiento de consulta explícita;
+- exclusión del contexto cotidiano.
+
+### Read-only
+
+- TASKs `FF-AI-VNEXT-008/009`;
+- código estable no asignado a una TASK;
+- tag y rama `tooling`;
+- worktrees históricos;
+- Project Profile/registries FitFlow si posteriormente se entrega un root explícito.
+
+### No tocar
+
+- stash;
+- FitFlow;
+- configuración personal/global de OpenCode;
+- historial de `tooling`;
+- tag archivado;
+- `origin/main`;
+- Router/Resolver/FinOps durante W1;
+- package manifests salvo autorización explícita;
+- storage, caches, logs y secrets.
+
+---
+
+## N. Risks and deferred work
+
+| Riesgo | Mitigación |
+|---|---|
+| Semantic drift entre docs y contratos | SPEC IDs, links y Validator |
+| Duplicación de identidad perfil/Role Registry | contratos separados; Router fuera de W1 |
+| Sobre-documentación | SPEC por capacidad, no por fragmento |
+| Romper contratos FitFlow v2 | lifecycle aditivo y compatibilidad |
+| Índices stale | lectura de source y metadata de cobertura |
+| Dependencia de Orca | adapter reemplazable; lifecycle provider-neutral |
+| Dependencia de OpenCode | launcher/response contract reemplazables |
+| Permisos meramente declarativos | smokes negativos; bloquear si no son exigibles |
+| Configuración cross-repo ausente | no inferir roots ni workaround |
+| Evidencia mutable o contradictoria | append-only/hash y referencias |
+| Model hint confundido con resolución | campos separados |
+| Tokens estimados presentados como provider | `usage_source` obligatorio |
+| Reutilizar perfiles archivados | IDs nuevos y negative tests |
+| Ranking prematuro | diferido explícitamente |
+| Provider research prematuro | sin alternativas inventadas |
+| Worktrees históricos abandonados | registrar, no limpiar dentro del milestone |
+
+### Trabajo diferido
+
+- ranking y fitness;
+- automatización de experimentos;
+- routing por evidencia;
+- FinOps avanzado;
+- provider/model research;
+- Temporal;
+- MCP/retrieval nuevo;
+- adapter Orca completo;
+- dashboards o índice semántico operativo.
+
+---
+
+## O. Developer decisions
+
+Rulings necesarios antes de materializar:
+
+1. **Namespace e identidad:** confirmar si nuevos documentos/schemas usan `tecnotron-*` mientras los contratos `fitflow-*` permanecen compatibles, o si se autoriza una migración separada.
+2. **Descomposición:** aceptar los siete WPs y la separación W4 entre System Guide y Closure.
+3. **Lifecycle:** aprobar un `task-lifecycle-record` aditivo en lugar de modificar `fitflow-task/v2`.
+4. **Perfiles OpenCode:** aprobar perfiles project-scoped en `.opencode/agents/`, sin links globales ni cambios en perfiles personales del Developer.
+5. **Evidencia estructurada:** aprobar la combinación Run Store + artifact sanitizado bajo la carpeta estable de TASK.
+6. **SPECs:** aprobar los RF candidatos antes de marcar cualquier WP como READY.
+
+No se requiere ruling de modelo ni provider para abrir la planificación.
+
+---
+
+## P. Status
+
+`ARCHITECT_PLAN_STATUS: PARTIAL`

@@ -1,0 +1,48 @@
+# Developer Acceptance Ruling
+
+El Developer acepta:
+
+* el Architecture and Milestone Plan original;
+* el Acceptance Revision Addendum;
+* los ocho Work Packages;
+* los rulings de namespace, lifecycle, perfiles, launcher, SPEC y evidencia;
+* la incorporación controlada de FitFlow mediante TASKs cross-repo.
+
+La falta de lectura directa de FitFlow no constituye una decisión arquitectónica pendiente. Es una restricción del entorno de esta sesión y se traslada al gate operativo de WP-000.
+
+Estados aprobados:
+
+```text
+MILESTONE_PLAN_STATUS: ACCEPTED
+ARCHITECT_REVISION_STATUS: COMPLETE
+WP-000_STATUS: NOT_READY
+WP-000_BLOCKER: FITFLOW_SOURCE_ACCESS_REQUIRED
+```
+
+WP-000 no puede pasar a `READY` hasta que una sesión/workspace autorizado para FitFlow permita:
+
+1. leer la fuente real;
+2. verificar el Project Profile;
+3. validar los registries;
+4. determinar la allowlist exacta;
+5. registrar el baseline FitFlow.
+
+Las tres decisiones enumeradas en la sección I no bloquean la aceptación actual:
+
+* las SPEC WP-001 a WP-006 se aprobarán individualmente cuando sean materializadas;
+* la allowlist FitFlow se aprobará después del source read;
+* una incompatibilidad real requerirá ruling sólo si WP-000 la demuestra.
+
+Estas condiciones son gates futuros del lifecycle, no faltantes del Milestone Plan.
+
+No regeneres el plan ni el addendum.
+
+Devuelve únicamente:
+
+```text
+MILESTONE_PLAN_STATUS: ACCEPTED
+ARCHITECT_REVISION_STATUS: COMPLETE
+NEXT_GATE: MATERIALIZE_MILESTONE_AND_WP-000_PLANNING
+```
+
+No implementes ni modifiques archivos todavía.  // .cbmignore M no es ruido 

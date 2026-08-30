@@ -1,0 +1,627 @@
+# Architecture Plan — Acceptance Revision Addendum
+
+## A. Corrected evidence statuses
+
+### Codebase Memory
+
+```text
+Codebase Memory: PASS
+availability: VERIFIED
+```
+
+Evidencia:
+
+- `list_projects` respondió correctamente.
+- Los proyectos `C-Proyectos-Web-Tecnotron-ai` y `C-Proyectos-Web-FitFlow` están registrados.
+- Consultas acotadas sobre `.ai/config/` de FitFlow fueron exitosas.
+- `index_status` de FitFlow: `ready`, 4.797 nodos y 9.924 edges.
+
+Caveat: la cobertura es best-effort. Project Profile, registries, README de configuración y `orca.yaml` presentan `freshness: metadata_changed`, por lo que su snapshot indexado no demuestra el estado actual del archivo. Sólo `orchestrator.yaml` reportó `metadata_match`.
+
+### repo-packager
+
+```text
+repo-packager: NOT_RUN
+availability: UNVERIFIED
+```
+
+### FitFlow direct-source access
+
+```text
+direct_source_access: UNAVAILABLE
+```
+
+Las lecturas directas de `C:\Proyectos-Web\FitFlow` fueron rechazadas por el control de acceso del entorno. No se modificó configuración ni se intentó eludir ese boundary.
+
+### Project Profile
+
+```text
+project_profile_status: UNRESOLVED
+```
+
+No se clasifica como `MISSING_CONFIGURATION`: el índice contiene evidencia de un profile en `.ai/config/project-profile.yaml`, pero su metadata cambió después del índice y no pudo leerse directamente.
+
+### Configuración activa
+
+```text
+active_registries_status: UNRESOLVED
+environment_injection_status: UNRESOLVED
+```
+
+Los archivos aparecen en el índice, pero su vigencia y validación actuales requieren WP-000.
+
+---
+
+## B. Project Profile resolution
+
+### Evidencia indexada, todavía no confirmada por source read
+
+Root explícito evaluado:
+
+```text
+C:\Proyectos-Web\FitFlow
+```
+
+Path indexado:
+
+```text
+C:\Proyectos-Web\FitFlow\.ai\config\project-profile.yaml
+```
+
+Snapshot indexado:
+
+```yaml
+schema_version: fitflow-project-profile/v1
+project_id: fitflow
+roots:
+  product: C:/Proyectos-Web/FitFlow
+  ai_core: C:/Proyectos-Web/Tecnotron-ai
+```
+
+También contiene, en el snapshot, las secciones requeridas por el schema vigente:
+
+- `authority`;
+- `product_architecture`;
+- `operational`;
+- `specification`;
+- `features`;
+- `environment`.
+
+Esto coincide estructuralmente con `src/registries/schemas/project-profile.js`, pero no se declara validación `PASS` hasta leer y validar la fuente actual.
+
+### Registries indexados
+
+| Archivo | Versión indexada | Estado |
+|---|---|---|
+| `.ai/config/roles.yaml` | `fitflow-role-registry/v3` | `UNRESOLVED` |
+| `.ai/config/models.yaml` | `fitflow-model-registry/v3` | `UNRESOLVED` |
+| `.ai/config/finops.yaml` | `fitflow-finops/v1` | `UNRESOLVED` |
+| `.ai/config/orchestrator.yaml` | `fitflow-orchestrator/v2` | mejor freshness, pero sin source read |
+
+El snapshot de FinOps conserva:
+
+```yaml
+incremental_budget_usd: 0
+paid_api_enabled: false
+```
+
+El snapshot de `roles.yaml` todavía contiene `planner_ai`, `coder_a`, `coder_b` y `coder_strong_a`. Eso es compatibilidad histórica de routing y no define los nueve perfiles operativos nuevos.
+
+### Puntos de inyección confirmados en Tecnotron-ai
+
+`resolveProject` consume:
+
+```text
+FF_PROJECT_ROOT
+FF_PROJECT_PROFILE
+FF_AI_CORE_ROOT
+```
+
+La inyección reproducible recomendada para worktrees es:
+
+```text
+FF_PROJECT_ROOT=<FitFlow task worktree root>
+FF_PROJECT_PROFILE=<FitFlow task worktree root>/.ai/config/project-profile.yaml
+FF_AI_CORE_ROOT=<Tecnotron-ai task worktree root>
+```
+
+Los tres valores deben inyectarse al proceso launcher/Validator. Ningún componente debe obtenerlos navegando a un directorio sibling.
+
+### Orca y launchers
+
+- El `orca.yaml` vigente de Tecnotron-ai sólo copia `.env` al worktree; no declara las variables `FF_PROJECT_*`.
+- El snapshot indexado del `orca.yaml` de FitFlow muestra también copia de `.env`, no un contrato explícito de inyección.
+- El baseline Tecnotron-ai no posee actualmente un launcher reproducible que garantice estas variables.
+
+Por tanto, WP-000 debe materializar un mecanismo task-scoped verificable. No debe guardar paths temporales de worktree dentro del Project Profile ni modificar configuración global de OpenCode.
+
+---
+
+## C. Updated scope and WP-000
+
+### Scope cross-repo revisado
+
+FitFlow puede modificarse sólo mediante TASKs cross-repo explícitamente aprobadas para:
+
+- Project Profile y configuración activa;
+- consumidores de contratos migrados;
+- ownership y resolución de roots;
+- conformance conjunta Tecnotron-ai/FitFlow.
+
+Cada repositorio conserva:
+
+```yaml
+repository:
+baseline:
+task_base:
+branch:
+worktree:
+allowed_paths: []
+forbidden_paths: []
+diff:
+validation:
+integration:
+rollback:
+```
+
+Reglas:
+
+- worktree distinto por repositorio;
+- no branch compartida;
+- no escritura incidental de producto;
+- no cambios de dominio o base de datos;
+- Validator obligatorio;
+- Reviewer obligatorio por scope cross-repo;
+- squash e integración independientes en la rama autorizada de cada repo;
+- una aceptación no autoriza automáticamente el otro repositorio.
+
+### WP-000
+
+```yaml
+id: WP-000
+wave: W0
+name: Cross-Repo Project Profile Baseline
+spec_required: false
+status: PROPOSED
+```
+
+No requiere SPEC propia mientras sólo materialice `fitflow-project-profile/v1` y contratos de registries ya aceptados. Si aparece comportamiento nuevo, se detiene y se crea una SPEC antes de continuar.
+
+#### Resultado
+
+1. Project Profile FitFlow leído desde fuente y localizado o creado.
+2. Validación contra `fitflow-project-profile/v1`.
+3. Roots explícitos y sin inferencia sibling.
+4. Registries activos resolubles y validados.
+5. Ownership Tecnotron-ai/FitFlow documentado.
+6. Inyección reproducible de `FF_PROJECT_*`.
+7. Conformance conjunta con paid API deshabilitada.
+
+#### TASK FitFlow
+
+```text
+TOF-W0-001 — FitFlow Project Profile and Active Configuration
+```
+
+**Ownership candidato**
+
+```text
+.ai/config/project-profile.yaml
+.ai/config/README.md
+.ai/config/roles.yaml          # sólo si falla conformance
+.ai/config/models.yaml         # sólo si falla conformance
+.ai/config/finops.yaml         # sólo si falla conformance
+.ai/config/orchestrator.yaml   # sólo si falla conformance
+orca.yaml                      # sólo si se aprueba como mecanismo de injection
+```
+
+**Estado de preparación**
+
+```yaml
+scope_fit: split_required
+```
+
+No puede pasar a READY hasta obtener source read, determinar si existe un cambio real y congelar la allowlist exacta. Si el profile actual valida y no requiere cambios, la TASK se reduce a ownership/injection documental o se cancela justificadamente; no se crea un commit vacío.
+
+#### TASK Tecnotron-ai
+
+```text
+TOF-W0-002 — Project Resolution, Environment Injection and Cross-Repo Conformance
+```
+
+Existe un gap real: el baseline tiene inputs `FF_PROJECT_*`, pero no un mecanismo launcher reproducible.
+
+**Ownership candidato**
+
+```text
+src/project-profile/index.js                  # sólo si hay defecto real
+tests/integration/routing.test.js
+tests/integration/runtime-conformance.test.js
+tests/integration/agent-mvp.test.js
+scripts/project-profile/**                    # wrapper/preflight candidato
+docs/architecture/development-pipeline-adapter.md
+docs/work-packages/WP-000-*/PLAN.md
+docs/tasks/TOF-W0-002/**
+```
+
+Debe:
+
+- aceptar roots y profile explícitos;
+- propagar las variables al proceso hijo;
+- validar el profile y los cuatro registries;
+- ejecutar conformance sin provider real;
+- no persistir paths de worktree;
+- distinguir `MISSING_CONFIGURATION`, `UNRESOLVED` y `UNAVAILABLE`.
+
+#### Gate WP-000
+
+```text
+source read
+→ schema validation
+→ registry validation
+→ environment injection smoke
+→ cross-repo conformance
+→ Validator PASS
+→ Reviewer
+→ Developer acceptance
+```
+
+### Criterio de cierre corregido
+
+Se sustituye:
+
+```text
+No cambios FitFlow
+```
+
+por:
+
+```text
+No cambios FitFlow fuera de las TASKs cross-repo expresamente aprobadas.
+```
+
+---
+
+## D. Namespace and lifecycle ruling
+
+### Namespace
+
+La convención real vigente es:
+
+```text
+<namespace>-<artifact>/v<integer>
+```
+
+Todos los contratos existentes usan `fitflow-*`; no se encontró ningún schema `tecnotron-*`. Los candidatos aprobados respetan la forma existente y establecen el namespace nuevo:
+
+```text
+tecnotron-agent-profile/v1
+tecnotron-agent-launch/v1
+tecnotron-task-lifecycle/v1
+tecnotron-execution-observation/v1
+```
+
+Estos son los IDs planificados finales para los contratos nuevos.
+
+Reglas consolidadas:
+
+- los contratos `fitflow-*` existentes permanecen inmutables;
+- los contratos nuevos usan `tecnotron-*`;
+- no se cambia el significado de una versión publicada;
+- compatibilidad y migración son explícitas;
+- la retirada de compatibilidad requiere otro ruling.
+
+### WP-004 revisado
+
+WP-004 ya no crea un sidecar permanente. Su resultado pasa a ser:
+
+> `tecnotron-task-lifecycle/v1` es la única política operativa vigente al cierre, mientras `fitflow-task/v2` permanece como formato histórico aceptado únicamente a través de un boundary de compatibilidad.
+
+#### Secuencia de migración
+
+1. Definir `tecnotron-task-lifecycle/v1`.
+2. Definir mapping explícito desde `fitflow-task/v2`.
+3. Validar casos compatibles, ambiguos y rechazados.
+4. Migrar consumidores Tecnotron-ai.
+5. Migrar consumidores FitFlow mediante TASK separada cuando corresponda.
+6. Documentar deprecación.
+7. Retirar el uso operativo directo de la política antigua.
+8. Mantener el parser/adapter compatible hasta otro ruling.
+
+#### TASKs WP-004 revisadas
+
+```text
+TOF-W2-002 — Canonical Tecnotron Task Lifecycle Contract
+```
+
+- Crea contrato, mapping y tests.
+- No modifica `fitflow-task/v2`.
+- Reviewer obligatorio por schema/lifecycle.
+
+```text
+TOF-W2-003 — Tecnotron Lifecycle Consumer Migration
+```
+
+- Migra consumidores Tecnotron-ai al nuevo lifecycle.
+- Mantiene el adapter de compatibilidad en el boundary.
+- Prueba que validación, review, aceptación e integración permanecen ortogonales.
+
+```text
+TOF-W2-004 — FitFlow Lifecycle Consumer Migration
+```
+
+- Condicional al inventario WP-000.
+- TASK FitFlow independiente con baseline, branch, worktree y allowlist propios.
+- Reviewer obligatorio.
+- Si no hay consumidores reales, se cancela con evidencia y no se inventa trabajo.
+
+#### Gate adicional WP-004
+
+Al cierre debe cumplirse:
+
+```text
+new canonical policy: tecnotron-task-lifecycle/v1
+legacy input compatibility: fitflow-task/v2
+operational policy count: 1
+direct legacy-policy consumers: 0
+```
+
+---
+
+## E. Profiles and launcher correction
+
+La formulación anterior “nueve adapters OpenCode” queda supersedida.
+
+### Resultado aprobado
+
+```text
+un launcher genérico parametrizado por perfil
++ nueve perfiles project-scoped
++ tecnotron-agent-launch/v1
++ smokes positivos y negativos
+```
+
+### Perfiles
+
+| Perfil | Escritura efectiva |
+|---|---|
+| `spec_analyst` | ninguna |
+| `planner` | ninguna |
+| `architect` | ninguna |
+| `explorer` | ninguna |
+| `implementer` | código y tests sólo bajo TASK |
+| `doc_curator` | documentación sólo bajo TASK |
+| `reviewer` | ninguna |
+| `researcher` | ninguna; web sólo bajo TASK autorizada |
+| `auditor` | ninguna |
+
+La escritura de planes o SPEC por perfiles read-only se devuelve como output propuesto hasta que una TASK posterior autorice explícitamente un writer. No se infiere permiso de escritura de la responsabilidad semántica.
+
+### Launcher genérico
+
+Input conceptual:
+
+```yaml
+profile_id:
+task_path:
+worktree_root:
+model_requested: null
+reasoning_effort: null
+context_pack_ref: null
+environment:
+  FF_PROJECT_ROOT:
+  FF_PROJECT_PROFILE:
+  FF_AI_CORE_ROOT:
+```
+
+Responsabilidades:
+
+- resolver uno de los nueve perfiles;
+- validar TASK, cwd y worktree;
+- aplicar deny-by-default;
+- inyectar environment task-scoped;
+- invocar `opencode run` mediante un único adapter;
+- no modificar configuración global;
+- normalizar resultado contra `tecnotron-agent-launch/v1`.
+
+### Smokes
+
+**Positivos**
+
+- discovery de nueve perfiles;
+- lanzamiento acotado de perfil read-only;
+- implementer dentro de ownership;
+- doc_curator dentro de docs;
+- ejecución sin modelo explícito cuando OpenCode lo admita;
+- modelo solicitado registrado separadamente.
+
+**Negativos**
+
+- perfil `coder_*`;
+- segundo implementer;
+- delegación;
+- web fuera de researcher;
+- escritura read-only;
+- escritura implementer/doc_curator fuera de ownership;
+- cwd/worktree incorrectos;
+- profile/model binding permanente;
+- salida CLI malformada;
+- configuración/global profile mutation.
+
+---
+
+## F. Evidence and SPEC approval model
+
+### Evidencia estructurada aprobada
+
+```text
+TASK + Run Store + RESULT + evidencia final sanitizada
+```
+
+| Artefacto | Responsabilidad |
+|---|---|
+| `TASK.md` | contrato de ejecución y RF asignados |
+| Run Store | eventos y observación operativa |
+| `RESULT.md` | resumen legible, divergencias y referencias |
+| Artifact sanitizado | snapshot verificable del run final relevante |
+
+El artifact no replica el event log completo.
+
+Contenido mínimo:
+
+```yaml
+schema_version: tecnotron-execution-observation/v1
+run_id:
+usage_record_id:
+content_hash:
+model_requested:
+model_resolved:
+provider:
+reasoning_effort:
+usage:
+  source: provider | estimated | unavailable
+  input_tokens: null
+  output_tokens: null
+  cached_tokens: null
+  total_tokens: null
+validator_result: PASS | FAIL | UNAVAILABLE | NOT_RUN
+reviewer_result: PASS | FAIL | UNAVAILABLE | NOT_RUN
+execution_disposition:
+```
+
+Reglas:
+
+- `usage_record_id` enlaza RunEvent y artifact.
+- `content_hash` verifica el snapshot.
+- Developer acceptance e integration no forman parte mutable de la observación.
+- RESULT referencia el artifact y sus hashes.
+- La observación original no se reescribe tras aceptación.
+- No se duplica el event log ni Run State.
+
+### SPEC approval checklist del Milestone Plan
+
+```markdown
+- [ ] WP-001 SPEC aprobada por Developer
+- [ ] WP-002 SPEC aprobada por Developer
+- [ ] WP-003 SPEC aprobada por Developer
+- [ ] WP-004 SPEC aprobada por Developer
+- [ ] WP-005 SPEC aprobada por Developer
+- [ ] WP-006 SPEC aprobada por Developer
+```
+
+- WP-000 no requiere SPEC mientras materialice contratos existentes.
+- WP-007 no requiere SPEC mientras sólo ejecute cierre y promoción.
+- Los RF candidatos son base de clarificación.
+- Los RF no llevan checkboxes de ejecución.
+- Cobertura RF se registra en RESULT o en una matriz derivada.
+
+---
+
+## G. Updated dependencies and gates
+
+### Work Packages consolidados
+
+| Wave | WP | Dependencias |
+|---|---|---|
+| W0 | WP-000 Cross-Repo Project Profile Baseline | baseline |
+| W1 | WP-001 Operational Profile Contracts | WP-000 |
+| W1 | WP-002 Deterministic OpenCode Launchers | WP-001 |
+| W2 | WP-003 SDD Authority and Artifacts | WP-002 |
+| W2 | WP-004 Governed Task Cycle Lite | WP-003, WP-002, WP-000 |
+| W3 | WP-005 Execution Observation Baseline | WP-004 |
+| W4 | WP-006 System Guide and Navigation | WP-001–WP-005 |
+| W4 | WP-007 Milestone Closure and Promotion | WP-000–WP-006 |
+
+El milestone contiene ocho WPs sin renumerar WP-001 a WP-007.
+
+### Gates revisados
+
+- **G0 — Baseline:** refs correctos; milestone aún no abierto.
+- **G0.5 — Cross-repo:** Project Profile y registries validados, environment injection reproducible y conformance conjunta.
+- **G1 — Profile SPEC:** WP-001 SPEC aprobada.
+- **G2 — Launcher:** un launcher genérico, nueve perfiles y smokes completos.
+- **G3 — SDD:** WP-003 SPEC, templates y autoridad aprobados.
+- **G4 — Lifecycle migration:** una política `tecnotron-task-lifecycle/v1`, compatibilidad legacy y consumidores migrados.
+- **G5 — Vertical cycle:** una task completa el ciclo hasta squash en `tools`.
+- **G6 — Observation:** artifact sanitizado correlacionado e inmutable.
+- **G7 — Guide:** navegación y links validados.
+- **G8 — Closure:** ocho WPs cerrados; cambios FitFlow limitados a TASKs aprobadas; Developer autoriza promoción.
+
+### Criterio de promoción revisado
+
+```text
+No cambios FitFlow fuera de las TASKs cross-repo expresamente aprobadas.
+```
+
+Además, cada cambio FitFlow debe tener integración, validación, rollback y aceptación propios antes de cerrar WP-000 o WP-004.
+
+---
+
+## H. Exact sections of the original plan superseded by this addendum
+
+Este addendum supersede exclusivamente:
+
+1. **B. Evidence coverage**
+   - estado de Codebase Memory;
+   - clasificación de Project Profile y registries;
+   - environment injection.
+
+2. **F. Milestone Plan**
+   - cantidad de WPs;
+   - ausencia de W0;
+   - dependencias;
+   - scope absoluto de FitFlow;
+   - gates y criterio de cierre.
+
+3. **G. Work Package proposals**
+   - se añade WP-000;
+   - se revisa WP-004;
+   - WP-001–007 conservan numeración.
+
+4. **H. SPEC plans**
+   - checklist de aprobación;
+   - WP-000 y WP-007 sin SPEC por defecto;
+   - lifecycle como migración a política única.
+
+5. **I. Executable TASK proposals**
+   - se añaden TOF-W0-001/002;
+   - se corrigen las TASKs de WP-004;
+   - se sustituye “nueve adapters” por launcher genérico.
+
+6. **J. Task Lifecycle and tool boundaries**
+   - `fitflow-task/v2` deja de ser política operativa futura;
+   - se introduce compatibilidad/migración hacia `tecnotron-task-lifecycle/v1`.
+
+7. **K. Model evidence plan**
+   - composición aprobada TASK + Run Store + RESULT + artifact sanitizado.
+
+8. **M. Exact file plan**
+   - nuevos archivos WP-000;
+   - IDs finales `tecnotron-*`;
+   - posibles paths FitFlow sólo bajo TASK aprobada;
+   - un launcher y nueve perfiles.
+
+9. **N. Risks and deferred work**
+   - FitFlow ya no está absolutamente excluido;
+   - el riesgo se controla mediante ownership cross-repo.
+
+10. **O. Developer decisions**
+    - namespace, perfiles, evidencia, lifecycle y descomposición quedan resueltos por este ruling.
+
+Todas las demás secciones permanecen vigentes.
+
+---
+
+## I. Remaining Developer decisions
+
+1. Aprobar individualmente las SPEC de WP-001 a WP-006 cuando sean materializadas.
+2. Tras source read de WP-000, aprobar la allowlist exacta de `TOF-W0-001` si FitFlow requiere cambios.
+3. Resolver cualquier incompatibilidad real que WP-000 detecte entre el Project Profile vigente y `fitflow-project-profile/v1`.
+
+No quedan rulings pendientes sobre namespace, cantidad de WPs, perfiles, launcher, evidencia estructurada ni estrategia de lifecycle.
+
+---
+
+## J. Status
+
+`ARCHITECT_REVISION_STATUS: PARTIAL`
