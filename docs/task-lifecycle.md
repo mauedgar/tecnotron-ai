@@ -1,8 +1,9 @@
 ---
 status: canonical
-owner: fitflow-ai
+owner: tecnotron-ai
 type: workflow
-updated: 2026-08-24
+updated: 2026-08-30
+version: 3.1
 related:
   - "[[operational-architecture]]"
   - "[[context-strategy]]"
@@ -10,20 +11,25 @@ related:
   - "[[implementation-roadmap]]"
 ---
 
-# Task Lifecycle
+# Task Lifecycle de Tecnotron-ai
 
-## 1. Purpose
+## 1. Propósito
 
-Define the lifecycle of a bounded development or documentation task from planning input to integration and cleanup.
+Definir el lifecycle de una tarea acotada de desarrollo o documentación desde
+su entrada de planificación hasta su integración y cleanup.
 
-The lifecycle prioritizes deterministic orchestration and removes repetitive Git/GitHub administration from the Coder role.
+Tecnotron-ai es un sistema de desarrollo independiente. El lifecycle prioriza
+la orquestación determinista y elimina del rol `Implementer` la administración
+repetitiva de Git y GitHub. El `Developer` es el orquestador real y conserva la
+autoridad de aceptación terminal.
 
-## 2. Principle
+## 2. Principio
 
-Task administration is deterministic whenever possible.
+La administración de tareas es determinista siempre que sea posible.
 
-Semantic work belongs to the appropriate reasoning role.
-Mechanical state transitions, Git operations, and provider updates belong to Task Lifecycle.
+El trabajo semántico pertenece al rol de razonamiento apropiado. Las
+transiciones mecánicas de estado, las operaciones Git y las actualizaciones de
+providers pertenecen al Task Lifecycle.
 
 ## 3. Lifecycle
 
@@ -38,6 +44,10 @@ WORKING
     |
 VALIDATED
     |
+PENDING_REVIEW
+    |
+Independent review PASS
+    |
 PENDING_ACCEPTANCE
     |
 Developer gate
@@ -51,221 +61,300 @@ DONE
 CLEANUP
 ```
 
-A concrete implementation may use provider-specific status names, but it must preserve the semantic meaning of these transitions.
+Una implementación concreta puede usar nombres de estado específicos de un
+provider, pero debe preservar el significado semántico de estas transiciones.
+Un review `FAIL` devuelve el trabajo a corrección; cuando la corrección y su
+validación terminan, el estado es nuevamente `PENDING_REVIEW`. No puede usarse
+`PENDING_ACCEPTANCE` antes de que un nuevo review independiente produzca
+`PASS`.
 
-## 4. Responsibility split
+### 3.1 Dimensiones de estado y autoridad
+
+El diagrama es navegación, no una variable única. Cada ejecución debe registrar
+por separado estas dimensiones, sin inferir una a partir de otra:
+
+| Dimensión | Qué registra | Ejemplos de valores |
+| --- | --- | --- |
+| Estado del contrato TASK | Snapshot autoritativo materializado en `TASK.md`; solo su owner determinista o un ruling competente puede superseder su autorización. | `READY`, `NOT_STARTED`, autorización declarada |
+| Estado de materialización | Existencia y preparación de branch, worktree y artefactos contractuales. | `NOT_MATERIALIZED`, `MATERIALIZED` |
+| Estado de implementación | Progreso observado del trabajo semántico. | `NOT_STARTED`, `WORKING`, `IMPLEMENTED`, `CORRECTED` |
+| Resultado de validación | Resultado de checks deterministas; no es review ni aceptación. | `PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE` |
+| Veredicto de review | Resultado independiente y versionado de cada ciclo. | `NOT_RUN`, `PASS`, `FAIL` |
+| Estado de handoff a review | Implementación validada que requiere review o re-review independiente. | `PENDING_REVIEW` |
+| Aceptación del Developer | Decisión terminal posterior a un review `PASS`. | `PENDING_ACCEPTANCE`, `ACCEPTED`, `REJECTED`, `REVISION_REQUESTED` |
+| Integración | Operaciones que incorporan el cambio en `integration_branch`. | `NOT_STARTED`, `INTEGRATING`, `INTEGRATED`, `FAILED` |
+| Publicación | Exposición deliberada de artefactos o cambios fuera de la integración local. | `NOT_STARTED`, `PUBLISHED`, `FAILED` |
+| Cierre | Disposición final de la TASK y cleanup autorizado. | `OPEN`, `DONE`, `CLEANUP_COMPLETE` |
+
+Un ruling posterior puede autorizar una corrección sin reescribir el snapshot de
+`TASK.md`; la evidencia debe citar el ruling y mostrar ambos valores, no fingir
+que el contrato original nunca existió. Un `FAIL` de review permanece como
+evidencia del ciclo correspondiente aunque un ciclo posterior quede
+`PENDING_REVIEW` o alcance `PASS`.
+
+## 4. Distribución de responsabilidades
 
 ### Deterministic Task Lifecycle
 
-Owns:
-- read task metadata;
-- resolve repository identity;
-- resolve integration base;
-- create or select task branch;
-- create task-scoped worktree;
-- record task/worktree association;
-- update provider task state;
-- verify Git cleanliness and expected branch;
-- execute configured deterministic pre-integration checks;
-- commit after acceptance when policy permits;
-- push;
-- create or update Pull Request;
-- link task and Pull Request;
-- update GitHub Project fields;
-- cleanup task-scoped worktree when integration policy permits.
+Responsabilidades:
 
-### Coder
+- leer metadata de la tarea;
+- resolver la identidad del repositorio;
+- resolver el parámetro `integration_branch` desde la autoridad aplicable;
+- crear o seleccionar la rama de la tarea;
+- crear el worktree acotado a la tarea;
+- registrar la asociación entre tarea y worktree;
+- actualizar el estado de la tarea en el provider;
+- verificar limpieza Git y rama esperada;
+- ejecutar checks deterministas configurados antes de la integración;
+- hacer commit después de la aceptación cuando la política lo permita;
+- hacer push;
+- crear o actualizar el Pull Request;
+- vincular la tarea y el Pull Request;
+- actualizar campos de GitHub Project;
+- limpiar el worktree acotado a la tarea cuando la política de integración lo
+  permita.
 
-Owns:
-- implementation;
-- task-scoped reasoning;
-- code/document edits;
-- implementation-specific validation;
-- evidence report.
+### Implementer
 
-Coder does not own routine GitHub Project administration or lifecycle bookkeeping.
+Responsabilidades:
+
+- implementación;
+- razonamiento acotado a la tarea;
+- cambios de código o documentación;
+- validación específica de la implementación;
+- reporte de evidencia.
+
+El `Implementer` no administra rutinariamente GitHub Project ni el bookkeeping
+del lifecycle.
 
 ### Reviewer
 
-Owns independent semantic review when required by task policy.
-
-Reviewer does not write product code.
+Realiza la revisión semántica independiente cuando la política de la tarea la
+requiere. El `Reviewer` no escribe código de producto.
 
 ### Validator
 
-Owns deterministic validation.
+Realiza la validación determinista.
 
-The role registry remains authoritative for concrete role identifiers and permissions.
+El role registry conserva la autoridad sobre los identificadores y permisos
+concretos de roles.
 
 ### Developer
 
-Owns:
-- terminal acceptance authority;
-- architecture decisions;
-- exceptional overrides;
-- rejection or acceptance of work before integration when a gate is required.
+Responsabilidades:
 
-## 5. Worktree policy
+- orquestación real del trabajo;
+- autoridad de aceptación terminal;
+- decisiones de arquitectura;
+- overrides excepcionales;
+- rechazo o aceptación del trabajo antes de la integración cuando existe un
+  gate.
 
-A write task owns one task-scoped Git worktree per repository it writes.
+## 5. Política de worktrees
 
-Task worktrees are normally ephemeral.
+Una tarea de escritura posee un Git worktree acotado a la tarea por cada
+repositorio que modifica.
 
-Do not persist task worktrees merely to accommodate cache or indexing limitations of another tool.
+Los worktrees de tarea son normalmente efímeros. No deben persistir solo para
+compensar limitaciones de cache o indexing de otra herramienta.
 
-A multi-repo task may use paired worktrees, one in each repository, correlated by the same task identity.
+Una tarea multi-repo puede usar worktrees coordinados, uno en cada repositorio,
+correlacionados por la misma identidad de tarea. Un workspace de carpetas puede
+coordinar lectura y contexto entre repositorios, pero no reemplaza los
+worktrees.
 
-An Orca Folder Workspace may be used for read/context coordination across repositories but does not replace the worktrees.
+## 6. Contrato de inicio de tarea
 
-## 6. Task start contract
-
-Conceptual input:
+Entrada conceptual:
 
 ```yaml
 task_id: string
 repository: logical-repository-id
-base_ref: logical-or-git-ref
+integration_branch: logical-or-git-ref
+task_branch: logical-or-git-ref
 write_scope:
   - path-or-repository
 ```
 
-Conceptual output:
+Salida conceptual:
 
 ```yaml
 task_id: string
-branch: string
+integration_branch: resolved-git-ref
+task_branch: resolved-git-ref
 worktree_root: path
 base_commit: sha
 provider_state: STARTED
 ```
 
-Project/repository/root resolution must use the portable infrastructure defined by the Project Profile and related contracts. Task Lifecycle must not hardcode workstation-specific sibling paths.
+`integration_branch` es un parámetro resuelto desde la autoridad de proyecto,
+milestone o TASK aplicable. La rama de tarea comienza desde el commit resuelto
+de `integration_branch`; el lifecycle no fija un nombre universal para esa
+rama.
 
-## 7. Work contract
+La resolución de proyecto, repositorio y root usa la infraestructura portable
+definida por el Project Profile y sus contratos relacionados. El Task Lifecycle
+no hardcodea paths hermanos específicos de una workstation.
 
-The Coder receives:
-- task content;
-- acceptance criteria;
-- resolved worktree;
-- allowed write scope;
-- context package or retrieval access;
-- validation commands/policy relevant to the task.
+## 7. Contrato de trabajo
 
-The Coder should not be required to reconstruct workspace topology or planning-provider state.
+El `Implementer` recibe:
 
-## 8. Validation contract
+- contenido de la tarea;
+- criterios de aceptación;
+- worktree resuelto;
+- scope de escritura permitido;
+- referencia de contexto, paquete de contexto o acceso a retrieval;
+- comandos o política de validación relevantes para la tarea.
 
-Validation evidence must distinguish:
+El ingreso de contexto es source-agnostic: cualquier fuente o adapter compatible
+puede suministrarlo mediante una referencia explícita sin adquirir autoridad ni
+crear una dependencia operativa. El `Implementer` no debe reconstruir la
+topología del workspace ni el estado del provider de planificación.
+
+## 8. Contrato de validación
+
+La evidencia de validación distingue:
+
 - `PASS`;
 - `FAIL`;
 - `NOT_RUN`;
 - `UNAVAILABLE`.
 
-An unavailable tool or dependency must not be reported as PASS.
+Una herramienta o dependencia no disponible no puede reportarse como `PASS`.
+La validación determinista específica de la tarea debe ejecutarse antes de la
+aceptación cuando sea viable.
 
-Task-specific deterministic validation should be executed before acceptance when feasible.
+## 9. Gate de aceptación
 
-## 9. Acceptance gate
+`PENDING_REVIEW` significa que la implementación —incluida cualquier corrección
+requerida— y la validación disponible están completas, pero todavía falta un
+review independiente `PASS`.
 
-`PENDING_ACCEPTANCE` means implementation and available validation are complete but integration is not yet authorized.
+`PENDING_ACCEPTANCE` significa que la implementación y la validación disponible
+están completas, un review independiente produjo `PASS` y la aceptación del
+Developer todavía no fue concedida. No significa integración, publicación ni
+cierre.
 
-The Developer may:
-- accept;
-- reject;
-- request revision;
-- explicitly waive a non-critical unavailable check with rationale.
+El `Developer` puede:
 
-No automatic merge is implied by Coder completion.
+- aceptar;
+- rechazar;
+- solicitar revisión;
+- eximir explícitamente un check no crítico no disponible, con justificación.
 
-## 10. Integration contract
+La finalización del `Implementer` no implica merge automático.
 
-After acceptance, deterministic operations may perform:
+## 10. Contrato de integración
+
+Después de la aceptación, las operaciones deterministas pueden ejecutar:
 
 ```text
-verify expected task/worktree
+verify expected task/worktree and integration_branch
 -> git diff --check / configured gates
 -> commit
 -> push
--> create/update PR
+-> create/update PR against integration_branch
 -> link task
 -> update Project state
 ```
 
-### 10.1 Active integration baseline
+La integración devuelve la rama de tarea al valor resuelto de
+`integration_branch`. Ninguna implementación puede sustituir ese parámetro por
+un nombre de rama fijo ni cambiarlo sin la autoridad aplicable.
 
-`tooling` is the active integration baseline. Feature branches start from
-`tooling` and return to `tooling` through Pull Requests using task-scoped
-worktrees.
+### 10.1 Valor vigente del milestone
 
-`main` is not a daily integration branch. It receives accepted milestones only
-through deliberate `tooling` to `main` Pull Requests merged with merge commits.
+Para `tecnotron-operational-foundation-v1`, el valor vigente de
+`integration_branch` es `tools`. Las ramas de tarea de ese milestone comienzan
+desde `tools` y se integran en `tools` mediante Pull Requests y worktrees
+acotados a la tarea.
 
-Commit messages are written in Spanish.
+`tools` es un valor específico del milestone, no una constante universal del
+Task Lifecycle. `main` recibe el milestone aceptado solo mediante una promoción
+deliberada. `tooling` es una referencia histórica y no es el baseline activo de
+este milestone.
 
-Task Lifecycle must not silently force-merge unrelated histories or bypass branch protections.
+Los mensajes de commit se escriben en español. El Task Lifecycle no debe forzar
+silenciosamente merges de historiales no relacionados ni eludir protecciones de
+rama.
 
-## 11. Cleanup contract
+## 11. Contrato de cleanup
 
-Cleanup may remove:
-- task-scoped worktree;
-- task-local temporary artifacts;
-- derived context packages;
-- derived code-intelligence state that explicitly belongs to the removed worktree and is safe to discard.
+El cleanup puede eliminar:
 
-Cleanup must not delete:
-- canonical source;
-- accepted Git history;
-- reusable source-of-truth documentation;
-- unrelated caches or indexes.
+- el worktree acotado a la tarea;
+- artefactos temporales locales de la tarea;
+- paquetes de contexto derivados;
+- estado derivado de code intelligence que pertenezca explícitamente al
+  worktree eliminado y sea seguro descartar.
 
-Derived-tool cleanup belongs to the adapter that owns the derived state.
+El cleanup no puede eliminar:
 
-## 12. GitHub integration
+- source canónico;
+- historial Git aceptado;
+- documentación source of truth reutilizable;
+- caches o índices no relacionados.
 
-GitHub is the current planning/integration provider.
+El cleanup de herramientas derivadas pertenece al adapter propietario de ese
+estado.
 
-Deterministic operations should prefer GitHub API or `gh` CLI adapters for:
+## 12. Integración con GitHub
+
+GitHub es el provider vigente de planificación e integración.
+
+Las operaciones deterministas deben preferir adapters de GitHub API o `gh` CLI
+para:
+
 - Issues;
 - Projects;
 - Pull Requests;
-- labels/fields;
-- links and state transitions.
+- labels y fields;
+- links y transiciones de estado.
 
-An LLM or MCP agent is not required for mechanical GitHub operations that can be expressed deterministically.
+No se requiere un agente LLM o MCP para operaciones mecánicas de GitHub que
+puedan expresarse de forma determinista. Si un provider o una implementación
+LLM+MCP futura reemplaza una parte del workflow, debe preservar el mismo
+contrato de Task Lifecycle.
 
-If a future provider or LLM+MCP implementation replaces part of this workflow, it must preserve the same Task Lifecycle contract.
+## 13. Transformación semántica
 
-## 13. Semantic transformation
+Puede usarse un modelo cuando una entrada no estructurada deba transformarse
+semánticamente, por ejemplo para:
 
-A model may be used when unstructured input must be transformed semantically, for example:
-- draft task title;
-- normalize task description;
-- infer proposed acceptance criteria.
+- redactar el título de una tarea;
+- normalizar la descripción de una tarea;
+- inferir criterios de aceptación propuestos.
 
-Model output must be validated against a deterministic schema before provider writes.
+La salida del modelo debe validarse contra un schema determinista antes de
+escribir en el provider. El modelo no adquiere ownership del Task Lifecycle por
+realizar esta transformación.
 
-The model does not gain ownership of Task Lifecycle by performing this transformation.
+## 14. Observabilidad
 
-## 14. Observability
+Cada ejecución del lifecycle debe llegar a exponer evidencia estructurada
+suficiente para reconstruir:
 
-Each lifecycle run should eventually expose enough structured evidence to reconstruct:
-- task id;
-- repository;
-- branch;
-- base commit;
+- ID de tarea;
+- repositorio;
+- `integration_branch` resuelto;
+- rama de tarea;
+- commit base;
 - worktree;
-- state transitions;
-- validation outcomes;
-- acceptance outcome;
-- PR/integration reference;
-- cleanup result.
+- transiciones de estado;
+- resultados de validación;
+- resultado de aceptación;
+- referencia de PR o integración;
+- resultado de cleanup.
 
-The exact persistence mechanism is an implementation concern.
+El mecanismo exacto de persistencia es un detalle de implementación.
 
-## 15. Implementation status
+## 15. Estado de implementación
 
-This document defines the canonical logical lifecycle.
+Este documento define el lifecycle lógico canónico. La automatización del
+lifecycle está planificada y debe implementarse solo después de disponer de los
+contratos portables de proyecto y root.
 
-Automation of the lifecycle is planned and should be implemented only after the portable project/root contracts are available.
-
-The implementation should remain small and use existing Git, GitHub, and workspace capabilities rather than replacing them.
+La implementación debe permanecer pequeña y usar las capacidades existentes de
+Git, GitHub y workspace en lugar de reemplazarlas.

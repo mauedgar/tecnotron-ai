@@ -1,8 +1,8 @@
 ---
 status: canonical
-owner: fitflow-ai
+owner: tecnotron-ai
 type: reference
-updated: 2026-08-29
+updated: 2026-08-30
 related:
   - "[[architecture]]"
   - "[[operational-architecture]]"
@@ -12,37 +12,47 @@ related:
   - "[[implementation-roadmap]]"
 ---
 
-# Source Of Truth
+# Source Of Truth de Tecnotron-ai
 
-This is the deterministic navigation and precedence index for canonical
-FitFlow-ai documentation. Derived indexes, generated packages, caches, agent
-sessions, workspace metadata, and Obsidian views are not source of truth.
+Este es el índice determinista de navegación y precedencia de la documentación
+canónica de Tecnotron-ai, un sistema de desarrollo independiente. Los índices
+derivados, paquetes generados, caches, sesiones de agentes, metadata de
+workspace y vistas de Obsidian no son source of truth.
 
-| Document | Authority |
+| Documento | Autoridad |
 | --- | --- |
-| [Architecture](architecture.md) | Stable AI Core architectural invariants and repository boundary. |
-| [Operational Architecture](operational-architecture.md) | Operational responsibilities, replaceable implementations, and control-plane boundaries. |
-| [Task Lifecycle](task-lifecycle.md) | Logical lifecycle, worktree policy, acceptance, integration, and cleanup contracts. |
-| [Context Strategy](context-strategy.md) | Context objective, retrieval policy, telemetry, and evaluation gates. |
-| [Current State](current-state.md) | Confirmed implementation reality and validation evidence only. |
-| [Implementation Roadmap](implementation-roadmap.md) | Sequencing and planned implementation work. |
-| [Milestone tecnotron-operational-foundation-v1](milestones/tecnotron-operational-foundation-v1/PLAN.md) | Accepted milestone planning at baseline `41088a4`; integrates through `tools` and promotes accepted milestones to `main`. |
-| [WP-000 Cross-repo Project Profile Baseline](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) | Completed mandatory Project Profile, environment injection, and cross-repo conformance predecessor; integrated in FitFlow `develop` and Tecnotron-ai `tools`. |
-| [Task TOF-W0-001](tasks/TOF-W0-001/TASK.md) | Scope contract for FitFlow Project Profile and active configuration planning. |
-| [Task TOF-W0-002](tasks/TOF-W0-002/TASK.md) | Scope contract for project resolution, environment injection, and cross-repo conformance planning. |
-| [Task FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Explorer and Agent Runtime conformance. |
-| [Task FF-AI-VNEXT-009](tasks/FF-AI-VNEXT-009/TASK.md) | Canonical definition, ownership, acceptance criteria, and scope boundary for Agent MVP composition root and documentation sync. |
-| [Compatibility Baseline](compatibility-baseline.md) | Observed tool compatibility and reproducible baseline evidence. |
-| [Development Pipeline Adapter](development-pipeline-adapter.md) | Canonical adapter boundary and current adapter status. |
-| Role registry v3 | Current role IDs and fixed deterministic routing policy. Version v2 is unsupported. The executable schema is [`src/registries/schemas/roles.js`](../src/registries/schemas/roles.js); active `roles.yaml` is owned by FitFlow. |
-| Model registry v3 | Explicit model eligibility and deterministic selection metadata. Version v2 is unsupported. The executable schema is [`src/registries/schemas/models.js`](../src/registries/schemas/models.js); active `models.yaml` is owned by FitFlow. |
+| [Architecture](architecture.md) | Invariantes arquitectónicos estables del AI Core y frontera del repositorio. |
+| [Operational Architecture](operational-architecture.md) | Responsabilidades operativas, implementaciones reemplazables y fronteras del control plane. |
+| [Task Lifecycle](task-lifecycle.md) | Lifecycle lógico, política de worktrees y contratos de aceptación, integración y cleanup. |
+| [Context Strategy](context-strategy.md) | Objetivo de contexto, política de retrieval, telemetría y gates de evaluación. |
+| [Current State](current-state.md) | Solo realidad de implementación confirmada y evidencia de validación. |
+| [Implementation Roadmap](implementation-roadmap.md) | Secuencia y trabajo de implementación planificado. |
+| [Milestone tecnotron-operational-foundation-v1](milestones/tecnotron-operational-foundation-v1/PLAN.md) | Planificación aceptada del milestone en baseline `41088a4`; su `integration_branch` vigente es `tools` y los milestones aceptados se promueven a `main`. |
+| [WP-000 Cross-repo Project Profile Baseline](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) | Predecesor completado de Project Profile obligatorio, inyección de entorno y conformance cross-repo; integrado en FitFlow `develop` y Tecnotron-ai `tools`. |
+| [Task TOF-W0-001](tasks/TOF-W0-001/TASK.md) | Contrato de scope histórico para Project Profile de FitFlow y planificación de configuración activa. |
+| [Task TOF-W0-002](tasks/TOF-W0-002/TASK.md) | Contrato de scope histórico para resolución de proyecto, inyección de entorno y planificación de conformance cross-repo. |
+| [Task FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/TASK.md) | Definición canónica, ownership, criterios de aceptación y frontera de scope para conformance de `Explorer` y Agent Runtime. |
+| [Task FF-AI-VNEXT-009](tasks/FF-AI-VNEXT-009/TASK.md) | Definición canónica, ownership, criterios de aceptación y frontera de scope para composition root del Agent MVP y sincronización documental. |
+| [Compatibility Baseline](compatibility-baseline.md) | Compatibilidad observada de herramientas y evidencia reproducible del baseline. |
+| [Development Pipeline Adapter](development-pipeline-adapter.md) | Frontera canónica del adapter y su estado vigente. |
+| Role registry v3 | IDs de roles vigentes y política de routing determinista fijo. La versión v2 no está soportada. El schema ejecutable es [`src/registries/schemas/roles.js`](../src/registries/schemas/roles.js); el `roles.yaml` activo pertenece a la configuración del proyecto que lo declara. |
+| Model registry v3 | Elegibilidad explícita de modelos y metadata de selección determinista. La versión v2 no está soportada. El schema ejecutable es [`src/registries/schemas/models.js`](../src/registries/schemas/models.js); el `models.yaml` activo pertenece a la configuración del proyecto que lo declara. |
 
-When documents disagree, resolve by subject authority in this table. Current
-State does not promote planned architecture to implementation; Roadmap does not
-override architectural invariants; the executable role registry controls
-concrete role IDs.
+Cuando los documentos discrepen, se resuelve por la autoridad de la materia
+indicada en esta tabla. Current State no promueve arquitectura planificada a
+implementación; Roadmap no reemplaza invariantes arquitectónicos; el role
+registry ejecutable controla los IDs concretos de roles. El `Developer` es el
+orquestador real y conserva la aceptación terminal.
 
-For `tecnotron-operational-foundation-v1`, `tools` is the active integration
-target, `main` is the promotion target for an accepted milestone, and `tooling`
-is historical. This milestone-specific ruling does not reactivate or rewrite
-TASKs before baseline `41088a413d06ed1d58d63d92320e38d4b44b86ea`.
+Las autoridades vigentes de arquitectura, operación, lifecycle, contexto,
+estado, roadmap, compatibilidad y adapters describen Tecnotron-ai. Las entradas
+de FitFlow identifican exclusivamente un producto consumidor o evidencia
+cross-repo/histórica delimitada; no transfieren identidad, ownership ni
+autoridad canónica a FitFlow.
+
+Para `tecnotron-operational-foundation-v1`, el parámetro `integration_branch`
+tiene el valor vigente `tools`; `main` es el destino de promoción de un
+milestone aceptado y `tooling` es histórico. `tools` no es una constante
+universal del Task Lifecycle. Este ruling específico del milestone no reactiva
+ni reescribe TASKs anteriores al baseline
+`41088a413d06ed1d58d63d92320e38d4b44b86ea`.

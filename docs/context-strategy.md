@@ -1,8 +1,8 @@
 ---
 status: canonical
-owner: fitflow-ai
+owner: tecnotron-ai
 type: context-policy
-updated: 2026-08-21
+updated: 2026-08-30
 related:
   - "[[operational-architecture]]"
   - "[[task-lifecycle]]"
@@ -15,7 +15,9 @@ related:
 
 ## 1. Purpose
 
-Define how FitFlow-ai retrieves, selects, verifies, measures, and materializes context for development agents.
+Define cómo Tecnotron-ai recupera, selecciona, verifica, mide y materializa
+contexto para agentes de desarrollo con independencia del proyecto o fuente que
+lo suministra.
 
 ## 2. Objective
 
@@ -50,6 +52,12 @@ broader exploration
 The exact order may vary by evidence type, but broader or more expensive retrieval must not be the default when narrower deterministic evidence is sufficient.
 
 ## 4. Context ownership
+
+El ingreso externo de contexto es source-agnostic. Cualquier proyecto,
+repositorio, provider o adapter compatible puede suministrarlo mediante
+referencias y ports explícitos; la fuente no se convierte en autoridad,
+dependencia obligatoria, componente ni conocimiento interno de Tecnotron-ai por
+el solo hecho de aportar evidencia.
 
 ### ContextPackager
 
@@ -248,7 +256,8 @@ A judge LLM must not replace an exact deterministic comparison.
 
 A Code Intelligence implementation is accepted through a task-oriented benchmark, not feature count.
 
-For representative FitFlow/FitFlow-ai tasks compare:
+Para TASKs representativas de Tecnotron-ai sobre consumidores compatibles como
+FitFlow, comparar:
 - relevant paths/symbols recovered;
 - false positives;
 - false negatives;
@@ -308,7 +317,7 @@ Canonical Markdown may expose portable metadata useful to both Developer navigat
 
 ```yaml
 status: canonical | planned | superseded | archived
-owner: fitflow-ai | fitflow
+owner: tecnotron-ai | declaring-project
 type: architecture | workflow | context-policy | state | roadmap | reference
 updated: YYYY-MM-DD
 related:
