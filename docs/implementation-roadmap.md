@@ -2,8 +2,8 @@
 document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 2.7
-updated: 2026-08-30
+version: 2.8
+updated: 2026-08-31
 owner: tecnotron-ai
 ---
 
@@ -19,7 +19,7 @@ queda como referencia historica sin autoridad operativa sobre este milestone.
 | Orden aprobado | Work Package | Estado | Navegacion |
 | ---: | --- | --- | --- |
 | 0 | `WP-000` | `DONE` | [Plan WP-000](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) |
-| 1 | `WP-001` | `PLANNING_PENDING_SPEC` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#wp-001--project-scoped-agent-profiles-mvp) |
+| 1 | `WP-001` | `SPEC_ACCEPTED_IMPLEMENTATION_NOT_STARTED` | [SPEC](work-packages/wp-001-operational-profile-contracts/SPEC.md) · [Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) |
 | — | `WP-002`–`WP-006` | `PLANNING_PENDING_SPEC` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
 | — | `WP-007` | `PLANNING_PENDING_CONFIRMATION` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#wp-007--non-behavioral-milestone-closeout-boundary) |
 
@@ -31,6 +31,12 @@ queda como referencia historica sin autoridad operativa sobre este milestone.
 [TOF-W0-002](tasks/TOF-W0-002/TASK.md), en ese orden. Esta seccion registra
 la planificacion y el estado de integracion; la promocion del milestone a `main`
 permanece sujeta a su gate especifico.
+
+La SPEC de `WP-001` esta aceptada y materializada junto con su Plan y la TASK
+[TOF-W1-001](tasks/TOF-W1-001/TASK.md). La materializacion fue revisada con
+`PASS`, aceptada por el Developer e integrada en `tools`; la implementacion no
+ha comenzado y requiere un gate posterior, `task_base` fresco y worktree propio.
+
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.
 
