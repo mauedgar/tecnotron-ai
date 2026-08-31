@@ -1,21 +1,22 @@
 ---
-document_id: FFAI-COMPAT-001
+document_id: TEC-COMPAT-001
 status: canonical
 machine_context: true
-version: 3.2
-updated: 2026-08-24
+version: 3.3
+updated: 2026-08-30
+owner: tecnotron-ai
 ---
 
 # Baseline de compatibilidad
 
-| Componente | Observacion 2026-08-21 | Decision |
+| Componente | Observación histórica 2026-08-21 | Disposición vigente |
 | --- | --- | --- |
-| Orca | runtime `1.4.185`; worktrees FitFlow-ai/FitFlow y Folder Workspace visibles | control de workspace/sesion; Folder Workspace no aisla escritura |
-| Git | `2.39.0`; `tooling` es el baseline de integracion activo | nuevas tasks desde `origin/tooling`; `main` recibe solo hitos por PR `tooling` a `main` con merge commit |
+| Orca | runtime `1.4.185`; worktrees del entonces denominado FitFlow-ai y de FitFlow, más Folder Workspace, visibles | Control de workspace/sesión; Folder Workspace no aísla escritura. La identidad canónica vigente es Tecnotron-ai. |
+| Git | `2.39.0`; `tooling` era el baseline de integración observado | `tooling` queda como referencia histórica. Para `tecnotron-operational-foundation-v1`, el parámetro `integration_branch` tiene el valor `tools`; no es una constante universal. |
 | Node | `22.18.0` | disponible |
 | npm | `11.19.0` | disponible |
 | Repomix | `1.18.0` | disponible; mantener sin upgrade |
-| repo-packager | reparado, PR #2 merged; tests 4/4 PASS | integrado en `tooling`; conformance v2 queda en `VNEXT-006` |
+| repo-packager | reparado, PR #2 merged; tests 4/4 PASS | integración histórica en `tooling`; conformance v2 registrada en `VNEXT-006` |
 | OpenCode CLI | `1.18.21`; ejecuta esta sesion bajo Orca | runtime actual intercambiable; adapter/conformance pending |
 | Otros Agent CLI | soportados por Orca como runtimes externos | no declarar conformance del AI Core sin tests propios |
 | OpenSpec CLI | `1.9.0` | adapter de lectura acotada implementado |
@@ -35,4 +36,5 @@ Evidencia ejecutada desde este worktree:
   se resuelven sin path hermano. `repo-packager` queda `UNREACHABLE` si no
   existe el entorno discovery reutilizable.
 
-Adaptar ContextPackager al contrato v2 corresponde a `FF-AI-VNEXT-006`.
+La adaptación de ContextPackager al contrato v2 correspondió históricamente a
+`FF-AI-VNEXT-006`.

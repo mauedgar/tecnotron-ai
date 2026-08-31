@@ -1,20 +1,25 @@
 ---
-document_id: FFAI-ADAPTER-001
+document_id: TEC-ADAPTER-001
 status: canonical
 machine_context: true
-version: 3.1
-updated: 2026-08-22
+version: 3.2
+updated: 2026-08-30
+owner: tecnotron-ai
 ---
 
 # Adapter del pipeline
 
 ## Entrada
 
-El core consume configuracion, contracts v2, TASK/Run State y Project Profile
-desde `<FitFlow-root>`. No mantiene copias editables. `resolveProject` es el
-unico boundary cross-repo: recibe `FF_PROJECT_PROFILE` o `FF_PROJECT_ROOT` y
-opcionalmente `FF_AI_CORE_ROOT`; nunca deduce un checkout por directorios
-hermanos. El Profile permanece propiedad de FitFlow.
+El core consume configuración, contracts v2, TASK/Run State y Project Profile
+desde referencias y ports explícitos del proyecto que declara esos recursos. No
+mantiene copias editables ni exige FitFlow como fuente. `resolveProject` es el
+boundary cross-repo vigente para configuraciones compatibles: recibe una
+referencia explícita de Profile o root y, opcionalmente, la referencia del AI
+Core; nunca deduce un checkout por directorios hermanos. El Profile permanece
+propiedad del proyecto que lo declara. Los nombres `FF_PROJECT_PROFILE`,
+`FF_PROJECT_ROOT` y `FF_AI_CORE_ROOT` son compatibilidad de la implementación
+vigente, no identidad ni dependencia canónica de Tecnotron-ai.
 
 ## Distribucion de contratos
 
@@ -38,7 +43,8 @@ suite permanecen pendientes; disponibilidad del CLI no equivale a conformance.
 
 Sincroniza de forma mecanica e idempotente la referencia Issue/TASK, macrostate
 de Project, resumen de PR y checks de Actions. Respeta la autoridad de los
-artifacts del run en FitFlow, no acepta estados terminales y no hace merge.
+artefactos del run en el proyecto activo, no acepta estados terminales y no hace
+merge.
 
 ## OpenSpec adapter
 

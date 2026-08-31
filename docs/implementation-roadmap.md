@@ -1,9 +1,10 @@
 ---
-document_id: FFAI-ROADMAP-001
+document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 2.6
-updated: 2026-08-29
+version: 2.7
+updated: 2026-08-30
+owner: tecnotron-ai
 ---
 
 # Secuencia de implementacion
@@ -112,7 +113,7 @@ limpieza.
 
 ## Autoridad y pendientes cross-repo
 
-Este documento es la Source of Truth del roadmap de AI Core para
+Este documento es la Source of Truth del roadmap de Tecnotron-ai para
 desarrolladores. El backlog machine-readable que hoy vive en FitFlow conserva
 estados stale para `002-004` y `006`; no se mueve ni se edita desde esta task.
 Su ownership y sincronizacion quedan `PENDING` hasta resolver TaskStore,

@@ -1,8 +1,8 @@
 ---
 status: canonical
-owner: fitflow-ai
+owner: tecnotron-ai
 type: architecture
-updated: 2026-08-21
+updated: 2026-08-30
 related:
   - "[[architecture]]"
   - "[[task-lifecycle]]"
@@ -15,7 +15,11 @@ related:
 
 ## 1. Purpose
 
-Define the stable operational architecture used to plan, isolate, execute, validate, and integrate work across FitFlow and FitFlow-ai without coupling the system to a specific workspace tool, agent runtime, model provider, code-intelligence implementation, or planning provider.
+Define la arquitectura operativa estable que Tecnotron-ai usa para planificar,
+aislar, ejecutar, validar e integrar trabajo sobre cualquier proyecto compatible
+sin acoplar el sistema a un producto, herramienta de workspace, Agent Runtime,
+Model Provider, implementación de code intelligence, planning provider ni fuente
+externa de contexto específicos.
 
 This document defines responsibilities and boundaries. Tool-specific procedures belong in adapters, implementation documentation, or current-state documentation.
 
@@ -91,7 +95,8 @@ A Task represents the requested unit of work and its acceptance criteria.
 
 Current planning and integration are based on GitHub Issues, Projects, Pull Requests, and Actions where available.
 
-The planning provider is replaceable and is not part of FitFlow product architecture.
+El planning provider es reemplazable y no forma parte de la arquitectura de un
+producto consumidor.
 
 ## 6. Task Lifecycle
 
@@ -230,15 +235,21 @@ Developer acceptance gates integration when required by Task Lifecycle.
 
 ## 13. Product and AI Core boundary
 
-FitFlow and FitFlow-ai remain independent Git repositories.
+Tecnotron-ai es un sistema de desarrollo independiente y reutilizable. Los
+productos consumidores y sus repositorios permanecen independientes de él.
 
-FitFlow owns the product, product-domain architecture, product state, and product-specific configuration.
+Un producto consumidor conserva su arquitectura de dominio, estado de producto
+y configuración específica. FitFlow es un consumidor posible.
 
-FitFlow-ai owns AI Core architecture, tooling, context policies, adapters, operational contracts, and AI Core implementation state.
+Tecnotron-ai posee la arquitectura del AI Core, tooling reutilizable, políticas
+de contexto, adapters, contratos operativos y estado de implementación del AI
+Core.
 
-FitFlow-ai may operate on FitFlow.
+Tecnotron-ai puede operar sobre un proyecto consumidor mediante ports y
+contratos explícitos.
 
-FitFlow must not gain a product dependency on FitFlow-ai merely to simplify tooling.
+Un producto consumidor no debe adquirir una dependencia de producto hacia
+Tecnotron-ai solo para simplificar tooling.
 
 ## 14. Canonical Markdown and Obsidian
 
@@ -252,7 +263,7 @@ Recommended metadata:
 
 ```yaml
 status: canonical
-owner: fitflow-ai
+owner: tecnotron-ai
 type: architecture
 updated: YYYY-MM-DD
 related:

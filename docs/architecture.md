@@ -1,10 +1,10 @@
 ---
-document_id: FFAI-ARCH-001
+document_id: TEC-ARCH-001
 status: canonical
 machine_context: true
-version: 3.1
-updated: 2026-08-21
-owner: fitflow-ai
+version: 3.2
+updated: 2026-08-30
+owner: tecnotron-ai
 type: architecture
 related:
   - "[[operational-architecture]]"
@@ -13,13 +13,14 @@ related:
   - "[[SOURCE_OF_TRUTH]]"
 ---
 
-# Arquitectura de FitFlow-ai
+# Arquitectura de Tecnotron-ai
 
 ## Invariantes
 
 ```text
-FitFlow y FitFlow-ai son repositorios independientes.
-FitFlow-ai opera sobre FitFlow sin crear una dependencia de producto inversa.
+Tecnotron-ai es un sistema de desarrollo independiente y reutilizable.
+Los productos consumidores, como FitFlow, permanecen independientes y no
+adquieren una dependencia de producto hacia Tecnotron-ai.
 ```
 
 - Los contratos portables de proyecto, repositorio y root preceden a cualquier
@@ -31,16 +32,17 @@ FitFlow-ai opera sobre FitFlow sin crear una dependencia de producto inversa.
 - Los providers de modelo solo aportan inferencia.
 - Las implementaciones de tooling no definen arquitectura ni source of truth.
 - Las decisiones y validaciones usan deterministic-first cuando sea posible.
-- `Developer` conserva la autoridad terminal; `Coder` es la familia logica de
-  implementacion y no administra el Task Lifecycle.
+- `Developer` conserva la autoridad terminal; `Implementer` realiza la
+  implementación acotada y no administra el Task Lifecycle.
 
 ## Limites del AI Core
 
-FitFlow-ai es source of truth para la arquitectura generica del AI Core,
-tooling, contexto y contratos operativos. FitFlow conserva el producto, su
-Project Profile, TASK, runs, ADR y configuracion especifica.
+Tecnotron-ai es source of truth para la arquitectura genérica del AI Core,
+tooling, contexto y contratos operativos reutilizables. Cada producto consumidor
+conserva su producto, Project Profile, TASK, runs, ADR y configuración
+específica; FitFlow es un consumidor posible, no la identidad de Tecnotron-ai.
 
-Research Knowledge Module queda fuera de la arquitectura de FitFlow-ai. El
+Research Knowledge Module queda fuera de la arquitectura de Tecnotron-ai. El
 Markdown canonico puede usar frontmatter portable, links explicitos,
 navegacion de indice a detalle, backlinks y lint determinista. Obsidian es una
 proyeccion para Developer, no source of truth ni dependencia runtime.

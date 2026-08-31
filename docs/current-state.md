@@ -1,12 +1,18 @@
 ---
-document_id: FFAI-STATE-001
+document_id: TEC-STATE-001
 status: canonical
 machine_context: true
-version: 1.5
-updated: 2026-08-29
+version: 1.6
+updated: 2026-08-30
+owner: tecnotron-ai
 ---
 
-# Estado actual de FitFlow-ai
+# Estado actual de Tecnotron-ai
+
+Todas las referencias a la rama `tooling` de este documento registran evidencia
+histórica anterior al milestone vigente; no le atribuyen autoridad operativa
+actual. Para `tecnotron-operational-foundation-v1`, el valor vigente de
+`integration_branch` es `tools`.
 
 ## Implementacion confirmada
 
@@ -88,7 +94,7 @@ desarrollador. No se modifican sin ownership de FitFlow.
 - Model Provider aporta inferencia; no gobierna workflow ni estados.
 
 Estas son capacidades de plataforma confirmadas por el desarrollador y por el
-runtime Orca; no se presentan como implementaciones de FitFlow-ai.
+runtime Orca; no se presentan como implementaciones propias de Tecnotron-ai.
 
 ## Evidencia y limitaciones
 
