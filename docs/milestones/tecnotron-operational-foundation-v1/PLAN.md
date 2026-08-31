@@ -4,8 +4,8 @@ status: accepted
 materialization_status: PENDING_ACCEPTANCE
 owner: tecnotron-ai
 type: milestone-plan
-version: 1.1
-updated: 2026-08-29
+version: 1.2
+updated: 2026-08-31
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 milestone_baseline: 41088a413d06ed1d58d63d92320e38d4b44b86ea
@@ -15,7 +15,7 @@ execution_status: IN_PROGRESS
 architect_revision_status: COMPLETE
 completed_work_packages:
   - WP-000
-next_gate: ACCEPT_RECONCILED_PLAN_THEN_MATERIALIZE_WP-001_SPEC
+next_gate: DEVELOPER_AUTHORIZATION_TO_START_TOF-W1-001
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -83,7 +83,7 @@ it enumerates; all other original-plan sections remain in force.
 | Integration target | `tools` |
 | Promotion target | `main` |
 | Completed predecessor | `WP-000` |
-| Next gate | Accepted WP-001 SPEC |
+| Next gate | Developer authorization to start TOF-W1-001 |
 | Terminal authority | Developer |
 
 `tools` is the integration branch for this milestone. `main` receives the
@@ -239,7 +239,7 @@ Full plan: [WP-000 Plan](../../work-packages/wp-000-cross-repo-project-profile-b
 
 ```yaml
 wave: W1
-status: PLANNING_PENDING_SPEC
+status: SPEC_ACCEPTED_IMPLEMENTATION_NOT_STARTED
 result: Nine model-independent operational profile contracts with exclusive responsibilities and enforceable permission boundaries
 complexity: high
 criticality: high
@@ -274,6 +274,13 @@ Profile semantics:
 
 WP-001 defines contracts and static conformance. It does not yet own the generic
 launcher or its normalized launch-result contract.
+
+Accepted SPEC: [WP-001 SPEC](../../work-packages/wp-001-operational-profile-contracts/SPEC.md).
+Technical plan: [WP-001 Plan](../../work-packages/wp-001-operational-profile-contracts/PLAN.md).
+Materialized task contract: [TOF-W1-001](../../tasks/TOF-W1-001/TASK.md),
+whose materialization passed independent review, was accepted by the Developer,
+and was integrated into `tools`. Its implementation remains `NOT_STARTED` until
+a later Developer gate and fresh Task Lifecycle isolation.
 
 ### WP-002 — Deterministic OpenCode Launchers
 
@@ -458,7 +465,7 @@ materialization, Developer READY gate, and Task Lifecycle isolation.
 
 | Candidate TASK | WP | Planned result |
 | --- | --- | --- |
-| `TOF-W1-001` | WP-001 | Profile SPEC, `tecnotron-agent-profile/v1`, portable registry/schema, contract tests |
+| `TOF-W1-001` | WP-001 | Implement accepted `tecnotron-agent-profile/v1`, portable registry/schema, fixtures, contract tests and minimal contract documentation |
 | `TOF-W1-002` | WP-002 | Nine project-scoped `.opencode/agents` profiles and static permission smokes |
 | `TOF-W1-003` | WP-002 | Generic launcher, `tecnotron-agent-launch/v1`, and local OpenCode conformance |
 | `TOF-W2-001` | WP-003 | SDD ADR, SPEC/WP/TASK templates, and validation |
@@ -499,7 +506,7 @@ or context budget changes.
 
 ## 8. SPEC approval gates
 
-- [ ] WP-001 SPEC approved by Developer.
+- [x] WP-001 SPEC approved by Developer and materialized at [WP-001 SPEC](../../work-packages/wp-001-operational-profile-contracts/SPEC.md); materialization review, acceptance, and integration are complete, while implementation remains `NOT_STARTED`.
 - [ ] WP-002 SPEC approved by Developer.
 - [ ] WP-003 SPEC approved by Developer.
 - [ ] WP-004 SPEC approved by Developer.
