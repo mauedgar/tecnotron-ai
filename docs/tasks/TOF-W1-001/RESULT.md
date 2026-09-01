@@ -75,5 +75,5 @@ El archivo `.opencode/package-lock.json` fue modificado por el proceso de creaci
 
 ## Final state
 
-Lifecycle actual: `PENDING_ACCEPTANCE` (Developer gate pendiente).  
+Lifecycle actual: `PENDING_ACCEPTANCE` (Developer gate pendiente).
 La corrección está implementada, el contrato está actualizado y la validación ha pasado. El siguiente paso es el **Reviewer independiente** (read‑only).
