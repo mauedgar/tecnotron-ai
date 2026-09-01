@@ -1,0 +1,296 @@
+schema_version: tecnotron-agent-profile/v1
+common_required_inputs:
+  - accepted_authority_ref
+  - resolved_project_profile_ref
+  - resolved_repository_ref
+  - read_scope
+  - context_ref_or_evidence_requirements
+  - context_budget
+conditional_required_inputs:
+  execution_profiles:
+    - task_authorization_ref
+    - write_scope_if_writer
+  researcher:
+    - research_authorization_ref
+  reviewer:
+    - change_snapshot_ref
+    - validation_evidence_ref
+  auditor:
+    - evidence_snapshot_ref
+    - evidence_matrix_ref
+profiles:
+  spec_analyst:
+    responsibility: specification
+    required_inputs:
+      - accepted_authority_ref
+      - resolved_project_profile_ref
+      - resolved_repository_ref
+      - read_scope
+      - context_ref_or_evidence_requirements
+      - context_budget
+      - problem
+      - accepted_authorities
+      - constraints
+      - gaps
+    allowed_outputs: [spec_proposal]
+    subagent_depth: 0
+    permissions:
+      default: deny
+      repository_read: declared_scope
+      filesystem_write: denied
+      command_execution: read_only_deterministic
+      web: denied
+      delegation: denied
+      git_mutation: denied
+      planning_provider_mutation: denied
+      workspace_lifecycle: denied
+      dependency_mutation: denied
+      secret_access: denied
+      paid_api: denied
+    tools: { default: deny, allow: [] }
+    skills: { default: deny, allow: [] }
+  planner:
+    responsibility: execution_planning
+    required_inputs:
+      - accepted_authority_ref
+      - resolved_project_profile_ref
+      - resolved_repository_ref
+      - read_scope
+      - context_ref_or_evidence_requirements
+      - context_budget
+      - accepted_spec
+      - milestone
+      - dependencies
+      - ownership
+    allowed_outputs: [wp_plan_proposal, task_decomposition_proposal]
+    subagent_depth: 0
+    permissions:
+      default: deny
+      repository_read: declared_scope
+      filesystem_write: denied
+      command_execution: read_only_deterministic
+      web: denied
+      delegation: denied
+      git_mutation: denied
+      planning_provider_mutation: denied
+      workspace_lifecycle: denied
+      dependency_mutation: denied
+      secret_access: denied
+      paid_api: denied
+    tools: { default: deny, allow: [] }
+    skills: { default: deny, allow: [] }
+  architect:
+    responsibility: technical_architecture
+    required_inputs:
+      - accepted_authority_ref
+      - resolved_project_profile_ref
+      - resolved_repository_ref
+      - read_scope
+      - context_ref_or_evidence_requirements
+      - context_budget
+      - accepted_spec
+      - existing_contracts
+      - architecture
+      - consumers
+    allowed_outputs: [architecture_proposal, adr_proposal]
+    subagent_depth: 0
+    permissions:
+      default: deny
+      repository_read: declared_scope
+      filesystem_write: denied
+      command_execution: read_only_deterministic
+      web: denied
+      delegation: denied
+      git_mutation: denied
+      planning_provider_mutation: denied
+      workspace_lifecycle: denied
+      dependency_mutation: denied
+      secret_access: denied
+      paid_api: denied
+    tools: { default: deny, allow: [] }
+    skills: { default: deny, allow: [] }
+  explorer:
+    responsibility: evidence_exploration
+    required_inputs:
+      - accepted_authority_ref
+      - resolved_project_profile_ref
+      - resolved_repository_ref
+      - read_scope
+      - context_ref_or_evidence_requirements
+      - context_budget
+      - evidence_requirements
+      - project_profile
+    allowed_outputs: [context_report]
+    subagent_depth: 0
+    permissions:
+      default: deny
+      repository_read: declared_scope
+      filesystem_write: denied
+      command_execution: read_only_deterministic
+      web: denied
+      delegation: denied
+      git_mutation: denied
+      planning_provider_mutation: denied
+      workspace_lifecycle: denied
+      dependency_mutation: denied
+      secret_access: denied
+      paid_api: denied
+    tools: { default: deny, allow: [] }
+    skills: { default: deny, allow: [] }
+  implementer:
+    responsibility: source_implementation
+    required_inputs:
+      - accepted_authority_ref
+      - resolved_project_profile_ref
+      - resolved_repository_ref
+      - read_scope
+      - context_ref_or_evidence_requirements
+      - context_budget
+      - task_authorization_ref
+      - write_scope_if_writer
+      - authorized_task
+      - task_plan
+      - task_worktree
+      - write_scope
+      - context_reference
+    allowed_outputs: [implementation_report]
+    subagent_depth: 0
+    permissions:
+      default: deny
+      repository_read: declared_scope
+      filesystem_write: task_owned_source
+      command_execution: task_validation
+      web: denied
+      delegation: denied
+      git_mutation: denied
+      planning_provider_mutation: denied
+      workspace_lifecycle: denied
+      dependency_mutation: denied
+      secret_access: denied
+      paid_api: denied
+    tools: { default: deny, allow: [] }
+    skills: { default: deny, allow: [] }
+  doc_curator:
+    responsibility: documentation_materialization
+    required_inputs:
+      - accepted_authority_ref
+      - resolved_project_profile_ref
+      - resolved_repository_ref
+      - read_scope
+      - context_ref_or_evidence_requirements
+      - context_budget
+      - task_authorization_ref
+      - write_scope_if_writer
+      - authorized_documentation_task
+      - accepted_authorities
+      - documentation_write_scope
+    allowed_outputs: [documentation_report]
+    subagent_depth: 0
+    permissions:
+      default: deny
+      repository_read: declared_scope
+      filesystem_write: task_owned_docs
+      command_execution: task_validation
+      web: denied
+      delegation: denied
+      git_mutation: denied
+      planning_provider_mutation: denied
+      workspace_lifecycle: denied
+      dependency_mutation: denied
+      secret_access: denied
+      paid_api: denied
+    tools: { default: deny, allow: [] }
+    skills: { default: deny, allow: [] }
+  reviewer:
+    responsibility: independent_review
+    required_inputs:
+      - accepted_authority_ref
+      - resolved_project_profile_ref
+      - resolved_repository_ref
+      - read_scope
+      - context_ref_or_evidence_requirements
+      - context_budget
+      - change_snapshot_ref
+      - validation_evidence_ref
+      - accepted_spec_or_task
+      - change_snapshot
+      - validation_result
+    allowed_outputs: [external_review_report]
+    subagent_depth: 0
+    permissions:
+      default: deny
+      repository_read: declared_scope
+      filesystem_write: denied
+      command_execution: read_only_deterministic
+      web: denied
+      delegation: denied
+      git_mutation: denied
+      planning_provider_mutation: denied
+      workspace_lifecycle: denied
+      dependency_mutation: denied
+      secret_access: denied
+      paid_api: denied
+    tools: { default: deny, allow: [] }
+    skills: { default: deny, allow: [] }
+  researcher:
+    responsibility: authorized_research
+    required_inputs:
+      - accepted_authority_ref
+      - resolved_project_profile_ref
+      - resolved_repository_ref
+      - read_scope
+      - context_ref_or_evidence_requirements
+      - context_budget
+      - research_authorization_ref
+      - research_question
+      - authorized_research_task
+      - source_policy
+    allowed_outputs: [research_report]
+    subagent_depth: 0
+    permissions:
+      default: deny
+      repository_read: declared_scope
+      filesystem_write: denied
+      command_execution: read_only_deterministic
+      web: authorized_research_task_only
+      delegation: denied
+      git_mutation: denied
+      planning_provider_mutation: denied
+      workspace_lifecycle: denied
+      dependency_mutation: denied
+      secret_access: denied
+      paid_api: denied
+    tools: { default: deny, allow: [] }
+    skills: { default: deny, allow: [] }
+  auditor:
+    responsibility: conformance_audit
+    required_inputs:
+      - accepted_authority_ref
+      - resolved_project_profile_ref
+      - resolved_repository_ref
+      - read_scope
+      - context_ref_or_evidence_requirements
+      - context_budget
+      - evidence_snapshot_ref
+      - evidence_matrix_ref
+      - contracts
+      - audit_scope
+      - evidence_matrix
+      - artifacts
+    allowed_outputs: [audit_report]
+    subagent_depth: 0
+    permissions:
+      default: deny
+      repository_read: declared_scope
+      filesystem_write: denied
+      command_execution: read_only_deterministic
+      web: denied
+      delegation: denied
+      git_mutation: denied
+      planning_provider_mutation: denied
+      workspace_lifecycle: denied
+      dependency_mutation: denied
+      secret_access: denied
+      paid_api: denied
+    tools: { default: deny, allow: [] }
+    skills: { default: deny, allow: [] }
