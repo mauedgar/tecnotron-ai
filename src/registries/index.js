@@ -8,6 +8,8 @@ const { ModelRegistry, MODEL_REGISTRY_VERSION } = require('./schemas/models');
 const { ProjectProfile } = require('./schemas/project-profile');
 const { FinOps } = require('./schemas/finops');
 const { ROLE_REGISTRY_VERSION } = require('./schemas/roles');
+const { AgentProfileRegistry } = require('./schemas/agent-profiles');
+const { loadAgentProfiles } = require('./agent-profiles');
 
 const REGISTRY_SCHEMAS = {
   'orchestrator.yaml': Orchestrator,
@@ -55,4 +57,13 @@ function loadRegistryFile(name, configDir = defaultConfigDir()) {
   return loadRegistry(path.join(configDir, name), schema, VERSION_REQUIREMENTS[name]);
 }
 
-module.exports = { loadRegistries, loadRegistryFile, REGISTRY_SCHEMAS, VERSION_REQUIREMENTS, RegistryLoadError, defaultConfigDir };
+module.exports = {
+  loadRegistries,
+  loadRegistryFile,
+  REGISTRY_SCHEMAS,
+  VERSION_REQUIREMENTS,
+  RegistryLoadError,
+  defaultConfigDir,
+  AgentProfileRegistry,
+  loadAgentProfiles,
+};
