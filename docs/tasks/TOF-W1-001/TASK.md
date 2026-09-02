@@ -1,11 +1,11 @@
 ---
 document_id: TOF-TASK-W1-001
-status: PLANNED
+status: PENDING_REVIEW
 materialization_status: ACCEPTED
 owner: tecnotron-ai
 type: task
 version: 1.0
-updated: 2026-08-31
+updated: 2026-09-01
 machine_context: true
 task_id: TOF-W1-001
 milestone_id: tecnotron-operational-foundation-v1
@@ -13,11 +13,12 @@ work_package_id: WP-001
 repository: tecnotron-ai
 integration_branch: tools
 task_branch: feat/TOF-W1-001
-task_base: PENDING_FRESH_TOOLS_SHA
-worktree: PENDING_TASK_LIFECYCLE_RESOLUTION
-execution_status: NOT_STARTED
-execution_readiness: BLOCKED_PENDING_DEVELOPER_START
-implementation_authorized: false
+task_base: 651e84de6524972cae925c067209705560b43f6d
+worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-001
+execution_status: EXECUTED
+execution_readiness: PENDING_INDEPENDENT_REVIEW
+implementation_authorized: true
+review_target_policy: EXTERNAL_HEAD_AFTER_COMMIT
 complexity: high
 criticality: high
 scope_fit: FIT
@@ -55,24 +56,25 @@ schema strict, loader/export mínimo, fixtures, contract tests positivos y
 negativos, inventario de consumidores y documentación contractual mínima.
 
 Esta TASK no produce, redefine ni acepta la SPEC. Su materialización fue
-aceptada e integrada, pero `implementation_authorized` permanece `false` hasta
-un gate posterior explícito del Developer y el inicio de Task Lifecycle.
+aceptada e integrada; el Developer autorizó explícitamente la implementación y
+la ejecución ya se completó en el worktree dedicado.
 
-## 2. Identidad de ejecución futura
+## 2. Identidad de ejecución
 
 ```yaml
 repository: tecnotron-ai
 integration_branch: tools
 task_branch: feat/TOF-W1-001
-task_base: PENDING_FRESH_TOOLS_SHA
-worktree: PENDING_TASK_LIFECYCLE_RESOLUTION
-implementation_authorized: false
+task_base: 651e84de6524972cae925c067209705560b43f6d
+worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-001
+implementation_authorized: true
 ```
 
-El `task_base` debe resolverse desde un `tools` fresco posterior a la aceptación
-e integración de esta materialización. No se permite reutilizar
-`0574759b54a362accbb2ff76df1163e39ef87aba` por inferencia ni implementar desde
-`feat/WP-001-materialization`.
+El `task_base` fue resuelto al iniciar esta ejecución desde `tools`; no identifica
+el HEAD posterior de implementación, corrección o review. El snapshot a revisar
+se entrega externamente después del commit para evitar referencias circulares.
+No se reutilizó `0574759b54a362accbb2ff76df1163e39ef87aba` por inferencia ni se
+implementó desde `feat/WP-001-materialization`.
 
 ## 3. Write ownership exacto
 
@@ -214,6 +216,6 @@ registries legacy y no ejecuta cleanup sin autorización posterior.
 ## 11. Estado
 
 ```text
-NOT_STARTED
-BLOCKED_PENDING_DEVELOPER_START
+EXECUTED
+PENDING_REVIEW
 ```

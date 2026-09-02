@@ -2,7 +2,7 @@
 status: canonical
 owner: tecnotron-ai
 type: reference
-updated: 2026-08-31
+updated: 2026-09-01
 related:
   - "[[architecture]]"
   - "[[operational-architecture]]"
@@ -31,7 +31,7 @@ workspace y vistas de Obsidian no son source of truth.
 | [WP-000 Cross-repo Project Profile Baseline](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) | Predecesor completado de Project Profile obligatorio, inyección de entorno y conformance cross-repo; integrado en FitFlow `develop` y Tecnotron-ai `tools`. |
 | [WP-001 Operational Profile Contracts SPEC](work-packages/wp-001-operational-profile-contracts/SPEC.md) | Comportamiento y fronteras aceptadas de `tecnotron-agent-profile/v1`, incluidos nueve perfiles, permisos deny-by-default y separación de modelo. |
 | [WP-001 Operational Profile Contracts Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) | Solución técnica y gates de implementación derivados de la SPEC aceptada. |
-| [Task TOF-W1-001](tasks/TOF-W1-001/TASK.md) | Contrato de scope futuro para implementar `tecnotron-agent-profile/v1`; su materialización está aceptada e integrada, pero la ejecución permanece bloqueada hasta un gate posterior del Developer, `task_base` fresco y worktree propio. |
+| [Task TOF-W1-001](tasks/TOF-W1-001/TASK.md) | Contrato de scope de `tecnotron-agent-profile/v1`; la implementación fue autorizada, ejecutada y validada sobre `task_base` `651e84d`, y permanece `PENDING_REVIEW` sin aceptación ni integración terminal. |
 | [Task TOF-W0-001](tasks/TOF-W0-001/TASK.md) | Contrato de scope histórico para Project Profile de FitFlow y planificación de configuración activa. |
 | [Task TOF-W0-002](tasks/TOF-W0-002/TASK.md) | Contrato de scope histórico para resolución de proyecto, inyección de entorno y planificación de conformance cross-repo. |
 | [Task FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/TASK.md) | Definición canónica, ownership, criterios de aceptación y frontera de scope para conformance de `Explorer` y Agent Runtime. |

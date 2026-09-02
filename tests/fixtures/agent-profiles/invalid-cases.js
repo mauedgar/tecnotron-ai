@@ -1,0 +1,40 @@
+'use strict';
+
+const cases = [
+  { name: 'missing profile', operation: 'delete', path: ['profiles', 'auditor'] },
+  { name: 'tenth profile', operation: 'copy', from: ['profiles', 'spec_analyst'], path: ['profiles', 'extra_profile'] },
+  { name: 'Validator profile', operation: 'copy', from: ['profiles', 'spec_analyst'], path: ['profiles', 'Validator'] },
+  { name: 'coder_b profile', operation: 'copy', from: ['profiles', 'implementer'], path: ['profiles', 'coder_b'] },
+  { name: 'coder_a profile', operation: 'copy', from: ['profiles', 'implementer'], path: ['profiles', 'coder_a'] },
+  { name: 'coder_strong_a profile', operation: 'copy', from: ['profiles', 'implementer'], path: ['profiles', 'coder_strong_a'] },
+  { name: 'arbitrary coder profile', operation: 'copy', from: ['profiles', 'implementer'], path: ['profiles', 'coder_custom'] },
+  { name: 'second source writer', operation: 'set', path: ['profiles', 'planner', 'permissions', 'filesystem_write'], value: 'task_owned_source', message: 'FILESYSTEM_WRITE_MISMATCH' },
+  { name: 'source write for doc curator', operation: 'set', path: ['profiles', 'doc_curator', 'permissions', 'filesystem_write'], value: 'task_owned_source', message: 'FILESYSTEM_WRITE_MISMATCH' },
+  { name: 'doc write for another profile', operation: 'set', path: ['profiles', 'planner', 'permissions', 'filesystem_write'], value: 'task_owned_docs', message: 'FILESYSTEM_WRITE_MISMATCH' },
+  { name: 'write for read-only profile', operation: 'set', path: ['profiles', 'reviewer', 'permissions', 'filesystem_write'], value: 'task_owned_source', message: 'FILESYSTEM_WRITE_MISMATCH' },
+  { name: 'omitted subagent depth', operation: 'delete', path: ['profiles', 'planner', 'subagent_depth'] },
+  { name: 'nonzero subagent depth', operation: 'set', path: ['profiles', 'planner', 'subagent_depth'], value: 1 },
+  { name: 'invalid subagent depth', operation: 'set', path: ['profiles', 'planner', 'subagent_depth'], value: '0' },
+  { name: 'delegation enabled', operation: 'set', path: ['profiles', 'planner', 'permissions', 'delegation'], value: 'allowed' },
+  { name: 'web outside researcher', operation: 'set', path: ['profiles', 'auditor', 'permissions', 'web'], value: 'authorized_research_task_only', message: 'WEB_PERMISSION_MISMATCH' },
+  { name: 'unconditional researcher web', operation: 'set', path: ['profiles', 'researcher', 'permissions', 'web'], value: 'allowed' },
+  { name: 'omitted permission', operation: 'delete', path: ['profiles', 'planner', 'permissions', 'paid_api'] },
+  { name: 'unknown permission value', operation: 'set', path: ['profiles', 'planner', 'permissions', 'command_execution'], value: 'shell' },
+  { name: 'tool capability expansion', operation: 'set', path: ['profiles', 'planner', 'tools', 'allow'], value: ['filesystem_write'] },
+  { name: 'skill capability expansion', operation: 'set', path: ['profiles', 'planner', 'skills', 'allow'], value: ['global_skill'] },
+  { name: 'unknown profile field', operation: 'set', path: ['profiles', 'planner', 'unexpected'], value: true },
+  { name: 'legacy schema version', operation: 'set', path: ['schema_version'], value: 'tecnotron-agent-profile/v0' },
+  { name: 'absolute path input', operation: 'set', path: ['profiles', 'planner', 'required_inputs', 0], value: 'C:/private/config' },
+  { name: 'FitFlow namespace', operation: 'set', path: ['profiles', 'planner', 'required_inputs', 0], value: 'fitflow-project' },
+  { name: 'OpenCode namespace', operation: 'set', path: ['profiles', 'planner', 'required_inputs', 0], value: 'opencode-agent' },
+  { name: 'launcher field', operation: 'set', path: ['launcher'], value: { enabled: true } },
+  { name: 'global configuration field', operation: 'set', path: ['global_config'], value: true },
+  ...['model', 'model_id', 'provider', 'runtime', 'runtime_id', 'reasoning_effort', 'resource_pool', 'preference', 'fallback'].map((field) => ({
+    name: `${field} binding`,
+    operation: 'set',
+    path: ['profiles', 'implementer', field],
+    value: 'forbidden',
+  })),
+];
+
+module.exports = { cases };

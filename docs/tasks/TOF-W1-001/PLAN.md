@@ -1,14 +1,17 @@
 ---
 document_id: TOF-PLAN-W1-001
-status: PLANNED
+status: PENDING_REVIEW
 owner: tecnotron-ai
 type: task-plan
 version: 1.0
-updated: 2026-08-31
+updated: 2026-09-01
 machine_context: true
 task_id: TOF-W1-001
-execution_status: NOT_STARTED
-implementation_authorized: false
+task_base: 651e84de6524972cae925c067209705560b43f6d
+execution_status: EXECUTED
+implementation_authorized: true
+review_target_policy: EXTERNAL_HEAD_AFTER_COMMIT
+current_handoff_state: PENDING_REVIEW
 complexity: high
 criticality: high
 scope_fit: FIT
@@ -47,8 +50,8 @@ por último compatibilidad/documentación. Ninguna fase amplía la TASK.
 5. Comparar `implementer_write_scope`, `doc_curator_write_scope` y
    `lifecycle_evidence_scope` con todos los paths previstos.
 
-Gate: `implementation_authorized: true` requiere ruling posterior explícito. Si
-falta, detener sin escribir.
+Gate satisfecho: el Developer emitió el ruling explícito requerido y la
+implementación autorizada ya fue ejecutada.
 
 ## Phase 1: RED del contrato
 
@@ -133,6 +136,6 @@ Stop if the selected schema cannot express deny-by-default permissions without a
 ## Estado
 
 ```text
-NOT_STARTED
-BLOCKED_PENDING_DEVELOPER_START
+EXECUTED
+PENDING_REVIEW
 ```

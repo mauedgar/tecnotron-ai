@@ -2,8 +2,8 @@
 document_id: TEC-STATE-001
 status: canonical
 machine_context: true
-version: 1.6
-updated: 2026-08-30
+version: 1.7
+updated: 2026-09-01
 owner: tecnotron-ai
 ---
 
@@ -65,6 +65,12 @@ actual. Para `tecnotron-operational-foundation-v1`, el valor vigente de
   `tools@423714572af5332b2defa7265ff1514d0fd0c81a` y FitFlow
   `develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`. La evidencia focalizada
   confirma resolver/doctor 15/15 y registries 8/8 `PASS`.
+- `TOF-W1-001`: `tecnotron-agent-profile/v1` está implementado con nueve
+  perfiles, `subagent_depth: 0`, permisos deny-by-default, loader, fixtures y
+  contract tests. La validación reproducida es 11/11 focalizada, 19/19 combinada
+  y 154/154 completa con el Project Profile y AI Core inyectados explícitamente.
+  El estado es `PENDING_REVIEW`; no implica aceptación, integración ni cierre de
+  `WP-001`.
 
 La promocion `002-004` consta en el commit FitFlow `52d729c`. Algunos
 run-state/result JSON y el backlog machine-readable de FitFlow conservan
