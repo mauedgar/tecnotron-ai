@@ -1,6 +1,6 @@
 ---
 document_id: TOF-TASK-W1-001
-status: PLANNED
+status: PENDING_REVIEW
 materialization_status: ACCEPTED
 owner: tecnotron-ai
 type: task
@@ -13,11 +13,12 @@ work_package_id: WP-001
 repository: tecnotron-ai
 integration_branch: tools
 task_branch: feat/TOF-W1-001
-task_base: bb2bfe7892b2e3c87297e445bb16279c4630385c
+task_base: 651e84de6524972cae925c067209705560b43f6d
 worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-001
 execution_status: EXECUTED
-execution_readiness: READY_FOR_INDEPENDENT_REVIEW
+execution_readiness: PENDING_INDEPENDENT_REVIEW
 implementation_authorized: true
+review_target_policy: EXTERNAL_HEAD_AFTER_COMMIT
 complexity: high
 criticality: high
 scope_fit: FIT
@@ -64,12 +65,14 @@ la ejecución ya se completó en el worktree dedicado.
 repository: tecnotron-ai
 integration_branch: tools
 task_branch: feat/TOF-W1-001
-task_base: bb2bfe7892b2e3c87297e445bb16279c4630385c
+task_base: 651e84de6524972cae925c067209705560b43f6d
 worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-001
 implementation_authorized: true
 ```
 
-El `task_base` fue resuelto mediante ruling del Developer para esta ejecución.
+El `task_base` fue resuelto al iniciar esta ejecución desde `tools`; no identifica
+el HEAD posterior de implementación, corrección o review. El snapshot a revisar
+se entrega externamente después del commit para evitar referencias circulares.
 No se reutilizó `0574759b54a362accbb2ff76df1163e39ef87aba` por inferencia ni se
 implementó desde `feat/WP-001-materialization`.
 
@@ -214,5 +217,5 @@ registries legacy y no ejecuta cleanup sin autorización posterior.
 
 ```text
 EXECUTED
-READY_FOR_INDEPENDENT_REVIEW
+PENDING_REVIEW
 ```

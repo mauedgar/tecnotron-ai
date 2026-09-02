@@ -3,13 +3,19 @@ document_id: TOF-WP-001-PLAN-001
 status: ACCEPTED
 owner: tecnotron-ai
 type: work-package-plan
-version: 1.0
-updated: 2026-08-31
+version: 1.1
+updated: 2026-09-01
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 work_package_id: WP-001
 spec: docs/work-packages/wp-001-operational-profile-contracts/SPEC.md
-execution_status: NOT_STARTED
+task_base: 651e84de6524972cae925c067209705560b43f6d
+execution_status: PENDING_REVIEW
+implementation_status: IMPLEMENTED
+validation_status: PASS
+review_status: REVIEW_REQUIRED
+implementation_authorized: true
+authorization_source: Developer ruling TOF-W1-001 execution and evidence correction
 implementation_task: TOF-W1-001
 complexity: high
 criticality: high
@@ -222,10 +228,13 @@ Stop conditions:
 ## 7. Estado
 
 La planificación fue revisada independientemente con `PASS` y aceptada por el
-Developer. La implementación continúa `NOT_STARTED` y no está autorizada; un
-gate posterior debe iniciar `TOF-W1-001` desde un `tools` fresco.
+Developer. Esa aceptación de materialización no inició por sí sola la TASK. Un
+ruling posterior autorizó `TOF-W1-001` desde `task_base` `651e84d`; la
+implementación y la validación disponible están completas y el handoff actual
+requiere un nuevo review independiente.
 
 ```text
 ACCEPTED
-IMPLEMENTATION_NOT_STARTED
+IMPLEMENTED
+PENDING_REVIEW
 ```

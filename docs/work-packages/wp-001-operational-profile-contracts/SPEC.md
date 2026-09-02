@@ -4,8 +4,8 @@ status: accepted
 materialization_status: ACCEPTED
 owner: tecnotron-ai
 type: work-package-spec
-version: 1.0
-updated: 2026-08-31
+version: 1.1
+updated: 2026-09-01
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 work_package_id: WP-001
@@ -401,6 +401,9 @@ historia, conocimiento privado ni scans amplios por defecto.
 ## 10. Estado de materialización
 
 La materialización fue revisada independientemente con `PASS` y aceptada por el
-Developer. Esta aceptación no inicia `TOF-W1-001`: la implementación permanece
-`NOT_STARTED` y requiere un gate posterior explícito, `task_base` fresco y
-worktree propio.
+Developer. Esa aceptación no inició por sí sola `TOF-W1-001`; un ruling posterior
+autorizó la ejecución desde `task_base`
+`651e84de6524972cae925c067209705560b43f6d` y en worktree propio. La
+implementación y la validación disponible están completas, con estado
+`PENDING_REVIEW`; aceptación terminal, integración y publicación permanecen
+pendientes.

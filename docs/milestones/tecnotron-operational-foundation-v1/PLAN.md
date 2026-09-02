@@ -4,8 +4,8 @@ status: accepted
 materialization_status: PENDING_ACCEPTANCE
 owner: tecnotron-ai
 type: milestone-plan
-version: 1.2
-updated: 2026-08-31
+version: 1.3
+updated: 2026-09-01
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 milestone_baseline: 41088a413d06ed1d58d63d92320e38d4b44b86ea
@@ -15,7 +15,7 @@ execution_status: IN_PROGRESS
 architect_revision_status: COMPLETE
 completed_work_packages:
   - WP-000
-next_gate: DEVELOPER_AUTHORIZATION_TO_START_TOF-W1-001
+next_gate: INDEPENDENT_REVIEW_PASS_FOR_TOF-W1-001
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -83,7 +83,7 @@ it enumerates; all other original-plan sections remain in force.
 | Integration target | `tools` |
 | Promotion target | `main` |
 | Completed predecessor | `WP-000` |
-| Next gate | Developer authorization to start TOF-W1-001 |
+| Next gate | Independent review PASS for TOF-W1-001 |
 | Terminal authority | Developer |
 
 `tools` is the integration branch for this milestone. `main` receives the
@@ -239,7 +239,7 @@ Full plan: [WP-000 Plan](../../work-packages/wp-000-cross-repo-project-profile-b
 
 ```yaml
 wave: W1
-status: SPEC_ACCEPTED_IMPLEMENTATION_NOT_STARTED
+status: IMPLEMENTED_PENDING_REVIEW
 result: Nine model-independent operational profile contracts with exclusive responsibilities and enforceable permission boundaries
 complexity: high
 criticality: high
@@ -279,8 +279,10 @@ Accepted SPEC: [WP-001 SPEC](../../work-packages/wp-001-operational-profile-cont
 Technical plan: [WP-001 Plan](../../work-packages/wp-001-operational-profile-contracts/PLAN.md).
 Materialized task contract: [TOF-W1-001](../../tasks/TOF-W1-001/TASK.md),
 whose materialization passed independent review, was accepted by the Developer,
-and was integrated into `tools`. Its implementation remains `NOT_STARTED` until
-a later Developer gate and fresh Task Lifecycle isolation.
+and was integrated into `tools`. A later Developer ruling authorized execution
+from `task_base` `651e84d` in its isolated worktree. Implementation and available
+validation are complete; independent review, terminal acceptance and integration
+remain pending.
 
 ### WP-002 — Deterministic OpenCode Launchers
 
@@ -506,7 +508,7 @@ or context budget changes.
 
 ## 8. SPEC approval gates
 
-- [x] WP-001 SPEC approved by Developer and materialized at [WP-001 SPEC](../../work-packages/wp-001-operational-profile-contracts/SPEC.md); materialization review, acceptance, and integration are complete, while implementation remains `NOT_STARTED`.
+- [x] WP-001 SPEC approved by Developer and materialized at [WP-001 SPEC](../../work-packages/wp-001-operational-profile-contracts/SPEC.md); implementation is complete and validated, with independent implementation review still pending.
 - [ ] WP-002 SPEC approved by Developer.
 - [ ] WP-003 SPEC approved by Developer.
 - [ ] WP-004 SPEC approved by Developer.

@@ -1,15 +1,17 @@
 ---
 document_id: TOF-PLAN-W1-001
-status: PLANNED
+status: PENDING_REVIEW
 owner: tecnotron-ai
 type: task-plan
 version: 1.0
 updated: 2026-09-01
 machine_context: true
 task_id: TOF-W1-001
-task_base: bb2bfe7892b2e3c87297e445bb16279c4630385c
+task_base: 651e84de6524972cae925c067209705560b43f6d
 execution_status: EXECUTED
 implementation_authorized: true
+review_target_policy: EXTERNAL_HEAD_AFTER_COMMIT
+current_handoff_state: PENDING_REVIEW
 complexity: high
 criticality: high
 scope_fit: FIT
@@ -135,5 +137,5 @@ Stop if the selected schema cannot express deny-by-default permissions without a
 
 ```text
 EXECUTED
-READY_FOR_INDEPENDENT_REVIEW
+PENDING_REVIEW
 ```
