@@ -3,7 +3,7 @@ document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
 version: 2.9
-updated: 2026-09-01
+updated: 2026-09-02
 owner: tecnotron-ai
 ---
 
@@ -19,7 +19,7 @@ queda como referencia historica sin autoridad operativa sobre este milestone.
 | Orden aprobado | Work Package | Estado | Navegacion |
 | ---: | --- | --- | --- |
 | 0 | `WP-000` | `DONE` | [Plan WP-000](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) |
-| 1 | `WP-001` | `IMPLEMENTED_PENDING_REVIEW` | [SPEC](work-packages/wp-001-operational-profile-contracts/SPEC.md) · [Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) |
+| 1 | `WP-001` | `ACCEPTED_INTEGRATED` | [SPEC](work-packages/wp-001-operational-profile-contracts/SPEC.md) · [Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) |
 | — | `WP-002`–`WP-006` | `PLANNING_PENDING_SPEC` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
 | — | `WP-007` | `PLANNING_PENDING_CONFIRMATION` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#wp-007--non-behavioral-milestone-closeout-boundary) |
 
@@ -33,11 +33,12 @@ la planificacion y el estado de integracion; la promocion del milestone a `main`
 permanece sujeta a su gate especifico.
 
 La SPEC de `WP-001` esta aceptada y materializada junto con su Plan y la TASK
-[TOF-W1-001](tasks/TOF-W1-001/TASK.md). La materializacion fue revisada con
-`PASS`, aceptada por el Developer e integrada en `tools`. Un ruling posterior
-autorizo la implementacion desde `task_base` `651e84d` en worktree propio; la
-implementacion y validacion estan completas y requieren un nuevo review
-independiente antes de cualquier aceptacion o integracion terminal.
+[TOF-W1-001](tasks/TOF-W1-001/TASK.md). Un ruling posterior autorizo la
+implementacion desde `task_base` `651e84d` en worktree propio. La validacion
+paso 11/11 focalizada, 19/19 combinada y 154/154 completa; el review
+independiente fue `PASS`, el Developer acepto la TASK y PR #27 la integro en
+`tools@d7e1e7e4784cae455782b38797c199e380173804`. Publicacion, promocion a
+`main` y cleanup permanecen `NOT_RUN`.
 
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.

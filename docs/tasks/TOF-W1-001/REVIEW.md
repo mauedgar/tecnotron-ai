@@ -1,6 +1,6 @@
 ---
 document_id: TOF-REVIEW-W1-001
-status: PENDING_ACCEPTANCE
+status: ACCEPTED
 owner: tecnotron-ai
 type: task-review
 version: 1.0
@@ -73,9 +73,3 @@ Providers, models, launchers, profile execution, and WP-002 are `NOT_RUN`.
 `PASS` from this independent review does not grant Developer acceptance and does
 not perform integration, publication, or closure. Those dispositions remain
 unreached and require the Developer gate.
-
-Este archivo es un skeleton reservado para un Reviewer independiente posterior
-a la implementación y validación de `TOF-W1-001`.
-
-No contiene findings ni verdict. La materialización del archivo no constituye
-review, `PASS`, aceptación del Developer ni integración.

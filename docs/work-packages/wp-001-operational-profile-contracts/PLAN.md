@@ -4,16 +4,22 @@ status: ACCEPTED
 owner: tecnotron-ai
 type: work-package-plan
 version: 1.1
-updated: 2026-09-01
+updated: 2026-09-02
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 work_package_id: WP-001
 spec: docs/work-packages/wp-001-operational-profile-contracts/SPEC.md
 task_base: 651e84de6524972cae925c067209705560b43f6d
-execution_status: PENDING_REVIEW
+execution_status: ACCEPTED_INTEGRATED
 implementation_status: IMPLEMENTED
 validation_status: PASS
-review_status: REVIEW_REQUIRED
+review_status: PASS
+developer_acceptance: ACCEPTED
+integration_status: INTEGRATED
+integration_ref: tools@d7e1e7e4784cae455782b38797c199e380173804
+publication_status: NOT_RUN
+promotion_to_main_status: NOT_RUN
+cleanup_status: NOT_RUN
 implementation_authorized: true
 authorization_source: Developer ruling TOF-W1-001 execution and evidence correction
 implementation_task: TOF-W1-001
@@ -230,11 +236,18 @@ Stop conditions:
 La planificación fue revisada independientemente con `PASS` y aceptada por el
 Developer. Esa aceptación de materialización no inició por sí sola la TASK. Un
 ruling posterior autorizó `TOF-W1-001` desde `task_base` `651e84d`; la
-implementación y la validación disponible están completas y el handoff actual
-requiere un nuevo review independiente.
+implementación y la validación disponible completaron 11/11, 19/19 y 154/154
+con `PASS`. El review independiente fue `PASS`, el Developer aceptó la TASK y
+PR #27 la integró en `tools@d7e1e7e4784cae455782b38797c199e380173804`.
+Publicación, promoción a `main` y cleanup permanecen `NOT_RUN`.
 
 ```text
 ACCEPTED
 IMPLEMENTED
-PENDING_REVIEW
+REVIEW_PASS
+DEVELOPER_ACCEPTED
+INTEGRATED_TOOLS
+PUBLICATION_NOT_RUN
+PROMOTION_TO_MAIN_NOT_RUN
+CLEANUP_NOT_RUN
 ```

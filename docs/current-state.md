@@ -3,7 +3,7 @@ document_id: TEC-STATE-001
 status: canonical
 machine_context: true
 version: 1.7
-updated: 2026-09-01
+updated: 2026-09-02
 owner: tecnotron-ai
 ---
 
@@ -69,8 +69,9 @@ actual. Para `tecnotron-operational-foundation-v1`, el valor vigente de
   perfiles, `subagent_depth: 0`, permisos deny-by-default, loader, fixtures y
   contract tests. La validación reproducida es 11/11 focalizada, 19/19 combinada
   y 154/154 completa con el Project Profile y AI Core inyectados explícitamente.
-  El estado es `PENDING_REVIEW`; no implica aceptación, integración ni cierre de
-  `WP-001`.
+  El review independiente fue `PASS`, el Developer lo aceptó y PR #27 lo integró
+  en `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publicación, promoción a
+  `main` y cleanup permanecen `NOT_RUN`.
 
 La promocion `002-004` consta en el commit FitFlow `52d729c`. Algunos
 run-state/result JSON y el backlog machine-readable de FitFlow conservan
