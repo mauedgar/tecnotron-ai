@@ -1,0 +1,14 @@
+accepted_profile_ids:
+  - spec_analyst
+  - planner
+  - architect
+  - explorer
+  - implementer
+  - doc_curator
+  - reviewer
+  - researcher
+  - auditor
+legacy_profile_ids:
+  - coder
+  - coder_readonly
+  - coder_writer
