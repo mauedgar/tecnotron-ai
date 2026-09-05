@@ -4,7 +4,7 @@ status: ACCEPTED
 materialization_status: ACCEPTED
 owner: tecnotron-ai
 type: work-package-plan
-version: 1.4
+version: 1.5
 updated: 2026-09-05
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
@@ -19,7 +19,7 @@ integration_target: tools
 developer_ready_gate: SATISFIED
 task_materialization_authorized: true
 next_executable_task: NONE
-next_lifecycle_action: CLEANUP_TOF_W1_002
+next_lifecycle_action: DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003
 executable_tasks_created: true
 implementation_authority_created: true
 implementation_status: IMPLEMENTED
@@ -30,7 +30,7 @@ integration_status: INTEGRATED
 integration_pr: 28
 integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 closure_status: DONE
-cleanup_status: NOT_RUN
+cleanup_status: CLEANUP_COMPLETE
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -93,14 +93,14 @@ integration_status: INTEGRATED
 integration_pr: 28
 integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 closure_status: DONE
-cleanup_status: NOT_RUN
+cleanup_status: CLEANUP_COMPLETE
 next_executable_task: NONE
-next_lifecycle_action: CLEANUP_TOF_W1_002
+next_lifecycle_action: DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003
 task_base: 03651b806da290ae256dfaa6bf924feef0487327
 effective_branch: mauedgar/feat-TOF-W1-002
 worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
-next_owner: Task Lifecycle
-next_required_action: CLEANUP_TOF_W1_002
+next_owner: Developer
+next_required_action: DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003
 ```
 
 La aceptacion y el gate `READY` solo significan que el PLAN cubre la SPEC y tiene
@@ -844,20 +844,20 @@ integration_status: INTEGRATED
 integration_pr: 28
 integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 closure_status: DONE
-cleanup_status: NOT_RUN
+cleanup_status: CLEANUP_COMPLETE
 next_executable_task: NONE
-next_lifecycle_action: CLEANUP_TOF_W1_002
+next_lifecycle_action: DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003
 task_base: 03651b806da290ae256dfaa6bf924feef0487327
 effective_branch: mauedgar/feat-TOF-W1-002
 worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
-next_owner: Task Lifecycle
-next_required_action: CLEANUP_TOF_W1_002
+next_owner: Developer
+next_required_action: DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003
 ```
 
 `TOF-W1-002` esta implementada y validada sobre el snapshot inmutable
 `a744d0746c50f4d411006cf99923c2f64e467797`; el review independiente es `PASS`
 y el Developer acepto ese snapshot exacto. PR #28 lo integro sin reescribirlo en
 `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`; closure esta `DONE` y Task
-Lifecycle posee el cleanup separado, que permanece `NOT_RUN`. `TOF-W1-003` se
-materializara despues contra el baseline competente resultante; no se precrea su
-TASK ni su worktree.
+Lifecycle completo el cleanup de worktree y ramas efimeras. El siguiente
+checkpoint pertenece al Developer; `TOF-W1-003` no se precrea ni se materializa
+antes de esa decision.

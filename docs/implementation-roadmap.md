@@ -49,9 +49,9 @@ estan `ACCEPTED` por el Developer. `WP-002_SPEC_ACCEPTANCE` y el gate Developer
 independiente `PASS` y aceptacion del Developer sobre
 `a744d0746c50f4d411006cf99923c2f64e467797`. PR #28 integro ese commit sin
 reescribirlo en `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`; el cierre de
-la TASK esta `DONE` y cleanup permanece `NOT_RUN`. La siguiente accion pertenece
-a Task Lifecycle: `CLEANUP_TOF_W1_002`. `TOF-W1-003` no esta materializada y
-solo podra partir despues del baseline competente resultante.
+la TASK esta `DONE` y cleanup esta `CLEANUP_COMPLETE`. La siguiente accion es el
+checkpoint `DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003`, propiedad del
+Developer. `TOF-W1-003` no esta materializada.
 
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.

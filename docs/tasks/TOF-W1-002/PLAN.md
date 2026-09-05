@@ -4,7 +4,7 @@ status: DONE
 materialization_status: MATERIALIZED
 owner: tecnotron-ai
 type: task-plan
-version: 1.3
+version: 1.4
 updated: 2026-09-05
 machine_context: true
 operation_id: TOF-W1-002-TASK-MATERIALIZATION-01
@@ -23,7 +23,7 @@ review_handoff_status: COMPLETE
 developer_acceptance: ACCEPTED
 integration_status: INTEGRATED
 closure_status: DONE
-cleanup_status: NOT_RUN
+cleanup_status: CLEANUP_COMPLETE
 integration_pr: 28
 integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 implementation_authorized: true
@@ -205,7 +205,7 @@ REVIEW_HANDOFF_COMPLETE
 DEVELOPER_ACCEPTANCE_ACCEPTED
 INTEGRATION_INTEGRATED
 CLOSURE_DONE
-CLEANUP_NOT_RUN
-NEXT_ACTION_CLEANUP_TOF_W1_002
-NEXT_OWNER_TASK_LIFECYCLE
+CLEANUP_COMPLETE
+NEXT_ACTION_DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003
+NEXT_OWNER_DEVELOPER
 ```

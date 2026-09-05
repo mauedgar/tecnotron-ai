@@ -3,7 +3,7 @@ document_id: TOF-RESULT-W1-002
 status: DONE
 owner: tecnotron-ai
 type: task-result
-version: 1.2
+version: 1.3
 updated: 2026-09-05
 task_id: TOF-W1-002
 operation_id: TOF-W1-002-REVIEW-EVIDENCE-01
@@ -15,7 +15,7 @@ developer_acceptance: ACCEPTED
 integration_status: INTEGRATED
 publication_status: PUBLISHED
 closure_status: DONE
-cleanup_status: NOT_RUN
+cleanup_status: CLEANUP_COMPLETE
 integration_pr: 28
 integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 terminal_acceptance: Developer
@@ -106,6 +106,10 @@ operational_debt:
     reviewed_static_version: 1.18.28
     observed_cli_version: 1.18.29
     disposition: LATER_EXACT_VERSION_CONFORMANCE
+  TASK_WORKTREE_ACTIVE_CWD_CLEANUP_HAZARD:
+    observed: true
+    current_instance: RESOLVED_BY_OUT_OF_WORKTREE_EXECUTION
+    structural_action: CONSIDER_PREFLIGHT_FOR_ACTIVE_CWD_OR_SESSION_HANDLES
 ```
 
 ## Lifecycle
@@ -120,13 +124,14 @@ integration_status: INTEGRATED
 integration_pr: 28
 integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 closure: DONE
-cleanup_status: NOT_RUN
-next_action: CLEANUP_TOF_W1_002
-next_owner: Task Lifecycle
+cleanup_status: CLEANUP_COMPLETE
+next_action: DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003
+next_owner: Developer
 ```
 
 Developer acceptance applies only to immutable commit
 `a744d0746c50f4d411006cf99923c2f64e467797` and tree
 `9bd7ab9db4bbe35425139e9c7e41c32ade3ee268`. PR #28 integrated it through a
-non-squash merge that preserves that commit as reachable history. Cleanup has
-not run and remains a separate Task Lifecycle action.
+non-squash merge that preserves that commit as reachable history. Task Lifecycle
+removed the task worktree and local and remote task branches; the accepted Git
+history remains reachable from `tools`.

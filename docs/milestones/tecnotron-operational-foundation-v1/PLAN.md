@@ -300,7 +300,7 @@ developer_ready_gate: SATISFIED
 accepted_plan_source_sha256: d67b1b9fc582f6e5223a8b716a32476ee78d9bbc2cc74573fc1e3409309bf3b4
 task_materialization_authorized: true
 next_executable_task: NONE
-next_lifecycle_action: CLEANUP_TOF_W1_002
+next_lifecycle_action: DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003
 executable_tasks_created: true
 implementation_authority: CREATED
 implementation_status: IMPLEMENTED
@@ -311,7 +311,7 @@ integration_status: INTEGRATED
 integration_pr: 28
 integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 closure_status: DONE
-cleanup_status: NOT_RUN
+cleanup_status: CLEANUP_COMPLETE
 task_base: 03651b806da290ae256dfaa6bf924feef0487327
 effective_branch: mauedgar/feat-TOF-W1-002
 worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
