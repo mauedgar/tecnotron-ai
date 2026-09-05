@@ -2,8 +2,8 @@
 document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 2.9
-updated: 2026-09-02
+version: 3.0
+updated: 2026-09-04
 owner: tecnotron-ai
 ---
 
@@ -20,7 +20,8 @@ queda como referencia historica sin autoridad operativa sobre este milestone.
 | ---: | --- | --- | --- |
 | 0 | `WP-000` | `DONE` | [Plan WP-000](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) |
 | 1 | `WP-001` | `ACCEPTED_INTEGRATED` | [SPEC](work-packages/wp-001-operational-profile-contracts/SPEC.md) · [Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) |
-| — | `WP-002`–`WP-006` | `PLANNING_PENDING_SPEC` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
+| 2 | `WP-002` | SPEC `ACCEPTED`; WP PLAN `NOT_MATERIALIZED` | [SPEC](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md) · [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#wp-002--deterministic-opencode-launchers) |
+| — | `WP-003`–`WP-006` | `PLANNING_PENDING_SPEC` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
 | — | `WP-007` | `PLANNING_PENDING_CONFIRMATION` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#wp-007--non-behavioral-milestone-closeout-boundary) |
 
 `WP-000` precede a `WP-001` y esta `DONE`: el Developer acepto terminalmente
@@ -39,6 +40,12 @@ paso 11/11 focalizada, 19/19 combinada y 154/154 completa; el review
 independiente fue `PASS`, el Developer acepto la TASK y PR #27 la integro en
 `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publicacion, promocion a
 `main` y cleanup permanecen `NOT_RUN`.
+
+La [SPEC de `WP-002`](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md)
+esta `ACCEPTED` por el Developer y el gate `WP-002_SPEC_ACCEPTANCE` esta
+`SATISFIED`. El siguiente limite del lifecycle es materializar el WP PLAN por el
+Architect y obtener el gate `READY` del Developer antes de materializar TASKs
+ejecutables. La autoridad de implementacion permanece `NOT_CREATED`.
 
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.

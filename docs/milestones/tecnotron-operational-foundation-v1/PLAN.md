@@ -4,8 +4,8 @@ status: accepted
 materialization_status: ACCEPTED
 owner: tecnotron-ai
 type: milestone-plan
-version: 1.3
-updated: 2026-09-02
+version: 1.4
+updated: 2026-09-04
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 milestone_baseline: 41088a413d06ed1d58d63d92320e38d4b44b86ea
@@ -16,7 +16,7 @@ architect_revision_status: COMPLETE
 completed_work_packages:
   - WP-000
   - WP-001
-next_gate: WP-002_SPEC_ACCEPTANCE
+next_gate: Developer READY gate after WP-002 WP PLAN materialization
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -84,7 +84,7 @@ it enumerates; all other original-plan sections remain in force.
 | Integration target | `tools` |
 | Promotion target | `main` |
 | Completed work packages | `WP-000`, `WP-001` |
-| Next gate | WP-002 SPEC acceptance |
+| Next gate | Developer `READY` gate after WP-002 WP PLAN materialization |
 | Terminal authority | Developer |
 
 `tools` is the integration branch for this milestone. `main` receives the
@@ -291,7 +291,11 @@ Developer accepted the TASK, and PR #27 integrated it in
 
 ```yaml
 wave: W1
-status: PLANNING_PENDING_SPEC
+spec_status: ACCEPTED
+spec_gate: WP-002_SPEC_ACCEPTANCE
+spec_gate_status: SATISFIED
+wp_plan_materialization_status: NOT_MATERIALIZED
+implementation_authority: NOT_CREATED
 result: One generic launcher parameterized by profile, nine project-scoped OpenCode profiles, tecnotron-agent-launch/v1, and positive/negative smokes
 complexity: high
 criticality: high
@@ -306,6 +310,15 @@ ownership: {terminal_acceptance: Developer, launcher_and_profiles: Tecnotron-ai}
 gates: [WP-002_SPEC_accepted, one_generic_launcher, project_scoped_profiles, independent_security_review]
 acceptance_criteria: [nine_profiles_discoverable, valid_read_only_launch, authorized_writer_launch, retired_profile_rejected, malformed_output_fails_closed]
 stop_conditions: [global_configuration_mutation, permanent_profile_model_binding, unprovable_permissions, paid_API_required]
+accepted_spec:
+  path: docs/work-packages/wp-002-deterministic-opencode-launchers/SPEC.md
+  semantic_sha256: 4733259d18b3f64f58f31127b1de4ba1b2ee6ca2a09a9046d95fced04aaaf202
+  acceptance_operation_id: TOF-WP002-SPEC-ACCEPTANCE-01
+known_environment_limitations:
+  - check: wp001_test
+    status: UNAVAILABLE
+    reason: declared yaml dependency absent from checkout
+    disposition: resolve before relying on the affected test during WP-002 implementation or validation; SPEC acceptance remains valid
 ```
 
 The launcher receives explicit profile, TASK, worktree, optional model request,
@@ -315,6 +328,11 @@ OpenCode adapter. It distinguishes requested, resolved, and observed model
 identity and normalizes the result against `tecnotron-agent-launch/v1`.
 
 There are nine profiles and one launcher, not nine launch adapters.
+
+Accepted SPEC: [WP-002 SPEC](../../work-packages/wp-002-deterministic-opencode-launchers/SPEC.md).
+The next lifecycle boundary is Architect materialization of the WP PLAN followed
+by the Developer `READY` gate. No executable TASK or implementation authority
+exists yet.
 
 ### WP-003 — SDD Authority and Artifacts
 
@@ -512,7 +530,7 @@ or context budget changes.
 ## 8. SPEC approval gates
 
 - [x] WP-001 SPEC approved by Developer and materialized at [WP-001 SPEC](../../work-packages/wp-001-operational-profile-contracts/SPEC.md); implementation and validation are complete, independent review passed, the Developer accepted the TASK, and PR #27 integrated it in `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publication, promotion to `main`, and cleanup remain `NOT_RUN`.
-- [ ] WP-002 SPEC approved by Developer.
+- [x] WP-002 SPEC approved by Developer; `WP-002_SPEC_ACCEPTANCE` is satisfied, the WP PLAN is not materialized, and implementation authority has not been created.
 - [ ] WP-003 SPEC approved by Developer.
 - [ ] WP-004 SPEC approved by Developer.
 - [ ] WP-005 SPEC approved by Developer.
