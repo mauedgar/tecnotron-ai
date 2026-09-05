@@ -3,14 +3,14 @@ document_id: TOF-REVIEW-W1-002
 status: PASS
 owner: tecnotron-ai
 type: task-review
-version: 1.0
+version: 1.1
 updated: 2026-09-05
 task_id: TOF-W1-002
 operation_id: TOF-W1-002-INDEPENDENT-REVIEW-01
 review_result: PASS
 review_target_commit: a744d0746c50f4d411006cf99923c2f64e467797
 review_target_tree: 9bd7ab9db4bbe35425139e9c7e41c32ade3ee268
-developer_acceptance: PENDING_ACCEPTANCE
+developer_acceptance: ACCEPTED
 integration_status: NOT_STARTED
 ---
 
@@ -92,5 +92,7 @@ correction of the reviewed snapshot.
 
 ## Boundary
 
-Review findings contain zero blockers and zero majors. Developer acceptance,
-integration, feature-branch publication, and closure were not performed.
+Review findings contain zero blockers and zero majors. Review itself did not
+perform acceptance; the subsequent Developer gate accepted this exact reviewed
+snapshot through `TOF-W1-002-DEVELOPER-ACCEPTANCE-01`. Integration,
+feature-branch publication, and closure were not performed.

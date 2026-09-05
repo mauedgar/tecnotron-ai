@@ -1,10 +1,10 @@
 ---
 document_id: TOF-TASK-W1-002
-status: PENDING_ACCEPTANCE
+status: ACCEPTED
 materialization_status: MATERIALIZED
 owner: tecnotron-ai
 type: task
-version: 1.1
+version: 1.2
 updated: 2026-09-05
 machine_context: true
 operation_id: TOF-W1-002-TASK-MATERIALIZATION-01
@@ -27,7 +27,7 @@ implementation_status: IMPLEMENTED
 validation_status: PASS
 review_status: PASS
 review_handoff_status: COMPLETE
-developer_acceptance: PENDING_ACCEPTANCE
+developer_acceptance: ACCEPTED
 integration_status: NOT_STARTED
 implementation_authorized: true
 implementation_started: true
@@ -35,6 +35,7 @@ immutable_implementation_commit: a744d0746c50f4d411006cf99923c2f64e467797
 immutable_implementation_tree: 9bd7ab9db4bbe35425139e9c7e41c32ade3ee268
 review_operation_id: TOF-W1-002-INDEPENDENT-REVIEW-01
 lifecycle_operation_id: TOF-W1-002-REVIEW-EVIDENCE-01
+developer_acceptance_operation_id: TOF-W1-002-DEVELOPER-ACCEPTANCE-01
 complexity: high
 criticality: high
 scope_fit: FIT
@@ -99,7 +100,7 @@ implementation_started: true
 implementation_status: IMPLEMENTED
 validation_status: PASS
 review_status: PASS
-developer_acceptance: PENDING_ACCEPTANCE
+developer_acceptance: ACCEPTED
 ```
 
 La rama efectiva y el worktree fueron resueltos por Task Lifecycle. El worktree
@@ -380,9 +381,9 @@ TASK_EXECUTED: IMPLEMENTED
 VALIDATION: PASS
 REVIEW: PASS
 REVIEW_HANDOFF: COMPLETE
-DEVELOPER_ACCEPTANCE: PENDING_ACCEPTANCE
+DEVELOPER_ACCEPTANCE: ACCEPTED
 INTEGRATION: NOT_STARTED
 CLOSURE: OPEN
-NEXT_GATE: Developer Acceptance
-NEXT_OWNER: Developer
+NEXT_GATE: INTEGRATION
+NEXT_OWNER: Task Lifecycle
 ```

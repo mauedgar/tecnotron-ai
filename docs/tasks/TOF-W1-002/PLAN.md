@@ -1,10 +1,10 @@
 ---
 document_id: TOF-PLAN-W1-002
-status: PENDING_ACCEPTANCE
+status: ACCEPTED
 materialization_status: MATERIALIZED
 owner: tecnotron-ai
 type: task-plan
-version: 1.1
+version: 1.2
 updated: 2026-09-05
 machine_context: true
 operation_id: TOF-W1-002-TASK-MATERIALIZATION-01
@@ -20,7 +20,7 @@ implementation_status: IMPLEMENTED
 validation_status: PASS
 review_status: PASS
 review_handoff_status: COMPLETE
-developer_acceptance: PENDING_ACCEPTANCE
+developer_acceptance: ACCEPTED
 integration_status: NOT_STARTED
 closure_status: OPEN
 implementation_authorized: true
@@ -29,6 +29,7 @@ immutable_implementation_commit: a744d0746c50f4d411006cf99923c2f64e467797
 immutable_implementation_tree: 9bd7ab9db4bbe35425139e9c7e41c32ade3ee268
 review_operation_id: TOF-W1-002-INDEPENDENT-REVIEW-01
 lifecycle_operation_id: TOF-W1-002-REVIEW-EVIDENCE-01
+developer_acceptance_operation_id: TOF-W1-002-DEVELOPER-ACCEPTANCE-01
 complexity: high
 criticality: high
 scope_fit: FIT
@@ -192,14 +193,15 @@ model research/replacement, otro repositorio o path no autorizado.
 ## Estado
 
 ```text
-PENDING_ACCEPTANCE
+ACCEPTED
 MATERIALIZED
 IMPLEMENTATION_IMPLEMENTED
 VALIDATION_PASS
 REVIEW_PASS
 REVIEW_HANDOFF_COMPLETE
-DEVELOPER_ACCEPTANCE_PENDING
+DEVELOPER_ACCEPTANCE_ACCEPTED
 INTEGRATION_NOT_STARTED
 CLOSURE_OPEN
-NEXT_OWNER_DEVELOPER
+NEXT_GATE_INTEGRATION
+NEXT_OWNER_TASK_LIFECYCLE
 ```

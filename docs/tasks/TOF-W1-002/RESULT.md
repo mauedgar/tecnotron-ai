@@ -1,9 +1,9 @@
 ---
 document_id: TOF-RESULT-W1-002
-status: PENDING_ACCEPTANCE
+status: ACCEPTED
 owner: tecnotron-ai
 type: task-result
-version: 1.0
+version: 1.1
 updated: 2026-09-05
 task_id: TOF-W1-002
 operation_id: TOF-W1-002-REVIEW-EVIDENCE-01
@@ -11,11 +11,12 @@ execution_status: IMPLEMENTED
 validation_status: PASS
 review_status: PASS
 review_handoff_status: COMPLETE
-developer_acceptance: PENDING_ACCEPTANCE
+developer_acceptance: ACCEPTED
 integration_status: NOT_STARTED
 publication_status: NOT_STARTED
 closure_status: OPEN
 terminal_acceptance: Developer
+developer_acceptance_operation_id: TOF-W1-002-DEVELOPER-ACCEPTANCE-01
 ---
 
 # RESULT TOF-W1-002
@@ -81,16 +82,24 @@ operational_debt:
   TASK_AUTHORITY_TRANSPORT_GAP:
     current_instance: MITIGATED
     structural_automation: NOT_YET_PROVEN
+    disposition: ACCEPTED_NONBLOCKING_DEBT
+    structural_fix: PENDING_COMPETENT_OWNER
   STALE_TASK_ENVIRONMENT_INJECTION:
     current_instance: MITIGATED_BY_EXPLICIT_ENVELOPE
     structural_automation: NOT_YET_PROVEN
+    disposition: ACCEPTED_NONBLOCKING_DEBT
+    structural_fix: PENDING_COMPETENT_OWNER
   OPENCODE_DEPENDENCY_SELF_MUTATION:
     observed: true
     current_cli_drift:
       from_reviewed_static_version: 1.18.28
       current_cli: 1.18.29
     entered_implementation_diff: false
-    disposition: SEPARATE_MAINTENANCE_OWNER
+    disposition: ACCEPTED_NONBLOCKING_MAINTENANCE_DEBT
+  OPENCODE_VERSION_DRIFT:
+    reviewed_static_version: 1.18.28
+    observed_cli_version: 1.18.29
+    disposition: LATER_EXACT_VERSION_CONFORMANCE
 ```
 
 ## Lifecycle
@@ -100,11 +109,14 @@ implementation_status: IMPLEMENTED
 validation_status: PASS
 review_status: PASS
 review_handoff_status: COMPLETE
-developer_acceptance: PENDING_ACCEPTANCE
+developer_acceptance: ACCEPTED
 integration_status: NOT_STARTED
 closure: OPEN
-next_gate: Developer Acceptance
-next_owner: Developer
+next_gate: INTEGRATION
+next_owner: Task Lifecycle
 ```
 
-No Developer acceptance, integration, publication, or closure is asserted.
+Developer acceptance applies only to immutable commit
+`a744d0746c50f4d411006cf99923c2f64e467797` and tree
+`9bd7ab9db4bbe35425139e9c7e41c32ade3ee268`. Integration, publication, and
+closure have not started.
