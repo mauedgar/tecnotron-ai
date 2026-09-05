@@ -2,8 +2,8 @@
 document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 3.1
-updated: 2026-09-04
+version: 3.2
+updated: 2026-09-05
 owner: tecnotron-ai
 ---
 
@@ -44,11 +44,12 @@ independiente fue `PASS`, el Developer acepto la TASK y PR #27 la integro en
 La [SPEC de `WP-002`](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md)
 y su [WP PLAN](work-packages/wp-002-deterministic-opencode-launchers/PLAN.md)
 estan `ACCEPTED` por el Developer. `WP-002_SPEC_ACCEPTANCE` y el gate Developer
-`READY` estan `SATISFIED`. `TOF-W1-002` esta materializada y `READY`, con
-autoridad de implementacion creada, rama/worktree resueltos y ejecucion todavia
-no iniciada. El siguiente paso es que el Validator determinista ejecute
-`WP002-WU-00`; `TOF-W1-003` se materializara despues contra el baseline
-competente resultante.
+`READY` estan `SATISFIED`. `TOF-W1-002` completo `WP002-WU-00` y
+`WP002-WU-01`: implementacion `IMPLEMENTED`, validacion `PASS` (159/159), review
+independiente `PASS` sobre `a744d0746c50f4d411006cf99923c2f64e467797` y
+handoff `PENDING_ACCEPTANCE`. El siguiente gate pertenece al Developer; la
+integracion no ha comenzado. `TOF-W1-003` se materializara despues contra el
+baseline competente resultante.
 
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.

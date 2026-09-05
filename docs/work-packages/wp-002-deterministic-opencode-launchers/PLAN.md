@@ -4,8 +4,8 @@ status: ACCEPTED
 materialization_status: ACCEPTED
 owner: tecnotron-ai
 type: work-package-plan
-version: 1.1
-updated: 2026-09-04
+version: 1.2
+updated: 2026-09-05
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 work_package_id: WP-002
@@ -18,12 +18,14 @@ planning_baseline: d5b972408700ee83bd312bc2c3ade74972e53b73
 integration_target: tools
 developer_ready_gate: SATISFIED
 task_materialization_authorized: true
-next_executable_task: TOF-W1-002
+next_executable_task: PENDING_DEVELOPER_ACCEPTANCE_TOF-W1-002
 executable_tasks_created: true
 implementation_authority_created: true
-implementation_status: NOT_STARTED
-validation_status: NOT_RUN
-review_status: NOT_RUN
+implementation_status: IMPLEMENTED
+validation_status: PASS
+review_status: PASS
+developer_acceptance: PENDING_ACCEPTANCE
+integration_status: NOT_STARTED
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -78,13 +80,17 @@ developer_ready_gate: SATISFIED
 task_materialization_authorized: true
 executable_tasks_created: true
 implementation_authority_created: true
-implementation_started: false
-next_executable_task: TOF-W1-002
+implementation_status: IMPLEMENTED
+validation_status: PASS
+review_status: PASS
+developer_acceptance: PENDING_ACCEPTANCE
+integration_status: NOT_STARTED
+next_executable_task: PENDING_DEVELOPER_ACCEPTANCE_TOF-W1-002
 task_base: 03651b806da290ae256dfaa6bf924feef0487327
 effective_branch: mauedgar/feat-TOF-W1-002
 worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
-next_owner: deterministic Validator
-next_required_action: EXECUTE_WP002_WU_00_ENVIRONMENT_TOOLCHAIN_PREFLIGHT
+next_owner: Developer
+next_required_action: DECIDE_TOF_W1_002_ACCEPTANCE_GATE
 ```
 
 La aceptacion y el gate `READY` solo significan que el PLAN cubre la SPEC y tiene
@@ -820,15 +826,21 @@ known_model_runtime_observation: PRESERVED_FOR_TOF-W1-003
 task_materialization_authorized: true
 executable_tasks_created: true
 implementation_authority_created: true
-implementation_started: false
-next_executable_task: TOF-W1-002
+implementation_status: IMPLEMENTED
+validation_status: PASS
+review_status: PASS
+developer_acceptance: PENDING_ACCEPTANCE
+integration_status: NOT_STARTED
+next_executable_task: PENDING_DEVELOPER_ACCEPTANCE_TOF-W1-002
 task_base: 03651b806da290ae256dfaa6bf924feef0487327
 effective_branch: mauedgar/feat-TOF-W1-002
 worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
-next_owner: deterministic Validator
-next_required_action: EXECUTE_WP002_WU_00_ENVIRONMENT_TOOLCHAIN_PREFLIGHT
+next_owner: Developer
+next_required_action: DECIDE_TOF_W1_002_ACCEPTANCE_GATE
 ```
 
-`TOF-W1-002` esta materializada contra el baseline competente, con rama/worktree
-resueltos e implementacion no iniciada. `TOF-W1-003` se materializara despues
+`TOF-W1-002` esta implementada y validada sobre el snapshot inmutable
+`a744d0746c50f4d411006cf99923c2f64e467797`; el review independiente es `PASS`
+y el estado es `PENDING_ACCEPTANCE`. El Developer decide el siguiente gate y la
+integracion permanece `NOT_STARTED`. `TOF-W1-003` se materializara despues
 contra el baseline competente resultante; no se precrea su TASK ni su worktree.

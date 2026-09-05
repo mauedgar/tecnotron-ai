@@ -1,11 +1,11 @@
 ---
 document_id: TOF-PLAN-W1-002
-status: READY
+status: PENDING_ACCEPTANCE
 materialization_status: MATERIALIZED
 owner: tecnotron-ai
 type: task-plan
-version: 1.0
-updated: 2026-09-04
+version: 1.1
+updated: 2026-09-05
 machine_context: true
 operation_id: TOF-W1-002-TASK-MATERIALIZATION-01
 task_id: TOF-W1-002
@@ -15,11 +15,20 @@ branch_management: TASK_LIFECYCLE
 requested_branch: feat/TOF-W1-002
 effective_branch: mauedgar/feat-TOF-W1-002
 worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
-execution_status: NOT_STARTED
-validation_status: NOT_RUN
-review_status: NOT_RUN
+execution_status: IMPLEMENTED
+implementation_status: IMPLEMENTED
+validation_status: PASS
+review_status: PASS
+review_handoff_status: COMPLETE
+developer_acceptance: PENDING_ACCEPTANCE
+integration_status: NOT_STARTED
+closure_status: OPEN
 implementation_authorized: true
-implementation_started: false
+implementation_started: true
+immutable_implementation_commit: a744d0746c50f4d411006cf99923c2f64e467797
+immutable_implementation_tree: 9bd7ab9db4bbe35425139e9c7e41c32ade3ee268
+review_operation_id: TOF-W1-002-INDEPENDENT-REVIEW-01
+lifecycle_operation_id: TOF-W1-002-REVIEW-EVIDENCE-01
 complexity: high
 criticality: high
 scope_fit: FIT
@@ -183,9 +192,14 @@ model research/replacement, otro repositorio o path no autorizado.
 ## Estado
 
 ```text
-READY
+PENDING_ACCEPTANCE
 MATERIALIZED
-IMPLEMENTATION_NOT_STARTED
-VALIDATION_NOT_RUN
-REVIEW_NOT_RUN
+IMPLEMENTATION_IMPLEMENTED
+VALIDATION_PASS
+REVIEW_PASS
+REVIEW_HANDOFF_COMPLETE
+DEVELOPER_ACCEPTANCE_PENDING
+INTEGRATION_NOT_STARTED
+CLOSURE_OPEN
+NEXT_OWNER_DEVELOPER
 ```
