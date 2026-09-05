@@ -18,9 +18,10 @@ repository: mauedgar/tecnotron-ai
 integration_branch: tools
 branch_management: TASK_LIFECYCLE
 requested_branch: feat/TOF-W1-002
-effective_branch: PENDING_TASK_LIFECYCLE_RESOLUTION
-task_base: 635f8b12aeeb86f16e7c56901392e8532b80a1b5
-worktree: PENDING_TASK_LIFECYCLE_RESOLUTION
+effective_branch: mauedgar/feat-TOF-W1-002
+task_base: 03651b806da290ae256dfaa6bf924feef0487327
+historical_pre_materialization_base: 635f8b12aeeb86f16e7c56901392e8532b80a1b5
+worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
 execution_status: NOT_STARTED
 validation_status: NOT_RUN
 review_status: NOT_RUN
@@ -73,25 +74,31 @@ OpenCode project-scoped como proyeccion estatica de
 `tecnotron-agent-profile/v1`.
 
 La autoridad de implementacion queda creada, pero la implementacion no comienza
-con esta materializacion. Task Lifecycle debe crear o seleccionar la rama y el
-worktree exclusivos desde el `task_base` exacto antes de cualquier ejecucion.
+con esta materializacion. Task Lifecycle resolvio la rama y el worktree
+exclusivos desde el estado competente de `tools` antes de cualquier ejecucion.
 
 ```yaml
 task_id: TOF-W1-002
-task_base: 635f8b12aeeb86f16e7c56901392e8532b80a1b5
+task_base: 03651b806da290ae256dfaa6bf924feef0487327
 integration_target: tools
 branch_management: TASK_LIFECYCLE
 requested_branch: feat/TOF-W1-002
-effective_branch: PENDING_TASK_LIFECYCLE_RESOLUTION
-worktree: PENDING_TASK_LIFECYCLE_RESOLUTION
+effective_branch: mauedgar/feat-TOF-W1-002
+worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
 owner: Implementer
 effective_role: Implementer
 implementation_authorized: true
 implementation_started: false
 ```
 
-El nombre solicitado de rama sigue el mecanismo vigente, pero no afirma que la
-rama o el worktree existan. No se inventa ni persiste un path de worktree.
+La rama efectiva y el worktree fueron resueltos por Task Lifecycle. El worktree
+es el snapshot de implementacion; la autoridad TASK/lifecycle vigente se
+transporta explicitamente desde el estado competente de integracion. Una
+operacion posterior no puede inferir que la autorizacion desaparecio solo
+porque un snapshot historico del worktree anteceda una sincronizacion de estado.
+Task Lifecycle debe transportar identidad, `task_base`, contrato/digest vigente,
+autoridad de integracion, rama/worktree, write scope y stop conditions; el
+historial de chat no adquiere autoridad.
 
 ## 2. Scope y write ownership
 

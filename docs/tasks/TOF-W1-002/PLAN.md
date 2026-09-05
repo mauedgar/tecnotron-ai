@@ -9,12 +9,12 @@ updated: 2026-09-04
 machine_context: true
 operation_id: TOF-W1-002-TASK-MATERIALIZATION-01
 task_id: TOF-W1-002
-task_base: 635f8b12aeeb86f16e7c56901392e8532b80a1b5
+task_base: 03651b806da290ae256dfaa6bf924feef0487327
 integration_branch: tools
 branch_management: TASK_LIFECYCLE
 requested_branch: feat/TOF-W1-002
-effective_branch: PENDING_TASK_LIFECYCLE_RESOLUTION
-worktree: PENDING_TASK_LIFECYCLE_RESOLUTION
+effective_branch: mauedgar/feat-TOF-W1-002
+worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
 execution_status: NOT_STARTED
 validation_status: NOT_RUN
 review_status: NOT_RUN
@@ -54,10 +54,10 @@ amplia permisos.
 ## Phase 0: materializacion operativa
 
 1. Confirmar TASK `READY`, `implementation_authorized: true` y parent artifacts.
-2. Confirmar `tools@635f8b12aeeb86f16e7c56901392e8532b80a1b5`
-   como `task_base` y verificar que sigue siendo un baseline aceptado.
-3. Task Lifecycle crea o selecciona la rama solicitada y un unico worktree
-   exclusivo; registra `effective_branch` y `worktree` sin inventar paths.
+2. Confirmar `tools@03651b806da290ae256dfaa6bf924feef0487327`
+   como `task_base` resuelto por el contrato canonico de inicio.
+3. Confirmar la rama `mauedgar/feat-TOF-W1-002` y el unico worktree exclusivo
+   resuelto en `C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002`.
 4. Confirmar worktree limpio, staging vacio y ownership del Implementer.
 5. Leer `AGENTS.md`, Project Profile activo, Source of Truth, SPEC, WP PLAN,
    TASK y este PLAN.
@@ -65,6 +65,8 @@ amplia permisos.
 
 Gate: cualquier coordenada pendiente, drift o write fuera de scope detiene antes
 de WU-00. La existencia de esta TASK no sustituye el worktree task-scoped.
+El worktree representa el snapshot de implementacion; Task Lifecycle transporta
+por separado la autoridad TASK vigente desde el estado competente de integracion.
 
 ## Phase 1: WU-00 environment preflight
 

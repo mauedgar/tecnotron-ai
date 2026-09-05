@@ -44,10 +44,11 @@ independiente fue `PASS`, el Developer acepto la TASK y PR #27 la integro en
 La [SPEC de `WP-002`](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md)
 y su [WP PLAN](work-packages/wp-002-deterministic-opencode-launchers/PLAN.md)
 estan `ACCEPTED` por el Developer. `WP-002_SPEC_ACCEPTANCE` y el gate Developer
-`READY` estan `SATISFIED`. El siguiente limite del lifecycle es materializar
-`TOF-W1-002` contra un baseline fresco y write scope exacto. No se ha creado una
-TASK ejecutable ni autoridad de implementacion; `TOF-W1-003` se materializara
-despues contra el baseline competente resultante.
+`READY` estan `SATISFIED`. `TOF-W1-002` esta materializada y `READY`, con
+autoridad de implementacion creada, rama/worktree resueltos y ejecucion todavia
+no iniciada. El siguiente paso es que el Validator determinista ejecute
+`WP002-WU-00`; `TOF-W1-003` se materializara despues contra el baseline
+competente resultante.
 
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.

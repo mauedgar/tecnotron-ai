@@ -18,9 +18,9 @@ planning_baseline: d5b972408700ee83bd312bc2c3ade74972e53b73
 integration_target: tools
 developer_ready_gate: SATISFIED
 task_materialization_authorized: true
-next_executable_candidate: TOF-W1-002
-executable_tasks_created: false
-implementation_authority_created: false
+next_executable_task: TOF-W1-002
+executable_tasks_created: true
+implementation_authority_created: true
 implementation_status: NOT_STARTED
 validation_status: NOT_RUN
 review_status: NOT_RUN
@@ -58,8 +58,9 @@ related:
 
 Este documento materializa la descomposicion tecnica aceptada de la SPEC WP-002.
 El Developer acepto el PLAN y satisfizo su gate `READY` mediante
-`TOF-WP002-READY-GATE-01`. No modifica la SPEC, no crea una TASK ejecutable, no
-crea un worktree de implementacion y no concede autoridad de implementacion.
+`TOF-WP002-READY-GATE-01`. La sincronizacion posterior materializo
+`TOF-W1-002`, creo su autoridad de implementacion y resolvio su rama/worktree
+sin modificar la SPEC ni iniciar implementacion.
 
 La precedencia aplicada es:
 
@@ -75,12 +76,15 @@ Estado conceptual:
 wp_plan: ACCEPTED
 developer_ready_gate: SATISFIED
 task_materialization_authorized: true
-executable_tasks_created: false
-implementation_authority_created: false
+executable_tasks_created: true
+implementation_authority_created: true
 implementation_started: false
-next_executable_candidate: TOF-W1-002
-next_owner: Task Lifecycle
-next_required_action: MATERIALIZE_TOF_W1_002_EXECUTABLE_TASK
+next_executable_task: TOF-W1-002
+task_base: 03651b806da290ae256dfaa6bf924feef0487327
+effective_branch: mauedgar/feat-TOF-W1-002
+worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
+next_owner: deterministic Validator
+next_required_action: EXECUTE_WP002_WU_00_ENVIRONMENT_TOOLCHAIN_PREFLIGHT
 ```
 
 La aceptacion y el gate `READY` solo significan que el PLAN cubre la SPEC y tiene
@@ -814,14 +818,17 @@ known_yaml_limitation: PRESERVED_UNAVAILABLE
 conditional_bootstrap_policy: RECORDED
 known_model_runtime_observation: PRESERVED_FOR_TOF-W1-003
 task_materialization_authorized: true
-executable_tasks_created: false
-implementation_authority_created: false
+executable_tasks_created: true
+implementation_authority_created: true
 implementation_started: false
-next_executable_candidate: TOF-W1-002
-next_owner: Task Lifecycle
-next_required_action: MATERIALIZE_TOF_W1_002_EXECUTABLE_TASK
+next_executable_task: TOF-W1-002
+task_base: 03651b806da290ae256dfaa6bf924feef0487327
+effective_branch: mauedgar/feat-TOF-W1-002
+worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
+next_owner: deterministic Validator
+next_required_action: EXECUTE_WP002_WU_00_ENVIRONMENT_TOOLCHAIN_PREFLIGHT
 ```
 
-`TOF-W1-002` debe materializarse contra un baseline fresco y write scope exacto.
-`TOF-W1-003` se materializara despues contra el baseline competente resultante;
-no se precrea su TASK ni su worktree en esta operacion.
+`TOF-W1-002` esta materializada contra el baseline competente, con rama/worktree
+resueltos e implementacion no iniciada. `TOF-W1-003` se materializara despues
+contra el baseline competente resultante; no se precrea su TASK ni su worktree.

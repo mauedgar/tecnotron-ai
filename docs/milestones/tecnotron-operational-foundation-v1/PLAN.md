@@ -16,7 +16,7 @@ architect_revision_status: COMPLETE
 completed_work_packages:
   - WP-000
   - WP-001
-next_gate: Materialize TOF-W1-002 executable TASK against a fresh lifecycle baseline
+next_gate: Execute WP002-WU-00 environment and toolchain preflight
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -84,7 +84,7 @@ it enumerates; all other original-plan sections remain in force.
 | Integration target | `tools` |
 | Promotion target | `main` |
 | Completed work packages | `WP-000`, `WP-001` |
-| Next gate | Materialize `TOF-W1-002` executable TASK against a fresh lifecycle baseline |
+| Next gate | Execute `WP002-WU-00` environment and toolchain preflight |
 | Terminal authority | Developer |
 
 `tools` is the integration branch for this milestone. `main` receives the
@@ -299,9 +299,13 @@ wp_plan_materialization_status: ACCEPTED
 developer_ready_gate: SATISFIED
 accepted_plan_source_sha256: d67b1b9fc582f6e5223a8b716a32476ee78d9bbc2cc74573fc1e3409309bf3b4
 task_materialization_authorized: true
-next_executable_candidate: TOF-W1-002
-executable_tasks_created: false
-implementation_authority: NOT_CREATED
+next_executable_task: TOF-W1-002
+executable_tasks_created: true
+implementation_authority: CREATED
+implementation_started: false
+task_base: 03651b806da290ae256dfaa6bf924feef0487327
+effective_branch: mauedgar/feat-TOF-W1-002
+worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
 result: One generic launcher parameterized by profile, nine project-scoped OpenCode profiles, tecnotron-agent-launch/v1, and positive/negative smokes
 complexity: high
 criticality: high
@@ -338,10 +342,11 @@ There are nine profiles and one launcher, not nine launch adapters.
 Accepted SPEC: [WP-002 SPEC](../../work-packages/wp-002-deterministic-opencode-launchers/SPEC.md).
 Accepted technical plan: [WP-002 Plan](../../work-packages/wp-002-deterministic-opencode-launchers/PLAN.md).
 The Developer accepted that plan and satisfied the `READY` gate through
-`TOF-WP002-READY-GATE-01`. The next lifecycle boundary is materialization of
-`TOF-W1-002` against a fresh baseline and exact write scope. No executable TASK
-or implementation authority exists yet; `TOF-W1-003` must not be materialized
-from this stale baseline.
+`TOF-WP002-READY-GATE-01`. `TOF-W1-002` is materialized and `READY`, its
+implementation authority exists, and its branch and worktree are resolved from
+`tools@03651b806da290ae256dfaa6bf924feef0487327`. Implementation has not started;
+the deterministic Validator must execute `WP002-WU-00` next. `TOF-W1-003` must
+not be materialized from a stale baseline.
 
 ### WP-003 — SDD Authority and Artifacts
 
@@ -539,7 +544,7 @@ or context budget changes.
 ## 8. SPEC approval gates
 
 - [x] WP-001 SPEC approved by Developer and materialized at [WP-001 SPEC](../../work-packages/wp-001-operational-profile-contracts/SPEC.md); implementation and validation are complete, independent review passed, the Developer accepted the TASK, and PR #27 integrated it in `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publication, promotion to `main`, and cleanup remain `NOT_RUN`.
-- [x] WP-002 SPEC and WP PLAN approved by Developer; `WP-002_SPEC_ACCEPTANCE` and the Developer `READY` gate are satisfied. `TOF-W1-002` is the next executable candidate, but no TASK or implementation authority has been created.
+- [x] WP-002 SPEC and WP PLAN approved by Developer; `WP-002_SPEC_ACCEPTANCE` and the Developer `READY` gate are satisfied. `TOF-W1-002` is materialized and `READY`, with implementation authority created and implementation not started; `WP002-WU-00` is next.
 - [ ] WP-003 SPEC approved by Developer.
 - [ ] WP-004 SPEC approved by Developer.
 - [ ] WP-005 SPEC approved by Developer.
