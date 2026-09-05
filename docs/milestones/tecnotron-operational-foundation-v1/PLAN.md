@@ -4,7 +4,7 @@ status: accepted
 materialization_status: ACCEPTED
 owner: tecnotron-ai
 type: milestone-plan
-version: 1.7
+version: 1.8
 updated: 2026-09-05
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
@@ -16,7 +16,7 @@ architect_revision_status: COMPLETE
 completed_work_packages:
   - WP-000
   - WP-001
-next_gate: Integration for TOF-W1-002
+next_gate: Cleanup for TOF-W1-002
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -84,7 +84,7 @@ it enumerates; all other original-plan sections remain in force.
 | Integration target | `tools` |
 | Promotion target | `main` |
 | Completed work packages | `WP-000`, `WP-001` |
-| Next gate | Integration for `TOF-W1-002` |
+| Next gate | Cleanup for `TOF-W1-002` |
 | Terminal authority | Developer |
 
 `tools` is the integration branch for this milestone. `main` receives the
@@ -299,14 +299,19 @@ wp_plan_materialization_status: ACCEPTED
 developer_ready_gate: SATISFIED
 accepted_plan_source_sha256: d67b1b9fc582f6e5223a8b716a32476ee78d9bbc2cc74573fc1e3409309bf3b4
 task_materialization_authorized: true
-next_executable_task: INTEGRATE_ACCEPTED_TOF-W1-002
+next_executable_task: NONE
+next_lifecycle_action: CLEANUP_TOF_W1_002
 executable_tasks_created: true
 implementation_authority: CREATED
 implementation_status: IMPLEMENTED
 validation_status: PASS
 review_status: PASS
 developer_acceptance: ACCEPTED
-integration_status: NOT_STARTED
+integration_status: INTEGRATED
+integration_pr: 28
+integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
+closure_status: DONE
+cleanup_status: NOT_RUN
 task_base: 03651b806da290ae256dfaa6bf924feef0487327
 effective_branch: mauedgar/feat-TOF-W1-002
 worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
@@ -349,9 +354,10 @@ The Developer accepted that plan and satisfied the `READY` gate through
 `TOF-WP002-READY-GATE-01`. `TOF-W1-002` completed implementation and validation;
 independent review `TOF-W1-002-INDEPENDENT-REVIEW-01` passed on immutable commit
 `a744d0746c50f4d411006cf99923c2f64e467797`. The Developer accepted that exact
-snapshot and authorized integration; integration remains `NOT_STARTED` and the
-next gate belongs to Task Lifecycle. `TOF-W1-003` must not be materialized from
-a stale baseline.
+snapshot and authorized integration. PR #28 integrated that exact commit without
+rewriting it in `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`; closure is
+`DONE`, cleanup is `NOT_RUN`, and the next action belongs to Task Lifecycle.
+`TOF-W1-003` must not be materialized from a stale baseline.
 
 ### WP-003 — SDD Authority and Artifacts
 
@@ -549,7 +555,7 @@ or context budget changes.
 ## 8. SPEC approval gates
 
 - [x] WP-001 SPEC approved by Developer and materialized at [WP-001 SPEC](../../work-packages/wp-001-operational-profile-contracts/SPEC.md); implementation and validation are complete, independent review passed, the Developer accepted the TASK, and PR #27 integrated it in `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publication, promotion to `main`, and cleanup remain `NOT_RUN`.
-- [x] WP-002 SPEC and WP PLAN approved by Developer; `WP-002_SPEC_ACCEPTANCE` and the Developer `READY` gate are satisfied. `TOF-W1-002` is implemented, validated, independently reviewed `PASS`, and accepted by the Developer; integration remains `NOT_STARTED`.
+- [x] WP-002 SPEC and WP PLAN approved by Developer; `WP-002_SPEC_ACCEPTANCE` and the Developer `READY` gate are satisfied. `TOF-W1-002` is implemented, validated, independently reviewed `PASS`, accepted by the Developer, and integrated by PR #28; cleanup remains `NOT_RUN`.
 - [ ] WP-003 SPEC approved by Developer.
 - [ ] WP-004 SPEC approved by Developer.
 - [ ] WP-005 SPEC approved by Developer.

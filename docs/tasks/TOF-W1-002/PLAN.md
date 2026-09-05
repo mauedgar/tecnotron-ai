@@ -1,10 +1,10 @@
 ---
 document_id: TOF-PLAN-W1-002
-status: ACCEPTED
+status: DONE
 materialization_status: MATERIALIZED
 owner: tecnotron-ai
 type: task-plan
-version: 1.2
+version: 1.3
 updated: 2026-09-05
 machine_context: true
 operation_id: TOF-W1-002-TASK-MATERIALIZATION-01
@@ -21,8 +21,11 @@ validation_status: PASS
 review_status: PASS
 review_handoff_status: COMPLETE
 developer_acceptance: ACCEPTED
-integration_status: NOT_STARTED
-closure_status: OPEN
+integration_status: INTEGRATED
+closure_status: DONE
+cleanup_status: NOT_RUN
+integration_pr: 28
+integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 implementation_authorized: true
 implementation_started: true
 immutable_implementation_commit: a744d0746c50f4d411006cf99923c2f64e467797
@@ -200,8 +203,9 @@ VALIDATION_PASS
 REVIEW_PASS
 REVIEW_HANDOFF_COMPLETE
 DEVELOPER_ACCEPTANCE_ACCEPTED
-INTEGRATION_NOT_STARTED
-CLOSURE_OPEN
-NEXT_GATE_INTEGRATION
+INTEGRATION_INTEGRATED
+CLOSURE_DONE
+CLEANUP_NOT_RUN
+NEXT_ACTION_CLEANUP_TOF_W1_002
 NEXT_OWNER_TASK_LIFECYCLE
 ```

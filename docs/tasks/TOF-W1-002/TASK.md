@@ -1,10 +1,10 @@
 ---
 document_id: TOF-TASK-W1-002
-status: ACCEPTED
+status: DONE
 materialization_status: MATERIALIZED
 owner: tecnotron-ai
 type: task
-version: 1.2
+version: 1.3
 updated: 2026-09-05
 machine_context: true
 operation_id: TOF-W1-002-TASK-MATERIALIZATION-01
@@ -28,7 +28,12 @@ validation_status: PASS
 review_status: PASS
 review_handoff_status: COMPLETE
 developer_acceptance: ACCEPTED
-integration_status: NOT_STARTED
+integration_status: INTEGRATED
+closure_status: DONE
+cleanup_status: NOT_RUN
+integration_pr: 28
+integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
+integrated_tools_head: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 implementation_authorized: true
 implementation_started: true
 immutable_implementation_commit: a744d0746c50f4d411006cf99923c2f64e467797
@@ -101,6 +106,9 @@ implementation_status: IMPLEMENTED
 validation_status: PASS
 review_status: PASS
 developer_acceptance: ACCEPTED
+integration_status: INTEGRATED
+closure: DONE
+cleanup_status: NOT_RUN
 ```
 
 La rama efectiva y el worktree fueron resueltos por Task Lifecycle. El worktree
@@ -376,14 +384,17 @@ del Developer.
 
 ```text
 TASK_MATERIALIZED: MATERIALIZED
-TASK_CONTRACT_STATUS: READY
+TASK_CONTRACT_STATUS: DONE
 TASK_EXECUTED: IMPLEMENTED
 VALIDATION: PASS
 REVIEW: PASS
 REVIEW_HANDOFF: COMPLETE
 DEVELOPER_ACCEPTANCE: ACCEPTED
-INTEGRATION: NOT_STARTED
-CLOSURE: OPEN
-NEXT_GATE: INTEGRATION
+INTEGRATION: INTEGRATED
+INTEGRATION_PR: 28
+INTEGRATION_COMMIT: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
+CLOSURE: DONE
+CLEANUP: NOT_RUN
+NEXT_ACTION: CLEANUP_TOF_W1_002
 NEXT_OWNER: Task Lifecycle
 ```

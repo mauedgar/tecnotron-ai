@@ -1,9 +1,9 @@
 ---
 document_id: TOF-RESULT-W1-002
-status: ACCEPTED
+status: DONE
 owner: tecnotron-ai
 type: task-result
-version: 1.1
+version: 1.2
 updated: 2026-09-05
 task_id: TOF-W1-002
 operation_id: TOF-W1-002-REVIEW-EVIDENCE-01
@@ -12,9 +12,12 @@ validation_status: PASS
 review_status: PASS
 review_handoff_status: COMPLETE
 developer_acceptance: ACCEPTED
-integration_status: NOT_STARTED
-publication_status: NOT_STARTED
-closure_status: OPEN
+integration_status: INTEGRATED
+publication_status: PUBLISHED
+closure_status: DONE
+cleanup_status: NOT_RUN
+integration_pr: 28
+integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 terminal_acceptance: Developer
 developer_acceptance_operation_id: TOF-W1-002-DEVELOPER-ACCEPTANCE-01
 ---
@@ -33,7 +36,9 @@ implementation:
   immutable_tree: 9bd7ab9db4bbe35425139e9c7e41c32ade3ee268
   base_commit: 03651b806da290ae256dfaa6bf924feef0487327
   branch: mauedgar/feat-TOF-W1-002
-  feature_branch_published: false
+  feature_branch_published: true
+  remote_branch: mauedgar/feat-TOF-W1-002
+  remote_commit: a744d0746c50f4d411006cf99923c2f64e467797
 ```
 
 The immutable implementation snapshot completed `WP002-WU-00` and
@@ -71,9 +76,12 @@ validation:
   unauthorized_writes: 0
 ```
 
-Validation is limited to deterministic static projection and regression
-evidence. It does not claim runtime effectiveness or exact-version runtime
-conformance.
+The same gates were rerun on integrated `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`
+with the explicit competent project/task environment: focused profiles 5/5,
+WP-001 regression 11/11, contracts check `PASS`, full suite 159/159, and
+`git diff --check` `PASS`. Validation is limited to deterministic static
+projection and regression evidence. It does not claim runtime effectiveness or
+exact-version runtime conformance.
 
 ## Operational debt
 
@@ -82,20 +90,18 @@ operational_debt:
   TASK_AUTHORITY_TRANSPORT_GAP:
     current_instance: MITIGATED
     structural_automation: NOT_YET_PROVEN
-    disposition: ACCEPTED_NONBLOCKING_DEBT
-    structural_fix: PENDING_COMPETENT_OWNER
+    disposition: PENDING_COMPETENT_STRUCTURAL_FIX
   STALE_TASK_ENVIRONMENT_INJECTION:
     current_instance: MITIGATED_BY_EXPLICIT_ENVELOPE
     structural_automation: NOT_YET_PROVEN
-    disposition: ACCEPTED_NONBLOCKING_DEBT
-    structural_fix: PENDING_COMPETENT_OWNER
+    disposition: PENDING_COMPETENT_STRUCTURAL_FIX
   OPENCODE_DEPENDENCY_SELF_MUTATION:
     observed: true
     current_cli_drift:
       from_reviewed_static_version: 1.18.28
       current_cli: 1.18.29
     entered_implementation_diff: false
-    disposition: ACCEPTED_NONBLOCKING_MAINTENANCE_DEBT
+    disposition: PENDING_MAINTENANCE_POLICY
   OPENCODE_VERSION_DRIFT:
     reviewed_static_version: 1.18.28
     observed_cli_version: 1.18.29
@@ -110,13 +116,17 @@ validation_status: PASS
 review_status: PASS
 review_handoff_status: COMPLETE
 developer_acceptance: ACCEPTED
-integration_status: NOT_STARTED
-closure: OPEN
-next_gate: INTEGRATION
+integration_status: INTEGRATED
+integration_pr: 28
+integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
+closure: DONE
+cleanup_status: NOT_RUN
+next_action: CLEANUP_TOF_W1_002
 next_owner: Task Lifecycle
 ```
 
 Developer acceptance applies only to immutable commit
 `a744d0746c50f4d411006cf99923c2f64e467797` and tree
-`9bd7ab9db4bbe35425139e9c7e41c32ade3ee268`. Integration, publication, and
-closure have not started.
+`9bd7ab9db4bbe35425139e9c7e41c32ade3ee268`. PR #28 integrated it through a
+non-squash merge that preserves that commit as reachable history. Cleanup has
+not run and remains a separate Task Lifecycle action.

@@ -2,7 +2,7 @@
 document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 3.3
+version: 3.4
 updated: 2026-09-05
 owner: tecnotron-ai
 ---
@@ -47,9 +47,11 @@ estan `ACCEPTED` por el Developer. `WP-002_SPEC_ACCEPTANCE` y el gate Developer
 `READY` estan `SATISFIED`. `TOF-W1-002` completo `WP002-WU-00` y
 `WP002-WU-01`: implementacion `IMPLEMENTED`, validacion `PASS` (159/159), review
 independiente `PASS` y aceptacion del Developer sobre
-`a744d0746c50f4d411006cf99923c2f64e467797`. La integracion esta autorizada pero
-permanece `NOT_STARTED`; el siguiente gate pertenece a Task Lifecycle.
-`TOF-W1-003` se materializara despues contra el baseline competente resultante.
+`a744d0746c50f4d411006cf99923c2f64e467797`. PR #28 integro ese commit sin
+reescribirlo en `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`; el cierre de
+la TASK esta `DONE` y cleanup permanece `NOT_RUN`. La siguiente accion pertenece
+a Task Lifecycle: `CLEANUP_TOF_W1_002`. `TOF-W1-003` no esta materializada y
+solo podra partir despues del baseline competente resultante.
 
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.
