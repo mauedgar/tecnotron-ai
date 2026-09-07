@@ -10,4 +10,5 @@ module.exports = {
   route: require('./route'),
   modelResolution: require('./model-resolution'),
   runtimeIdentity: require('./runtime-identity'),
+  agentLaunch: require('./agent-launch'),
 };

@@ -1,0 +1,300 @@
+operation:
+  task_id: TOF-W1-003
+  owner: Explorer
+  action: PREPARE_WU03_WU04_EXECUTION_PACKAGE
+  status: PASS
+
+repository:
+  head: f3fba105cdbefa8cdf2c2e39d167c25db4931ba5
+  branch: mauedgar/feat-TOF-W1-003
+  mutated: false
+  staging_empty: true
+
+WU02:
+  validated_for_progression: true
+
+WU03:
+  accepted_requirements:
+    - permission_projection: MONOTONICALLY_RESTRICTIVE_INTERSECTION
+    - denied: [native_actor_shell, delegation_subagents, paid_api, extra_tools_skills_mcp_plugins, indirect_web_routes]
+    - web: allowed_only_for: researcher, requires_authorization: true
+    - environment: inherit: false, minimal_allowlist: required, secrets: reject, provider_overrides: reject, root_conflicts: reject
+    - effective_configuration: known_viable_mechanism: EFFECTIVE_CONFIG_PROBE, invocation_isolation_viable: false
+    - accepted_result: actor_allowed_only_if: [CONFORMANT, SAFELY_NARROWER]
+
+  source_extension_points:
+    permission_projection:
+      existing_owner: src/agent-launch/authority.js (resolveLaunchAuthority, validateProfileInputs)
+      reusable_interfaces:
+        - authority resolver producing ResolvedAuthority envelope (src/contracts/agent-launch.js)
+        - canonical equality comparison (canonicalJson, equal in authority.js)
+        - scope containment proof (proveScopeContained in project-preflight.js)
+        - profile contract validation (AgentProfileRegistry in schemas/agent-profiles.js)
+      implementation_target: src/agent-launch/ (extend preflight to compute permission intersection and produce projected_config_digest)
+      tests_to_extend:
+        - tests/core/agent-launch-preflight.test.js (authority congruence, scope containment)
+        - tests/contract/opencode-agent-profiles.test.js (projection validation)
+
+    environment:
+      existing_owner: src/agent-launch/project-preflight.js (preflightProject, observeGit, canonicalDirectory)
+      reusable_interfaces:
+        - resolveProject (src/project-profile/index.js)
+        - git observation (observeGit in project-preflight.js)
+        - scope syntax validation (validateScopeSyntax in project-preflight.js)
+      implementation_target: src/agent-launch/project-preflight.js (extend to build sanitized task-scoped env allowlist)
+      tests_to_extend:
+        - tests/core/agent-launch-preflight.test.js (project preflight, git observation, scope containment)
+
+    configuration:
+      existing_owner: src/agent-launch/ (no current owner for effective config proof)
+      effective_probe_interface:
+        - AgentLaunchResult.configuration fields (src/contracts/agent-launch.js:266-273)
+        - proof_mechanism enum: INVOCATION_ISOLATION | EFFECTIVE_CONFIG_PROBE | BOTH
+        - conformance_status enum: CONFORMANT | SAFELY_NARROWER | UNPROVABLE | MISMATCH | BROADER | NOT_EVALUATED
+      implementation_target: src/agent-launch/ (new adapter integration point for EFFECTIVE_CONFIG_PROBE per DR-WP002-028A)
+      tests_to_extend:
+        - tests/contract/agent-launch.test.js (result schema with configuration fields)
+        - tests/core/agent-launch-preflight.test.js (composed preflight)
+
+  existing_owners:
+    - src/agent-launch/authority.js
+    - src/agent-launch/project-preflight.js
+    - src/agent-launch/context-preflight.js
+    - src/agent-launch/index.js
+    - src/registries/schemas/agent-profiles.js
+    - src/registries/agent-profiles.js
+    - .opencode/agents/*.md (9 projected profiles)
+
+  reusable_interfaces:
+    - ResolvedAuthority envelope with congruence tracking
+    - AgentProfileRegistry with deny-by-default permissions
+    - canonicalJson/digestValue for stable comparison
+    - proveScopeContained for scope escape detection
+    - loadAgentProfiles for profile contract loading
+
+  tests_to_extend:
+    - tests/core/agent-launch-preflight.test.js
+    - tests/contract/opencode-agent-profiles.test.js
+    - tests/contract/agent-launch.test.js
+
+  ownership_conflicts: []
+
+  missing_primitives:
+    - requirement: EFFECTIVE_CONFIG_PROBE mechanism to obtain and compare OpenCode effective config per-invocation
+      current_boundary: No adapter exists; src/agent-runtime/index.js uses simulated adapter only
+      missing_capability: CLI adapter with config isolation/probe capability (DR-WP002-028A, DR-WP002-031, DR-WP002-032)
+      blocking: true
+    - requirement: Project-scoped OpenCode config construction from projected permissions
+      current_boundary: .opencode/agents/*.md exist as static projections; no dynamic config builder
+      missing_capability: Config builder that emits project-scoped OpenCode config with deny-by-default permissions
+      blocking: true
+    - requirement: Environment reconstruction with minimal allowlist and secret rejection
+      current_boundary: project-preflight observes git/project but doesn't build child process env
+      missing_capability: Env builder that filters to minimal allowlist (DR-WP002-030)
+      blocking: true
+
+  effective_config_mechanism:
+    invocation_isolation: false
+    effective_config_probe: true
+
+WU04:
+  accepted_requirements:
+    - explicit_constraints_shapes: [model, model+provider, provider, runtime, provider+runtime]
+    - resolved_identity: model: concrete, provider: concrete, runtime: concrete (before actor)
+    - no_profile_id_as_routing_input: true
+    - no_implicit_defaults: true
+    - no_ranking_fallback: true
+    - no_paid_api: true
+    - no_profile_model_binding: true
+    - no_generic_compatibility_shims: true
+
+  source_extension_points:
+    model_resolver:
+      existing_owner: src/model-resolver/index.js (resolveModel, evaluateModelEligibility, compareCandidates)
+      reusable_interfaces:
+        - ModelRegistry v3 schema (src/registries/schemas/models.js)
+        - RoleRegistry v3 schema (src/registries/schemas/roles.js)
+        - FinOps evaluation (src/finops/index.js)
+        - ModelResolutionResult contract (src/contracts/model-resolution.js)
+      extensions_required:
+        - Support EXPLICIT_CONSTRAINTS: resolve concrete model from provider_ref/runtime_constraints_ref without model_ref
+        - Support AUTHORIZED_DETERMINISTIC_SELECTION: require competent authority, no OpenCode defaults
+        - Enforce paid_api_enabled: false, zero_cost candidate selection
+        - Return resolved_model_ref, resolved_provider_ref, resolved_runtime_ref, model_resolution_ref
+
+    router:
+      existing_owner: src/router/index.js (routeTask)
+      mutation_required: false
+      note: Router already returns role + ExecutionRequirements; no profile_id input; compatible with WU-04
+
+    model_registry:
+      schema_version: fitflow-model-registry/v3 (src/registries/schemas/models.js:6)
+      mutation_required: false
+      note: Registry schema supports selection_tier, preferred_roles, resource_pool, capabilities; compatible
+
+    launch_resolution:
+      existing_owner: src/agent-mvp/index.js (createAgentMvp composition root)
+      implementation_target: src/agent-launch/ (integrate model resolution into preflight before adapter invocation)
+      tests_to_extend:
+        - tests/core/routing.test.js (router + model resolver determinism)
+        - tests/integration/agent-mvp.test.js (end-to-end with real registries)
+        - tests/integration/routing.test.js (skipped test for real FitFlow profile)
+
+  existing_owners:
+    - src/model-resolver/index.js
+    - src/router/index.js
+    - src/registries/schemas/models.js
+    - src/registries/schemas/roles.js
+    - src/registries/index.js
+    - src/finops/index.js
+    - src/contracts/model-resolution.js
+    - src/contracts/runtime-identity.js
+    - src/agent-runtime/index.js
+    - src/agent-mvp/index.js
+
+  reusable_interfaces:
+    - resolveModel with role, requirements, modelRegistry, roleRegistry, finops
+    - routeTask with TaskRoutingInput, RoleRegistry
+    - evaluateResourcePool with provider/pool availability checks
+    - ModelResolutionResult with SELECTED/BLOCKED discriminated union
+    - RuntimeIdentity with CONFIRMED/MISMATCH/UNAVAILABLE/FAILED
+
+  tests_to_extend:
+    - tests/core/routing.test.js
+    - tests/integration/agent-mvp.test.js
+    - tests/integration/routing.test.js
+    - tests/integration/runtime-conformance.test.js
+
+  ownership_conflicts: []
+
+  missing_primitives:
+    - requirement: AUTHORIZED_DETERMINISTIC_SELECTION requires competent authority to enable deterministic selection
+      current_boundary: AgentLaunchRequest.authorization + ResolvedAuthority encode authority; but no authority source implemented
+      missing_capability: Authority source that grants/denies deterministic selection per profile/kind
+      blocking: true
+    - requirement: EXPLICIT_CONSTRAINTS with provider_ref only requires resolver to pick eligible model for that provider
+      current_boundary: resolveModel filters by eligible_roles then sorts; provider filter not explicit
+      missing_capability: Provider-constrained candidate filtering in resolveModel
+      blocking: false
+    - requirement: Runtime identity observation from adapter
+      current_boundary: agent-runtime/index.js validates execution.provider/runtime_id against proposal
+      missing_capability: Real OpenCode CLI adapter that returns observed model/provider/runtime
+      blocking: true
+
+  registry_mutation_required: false
+  router_mutation_required: false
+
+runtime_observation:
+  current_candidate:
+    provider: opencode
+    model: opencode/mimo-v2.5-free
+    registry_entry: mimo_v25_free_opencode
+    deterministic_identity: true
+    zero_cost: true
+  architecture_effect: NONE
+
+skipped_tests:
+  classified: true
+  items:
+    - test:
+        path: tests/integration/agent-mvp.test.js
+        name: "active v3 registries complete a declared simulation with paid API disabled"
+        skip_condition: "!hasExternalProjectResolution (FF_PROJECT_ROOT || FF_PROJECT_PROFILE || FF_AI_CORE_ROOT not set)"
+        skip_intent: Requires real FitFlow project with v3 registries (roles.yaml, models.yaml, finops.yaml, orchestrator.yaml) to validate end-to-end resolution with paid_api_enabled: false
+        requires_external_environment: true
+        mandatory_for_WU06: PROVEN_YES
+        maintenance_required_now: false
+    - test:
+        path: tests/integration/runtime-conformance.test.js
+        name: "active v3 registries complete a declared simulation with paid API disabled"
+        skip_condition: "!hasExternalProjectResolution (same as above)"
+        skip_intent: Duplicate of above; validates runtime conformance with real registries
+        requires_external_environment: true
+        mandatory_for_WU06: PROVEN_YES
+        maintenance_required_now: false
+    - test:
+        path: tests/integration/routing.test.js
+        name: "real FitFlow profile and active registries produce a deterministic runtime proposal"
+        skip_condition: "!hasExplicitProjectResolution (FF_PROJECT_ROOT && FF_AI_CORE_ROOT && FF_PROJECT_PROFILE not all set)"
+        skip_intent: Requires explicit project resolution env vars to validate deterministic proposal with mimo_v25_free_opencode
+        requires_external_environment: true
+        mandatory_for_WU06: PROVEN_YES
+        maintenance_required_now: false
+
+  maintenance_required_now: false
+  revisit_gate: WU06
+
+existing_coverage:
+  WU03_permission_projection:
+    - tests/core/agent-launch-preflight.test.js: authority resolver validates 9 profiles against 5 kinds (line 231)
+    - tests/core/agent-launch-preflight.test.js: rejects missing/extra/mismatched profile-specific inputs (line 242)
+    - tests/core/agent-launch-preflight.test.js: authority congruence classifies security mismatches (line 258)
+    - tests/core/agent-launch-preflight.test.js: scope containment rejects traversal/symlink escapes (lines 328-384)
+    - tests/core/agent-launch-preflight.test.js: project preflight observes real project/git/worktree (lines 283, 297, 317)
+    - tests/contract/opencode-agent-profiles.test.js: discovers exactly 9 accepted profiles (line 98)
+    - tests/contract/opencode-agent-profiles.test.js: projects every profile from tecnotron-agent-profile/v1 (line 105)
+    - tests/contract/opencode-agent-profiles.test.js: rejects broadening mutations (NC-LAUNCH-004/007/008/009/010/012/013) (line 121)
+  WU03_environment:
+    - tests/core/agent-launch-preflight.test.js: project preflight resolves independent product/AI Core roots (line 297)
+    - tests/core/agent-launch-preflight.test.js: rejects stale injected coordinates (line 386)
+    - tests/core/agent-launch-preflight.test.js: always observes Git directly (line 410)
+    - tests/core/agent-launch-preflight.test.js: rejects cwd/branch/revision/worktree mismatches (line 428)
+  WU03_configuration:
+    - tests/contract/agent-launch.test.js: request enforces context one-of and closed model request states (line 176)
+    - tests/contract/agent-launch.test.js: normalized result strict with reason codes per status (line 258)
+  WU04_model_resolver:
+    - tests/core/routing.test.js: model hard eligibility checks capability/criticality/trust (line 144)
+    - tests/core/routing.test.js: FinOps checks provider/pool availability (line 151)
+    - tests/core/routing.test.js: FinOps checks pool criticality (line 164)
+    - tests/core/routing.test.js: FinOps enforces resource class/access mode (line 168)
+    - tests/core/routing.test.js: FinOps checks quota/capacity/rate limit/concurrency (line 182)
+    - tests/core/routing.test.js: FinOps keeps paid resources disabled (line 196)
+    - tests/core/routing.test.js: resolver returns deterministic fallback without relaxing constraints (line 208)
+    - tests/core/routing.test.js: selection orders by tier, preference, stable ID (line 223)
+    - tests/core/routing.test.js: preferred roles never authorize a model (line 239)
+    - tests/core/routing.test.js: resolver proposes runtime without invoking one (line 257)
+  WU04_router:
+    - tests/core/routing.test.js: routes canonical task fields, derives requirements (line 92)
+    - tests/core/routing.test.js: caller cannot provide final role/capabilities/provider/model/runtime (line 97)
+    - tests/core/routing.test.js: stable unsupported/unavailable/missing-role outcomes (line 111)
+    - tests/core/routing.test.js: rejects developer/deterministic/disabled routing roles (line 119)
+    - tests/core/routing.test.js: stable no-match and ambiguous outcomes (line 131)
+    - tests/core/routing.test.js: rejects role criticality incompatible (line 138)
+  WU04_launch_resolution:
+    - tests/integration/agent-mvp.test.js: local end-to-end with deterministic fake materializer (line 252)
+    - tests/integration/runtime-conformance.test.js: local conformance through declared simulation (line 76)
+
+new_WU03_tests_required:
+  - Permission projection intersection computation (profile ∩ authority ∩ authorization ∩ scope ∩ adapter capability)
+  - Projected OpenCode config digest generation and verification
+  - EFFECTIVE_CONFIG_PROBE integration test with real OpenCode CLI
+  - Environment reconstruction with minimal allowlist and secret rejection
+  - Native shell/delegation/paid API denial enforcement in adapter
+  - Web authorization conditional enable for researcher only
+  - Configuration proof per-invocation (CONFORMANT/SAFELY_NARROWER gating)
+
+new_WU04_tests_required:
+  - EXPLICIT_CONSTRAINTS with model_ref only: resolver picks eligible model
+  - EXPLICIT_CONSTRAINTS with provider_ref only: resolver picks eligible model for provider
+  - EXPLICIT_CONSTRAINTS with runtime_constraints_ref only: resolver evaluates constraint
+  - EXPLICIT_CONSTRAINTS with model_ref omitted: resolver satisfies provider/runtime constraints
+  - AUTHORIZED_DETERMINISTIC_SELECTION without constraints: authority enables deterministic selection
+  - AUTHORIZED_DETERMINISTIC_SELECTION without competent authority: BLOCKED before actor
+  - Resolved identity (model/provider/runtime concrete) before adapter invocation
+  - Observed identity vs resolved identity mismatch detection (FAILED/OBSERVED_IDENTITY_MISMATCH)
+  - No profile→role/model/provider binding in resolution path
+  - Paid API disabled enforcement in FinOps and resolver
+  - Provider/runtime availability gating (UNAVAILABLE vs BLOCKED distinction)
+
+implementation_performed: false
+files_modified: []
+actor_invoked: false
+
+blocking_findings:
+  - No OpenCode CLI adapter implementation exists (required for WU-03 effective config proof and WU-04 runtime identity observation)
+  - No authority source implementation for AUTHORIZED_DETERMINISTIC_SELECTION gating
+  - No dynamic OpenCode config builder from projected permissions
+  - No environment reconstruction for child process
+
+next_owner: Implementer
+next_required_action: IMPLEMENT_WU03_WU04_FROM_PREPARED_EXECUTION_PACKAGE
