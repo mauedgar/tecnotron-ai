@@ -1,0 +1,35 @@
+{
+  "adapter_id": "opencode-cli",
+  "adapter_version": "1.0.0",
+  "supported_opencode_version": "1.18.21",
+  "capability_matrix": {
+    "repository_read": true,
+    "filesystem_write": true,
+    "web": true,
+    "enforcement": {
+      "native_actor_shell_denied": true,
+      "scope_containment": true,
+      "delegation_denied": true,
+      "subagents_denied": true,
+      "task_spawning_denied": true,
+      "paid_api_denied": true,
+      "additional_tools_denied": true,
+      "additional_skills_denied": true,
+      "mcp_denied": true,
+      "plugins_denied": true,
+      "indirect_capability_routes_denied": true,
+      "unauthorized_web_denied": true,
+      "external_filesystem_denied": true
+    }
+  },
+  "config_source_map": {
+    "remote": "excluded",
+    "organizational": "excluded",
+    "global": "excluded",
+    "personal": "excluded",
+    "custom": "excluded",
+    "project": "projected",
+    "managed": "excluded",
+    "inline": "excluded"
+  }
+}

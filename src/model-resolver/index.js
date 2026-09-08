@@ -1,7 +1,11 @@
 'use strict';
 
 const { ExecutionRequirements, Criticality, TrustLevel } = require('../contracts/route');
-const { ModelResolutionResult, MODEL_SELECTION_POLICY_ID } = require('../contracts/model-resolution');
+const {
+  ModelResolutionResult,
+  ModelSelectionConstraints,
+  MODEL_SELECTION_POLICY_ID,
+} = require('../contracts/model-resolution');
 const { ModelRegistry, MODEL_REGISTRY_VERSION } = require('../registries/schemas/models');
 const { RoleRegistry, ROLE_REGISTRY_VERSION } = require('../registries/schemas/roles');
 const { evaluateResourcePool } = require('../finops');
@@ -29,17 +33,28 @@ function blocked() {
   return ModelResolutionResult.parse({ status: 'BLOCKED', selected: null, reason_code: 'NO_ELIGIBLE_MODEL' });
 }
 
-function resolveModel({ role, requirements, modelRegistry, roleRegistry, finops }) {
+function matchesConstraints(registryId, model, constraints) {
+  return (!constraints.model_ref || registryId === constraints.model_ref)
+    && (!constraints.provider_ref || model.provider === constraints.provider_ref)
+    && (!constraints.runtime_ref || model.runtime_id === constraints.runtime_ref);
+}
+
+function resolveModel({ role, requirements, modelRegistry, roleRegistry, finops, constraints }) {
   if (modelRegistry?.schema_version !== MODEL_REGISTRY_VERSION || roleRegistry?.schema_version !== ROLE_REGISTRY_VERSION) return blocked();
   const parsedModels = ModelRegistry.safeParse(modelRegistry);
   const parsedRoles = RoleRegistry.safeParse(roleRegistry);
   const parsedRequirements = ExecutionRequirements.safeParse(requirements);
   if (!parsedModels.success || !parsedRoles.success || !parsedRequirements.success) return blocked();
+  const parsedConstraints = constraints === undefined
+    ? { success: true, data: {} }
+    : ModelSelectionConstraints.safeParse(constraints);
+  if (!parsedConstraints.success) return blocked();
   const roleEntry = parsedRoles.data.roles[role];
   if (!roleEntry || roleEntry.actor_type !== 'model' || roleEntry.status === 'disabled' || parsedRoles.data.disabled_roles.includes(role)) return blocked();
 
   const authorized = Object.entries(parsedModels.data.entries)
     .filter(([, model]) => model.eligible_roles.includes(role))
+    .filter(([registryId, model]) => matchesConstraints(registryId, model, parsedConstraints.data))
     .sort(compareCandidates(role));
   const eligible = authorized.filter(([, model]) => evaluateModelEligibility(model, role, parsedRequirements.data, finops).eligible);
   if (eligible.length === 0) return blocked();

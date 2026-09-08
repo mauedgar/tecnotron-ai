@@ -2,9 +2,37 @@
 
 const { z } = require('zod');
 const { ArtifactRef } = require('./common');
-const { ResourceClass, AccessMode } = require('./route');
+const { ResourceClass, AccessMode, RouteDecision } = require('./route');
 
 const MODEL_SELECTION_POLICY_ID = 'fitflow-model-selection/v1';
+
+const ModelSelectionConstraints = z
+  .object({
+    model_ref: z.string().min(1).optional(),
+    provider_ref: z.string().min(1).optional(),
+    runtime_ref: z.string().min(1).optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, 'at least one model selection constraint is required');
+
+const RuntimeConstraintsResolution = z.object({
+  runtime_constraints_ref: z.string().min(1),
+  runtime_ref: z.string().min(1),
+}).strict();
+
+const RoutingDecisionResolution = z.object({
+  routing_decision_ref: z.string().min(1),
+  decision: RouteDecision,
+}).strict();
+
+const DeterministicSelectionAuthorization = z.object({
+  authorized: z.boolean(),
+  authority_ref: z.string().min(1).nullable(),
+}).strict().superRefine((value, ctx) => {
+  if (value.authorized && value.authority_ref === null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['authority_ref'], message: 'authorized selection requires authority ref' });
+  }
+});
 
 const SelectedModel = z
   .object({
@@ -42,6 +70,10 @@ const ModelResolutionArtifactRef = ArtifactRef.extend({
 
 module.exports = {
   MODEL_SELECTION_POLICY_ID,
+  ModelSelectionConstraints,
+  RuntimeConstraintsResolution,
+  RoutingDecisionResolution,
+  DeterministicSelectionAuthorization,
   SelectedModel,
   ModelResolutionResult,
   ModelResolutionArtifactRef,

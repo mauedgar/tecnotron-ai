@@ -1,0 +1,10 @@
+{
+  "proof_mechanism": "EFFECTIVE_CONFIG_PROBE",
+  "conformance_statuses": ["CONFORMANT", "SAFELY_NARROWER", "UNPROVABLE", "MISMATCH", "BROADER"],
+  "actor_invoked": false,
+  "identity_preservation": {
+    "requested": "never_overwritten_by_observed",
+    "resolved": "never_overwritten_by_observed",
+    "observed": "separate_field_only"
+  }
+}

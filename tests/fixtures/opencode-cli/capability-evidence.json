@@ -1,0 +1,18 @@
+{
+  "source_categories": [
+    { "source": "remote", "state": "excluded" },
+    { "source": "organizational", "state": "excluded" },
+    { "source": "global", "state": "excluded" },
+    { "source": "personal", "state": "excluded" },
+    { "source": "custom", "state": "excluded" },
+    { "source": "project", "state": "projected" },
+    { "source": "managed", "state": "excluded" },
+    { "source": "inline", "state": "excluded" }
+  ],
+  "capabilities": [
+    "repository_read",
+    "filesystem_write",
+    "web",
+    "enforcement"
+  ]
+}
