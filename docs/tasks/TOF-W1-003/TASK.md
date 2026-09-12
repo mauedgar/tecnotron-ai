@@ -4,8 +4,8 @@ status: READY
 materialization_status: MATERIALIZED
 owner: tecnotron-ai
 type: task
-version: 1.0
-updated: 2026-09-05
+version: 1.1
+updated: 2026-09-12
 machine_context: true
 operation_id: TOF-W1-003-TASK-MATERIALIZATION-01
 task_id: TOF-W1-003
@@ -22,18 +22,27 @@ repository: mauedgar/tecnotron-ai
 integration_branch: tools
 branch_management: TASK_LIFECYCLE
 requested_branch: feat/TOF-W1-003
-effective_branch: PENDING_TASK_LIFECYCLE_RESOLUTION
+effective_branch: mauedgar/feat-TOF-W1-003
 task_base_policy: POST_MATERIALIZATION_TOOLS_HEAD
-worktree: PENDING_TASK_LIFECYCLE_RESOLUTION
-execution_status: NOT_STARTED
-implementation_status: NOT_STARTED
-validation_status: NOT_RUN
-review_status: NOT_RUN
+worktree: UNKNOWN_NOT_REESTABLISHED
+execution_status: STARTED
+implementation_status: STARTED_RESCOPE_RECONCILED
+validation_status: NOT_ESTABLISHED
+review_status: NOT_ESTABLISHED
 developer_acceptance: NOT_RUN
 integration_status: NOT_STARTED
 closure_status: OPEN
-implementation_authorized: true
-implementation_started: false
+implementation_authorized: false
+implementation_started: true
+rescope_disposition: RESCOPE_NARROW
+continuation_authority: NOT_AUTHORIZED
+existing_branch_work_disposition: PRESERVE_PENDING_COMPETENT_RESCOPE_AND_METADATA_RECONCILIATION
+historical_task_materialization_commit: 9d851f00115c2823fb3e98b07f507a3eed9649a4
+observed_execution_baseline: f3fba105cdbefa8cdf2c2e39d167c25db4931ba5
+baseline_reconciliation_status: HISTORICAL_VARIANCE_RECORDED_CONTINUATION_BASE_UNSET
+future_continuation_baseline: UNSET_PENDING_DEVELOPER_IMPLEMENTATION_CONTINUATION_DECISION
+execution_coordination_architecture: THIN_DEDICATED_EXECUTION_COORDINATOR
+execution_surface_port: HARNESS_AGNOSTIC
 complexity: high
 criticality: high
 scope_fit: FIT
@@ -344,6 +353,139 @@ INTEGRATION: NOT_STARTED
 CLOSURE: OPEN
 NEXT_OPERATION: TASK_LIFECYCLE_CREATE_IMPLEMENTATION_BRANCH_AND_WORKTREE
 ```
+
+
+## 12. Developer rescope and baseline reconciliation (2026-09-12)
+
+Sections 1-11 above preserve the original materialized task contract and its
+historical provenance. They are not rewritten as if the later architecture had
+existed at materialization time. For any continuing work, this section is the
+competent later Developer disposition and narrows that original scope.
+
+```yaml
+reconciliation:
+  concern: TOF_W1_003_RESCOPE_AND_BASELINE_RECONCILIATION
+  developer_disposition: RESCOPE_NARROW
+  repository_effect: METADATA_RECONCILIATION_ONLY
+  implementation_continuation: NOT_AUTHORIZED
+  architecture:
+    execution_coordination: THIN_DEDICATED_EXECUTION_COORDINATOR
+    execution_surface_port: HARNESS_AGNOSTIC
+    architecture_selection_changed_by_this_reconciliation: false
+
+current_lifecycle_state:
+  task_materialized: true
+  implementation_started: true
+  observed_branch: mauedgar/feat-TOF-W1-003
+  observed_branch_head: 3cd936b0407a8f69a0ee8f0cec73987f0c2f2783
+  existing_branch_work: PRESERVE_PENDING_COMPETENT_RESCOPE_AND_METADATA_RECONCILIATION
+  validation: NOT_ESTABLISHED
+  review: NOT_ESTABLISHED
+  developer_acceptance: NOT_RUN
+  integration: NOT_STARTED
+  closure: OPEN
+
+work_unit_disposition:
+  WP002-WU-02:
+    disposition: NARROWED
+    continuing_scope:
+      - consume already-established authority, scope, project/repository coordinates and context references
+      - surface-local verification required for safe OpenCode invocation
+      - fail closed on inconsistent or unprovable supplied execution-surface constraints
+    removed_ownership:
+      - authority origination or policy
+      - Task Lifecycle branch/worktree ownership
+      - Project Profile ownership
+      - Context Strategy retrieval or sufficiency ownership
+  WP002-WU-03:
+    disposition: PRESERVED_NARROWED
+    continuing_scope:
+      - OpenCode permission and effective-configuration enforcement
+      - task-scoped environment sanitization for the execution surface
+      - capability evidence and fail-closed surface conformance
+  WP002-WU-04:
+    disposition: REMOVED_FROM_CONTINUING_TOF_W1_003
+    competent_owner:
+      - Router / ModelResolver / FinOps decisioning
+    rule: TOF-W1-003 consumes resolved coordinates; it does not select them
+  WP002-WU-05:
+    disposition: SPLIT
+    continuing_scope:
+      - OpenCode CLI adapter
+      - version/capability discovery
+      - non-interactive invocation mechanics
+      - cwd/profile/config/context and already-resolved identity transport
+      - timeout/abort/child-process handling
+      - machine-readable output normalization
+      - observed surface/runtime identity evidence
+    removed_ownership:
+      - generic execution-attempt coordination
+      - semantic Operation to execution-attempt orchestration
+      - hidden rerouting or replacement decisioning
+  WP002-WU-06:
+    disposition: NARROWED
+    continuing_scope:
+      - deterministic tests and conformance evidence for the preserved OpenCode execution-surface boundary
+    excluded:
+      - acceptance evidence for Router / ModelResolver / FinOps decisioning
+      - acceptance evidence for the generic Execution Coordinator
+  WP002-WU-07:
+    disposition: CONDITIONAL_NOT_REACHED
+    prerequisite: newly authorized narrowed implementation reaches a competent validated snapshot
+
+continuing_scope:
+  - OpenCode execution-surface adapter work
+  - effective configuration handling
+  - harness identity, tested-support and conformance evidence
+  - launch-surface mechanics
+  - surface-specific deterministic tests
+
+explicitly_outside_continuing_scope:
+  - generic execution coordination
+  - Router decisioning
+  - ModelResolver selection
+  - FinOps eligibility or optimization ownership
+  - authority origination
+  - Task Lifecycle ownership
+  - Context Strategy ownership
+  - Project Profile ownership
+
+existing_branch_semantic_classification:
+  PRESERVE_IN_NARROWED_TASK:
+    - OpenCode adapter mechanics
+    - effective configuration projection/probe mechanics
+    - execution-surface environment sanitization
+    - harness/conformance evidence handling
+    - surface-specific deterministic tests and fixtures
+  REASSIGN_TO_COMPETENT_OWNER:
+    - model/provider/runtime resolution and eligibility logic implemented as TOF-W1-003-owned decisioning
+    - generic execution-attempt coordination semantics currently mixed into launch orchestration
+  SUPERSEDED_BY_BOUNDARY_CHANGE:
+    - any assumption that TOF-W1-003 itself owns generic launcher/orchestration architecture
+    - any assumption that TOF-W1-003 owns Router / ModelResolver / FinOps decisions
+  classification_rule: semantic responsibility, not whole-file deletion or acceptance
+
+baseline_discrepancy:
+  task_materialization_commit: 9d851f00115c2823fb3e98b07f507a3eed9649a4
+  declared_policy: POST_MATERIALIZATION_TOOLS_HEAD
+  observed_later_execution_baseline: f3fba105cdbefa8cdf2c2e39d167c25db4931ba5
+  disposition: HISTORICAL_VARIANCE_RECORDED_NON_RETROACTIVE
+  findings:
+    - f3fba105 is a later competent tools repository state and the observed historical execution baseline
+    - no prior task-specific baseline-refresh ruling has been established for TOF-W1-003
+    - this reconciliation does not retroactively authorize the deviation
+    - this reconciliation does not invalidate or discard the existing branch work
+    - future continuation baseline remains unset until a new Developer implementation-continuation decision
+  continuation_baseline: UNSET_PENDING_DEVELOPER_IMPLEMENTATION_CONTINUATION_DECISION
+```
+
+OpenCode remains an execution surface, not the semantic execution-coordination
+architecture. ChatGPT or any other current/future execution surface acquires no
+canonical architecture ownership from this reconciliation.
+
+The existing branch is preserved unchanged. This reconciliation does not
+authorize reset, rebase, rewrite, cherry-pick, merge, integration, publication,
+implementation continuation, or implementation of the Execution Coordinator.
 
 ## Runtime
 

@@ -2,8 +2,8 @@
 document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 3.4
-updated: 2026-09-05
+version: 3.5
+updated: 2026-09-12
 owner: tecnotron-ai
 ---
 
@@ -49,9 +49,36 @@ estan `ACCEPTED` por el Developer. `WP-002_SPEC_ACCEPTANCE` y el gate Developer
 independiente `PASS` y aceptacion del Developer sobre
 `a744d0746c50f4d411006cf99923c2f64e467797`. PR #28 integro ese commit sin
 reescribirlo en `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`; el cierre de
-la TASK esta `DONE` y cleanup esta `CLEANUP_COMPLETE`. La siguiente accion es el
-checkpoint `DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003`, propiedad del
-Developer. `TOF-W1-003` no esta materializada.
+la TASK esta `DONE` y cleanup esta `CLEANUP_COMPLETE`.
+
+`TOF-W1-003` fue materializada posteriormente en
+`9d851f00115c2823fb3e98b07f507a3eed9649a4` y la implementacion comenzo en la
+rama observada `mauedgar/feat-TOF-W1-003`, cuyo HEAD preservado para esta
+reconciliacion es `3cd936b0407a8f69a0ee8f0cec73987f0c2f2783`. El Developer
+selecciono despues `RESCOPE_NARROW`: la responsabilidad continua de la TASK es
+la boundary de ejecucion/conformance de la superficie OpenCode. `WP002-WU-02`
+queda estrechada, `WU-03` preservada/estrechada, `WU-04` deja de pertenecer al
+scope continuo, `WU-05` se divide entre mecanica OpenCode y coordinacion de
+ejecucion generica, `WU-06` se estrecha a conformance de superficie y `WU-07`
+permanece condicional y no alcanzada.
+
+La coordinacion de ejecucion generica pertenece a la arquitectura seleccionada
+`THIN_DEDICATED_EXECUTION_COORDINATOR` mediante una boundary harness-agnostic
+`ExecutionSurfacePort`; OpenCode no se convierte por ello en arquitectura de
+coordinacion. Router / ModelResolver / FinOps conservan decisioning, y Task
+Lifecycle, Context Strategy, Project Profile y las autoridades competentes
+conservan sus ownerships existentes. La continuacion de implementacion de
+`TOF-W1-003` esta `NOT_AUTHORIZED`.
+
+La TASK declaro `POST_MATERIALIZATION_TOOLS_HEAD`, mientras que la ejecucion
+historica observada uso el baseline posterior
+`f3fba105cdbefa8cdf2c2e39d167c25db4931ba5`. La reconciliacion registra esa
+varianza sin legitimarla retroactivamente ni invalidar el trabajo existente. El
+baseline para una futura continuacion queda `UNSET_PENDING_DEVELOPER_IMPLEMENTATION_CONTINUATION_DECISION`.
+Validacion, review, aceptacion del Developer, integracion y cierre de
+`TOF-W1-003` permanecen no establecidos. El trabajo de la rama existente se
+preserva pendiente de clasificacion semantica por responsabilidad; no constituye
+evidencia de implementacion aceptada.
 
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.
