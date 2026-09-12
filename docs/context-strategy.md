@@ -360,3 +360,113 @@ repo-packager simplification if justified
     |
 evaluation framework adoption only if a remaining gap exists
 ```
+
+## 16. Semantic handoff and portable context projection
+
+A semantic handoff is an explicit portability-boundary representation used when
+portable continuation or clean recovery is claimed across a context boundary.
+
+A handoff may carry semantic information directly, reference it from competent
+sources, or combine projected values with explicit references. It is a
+projection of semantic Operation state and related references, not a new
+Operation and not an independently authoritative mutable copy of Operation
+truth.
+
+A handoff is required by a portability or clean-recovery claim. It is not
+universally required merely because an actor, prompt, tool, model, run, session,
+serialization, or materialization boundary changed.
+
+For the receiving consumer and intended action, the handoff must provide or
+competently reference every required semantic element. Relevant elements may
+include:
+
+- semantic Operation identity;
+- objective and bounded scope;
+- relevant intended effects;
+- relevant authority basis and authorization disposition;
+- constraints;
+- known facts;
+- unresolved or `UNKNOWN` facts;
+- relevant decisions and results;
+- applicable unresolved obligations;
+- evidence and provenance references;
+- required historical references;
+- context cutoff;
+- context sufficiency assessment.
+
+Information that is not required for the receiving action need not be copied
+solely for representational completeness. Required information that cannot be
+competently established remains explicit and must not be reconstructed from
+assumption, omitted history, hidden memory, prior conversation position,
+workspace/session history, or other implicit platform state.
+
+### Consumer/action-specific projection
+
+A context projection is the consumer/action-specific selection and
+representation of information required to perform an intended action.
+
+Different consumers may receive different projections of the same semantic
+Operation. Different projections do not establish different Operation truth.
+
+The objective is minimum sufficient and verifiable context for the intended
+consumer/action, not minimum token count, maximum compression, complete
+transcript reproduction, or embedding every known fact.
+
+Where practical, projections should reference competent sources instead of
+duplicating mutable material. A projection that later becomes stale does not
+become new authoritative truth.
+
+### Provenance and cutoff
+
+A source reference should preserve, where applicable, the source identity or
+locator, source owner, known authority relationship, provenance, version or
+revision identity, and the relevant temporal or revision cutoff.
+
+Use of a source does not increase its authority. Retrieval, materialization,
+provenance, or evidence availability alone does not grant authority.
+
+Provenance required to interpret or verify projected information must survive
+context transformation. If required provenance cannot be competently
+established, it remains `UNKNOWN` or explicitly unresolved.
+
+A cutoff expresses the boundary of projected knowledge. It must not be
+invented. A known cutoff does not prove completeness, authority, truth, or
+freshness beyond that boundary.
+
+### Sufficiency and explicit unknowns
+
+Context sufficiency is assessed relative to an identified consumer, intended
+action, and the semantic information required for that action.
+
+The semantic states must distinguish at least:
+
+```text
+SUFFICIENT
+INCOMPLETE
+EMPTY
+UNKNOWN
+```
+
+`SUFFICIENT` requires every needed semantic element to be explicitly available
+or competently resolvable. `INCOMPLETE` means relevant context exists but
+required information remains missing or unresolved. `EMPTY` means no relevant
+context has been established. `UNKNOWN` means sufficiency cannot competently be
+established.
+
+Serialized or packaged context does not establish sufficiency by its existence.
+A materializer may create bytes without proving that required information is
+present, references are resolvable, claims are true, sources are authoritative,
+or the projection is sufficient.
+
+`UNKNOWN` is distinct from false, empty, rejected, unavailable by policy, and
+not applicable. Missing required information must remain visible; it must not be
+silently omitted where omission could imply sufficiency.
+
+Complete history need not be embedded when omitted material is irrelevant to the
+action or remains competently recoverable through explicit references.
+Compression is permitted only when required semantic meaning, authority
+distinctions, evidence, provenance, cutoff, and unresolved information remain
+recoverable.
+
+Implicit platform context may be used as convenience, but it is never an
+integrity dependency for a portability or clean-recovery claim.

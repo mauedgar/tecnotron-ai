@@ -304,3 +304,176 @@ A change requires at least one of:
 - a material new requirement that existing boundaries cannot represent.
 
 Implementation details may change without reopening this architecture when the existing contracts remain valid.
+
+## 17. Semantic Operation boundary
+
+A semantic `Operation` is the target-independent aggregate that carries
+Tecnotron control-plane semantic continuity.
+
+Its identity is independent of:
+
+- execution-attempt, run, and session identity;
+- repository, branch, and worktree identity;
+- actor, model, provider, runtime, and harness identity;
+- artifact identity and content hash.
+
+An Operation represents, when applicable:
+
+- objective;
+- intended effects;
+- bounded scope;
+- governance;
+- constraints;
+- known facts;
+- unresolved or `UNKNOWN` facts;
+- decisions;
+- results where present;
+- applicable obligations;
+- traceability.
+
+Missing or unknowable values remain explicit and must not be invented.
+Relevant historical decisions, evidence, provenance, and results may be
+referenced without embedding complete history in every Operation representation.
+
+Validation, review, Developer acceptance, escalation, recovery, materialization,
+integration, publication, and closure are conditional obligations. They are not
+universal lifecycle stages. No universal scalar status, linear lifecycle, or
+finite-state machine may collapse semantic Operation condition together with
+execution, target/domain, repository/Git, workspace/session, materialization,
+evidence, validation, review, acceptance, integration, publication, or closure
+state.
+
+A `next_gate` may be derived only from applicable unresolved obligations. Where
+obligation applicability or state is unknown, the next gate remains unknown.
+
+## 18. Governance and effect boundary
+
+An `authority_reference` records the competent authority basis relevant to an
+Operation or intended effect. It does not itself establish that the effect is
+currently authorized and does not manufacture or refresh authority.
+
+Authorization disposition is assessed separately. Effects that require
+established authorization fail closed when that disposition is `UNKNOWN`.
+
+Intended effects are scoped independently. Renewed authorization is required
+when an action expands scope or target, changes effect class, requires
+additional privilege or capability, crosses into integration, publication, or
+canonical adoption, or continues despite an unresolved authority or policy
+conflict.
+
+Mechanics may execute atomically inside an already valid grant. Semantic
+responsibility separation does not require a separate process, function, or
+prompt for every mechanic.
+
+The following relationships remain distinct:
+
+```text
+semantic_operation
+!= execution_attempt
+!= result
+!= evidence
+!= validation
+!= review
+!= materialization
+!= integration
+!= publication
+!= canonical_adoption
+```
+
+One relationship may reference or condition another, but none automatically
+implies the next. In particular, successful execution, validation, review, or
+materialization does not itself authorize integration, publication, or
+canonical adoption.
+
+Evidence, retrieval, validation, recipes, and materializers do not originate
+authority. Hashes may identify or attest materialized bytes or referenced
+inputs; they do not define semantic Operation identity and do not confer
+authority.
+
+## 19. Decisioning boundary
+
+Decisioning is target-independent and consumes requirements and constraints
+associated with a semantic Operation without redefining that Operation.
+
+It may resolve eligible candidates for:
+
+- actor routing;
+- model routing;
+- provider selection;
+- runtime eligibility;
+- capability requirements;
+- quota, capacity, and availability constraints;
+- FinOps constraints;
+- deterministic constraint precedence.
+
+Decisioning does not prescribe a Router, ModelResolver, registry serialization,
+provider adapter, database, execution coordinator, catalog, or persistence
+format.
+
+A resolution does not authorize execution. Technical capability, eligibility,
+ranking, availability, authentication, quota, capacity, commercial
+accessibility, and FinOps suitability do not create authority.
+
+Mandatory constraints precede optimization. Explicit competent exclusions
+cannot be overridden by ranking or preference. An unknown mandatory condition
+fails closed for the affected selection; only established eligible candidates
+participate in optimization.
+
+Requested, resolved, and observed identities remain distinct:
+
+```text
+requested_identity != resolved_identity
+resolved_identity != observed_identity
+routing != execution
+runtime_eligibility != harness_conformance
+```
+
+Decisioning owns resolution of a runtime candidate, not observed runtime truth
+or harness conformance. Target-product configuration remains under the
+competent target authority.
+
+## 20. Execution-coordination capability boundary
+
+Execution coordination is a required semantic capability, but its concrete
+architecture remains unselected:
+
+```yaml
+execution_coordination:
+  capability_required: true
+  architecture_selected: false
+```
+
+A conforming execution-coordination boundary must be able, where applicable,
+to:
+
+- accept an execution-attempt request for an existing semantic Operation;
+- preserve a distinct execution-attempt identity;
+- consume independently valid decisioning;
+- preserve independently established authorization and effect constraints;
+- respect required harness conformance established by the competent owner;
+- request execution through an eligible conforming surface;
+- associate observations and results with the correct execution attempt and
+  semantic Operation;
+- report no-start, partial result, success, failure, unavailable capability,
+  and cancellation explicitly where applicable;
+- preserve relevant evidence references.
+
+Execution coordination does not own routing, observed runtime truth, harness
+conformance, or authority. It must not silently switch actor, model, provider,
+or runtime candidate; weaken mandatory capabilities or authorization; expand
+effect scope; bypass conformance; or reinterpret unknown mandatory facts as
+satisfied.
+
+A failed or unavailable execution may yield an explicit execution result or a
+request for a new competent decision. It must not create a hidden routing
+decision.
+
+This boundary does not select Orca, OpenCode, ChatGPT, Agent Runtime, an SDK, a
+plugin system, a queue, scheduler, workflow engine, state machine, database,
+event store, worker topology, persistence mechanism, workspace mechanism, or
+worktree/session architecture.
+
+Execution result remains distinct from validation, review, Developer
+acceptance, integration, publication, canonical adoption, and Operation closure.
+Failure reporting and cancellation support do not require a universal
+execution state machine.
