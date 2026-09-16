@@ -11,3 +11,5 @@ module.exports = {
   modelResolution: require('./model-resolution'),
   runtimeIdentity: require('./runtime-identity'),
 };
+
+Object.assign(module.exports, require('./execution-coordination'));
