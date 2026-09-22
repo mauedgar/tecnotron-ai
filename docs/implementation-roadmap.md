@@ -2,8 +2,8 @@
 document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 3.5
-updated: 2026-09-12
+version: 3.6
+updated: 2026-09-22
 owner: tecnotron-ai
 ---
 
@@ -20,7 +20,7 @@ queda como referencia historica sin autoridad operativa sobre este milestone.
 | ---: | --- | --- | --- |
 | 0 | `WP-000` | `DONE` | [Plan WP-000](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) |
 | 1 | `WP-001` | `ACCEPTED_INTEGRATED` | [SPEC](work-packages/wp-001-operational-profile-contracts/SPEC.md) · [Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) |
-| 2 | `WP-002` | SPEC and WP PLAN `ACCEPTED`; Developer `READY` `SATISFIED` | [SPEC](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md) · [Plan](work-packages/wp-002-deterministic-opencode-launchers/PLAN.md) |
+| 2 | `WP-002` | `COMPLETE`; dependency `SATISFIED_FOR_MILESTONE_ORDERING` | [SPEC](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md) · [Plan](work-packages/wp-002-deterministic-opencode-launchers/PLAN.md) |
 | — | `WP-003`–`WP-006` | `PLANNING_PENDING_SPEC` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
 | — | `WP-007` | `PLANNING_PENDING_CONFIRMATION` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#wp-007--non-behavioral-milestone-closeout-boundary) |
 
@@ -51,44 +51,45 @@ independiente `PASS` y aceptacion del Developer sobre
 reescribirlo en `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`; el cierre de
 la TASK esta `DONE` y cleanup esta `CLEANUP_COMPLETE`.
 
-`TOF-W1-003` fue materializada posteriormente en
-`9d851f00115c2823fb3e98b07f507a3eed9649a4` y la implementacion comenzo en la
-rama observada `mauedgar/feat-TOF-W1-003`, cuyo HEAD preservado para esta
-reconciliacion es `3cd936b0407a8f69a0ee8f0cec73987f0c2f2783`. El Developer
-selecciono despues `RESCOPE_NARROW`: la responsabilidad continua de la TASK es
-la boundary de ejecucion/conformance de la superficie OpenCode. `WP002-WU-02`
-queda estrechada, `WU-03` preservada/estrechada, `WU-04` deja de pertenecer al
-scope continuo, `WU-05` se divide entre mecanica OpenCode y coordinacion de
-ejecucion generica, `WU-06` se estrecha a conformance de superficie y `WU-07`
-permanece condicional y no alcanzada.
+`TOF-W1-003` fue materializada originalmente en
+`9d851f00115c2823fb3e98b07f507a3eed9649a4`; la rama historica observada
+`mauedgar/feat-TOF-W1-003@3cd936b0407a8f69a0ee8f0cec73987f0c2f2783`
+queda preservada como provenance. El Developer selecciono `RESCOPE_NARROW` y
+separo la coordinacion generica de la responsabilidad continua: la TASK quedo
+limitada a `OPEN_CODE_EXECUTION_SURFACE_BOUNDARY`, mientras Router /
+ModelResolver / FinOps conservaron decisioning y el Execution Coordinator
+generico permanecio detras de `ExecutionSurfacePort`.
 
-La coordinacion de ejecucion generica pertenece a la arquitectura seleccionada
-`THIN_DEDICATED_EXECUTION_COORDINATOR` mediante una boundary harness-agnostic
-`ExecutionSurfacePort`; OpenCode no se convierte por ello en arquitectura de
-coordinacion. Router / ModelResolver / FinOps conservan decisioning, y Task
-Lifecycle, Context Strategy, Project Profile y las autoridades competentes
-conservan sus ownerships existentes. La continuacion de implementacion de
-`TOF-W1-003` esta `NOT_AUTHORIZED`.
+La responsabilidad estrechada de `TOF-W1-003` esta ahora `COMPLETE`: validacion
+`COMPLETE`, review independiente `PASS`, aceptacion del Developer `GRANTED`,
+integracion local `COMPLETED` y publicacion remota `COMPLETED`. El estado
+integrado/publicado observado es
+`tools@8be03eda0dd3060024e154a6de9aa2b903ae5b5d` con tree
+`dc5f42e3c4d905ac0f09d23455c7c5bd024690f2`. La varianza historica de baseline
+y los estados previos `NOT_AUTHORIZED` permanecen como provenance, no como
+estado presente.
 
-La TASK declaro `POST_MATERIALIZATION_TOOLS_HEAD`, mientras que la ejecucion
-historica observada uso el baseline posterior
-`f3fba105cdbefa8cdf2c2e39d167c25db4931ba5`. La reconciliacion registra esa
-varianza sin legitimarla retroactivamente ni invalidar el trabajo existente. El
-baseline para una futura continuacion queda `UNSET_PENDING_DEVELOPER_IMPLEMENTATION_CONTINUATION_DECISION`.
-Validacion, review, aceptacion del Developer, integracion y cierre de
-`TOF-W1-003` permanecen no establecidos. El trabajo de la rama existente se
-preserva pendiente de clasificacion semantica por responsabilidad; no constituye
-evidencia de implementacion aceptada.
+La arquitectura vigente continua siendo
+`THIN_DEDICATED_EXECUTION_COORDINATOR` detras de un `ExecutionSurfacePort`
+harness-agnostic. OpenCode permanece como superficie de ejecucion reemplazable
+y no adquiere ownership de coordinacion, lifecycle, routing, contexto,
+model/provider selection ni aceptacion.
 
-Responsabilidades posteriores separadas resolvieron fuera del scope continuo de
-`TOF-W1-003` dos concerns relacionados. El Execution Coordinator generico fue
-seleccionado como `THIN_DEDICATED_EXECUTION_COORDINATOR` e integrado en
-`tools@3de72f1c04d9386ab5f95b099922871306bbb2fe`; esto no autoriza ni completa la
-boundary OpenCode restante de `TOF-W1-003`. Posteriormente, el
-`DETERMINISTIC_TASKCYCLE_SUBSTRATE_PROTOTYPE_V0` fue integrado en
-`tools@f0cea71b328f80f08220a97ee6bb9d96dc399999` como prototipo acotado de
-continuacion determinista portable. Ninguno de esos resultados adopta un
-generalized executor, un TaskCycle universal o una state machine universal.
+`WP-002` queda `SATISFIED_FOR_MILESTONE_ORDERING`. `WP-003` continua
+`PLANNING_PENDING_SPEC`, con dependencia sobre WP-002 satisfecha e
+inicializacion `NOT_AUTHORIZED`. Antes de autorizar su SPEC cycle, el Developer
+selecciono una reconciliacion acotada de higiene/deprecacion del repositorio:
+inventariar consumidores y clasificar configuraciones/YAML/compatibilidad/
+fixtures/historico como activo, compatibilidad requerida, evidencia historica,
+fixture, generado, huerfano o irresuelto. Esta responsabilidad no crea un nuevo
+Work Package ni altera el grafo aceptado del milestone.
+
+Responsabilidades separadas previas siguen preservadas: el Execution
+Coordinator generico fue integrado en
+`tools@3de72f1c04d9386ab5f95b099922871306bbb2fe`, y el
+`DETERMINISTIC_TASKCYCLE_SUBSTRATE_PROTOTYPE_V0` en
+`tools@f0cea71b328f80f08220a97ee6bb9d96dc399999`. Ninguno adopta un generalized
+executor, un TaskCycle universal o una state machine universal.
 
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.

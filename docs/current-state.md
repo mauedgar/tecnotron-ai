@@ -2,7 +2,7 @@
 document_id: TEC-STATE-001
 status: canonical
 machine_context: true
-version: 1.7
+version: 1.8
 updated: 2026-09-22
 owner: tecnotron-ai
 ---
@@ -150,10 +150,20 @@ entorno explicitas; los paths temporales no se persisten en Project Profile.
 - Review semantica independiente: `COMPLETED` / veredicto `ACCEPT_WITH_NON_BLOCKING_FINDINGS` (M1 `RESOLVED` tras re-review).
 - Divergencia baseline `ceae62a` vs `tooling` owned by Task Lifecycle; no resuelta en esta task. **Baseline de integracion faltante:** commits `e75e930` (package publication), `daae49d` (package.json), `de300da` (.gitignore, compatibility, task-lifecycle baseline policy) — prerequisito de integracion para Task Cycle tras validacion Developer, **no bloquea** validacion worktree actual, **no autoriza** rebase/merge ahora.
 
-- `TOF-W1-003` continua siendo la TASK estrechada de la superficie OpenCode y
-  conserva `continuation_authority: NOT_AUTHORIZED`; la integracion separada del
-  Execution Coordinator no convierte esa TASK en completada ni autoriza su
-  continuacion.
+- `TOF-W1-003`: la responsabilidad estrechada
+  `OPEN_CODE_EXECUTION_SURFACE_BOUNDARY` esta `COMPLETE`. La validacion esta
+  `COMPLETE`, el review independiente fue `PASS`, la aceptacion del Developer
+  fue `GRANTED`, y la integracion local y publicacion remota fueron completadas.
+  El estado integrado/publicado observado de `tools` es
+  `8be03eda0dd3060024e154a6de9aa2b903ae5b5d` con tree
+  `dc5f42e3c4d905ac0f09d23455c7c5bd024690f2`.
+- `WP-002` queda `SATISFIED_FOR_MILESTONE_ORDERING`. `WP-003` conserva estado
+  `PLANNING_PENDING_SPEC`; su dependencia sobre WP-002 esta satisfecha, pero su
+  inicializacion permanece `NOT_AUTHORIZED`.
+- Antes de iniciar WP-003, el Developer selecciono una reconciliacion acotada de
+  higiene/deprecacion del repositorio para clasificar configuraciones, YAML,
+  compatibilidad, fixtures e historico sin alterar el grafo aceptado de Work
+  Packages ni borrar evidencia por inferencia.
 - Los hallazgos de Programmatic Process son evidencia de investigacion sin
   transferencia automatica de ownership o arquitectura a Tecnotron.
 

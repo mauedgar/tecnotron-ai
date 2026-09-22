@@ -4,8 +4,8 @@ status: accepted
 materialization_status: ACCEPTED
 owner: tecnotron-ai
 type: milestone-plan
-version: 1.8
-updated: 2026-09-05
+version: 1.9
+updated: 2026-09-22
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 milestone_baseline: 41088a413d06ed1d58d63d92320e38d4b44b86ea
@@ -16,7 +16,8 @@ architect_revision_status: COMPLETE
 completed_work_packages:
   - WP-000
   - WP-001
-next_gate: Cleanup for TOF-W1-002
+  - WP-002
+next_gate: DEVELOPER_AUTHORIZE_TECNOTRON_REPOSITORY_HYGIENE_AND_DEPRECATION_RECONCILIATION_001
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -83,8 +84,8 @@ it enumerates; all other original-plan sections remain in force.
 | Milestone baseline | `41088a413d06ed1d58d63d92320e38d4b44b86ea` |
 | Integration target | `tools` |
 | Promotion target | `main` |
-| Completed work packages | `WP-000`, `WP-001` |
-| Next gate | Cleanup for `TOF-W1-002` |
+| Completed work packages | `WP-000`, `WP-001`, `WP-002` |
+| Next gate | bounded repository hygiene/deprecation reconciliation before WP-003 SPEC authorization |
 | Terminal authority | Developer |
 
 `tools` is the integration branch for this milestone. `main` receives the
@@ -300,7 +301,7 @@ developer_ready_gate: SATISFIED
 accepted_plan_source_sha256: d67b1b9fc582f6e5223a8b716a32476ee78d9bbc2cc74573fc1e3409309bf3b4
 task_materialization_authorized: true
 next_executable_task: NONE
-next_lifecycle_action: DEVELOPER_ADVISORY_CHECKPOINT_BEFORE_TOF_W1_003
+next_lifecycle_action: DEVELOPER_AUTHORIZE_TECNOTRON_REPOSITORY_HYGIENE_AND_DEPRECATION_RECONCILIATION_001
 executable_tasks_created: true
 implementation_authority: CREATED
 implementation_status: IMPLEMENTED
@@ -312,6 +313,17 @@ integration_pr: 28
 integration_commit: 5b9cf94116d66dd09143d0b5a458c4babfc89cf4
 closure_status: DONE
 cleanup_status: CLEANUP_COMPLETE
+wp_completion_status: COMPLETE
+dependency_satisfaction: SATISFIED_FOR_MILESTONE_ORDERING
+tof_w1_003:
+  responsibility: OPEN_CODE_EXECUTION_SURFACE_BOUNDARY
+  disposition: COMPLETE
+  validation: COMPLETE
+  independent_review: PASS
+  developer_acceptance: GRANTED
+  integration: COMPLETED
+  remote_publication: COMPLETED
+  integrated_tools_head: 8be03eda0dd3060024e154a6de9aa2b903ae5b5d
 task_base: 03651b806da290ae256dfaa6bf924feef0487327
 effective_branch: mauedgar/feat-TOF-W1-002
 worktree: C:/Users/maued/orca/workspaces/Tecnotron-ai/feat-TOF-W1-002
@@ -356,8 +368,19 @@ independent review `TOF-W1-002-INDEPENDENT-REVIEW-01` passed on immutable commit
 `a744d0746c50f4d411006cf99923c2f64e467797`. The Developer accepted that exact
 snapshot and authorized integration. PR #28 integrated that exact commit without
 rewriting it in `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`; closure is
-`DONE`, cleanup is `NOT_RUN`, and the next action belongs to Task Lifecycle.
-`TOF-W1-003` must not be materialized from a stale baseline.
+`DONE` and cleanup is `CLEANUP_COMPLETE`.
+
+`TOF-W1-003` was subsequently narrowed to
+`OPEN_CODE_EXECUTION_SURFACE_BOUNDARY`. That responsibility is now `COMPLETE`:
+validation `COMPLETE`, independent review `PASS`, Developer acceptance `GRANTED`,
+local integration `COMPLETED`, and remote publication `COMPLETED`. The observed
+integrated/published milestone state is
+`tools@8be03eda0dd3060024e154a6de9aa2b903ae5b5d`. Historical pre-completion
+`NOT_AUTHORIZED` state and baseline variance remain provenance only.
+
+Therefore WP-002 is `SATISFIED_FOR_MILESTONE_ORDERING`. Before WP-003 SPEC
+authorization, the Developer selected a bounded repository hygiene/deprecation
+reconciliation. This does not alter the accepted WP dependency graph.
 
 ### WP-003 — SDD Authority and Artifacts
 
@@ -374,6 +397,8 @@ model_suggestions:
   - {candidate: openai/gpt-5.6-sol, purpose: SDD_and_authority_design, reasoning_effort: xhigh, binding: false}
 model_evidence_required: [accepted_SPEC, valid_and_invalid_fixtures, template_validation, authority_review]
 dependencies: [WP-002]
+dependency_status: SATISFIED
+initialization_authority: NOT_AUTHORIZED
 ownership: {terminal_acceptance: Developer, semantics: Architect, writing: Doc_Curator}
 gates: [WP-003_SPEC_accepted, ADR_accepted, templates_validated, no_parallel_authority]
 acceptance_criteria: [stable_RF_and_RNF_ids, SPEC_defines_what_and_why, WP_PLAN_defines_how, TASK_assigns_requirements, split_required_blocks_READY]
@@ -555,7 +580,7 @@ or context budget changes.
 ## 8. SPEC approval gates
 
 - [x] WP-001 SPEC approved by Developer and materialized at [WP-001 SPEC](../../work-packages/wp-001-operational-profile-contracts/SPEC.md); implementation and validation are complete, independent review passed, the Developer accepted the TASK, and PR #27 integrated it in `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publication, promotion to `main`, and cleanup remain `NOT_RUN`.
-- [x] WP-002 SPEC and WP PLAN approved by Developer; `WP-002_SPEC_ACCEPTANCE` and the Developer `READY` gate are satisfied. `TOF-W1-002` is implemented, validated, independently reviewed `PASS`, accepted by the Developer, and integrated by PR #28; cleanup remains `NOT_RUN`.
+- [x] WP-002 SPEC and WP PLAN approved by Developer; `TOF-W1-002` is closed with cleanup complete, and narrowed `TOF-W1-003` (`OPEN_CODE_EXECUTION_SURFACE_BOUNDARY`) is complete, independently reviewed `PASS`, Developer-accepted, integrated and remotely published. WP-002 is `SATISFIED_FOR_MILESTONE_ORDERING`.
 - [ ] WP-003 SPEC approved by Developer.
 - [ ] WP-004 SPEC approved by Developer.
 - [ ] WP-005 SPEC approved by Developer.

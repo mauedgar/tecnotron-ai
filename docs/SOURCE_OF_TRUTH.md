@@ -10,6 +10,7 @@ related:
   - "[[context-strategy]]"
   - "[[current-state]]"
   - "[[implementation-roadmap]]"
+  - "[[capability-map]]"
 ---
 
 # Source Of Truth de Tecnotron-ai
@@ -32,8 +33,8 @@ workspace y vistas de Obsidian no son source of truth.
 | [WP-001 Operational Profile Contracts SPEC](work-packages/wp-001-operational-profile-contracts/SPEC.md) | Comportamiento y fronteras aceptadas de `tecnotron-agent-profile/v1`, incluidos nueve perfiles, permisos deny-by-default y separación de modelo. |
 | [WP-001 Operational Profile Contracts Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) | Solución técnica y gates de implementación derivados de la SPEC aceptada. |
 | [WP-002 Deterministic OpenCode Launchers SPEC](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md) | Comportamiento y fronteras aceptadas de `tecnotron-agent-launch/v1`; el gate `WP-002_SPEC_ACCEPTANCE` está satisfecho sin crear autoridad de implementación. |
-| [WP-002 Deterministic OpenCode Launchers Plan](work-packages/wp-002-deterministic-opencode-launchers/PLAN.md) | Solución técnica y descomposición aceptadas; PR #28 integró `TOF-W1-002`. `TOF-W1-003` fue materializada después y su estado vigente se rige por su TASK reconciliada: `RESCOPE_NARROW`, implementación iniciada pero continuación `NOT_AUTHORIZED`. |
-| [Task TOF-W1-003](tasks/TOF-W1-003/TASK.md) | TASK materializada en `9d851f00115c2823fb3e98b07f507a3eed9649a4`; implementación observada iniciada en `mauedgar/feat-TOF-W1-003@3cd936b0407a8f69a0ee8f0cec73987f0c2f2783`. Developer dispuso `RESCOPE_NARROW`: continúa solo la boundary OpenCode de ejecución/conformance; coordinación genérica y Router / ModelResolver / FinOps quedan fuera. La varianza entre el baseline declarado post-materialización y `f3fba105cdbefa8cdf2c2e39d167c25db4931ba5` queda registrada sin legitimación retroactiva ni invalidación de la rama. Continuación `NOT_AUTHORIZED`; validación, review, aceptación, integración y cierre no establecidos. La integracion separada del Execution Coordinator generico no completa ni reactiva la continuacion OpenCode de esta TASK. |
+| [WP-002 Deterministic OpenCode Launchers Plan](work-packages/wp-002-deterministic-opencode-launchers/PLAN.md) | Solución técnica y descomposición aceptadas. `TOF-W1-002` y la responsabilidad estrechada `OPEN_CODE_EXECUTION_SURFACE_BOUNDARY` de `TOF-W1-003` están completadas; WP-002 satisface el orden del milestone. |
+| [Task TOF-W1-003](tasks/TOF-W1-003/TASK.md) | TASK históricamente `RESCOPE_NARROW`; la responsabilidad final `OPEN_CODE_EXECUTION_SURFACE_BOUNDARY` está `COMPLETE`, con validación `COMPLETE`, review independiente `PASS`, aceptación Developer `GRANTED`, integración y publicación completadas. Los estados previos `NOT_AUTHORIZED` y la varianza de baseline quedan como provenance histórica. OpenCode sigue siendo una superficie reemplazable y no absorbe coordinación genérica ni Router / ModelResolver / FinOps. |
 | [Task TOF-W1-002](tasks/TOF-W1-002/TASK.md) | Contrato para `WP002-WU-00` y `WP002-WU-01`; snapshot inmutable `a744d0746c50f4d411006cf99923c2f64e467797` validado, revisado con `PASS`, aceptado por el Developer e integrado mediante PR #28 en `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`. Cierre `DONE`, cleanup `CLEANUP_COMPLETE`; [RESULT](tasks/TOF-W1-002/RESULT.md) y [REVIEW](tasks/TOF-W1-002/REVIEW.md) preservan la evidencia. |
 | [Task TOF-W1-001](tasks/TOF-W1-001/TASK.md) | Contrato de scope histórico de `tecnotron-agent-profile/v1`; validación `PASS` (11/11, 19/19 y 154/154), review independiente `PASS`, aceptación del Developer e integración en `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publicación, promoción a `main` y cleanup: `NOT_RUN`. |
 | [Task TOF-W0-001](tasks/TOF-W0-001/TASK.md) | Contrato de scope histórico para Project Profile de FitFlow y planificación de configuración activa. |
@@ -42,6 +43,7 @@ workspace y vistas de Obsidian no son source of truth.
 | [Task FF-AI-VNEXT-009](tasks/FF-AI-VNEXT-009/TASK.md) | Definición canónica, ownership, criterios de aceptación y frontera de scope para composition root del Agent MVP y sincronización documental. |
 | [Compatibility Baseline](compatibility-baseline.md) | Compatibilidad observada de herramientas y evidencia reproducible del baseline. |
 | [Development Pipeline Adapter](development-pipeline-adapter.md) | Frontera canónica del adapter y su estado vigente. |
+| [Capability Map](capability-map.md) | Índice de reconciliación CURRENT / HISTORICAL_RECONCILED / DEFERRED / UNRESOLVED. Agrega referencias y disposiciones; no reemplaza las autoridades canónicas de cada materia. |
 | Role registry v3 | IDs de roles vigentes y política de routing determinista fijo. La versión v2 no está soportada. El schema ejecutable es [`src/registries/schemas/roles.js`](../src/registries/schemas/roles.js); el `roles.yaml` activo pertenece a la configuración del proyecto que lo declara. |
 | Model registry v3 | Elegibilidad explícita de modelos y metadata de selección determinista. La versión v2 no está soportada. El schema ejecutable es [`src/registries/schemas/models.js`](../src/registries/schemas/models.js); el `models.yaml` activo pertenece a la configuración del proyecto que lo declara. |
 
