@@ -110,6 +110,7 @@ function mockRunner({
         sessionID: 'session-1',
         type: 'text',
         text: 'ok',
+        time: { start: 1, end: 2 },
       },
     }) + '\n' , stderr: '' },
   resolvedConfig = conformingConfig(),
@@ -222,55 +223,162 @@ test('JSON output normalization accepts one JSON value or newline-delimited even
   assert.equal(parseJsonOutput('not-json'), null);
 });
 
-test('semantic OpenCode output validator enforces the supported v1.18.31 event envelope and payload shapes', () => {
+test('semantic OpenCode output validator enforces exact emitted text/reasoning/step payloads for v1.18.31', () => {
+  const identity = {
+    id: 'prt_1',
+    messageID: 'msg_1',
+    sessionID: 'ses_1',
+  };
   const textEvent = {
     type: 'text',
     timestamp: 1,
-    sessionID: 'session-1',
+    sessionID: 'ses_1',
     part: {
-      id: 'part-1',
-      messageID: 'message-1',
-      sessionID: 'session-1',
+      ...identity,
       type: 'text',
       text: 'ok',
+      time: { start: 1, end: 2 },
+    },
+  };
+  const reasoningEvent = {
+    type: 'reasoning',
+    timestamp: 2,
+    sessionID: 'ses_1',
+    part: {
+      ...identity,
+      id: 'prt_2',
+      type: 'reasoning',
+      text: 'because',
+      time: { start: 2, end: 3 },
     },
   };
   const stepStartEvent = {
     type: 'step_start',
-    timestamp: 2,
-    sessionID: 'session-1',
+    timestamp: 3,
+    sessionID: 'ses_1',
     part: {
-      id: 'part-2',
-      messageID: 'message-1',
-      sessionID: 'session-1',
+      ...identity,
+      id: 'prt_3',
       type: 'step-start',
     },
   };
+  const stepFinishEvent = {
+    type: 'step_finish',
+    timestamp: 4,
+    sessionID: 'ses_1',
+    part: {
+      ...identity,
+      id: 'prt_4',
+      type: 'step-finish',
+      reason: 'stop',
+      cost: 0,
+      tokens: {
+        input: 1,
+        output: 2,
+        reasoning: 0,
+        cache: { read: 0, write: 0 },
+      },
+    },
+  };
 
-  assert.equal(validateOpenCodeEvents([textEvent, stepStartEvent]), true);
+  assert.equal(validateOpenCodeEvents([textEvent, reasoningEvent, stepStartEvent, stepFinishEvent]), true);
   assert.equal(validateOpenCodeEvents([{ ...textEvent, timestamp: undefined }]), false);
   assert.equal(validateOpenCodeEvents([{ ...textEvent, sessionID: undefined }]), false);
   assert.equal(validateOpenCodeEvents([{ type: 'text', text: 'forged-top-level-text' }]), false);
+  assert.equal(validateOpenCodeEvents([{ ...textEvent, part: { ...textEvent.part, time: undefined } }]), false);
+  assert.equal(validateOpenCodeEvents([{ ...textEvent, part: { ...textEvent.part, time: { start: 1 } } }]), false);
+  assert.equal(validateOpenCodeEvents([{ ...reasoningEvent, part: { ...reasoningEvent.part, time: undefined } }]), false);
+  assert.equal(validateOpenCodeEvents([{ ...reasoningEvent, part: { ...reasoningEvent.part, time: { start: 1 } } }]), false);
+  assert.equal(validateOpenCodeEvents([{ ...stepFinishEvent, part: { ...stepFinishEvent.part, reason: undefined } }]), false);
+  assert.equal(validateOpenCodeEvents([{ ...stepFinishEvent, part: { ...stepFinishEvent.part, cost: undefined } }]), false);
+  assert.equal(validateOpenCodeEvents([{ ...stepFinishEvent, part: { ...stepFinishEvent.part, tokens: undefined } }]), false);
   assert.equal(validateOpenCodeEvents([{
-    type: 'text',
-    timestamp: 1,
-    sessionID: 'session-1',
-    part: { type: 'text', text: 'ok' },
+    ...stepFinishEvent,
+    part: {
+      ...stepFinishEvent.part,
+      tokens: { input: 1, output: 2, reasoning: 0, cache: {} },
+    },
   }]), false);
   assert.equal(validateOpenCodeEvents([{
-    type: 'tool_use',
-    timestamp: 1,
-    sessionID: 'session-1',
-    part: {},
-  }]), false);
-  assert.equal(validateOpenCodeEvents([{
-    type: 'step_start',
-    timestamp: 1,
-    sessionID: 'session-1',
-    part: {},
+    type: 'step_start', timestamp: 1, sessionID: 'ses_1', part: {},
   }]), false);
   assert.equal(validateOpenCodeEvents([{ unexpected: 'shape' }]), false);
-  assert.equal(validateOpenCodeEvents([{ type: 'unknown-event', timestamp: 1, sessionID: 'session-1' }]), false);
+  assert.equal(validateOpenCodeEvents([{ type: 'unknown-event', timestamp: 1, sessionID: 'ses_1' }]), false);
+});
+
+test('semantic OpenCode output validator enforces exact terminal tool payloads for v1.18.31', () => {
+  const base = {
+    type: 'tool_use',
+    timestamp: 1,
+    sessionID: 'ses_1',
+    part: {
+      id: 'prt_tool',
+      messageID: 'msg_1',
+      sessionID: 'ses_1',
+      type: 'tool',
+      callID: 'call_1',
+      tool: 'read',
+    },
+  };
+  const completed = {
+    ...base,
+    part: {
+      ...base.part,
+      state: {
+        status: 'completed',
+        input: { filePath: 'README.md' },
+        output: 'contents',
+        title: 'Read',
+        metadata: {},
+        time: { start: 1, end: 2 },
+      },
+    },
+  };
+  const failed = {
+    ...base,
+    part: {
+      ...base.part,
+      state: {
+        status: 'error',
+        input: { filePath: 'README.md' },
+        error: 'failed',
+        time: { start: 1, end: 2 },
+      },
+    },
+  };
+
+  assert.equal(validateOpenCodeEvents([completed, failed]), true);
+  assert.equal(validateOpenCodeEvents([{ ...completed, part: { ...completed.part, state: { status: 'completed' } } }]), false);
+  assert.equal(validateOpenCodeEvents([{
+    ...completed,
+    part: { ...completed.part, state: { ...completed.part.state, metadata: undefined } },
+  }]), false);
+  assert.equal(validateOpenCodeEvents([{ ...failed, part: { ...failed.part, state: { status: 'error' } } }]), false);
+  assert.equal(validateOpenCodeEvents([{
+    ...failed,
+    part: { ...failed.part, state: { ...failed.part.state, time: { start: 1 } } },
+  }]), false);
+});
+
+test('semantic OpenCode output validator enforces supported named error envelopes', () => {
+  const errorEvent = (error) => ({
+    type: 'error',
+    timestamp: 1,
+    sessionID: 'ses_1',
+    error,
+  });
+
+  assert.equal(validateOpenCodeEvents([errorEvent({
+    name: 'APIError',
+    data: { message: 'bad', isRetryable: false },
+  })]), true);
+  assert.equal(validateOpenCodeEvents([errorEvent({
+    name: 'ProviderAuthError',
+    data: { providerID: 'provider-a', message: 'denied' },
+  })]), true);
+  assert.equal(validateOpenCodeEvents([errorEvent({ name: 'APIError', data: { message: 'bad' } })]), false);
+  assert.equal(validateOpenCodeEvents([errorEvent({ name: 'UnknownFutureError', data: {} })]), false);
+  assert.equal(validateOpenCodeEvents([errorEvent({ name: 'MessageAbortedError' })]), false);
 });
 
 test('low-level process runner contains an aborted child through the injected tree killer', async () => {

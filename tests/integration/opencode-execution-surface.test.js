@@ -103,6 +103,7 @@ test('current Execution Coordinator consumes OpenCode as a replaceable surface w
           sessionID: 'session-integration-1',
           type: 'text',
           text: 'done',
+          time: { start: 1, end: 2 },
         },
       }) + '\n',
       stderr: '',

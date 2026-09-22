@@ -716,10 +716,64 @@ function validateOpenCodeEvents(events) {
   ]);
 
   const isRecord = (value) => value && typeof value === 'object' && !Array.isArray(value);
+  const isNonNegativeInteger = (value) => Number.isInteger(value) && value >= 0;
+  const optionalString = (value) => value === undefined || typeof value === 'string';
+  const optionalBoolean = (value) => value === undefined || typeof value === 'boolean';
+  const optionalRecord = (value) => value === undefined || isRecord(value);
+  const recordOfStrings = (value) => isRecord(value)
+    && Object.values(value).every((entry) => typeof entry === 'string');
+  const completedTime = (value) => isRecord(value)
+    && isNonNegativeInteger(value.start)
+    && isNonNegativeInteger(value.end)
+    // `run --format json` emits text/reasoning only when `part.time?.end` is truthy.
+    && value.end > 0;
+  const terminalToolTime = (value) => isRecord(value)
+    && isNonNegativeInteger(value.start)
+    && isNonNegativeInteger(value.end);
   const hasPartIdentity = (part, sessionID) => isRecord(part)
     && typeof part.id === 'string' && part.id
     && typeof part.messageID === 'string' && part.messageID
     && typeof part.sessionID === 'string' && part.sessionID === sessionID;
+  const validTokens = (tokens) => isRecord(tokens)
+    && Number.isFinite(tokens.input)
+    && Number.isFinite(tokens.output)
+    && Number.isFinite(tokens.reasoning)
+    && (tokens.total === undefined || Number.isFinite(tokens.total))
+    && isRecord(tokens.cache)
+    && Number.isFinite(tokens.cache.read)
+    && Number.isFinite(tokens.cache.write);
+
+  const validNamedError = (error) => {
+    if (!isRecord(error) || typeof error.name !== 'string' || !isRecord(error.data)) return false;
+    const data = error.data;
+    switch (error.name) {
+      case 'MessageOutputLengthError':
+        return true;
+      case 'ProviderAuthError':
+        return typeof data.providerID === 'string'
+          && typeof data.message === 'string';
+      case 'UnknownError':
+        return typeof data.message === 'string'
+          && optionalString(data.ref);
+      case 'MessageAbortedError':
+      case 'ContextOverflowError':
+      case 'ContentFilterError':
+        return typeof data.message === 'string'
+          && (error.name !== 'ContextOverflowError' || optionalString(data.responseBody));
+      case 'StructuredOutputError':
+        return typeof data.message === 'string'
+          && isNonNegativeInteger(data.retries);
+      case 'APIError':
+        return typeof data.message === 'string'
+          && typeof data.isRetryable === 'boolean'
+          && (data.statusCode === undefined || isNonNegativeInteger(data.statusCode))
+          && (data.responseHeaders === undefined || recordOfStrings(data.responseHeaders))
+          && optionalString(data.responseBody)
+          && (data.metadata === undefined || recordOfStrings(data.metadata));
+      default:
+        return false;
+    }
+  };
 
   for (const event of events) {
     if (!isRecord(event)) return false;
@@ -728,15 +782,26 @@ function validateOpenCodeEvents(events) {
     if (typeof event.sessionID !== 'string' || !event.sessionID) return false;
 
     if (event.type === 'error') {
-      if (!isRecord(event.error) || typeof event.error.name !== 'string' || !event.error.name) return false;
+      if (!validNamedError(event.error)) return false;
       continue;
     }
 
     if (!hasPartIdentity(event.part, event.sessionID)) return false;
 
-    if (event.type === 'text' || event.type === 'reasoning') {
-      if (event.part.type !== event.type) return false;
+    if (event.type === 'text') {
+      if (event.part.type !== 'text') return false;
       if (typeof event.part.text !== 'string') return false;
+      if (!completedTime(event.part.time)) return false;
+      if (!optionalBoolean(event.part.synthetic) || !optionalBoolean(event.part.ignored)) return false;
+      if (!optionalRecord(event.part.metadata)) return false;
+      continue;
+    }
+
+    if (event.type === 'reasoning') {
+      if (event.part.type !== 'reasoning') return false;
+      if (typeof event.part.text !== 'string') return false;
+      if (!completedTime(event.part.time)) return false;
+      if (!optionalRecord(event.part.metadata)) return false;
       continue;
     }
 
@@ -744,13 +809,43 @@ function validateOpenCodeEvents(events) {
       if (event.part.type !== 'tool') return false;
       if (typeof event.part.callID !== 'string' || !event.part.callID) return false;
       if (typeof event.part.tool !== 'string' || !event.part.tool) return false;
+      if (!optionalRecord(event.part.metadata)) return false;
       if (!isRecord(event.part.state)) return false;
-      if (!['completed', 'error'].includes(event.part.state.status)) return false;
+
+      const state = event.part.state;
+      if (state.status === 'completed') {
+        if (!isRecord(state.input)) return false;
+        if (typeof state.output !== 'string') return false;
+        if (typeof state.title !== 'string') return false;
+        if (!isRecord(state.metadata)) return false;
+        if (!terminalToolTime(state.time)) return false;
+        if (state.time.compacted !== undefined && !isNonNegativeInteger(state.time.compacted)) return false;
+        if (state.attachments !== undefined && !Array.isArray(state.attachments)) return false;
+        continue;
+      }
+
+      if (state.status === 'error') {
+        if (!isRecord(state.input)) return false;
+        if (typeof state.error !== 'string') return false;
+        if (!terminalToolTime(state.time)) return false;
+        if (!optionalRecord(state.metadata)) return false;
+        continue;
+      }
+
+      return false;
+    }
+
+    if (event.type === 'step_start') {
+      if (event.part.type !== 'step-start') return false;
+      if (!optionalString(event.part.snapshot)) return false;
       continue;
     }
 
-    const expectedPartType = event.type === 'step_start' ? 'step-start' : 'step-finish';
-    if (event.part.type !== expectedPartType) return false;
+    if (event.part.type !== 'step-finish') return false;
+    if (typeof event.part.reason !== 'string') return false;
+    if (!optionalString(event.part.snapshot)) return false;
+    if (!Number.isFinite(event.part.cost)) return false;
+    if (!validTokens(event.part.tokens)) return false;
   }
 
   return true;

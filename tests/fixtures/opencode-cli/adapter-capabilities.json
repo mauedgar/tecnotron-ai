@@ -1,6 +1,6 @@
 {
   "adapter_id": "opencode-cli",
-  "adapter_version": "2.2.2",
+  "adapter_version": "2.2.1",
   "surface_local_controls": [
     "environment_sanitization",
     "global_personal_config_isolation",
