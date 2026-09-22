@@ -1,0 +1,14 @@
+{
+  "proof_mechanisms": [
+    "opencode --version",
+    "opencode debug config",
+    "opencode debug agent <actor>"
+  ],
+  "project_scoped_isolation": true,
+  "pure_required": false,
+  "capability_policy_origin": "forbidden",
+  "capability_observation": "required",
+  "identity_selection": "forbidden",
+  "identity_transport": "required",
+  "harness_conformance_reference": "required"
+}

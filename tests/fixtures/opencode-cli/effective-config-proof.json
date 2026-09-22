@@ -1,0 +1,13 @@
+{
+  "surface_local_required": {
+    "autoupdate": false,
+    "share": "disabled"
+  },
+  "harness_capabilities": {
+    "skills": "observe",
+    "mcp": "observe",
+    "plugins": "observe"
+  },
+  "proof": "PROJECT_SCOPED_EFFECTIVE_CONFIG_OBSERVATION",
+  "rule": "observed capability presence does not create authority and is not blanket-rejected by the surface"
+}

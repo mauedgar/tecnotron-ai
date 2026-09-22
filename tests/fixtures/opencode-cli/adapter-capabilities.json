@@ -1,0 +1,20 @@
+{
+  "adapter_id": "opencode-cli",
+  "adapter_version": "2.1.0",
+  "surface_local_controls": [
+    "environment_sanitization",
+    "global_personal_config_isolation",
+    "autoupdate_disabled",
+    "sharing_disabled",
+    "resolved_identity_transport",
+    "machine_readable_output",
+    "timeout_abort_child_containment"
+  ],
+  "harness_capabilities": {
+    "skills": "observable_not_blanket_denied",
+    "mcp": "observable_not_blanket_denied",
+    "plugins": "observable_not_blanket_denied",
+    "policy_owner": "external_harness_conformance"
+  },
+  "identity_selection": "forbidden"
+}

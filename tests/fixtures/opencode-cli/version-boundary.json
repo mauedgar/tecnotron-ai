@@ -1,0 +1,8 @@
+{
+  "supported_opencode_versions": [
+    "1.18.29",
+    "1.18.31"
+  ],
+  "policy": "exact-tested-support-only",
+  "latest_reconciled_version": "1.18.31"
+}
