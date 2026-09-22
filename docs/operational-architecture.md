@@ -434,14 +434,22 @@ competent target authority.
 
 ## 20. Execution-coordination capability boundary
 
-Execution coordination is a required semantic capability, but its concrete
-architecture remains unselected:
+Execution coordination is a required semantic capability. Tecnotron currently
+selects a thin dedicated Execution Coordinator behind a harness-agnostic
+`ExecutionSurfacePort`.
 
 ```yaml
 execution_coordination:
   capability_required: true
-  architecture_selected: false
+  architecture_selected: true
+  selected_architecture: THIN_DEDICATED_EXECUTION_COORDINATOR
+  execution_surface_port: HARNESS_AGNOSTIC
 ```
+
+The selected architecture is an implementation of the boundary below; it does
+not transfer ownership from decisioning, authorization, harness conformance,
+Task Lifecycle, Context Strategy, Project Profile, or product authority.
+Execution surfaces remain replaceable.
 
 A conforming execution-coordination boundary must be able, where applicable,
 to:

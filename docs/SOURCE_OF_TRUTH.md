@@ -2,7 +2,7 @@
 status: canonical
 owner: tecnotron-ai
 type: reference
-updated: 2026-09-12
+updated: 2026-09-22
 related:
   - "[[architecture]]"
   - "[[operational-architecture]]"
@@ -22,10 +22,10 @@ workspace y vistas de Obsidian no son source of truth.
 | Documento | Autoridad |
 | --- | --- |
 | [Architecture](architecture.md) | Invariantes arquitectónicos estables del AI Core y frontera del repositorio. |
-| [Operational Architecture](operational-architecture.md) | Responsabilidades operativas, implementaciones reemplazables y fronteras del control plane. |
+| [Operational Architecture](operational-architecture.md) | Responsabilidades operativas, implementaciones reemplazables y fronteras del control plane; incluye la arquitectura vigente `THIN_DEDICATED_EXECUTION_COORDINATOR` detras de `ExecutionSurfacePort`. |
 | [Task Lifecycle](task-lifecycle.md) | Lifecycle lógico, política de worktrees y contratos de aceptación, integración y cleanup. |
 | [Context Strategy](context-strategy.md) | Objetivo de contexto, política de retrieval, telemetría y gates de evaluación. |
-| [Current State](current-state.md) | Solo realidad de implementación confirmada y evidencia de validación. |
+| [Current State](current-state.md) | Solo realidad de implementacion confirmada y evidencia de validacion, incluidos los avances posteriores de Execution Coordinator y substrate V0. |
 | [Implementation Roadmap](implementation-roadmap.md) | Secuencia y trabajo de implementación planificado. |
 | [Milestone tecnotron-operational-foundation-v1](milestones/tecnotron-operational-foundation-v1/PLAN.md) | Planificación aceptada del milestone en baseline `41088a4`; su `integration_branch` vigente es `tools` y los milestones aceptados se promueven a `main`. |
 | [WP-000 Cross-repo Project Profile Baseline](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) | Predecesor completado de Project Profile obligatorio, inyección de entorno y conformance cross-repo; integrado en FitFlow `develop` y Tecnotron-ai `tools`. |
@@ -33,7 +33,7 @@ workspace y vistas de Obsidian no son source of truth.
 | [WP-001 Operational Profile Contracts Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) | Solución técnica y gates de implementación derivados de la SPEC aceptada. |
 | [WP-002 Deterministic OpenCode Launchers SPEC](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md) | Comportamiento y fronteras aceptadas de `tecnotron-agent-launch/v1`; el gate `WP-002_SPEC_ACCEPTANCE` está satisfecho sin crear autoridad de implementación. |
 | [WP-002 Deterministic OpenCode Launchers Plan](work-packages/wp-002-deterministic-opencode-launchers/PLAN.md) | Solución técnica y descomposición aceptadas; PR #28 integró `TOF-W1-002`. `TOF-W1-003` fue materializada después y su estado vigente se rige por su TASK reconciliada: `RESCOPE_NARROW`, implementación iniciada pero continuación `NOT_AUTHORIZED`. |
-| [Task TOF-W1-003](tasks/TOF-W1-003/TASK.md) | TASK materializada en `9d851f00115c2823fb3e98b07f507a3eed9649a4`; implementación observada iniciada en `mauedgar/feat-TOF-W1-003@3cd936b0407a8f69a0ee8f0cec73987f0c2f2783`. Developer dispuso `RESCOPE_NARROW`: continúa solo la boundary OpenCode de ejecución/conformance; coordinación genérica y Router / ModelResolver / FinOps quedan fuera. La varianza entre el baseline declarado post-materialización y `f3fba105cdbefa8cdf2c2e39d167c25db4931ba5` queda registrada sin legitimación retroactiva ni invalidación de la rama. Continuación `NOT_AUTHORIZED`; validación, review, aceptación, integración y cierre no establecidos. |
+| [Task TOF-W1-003](tasks/TOF-W1-003/TASK.md) | TASK materializada en `9d851f00115c2823fb3e98b07f507a3eed9649a4`; implementación observada iniciada en `mauedgar/feat-TOF-W1-003@3cd936b0407a8f69a0ee8f0cec73987f0c2f2783`. Developer dispuso `RESCOPE_NARROW`: continúa solo la boundary OpenCode de ejecución/conformance; coordinación genérica y Router / ModelResolver / FinOps quedan fuera. La varianza entre el baseline declarado post-materialización y `f3fba105cdbefa8cdf2c2e39d167c25db4931ba5` queda registrada sin legitimación retroactiva ni invalidación de la rama. Continuación `NOT_AUTHORIZED`; validación, review, aceptación, integración y cierre no establecidos. La integracion separada del Execution Coordinator generico no completa ni reactiva la continuacion OpenCode de esta TASK. |
 | [Task TOF-W1-002](tasks/TOF-W1-002/TASK.md) | Contrato para `WP002-WU-00` y `WP002-WU-01`; snapshot inmutable `a744d0746c50f4d411006cf99923c2f64e467797` validado, revisado con `PASS`, aceptado por el Developer e integrado mediante PR #28 en `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`. Cierre `DONE`, cleanup `CLEANUP_COMPLETE`; [RESULT](tasks/TOF-W1-002/RESULT.md) y [REVIEW](tasks/TOF-W1-002/REVIEW.md) preservan la evidencia. |
 | [Task TOF-W1-001](tasks/TOF-W1-001/TASK.md) | Contrato de scope histórico de `tecnotron-agent-profile/v1`; validación `PASS` (11/11, 19/19 y 154/154), review independiente `PASS`, aceptación del Developer e integración en `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publicación, promoción a `main` y cleanup: `NOT_RUN`. |
 | [Task TOF-W0-001](tasks/TOF-W0-001/TASK.md) | Contrato de scope histórico para Project Profile de FitFlow y planificación de configuración activa. |

@@ -80,6 +80,16 @@ Validacion, review, aceptacion del Developer, integracion y cierre de
 preserva pendiente de clasificacion semantica por responsabilidad; no constituye
 evidencia de implementacion aceptada.
 
+Responsabilidades posteriores separadas resolvieron fuera del scope continuo de
+`TOF-W1-003` dos concerns relacionados. El Execution Coordinator generico fue
+seleccionado como `THIN_DEDICATED_EXECUTION_COORDINATOR` e integrado en
+`tools@3de72f1c04d9386ab5f95b099922871306bbb2fe`; esto no autoriza ni completa la
+boundary OpenCode restante de `TOF-W1-003`. Posteriormente, el
+`DETERMINISTIC_TASKCYCLE_SUBSTRATE_PROTOTYPE_V0` fue integrado en
+`tools@f0cea71b328f80f08220a97ee6bb9d96dc399999` como prototipo acotado de
+continuacion determinista portable. Ninguno de esos resultados adopta un
+generalized executor, un TaskCycle universal o una state machine universal.
+
 Las TASKs de la tabla historica siguiente permanecen como registro anterior al
 baseline y no son contexto activo del milestone.
 

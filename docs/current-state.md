@@ -3,7 +3,7 @@ document_id: TEC-STATE-001
 status: canonical
 machine_context: true
 version: 1.7
-updated: 2026-09-02
+updated: 2026-09-22
 owner: tecnotron-ai
 ---
 
@@ -73,6 +73,20 @@ actual. Para `tecnotron-operational-foundation-v1`, el valor vigente de
   en `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publicación, promoción a
   `main` y cleanup permanecen `NOT_RUN`.
 
+- Execution Coordinator: arquitectura `THIN_DEDICATED_EXECUTION_COORDINATOR`
+  integrada en `tools@3de72f1c04d9386ab5f95b099922871306bbb2fe`.
+  Consume decisioning ya resuelto, preserva autorizacion y conformance como
+  inputs independientes, conserva `Operation` y `execution_attempt` como
+  identidades distintas y opera a traves de un `ExecutionSurfacePort`
+  harness-agnostic. OpenCode, ChatGPT u otra superficie no adquieren ownership
+  arquitectonico por este boundary.
+- Deterministic TaskCycle Substrate Prototype V0: integrado en
+  `tools@f0cea71b328f80f08220a97ee6bb9d96dc399999`. Demuestra continuacion
+  portable acotada, preservacion de responsabilidad/authority basis,
+  correspondencia mecanica explicita y consumo cross-surface. Es un prototipo
+  acotado; no adopta generalized executor, TaskCycle universal, state machine
+  universal ni reemplaza el Task Lifecycle canonico de Tecnotron.
+
 La promocion `002-004` consta en el commit FitFlow `52d729c`. Algunos
 run-state/result JSON y el backlog machine-readable de FitFlow conservan
 `PENDING_ACCEPTANCE`; son artefactos stale, no una reversa de la decision del
@@ -135,6 +149,13 @@ entorno explicitas; los paths temporales no se persisten en Project Profile.
 - Cobertura de grafo: archivos nuevos de esta task no indexados al momento de verificacion; evidencia basada en source read directo y ejecucion de comandos.
 - Review semantica independiente: `COMPLETED` / veredicto `ACCEPT_WITH_NON_BLOCKING_FINDINGS` (M1 `RESOLVED` tras re-review).
 - Divergencia baseline `ceae62a` vs `tooling` owned by Task Lifecycle; no resuelta en esta task. **Baseline de integracion faltante:** commits `e75e930` (package publication), `daae49d` (package.json), `de300da` (.gitignore, compatibility, task-lifecycle baseline policy) — prerequisito de integracion para Task Cycle tras validacion Developer, **no bloquea** validacion worktree actual, **no autoriza** rebase/merge ahora.
+
+- `TOF-W1-003` continua siendo la TASK estrechada de la superficie OpenCode y
+  conserva `continuation_authority: NOT_AUTHORIZED`; la integracion separada del
+  Execution Coordinator no convierte esa TASK en completada ni autoriza su
+  continuacion.
+- Los hallazgos de Programmatic Process son evidencia de investigacion sin
+  transferencia automatica de ownership o arquitectura a Tecnotron.
 
 ## Prioridades
 
