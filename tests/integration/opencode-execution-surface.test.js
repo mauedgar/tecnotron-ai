@@ -93,7 +93,18 @@ test('current Execution Coordinator consumes OpenCode as a replaceable surface w
 
     return {
       exitCode: 0,
-      stdout: '{"type":"text","text":"done"}\n',
+      stdout: JSON.stringify({
+        type: 'text',
+        timestamp: 1,
+        sessionID: 'session-integration-1',
+        part: {
+          id: 'part-integration-1',
+          messageID: 'message-integration-1',
+          sessionID: 'session-integration-1',
+          type: 'text',
+          text: 'done',
+        },
+      }) + '\n',
       stderr: '',
       timedOut: false,
       aborted: false,

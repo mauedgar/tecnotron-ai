@@ -100,7 +100,18 @@ function conformingAgentConfig({ write = true, webAllowed = false } = {}) {
 }
 
 function mockRunner({
-  run = { exitCode: 0, stdout: '{"type":"text","text":"ok"}\n', stderr: '' },
+  run = { exitCode: 0, stdout: JSON.stringify({
+      type: 'text',
+      timestamp: 1,
+      sessionID: 'session-1',
+      part: {
+        id: 'part-1',
+        messageID: 'message-1',
+        sessionID: 'session-1',
+        type: 'text',
+        text: 'ok',
+      },
+    }) + '\n' , stderr: '' },
   resolvedConfig = conformingConfig(),
   agentConfig = conformingAgentConfig(),
 } = {}) {
@@ -211,20 +222,55 @@ test('JSON output normalization accepts one JSON value or newline-delimited even
   assert.equal(parseJsonOutput('not-json'), null);
 });
 
-test('semantic OpenCode output validator accepts recognized events and rejects unknown JSON shapes', () => {
-  assert.equal(validateOpenCodeEvents([{ type: 'text', text: 'ok' }]), true);
-  assert.equal(
-    validateOpenCodeEvents([{
-      type: 'step_start',
-      timestamp: 1,
+test('semantic OpenCode output validator enforces the supported v1.18.31 event envelope and payload shapes', () => {
+  const textEvent = {
+    type: 'text',
+    timestamp: 1,
+    sessionID: 'session-1',
+    part: {
+      id: 'part-1',
+      messageID: 'message-1',
       sessionID: 'session-1',
-      part: { type: 'step-start' },
-    }]),
-    true,
-  );
+      type: 'text',
+      text: 'ok',
+    },
+  };
+  const stepStartEvent = {
+    type: 'step_start',
+    timestamp: 2,
+    sessionID: 'session-1',
+    part: {
+      id: 'part-2',
+      messageID: 'message-1',
+      sessionID: 'session-1',
+      type: 'step-start',
+    },
+  };
+
+  assert.equal(validateOpenCodeEvents([textEvent, stepStartEvent]), true);
+  assert.equal(validateOpenCodeEvents([{ ...textEvent, timestamp: undefined }]), false);
+  assert.equal(validateOpenCodeEvents([{ ...textEvent, sessionID: undefined }]), false);
+  assert.equal(validateOpenCodeEvents([{ type: 'text', text: 'forged-top-level-text' }]), false);
+  assert.equal(validateOpenCodeEvents([{
+    type: 'text',
+    timestamp: 1,
+    sessionID: 'session-1',
+    part: { type: 'text', text: 'ok' },
+  }]), false);
+  assert.equal(validateOpenCodeEvents([{
+    type: 'tool_use',
+    timestamp: 1,
+    sessionID: 'session-1',
+    part: {},
+  }]), false);
+  assert.equal(validateOpenCodeEvents([{
+    type: 'step_start',
+    timestamp: 1,
+    sessionID: 'session-1',
+    part: {},
+  }]), false);
   assert.equal(validateOpenCodeEvents([{ unexpected: 'shape' }]), false);
-  assert.equal(validateOpenCodeEvents([{ type: 'unknown-event' }]), false);
-  assert.equal(validateOpenCodeEvents([{ type: 'text' }]), false);
+  assert.equal(validateOpenCodeEvents([{ type: 'unknown-event', timestamp: 1, sessionID: 'session-1' }]), false);
 });
 
 test('low-level process runner contains an aborted child through the injected tree killer', async () => {
@@ -392,6 +438,54 @@ test('semantic permission proof accepts a runtime-managed allow confined to the 
     proof.direct_permission_conformance.trailing_rule_classification[0].classification,
     'RUNTIME_ISOLATION_ROOT_ONLY',
   );
+});
+
+test('semantic permission proof rejects root-prefix wildcard escapes without a directory boundary', () => {
+  const isolationRoot = path.join(process.cwd(), '.tmp-runtime-root');
+
+  for (const suffix of ['*', '?']) {
+    const rules = conformingAgentConfig();
+    rules.permission.push({
+      permission: 'external_directory',
+      pattern: `${isolationRoot.replaceAll('\\', '/')}${suffix}`,
+      action: 'allow',
+    });
+
+    assert.throws(
+      () => assertEffectivePermissionBoundary({
+        agentConfig: rules,
+        readScopes: ['**'],
+        writeScopes: ['src/**'],
+        webAllowed: false,
+        isolationRoot,
+      }),
+      (error) => error instanceof OpenCodeSurfaceError
+        && error.reasonCode === 'EFFECTIVE_PERMISSION_BROADENING'
+        && String(error.details).includes('MATERIAL_DIRECT_PERMISSION_EXPANSION'),
+    );
+  }
+});
+
+test('semantic permission proof accepts wildcard descendants only after the isolation-root separator', () => {
+  const isolationRoot = path.join(process.cwd(), '.tmp-runtime-root');
+
+  for (const descendantPattern of ['/*', '/**', '/child*']) {
+    const rules = conformingAgentConfig();
+    rules.permission.push({
+      permission: 'external_directory',
+      pattern: `${isolationRoot.replaceAll('\\', '/')}${descendantPattern}`,
+      action: 'allow',
+    });
+
+    const proof = assertEffectivePermissionBoundary({
+      agentConfig: rules,
+      readScopes: ['**'],
+      writeScopes: ['src/**'],
+      webAllowed: false,
+      isolationRoot,
+    });
+    assert.equal(proof.non_broadening, true);
+  }
 });
 
 test('semantic permission proof rejects a runtime-managed-looking allow outside the isolated adapter root', () => {

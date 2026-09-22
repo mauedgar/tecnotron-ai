@@ -479,10 +479,11 @@ function pathPatternContainedInRoot(pattern, root) {
   if (normalizedPattern.split('/').includes('..')) return false;
 
   const wildcardIndex = normalizedPattern.search(/[*?]/u);
-  const staticPrefix = (wildcardIndex === -1
+  const rawStaticPrefix = wildcardIndex === -1
     ? normalizedPattern
-    : normalizedPattern.slice(0, wildcardIndex)
-  ).replace(/\/+$/u, '');
+    : normalizedPattern.slice(0, wildcardIndex);
+  const prefixHasDirectoryBoundary = /\/+$/u.test(rawStaticPrefix);
+  const staticPrefix = rawStaticPrefix.replace(/\/+$/u, '');
 
   if (!staticPrefix || !path.isAbsolute(staticPrefix)) return false;
 
@@ -495,7 +496,16 @@ function pathPatternContainedInRoot(pattern, root) {
 
   const rootValue = caseFold(normalizedRoot);
   const prefixValue = caseFold(normalizedPrefix);
-  return prefixValue === rootValue || prefixValue.startsWith(`${rootValue}/`);
+
+  if (prefixValue === rootValue) {
+    // A wildcard immediately after the root text can match siblings sharing
+    // that textual prefix (for example <root>-escape). Wildcard-bearing
+    // patterns are root-contained only when the wildcard follows an explicit
+    // directory separator. Exact root without a wildcard remains contained.
+    return wildcardIndex === -1 || prefixHasDirectoryBoundary;
+  }
+
+  return prefixValue.startsWith(`${rootValue}/`);
 }
 
 function classifyTrailingDirectRule(rule, {
@@ -705,36 +715,42 @@ function validateOpenCodeEvents(events) {
     'error',
   ]);
 
-  for (const event of events) {
-    if (!event || typeof event !== 'object' || Array.isArray(event)) return false;
-    if (typeof event.type !== 'string' || !recognized.has(event.type)) return false;
+  const isRecord = (value) => value && typeof value === 'object' && !Array.isArray(value);
+  const hasPartIdentity = (part, sessionID) => isRecord(part)
+    && typeof part.id === 'string' && part.id
+    && typeof part.messageID === 'string' && part.messageID
+    && typeof part.sessionID === 'string' && part.sessionID === sessionID;
 
-    if (event.timestamp !== undefined && !Number.isFinite(event.timestamp)) return false;
-    if (event.sessionID !== undefined && (typeof event.sessionID !== 'string' || !event.sessionID)) return false;
+  for (const event of events) {
+    if (!isRecord(event)) return false;
+    if (typeof event.type !== 'string' || !recognized.has(event.type)) return false;
+    if (!Number.isFinite(event.timestamp)) return false;
+    if (typeof event.sessionID !== 'string' || !event.sessionID) return false;
+
+    if (event.type === 'error') {
+      if (!isRecord(event.error) || typeof event.error.name !== 'string' || !event.error.name) return false;
+      continue;
+    }
+
+    if (!hasPartIdentity(event.part, event.sessionID)) return false;
 
     if (event.type === 'text' || event.type === 'reasoning') {
-      const directText = typeof event.text === 'string';
-      const partText = event.part
-        && typeof event.part === 'object'
-        && !Array.isArray(event.part)
-        && typeof event.part.text === 'string';
-      if (!directText && !partText) return false;
+      if (event.part.type !== event.type) return false;
+      if (typeof event.part.text !== 'string') return false;
+      continue;
     }
 
     if (event.type === 'tool_use') {
-      if (!event.part || typeof event.part !== 'object' || Array.isArray(event.part)) return false;
-      if (event.part.type !== undefined && event.part.type !== 'tool') return false;
+      if (event.part.type !== 'tool') return false;
+      if (typeof event.part.callID !== 'string' || !event.part.callID) return false;
+      if (typeof event.part.tool !== 'string' || !event.part.tool) return false;
+      if (!isRecord(event.part.state)) return false;
+      if (!['completed', 'error'].includes(event.part.state.status)) return false;
+      continue;
     }
 
-    if (event.type === 'step_start' || event.type === 'step_finish') {
-      if (!event.part || typeof event.part !== 'object' || Array.isArray(event.part)) return false;
-      const expectedPartType = event.type === 'step_start' ? 'step-start' : 'step-finish';
-      if (event.part.type !== undefined && event.part.type !== expectedPartType) return false;
-    }
-
-    if (event.type === 'error') {
-      if (event.error === undefined || event.error === null) return false;
-    }
+    const expectedPartType = event.type === 'step_start' ? 'step-start' : 'step-finish';
+    if (event.part.type !== expectedPartType) return false;
   }
 
   return true;
