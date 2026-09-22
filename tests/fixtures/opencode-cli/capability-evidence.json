@@ -10,5 +10,24 @@
   "capability_observation": "required",
   "identity_selection": "forbidden",
   "identity_transport": "required",
-  "harness_conformance_reference": "required"
+  "harness_conformance_reference": "required",
+  "authorization_effect_binding": "required_for_write_scope",
+  "effective_permission_non_broadening": "required_for_read_edit_web_external_directory",
+  "semantic_output_contract_validation": "required",
+  "effective_permission_proof": "ordered_last_match_semantic_conformance",
+  "inline_projection_scope": [
+    "read",
+    "edit",
+    "webfetch",
+    "websearch",
+    "external_directory"
+  ],
+  "harness_capabilities_not_projected": [
+    "skills",
+    "mcp",
+    "plugins",
+    "bash",
+    "task"
+  ],
+  "runtime_managed_exception_policy": "isolated_runtime_root_only; deny/narrower allowed; unknown/ask/outside-root fail closed"
 }

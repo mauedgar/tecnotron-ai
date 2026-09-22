@@ -9,5 +9,14 @@
     "plugins": "observe"
   },
   "proof": "PROJECT_SCOPED_EFFECTIVE_CONFIG_OBSERVATION",
-  "rule": "observed capability presence does not create authority and is not blanket-rejected by the surface"
+  "rule": "observed harness capability presence does not create authority; invocation-scoped direct permissions are proven using OpenCode v1 ordered rules where the last matching rule wins",
+  "direct_permission_boundary": {
+    "read_scope": "effective allow patterns must be contained in requested read_scope",
+    "write_scope": "effective edit allow patterns must be contained in requested write_scope and write effect must be authorized",
+    "web": "effective web allow is forbidden when request web=false",
+    "external_directory": "effective allow is forbidden for repository-relative scopes",
+    "proof_semantics": "ORDERED_LAST_MATCH_SEMANTIC_CONFORMANCE",
+    "projection_precedence": "projected direct rules must be observed intact; later direct rules must be deterministically classified as safely narrower, exact authorized duplicates, or isolated-runtime-root-only; unknown, ask, wildcard expansion or outside-root allow fails closed",
+    "diagnostic_evidence": "sanitized effective direct rules, projection index, trailing rule classifications"
+  }
 }

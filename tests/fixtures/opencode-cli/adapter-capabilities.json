@@ -1,6 +1,6 @@
 {
   "adapter_id": "opencode-cli",
-  "adapter_version": "2.1.0",
+  "adapter_version": "2.2.2",
   "surface_local_controls": [
     "environment_sanitization",
     "global_personal_config_isolation",
@@ -8,7 +8,11 @@
     "sharing_disabled",
     "resolved_identity_transport",
     "machine_readable_output",
-    "timeout_abort_child_containment"
+    "timeout_abort_child_containment",
+    "authorization_effect_binding",
+    "ordered_last_match_semantic_direct_permission_conformance",
+    "effective_permission_non_broadening",
+    "semantic_output_validation"
   ],
   "harness_capabilities": {
     "skills": "observable_not_blanket_denied",

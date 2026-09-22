@@ -7,7 +7,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 
 const ADAPTER_ID = 'opencode-cli';
-const ADAPTER_VERSION = '2.1.0';
+const ADAPTER_VERSION = '2.2.1';
 const SUPPORTED_OPENCODE_VERSIONS = Object.freeze(['1.18.29', '1.18.31']);
 const SUPPORTED_OPENCODE_VERSION = '1.18.31';
 const MAX_OUTPUT_BYTES = 5 * 1024 * 1024;
@@ -177,28 +177,81 @@ function sanitizeEnvironment(systemEnvironment = {}, requestedVariables = {}) {
   return Object.freeze(Object.fromEntries(Object.keys(result).sort().map((key) => [key, result[key]])));
 }
 
+function buildDirectPermissionProjection({
+  readScopes = [],
+  writeScopes = [],
+  webAllowed = false,
+} = {}) {
+  const normalizedReadScopes = normalizeScopeList(readScopes, 'READ_SCOPE');
+  const normalizedWriteScopes = normalizeScopeList(writeScopes, 'WRITE_SCOPE');
+
+  if (typeof webAllowed !== 'boolean') {
+    throw new OpenCodeSurfaceError('WEB_CAPABILITY_DECLARATION_INVALID', 'BLOCKED');
+  }
+
+  const read = { '*': 'deny' };
+  for (const scope of normalizedReadScopes) read[scope] = 'allow';
+
+  const edit = { '*': 'deny' };
+  for (const scope of normalizedWriteScopes) edit[scope] = 'allow';
+
+  return Object.freeze({
+    read: Object.freeze(read),
+    edit: Object.freeze(edit),
+    webfetch: webAllowed ? 'allow' : 'deny',
+    websearch: webAllowed ? 'allow' : 'deny',
+    external_directory: 'deny',
+  });
+}
+
+function buildDirectPermissionProjectionRules({
+  readScopes = [],
+  writeScopes = [],
+  webAllowed = false,
+} = {}) {
+  const projection = buildDirectPermissionProjection({ readScopes, writeScopes, webAllowed });
+  const rules = [];
+
+  for (const [permission, value] of Object.entries(projection)) {
+    if (typeof value === 'string') {
+      rules.push({ permission, pattern: '*', action: value });
+      continue;
+    }
+    for (const [pattern, action] of Object.entries(value)) {
+      rules.push({ permission, pattern, action });
+    }
+  }
+
+  return rules;
+}
+
 function buildInlineConfig({
   actorId,
   readScopes,
   writeScopes,
   webAllowed = false,
 } = {}) {
-  normalizeScopeList(readScopes || [], 'READ_SCOPE');
-  normalizeScopeList(writeScopes || [], 'WRITE_SCOPE');
-
   if (typeof actorId !== 'string' || !actorId) {
     throw new OpenCodeSurfaceError('ACTOR_IDENTITY_REQUIRED', 'BLOCKED');
   }
-  if (typeof webAllowed !== 'boolean') {
-    throw new OpenCodeSurfaceError('WEB_CAPABILITY_DECLARATION_INVALID', 'BLOCKED');
-  }
 
-  // Surface-local policy only. Harness/project capabilities are not re-authored
-  // here; their conformance is established externally and transported through
-  // request.harness_conformance.
+  const directPermissionProjection = buildDirectPermissionProjection({
+    readScopes: readScopes || [],
+    writeScopes: writeScopes || [],
+    webAllowed,
+  });
+
+  // Project only the portable direct read/write/web/repository-containment
+  // dimensions. Skills, MCP, plugins and other harness capabilities are not
+  // re-authored here; their authority remains external harness conformance.
   return Object.freeze({
     autoupdate: false,
     share: 'disabled',
+    agent: Object.freeze({
+      [actorId]: Object.freeze({
+        permission: directPermissionProjection,
+      }),
+    }),
   });
 }
 
@@ -418,9 +471,282 @@ function summarizeHarnessCapabilities(resolvedConfig, agentConfig) {
   });
 }
 
+
+function pathPatternContainedInRoot(pattern, root) {
+  if (typeof pattern !== 'string' || !pattern || typeof root !== 'string' || !root) return false;
+
+  const normalizedPattern = pattern.replaceAll('\\', '/');
+  if (normalizedPattern.split('/').includes('..')) return false;
+
+  const wildcardIndex = normalizedPattern.search(/[*?]/u);
+  const staticPrefix = (wildcardIndex === -1
+    ? normalizedPattern
+    : normalizedPattern.slice(0, wildcardIndex)
+  ).replace(/\/+$/u, '');
+
+  if (!staticPrefix || !path.isAbsolute(staticPrefix)) return false;
+
+  const normalizedRoot = path.resolve(root).replaceAll('\\', '/').replace(/\/+$/u, '');
+  const normalizedPrefix = path.resolve(staticPrefix).replaceAll('\\', '/').replace(/\/+$/u, '');
+
+  const caseFold = process.platform === 'win32'
+    ? (value) => value.toLowerCase()
+    : (value) => value;
+
+  const rootValue = caseFold(normalizedRoot);
+  const prefixValue = caseFold(normalizedPrefix);
+  return prefixValue === rootValue || prefixValue.startsWith(`${rootValue}/`);
+}
+
+function classifyTrailingDirectRule(rule, {
+  readScopes,
+  writeScopes,
+  webAllowed,
+  isolationRoot,
+} = {}) {
+  if (rule.action === 'deny') {
+    return Object.freeze({ classification: 'SAFELY_NARROWER_DENY', non_broadening: true });
+  }
+
+  if (rule.action === 'ask') {
+    return Object.freeze({ classification: 'INTERACTIVE_EXPANSION_UNPROVABLE', non_broadening: false });
+  }
+
+  if (rule.action !== 'allow') {
+    return Object.freeze({ classification: 'UNKNOWN_ACTION', non_broadening: false });
+  }
+
+  if (rule.permission === 'read' && readScopes.includes(rule.pattern)) {
+    return Object.freeze({ classification: 'DUPLICATE_AUTHORIZED_READ_ALLOW', non_broadening: true });
+  }
+
+  if (rule.permission === 'edit' && writeScopes.includes(rule.pattern)) {
+    return Object.freeze({ classification: 'DUPLICATE_AUTHORIZED_EDIT_ALLOW', non_broadening: true });
+  }
+
+  if (
+    ['read', 'edit', 'external_directory'].includes(rule.permission)
+    && pathPatternContainedInRoot(rule.pattern, isolationRoot)
+  ) {
+    return Object.freeze({ classification: 'RUNTIME_ISOLATION_ROOT_ONLY', non_broadening: true });
+  }
+
+  if (
+    ['webfetch', 'websearch'].includes(rule.permission)
+    && webAllowed
+    && rule.pattern === '*'
+  ) {
+    return Object.freeze({ classification: 'DUPLICATE_AUTHORIZED_WEB_ALLOW', non_broadening: true });
+  }
+
+  return Object.freeze({ classification: 'MATERIAL_DIRECT_PERMISSION_EXPANSION', non_broadening: false });
+}
+
+function assertEffectivePermissionBoundary({
+  agentConfig,
+  readScopes,
+  writeScopes,
+  webAllowed,
+  isolationRoot = null,
+}) {
+  const rules = normalizedPermissionRules(agentConfig);
+  if (!rules) {
+    throw new OpenCodeSurfaceError('EFFECTIVE_PERMISSION_UNPROVABLE', 'BLOCKED');
+  }
+
+  const expectedProjection = buildDirectPermissionProjectionRules({
+    readScopes,
+    writeScopes,
+    webAllowed,
+  });
+
+  // OpenCode v1 permission rules are ordered and the last matching rule wins.
+  // We therefore prove that the invocation-scoped projection occurs intact in
+  // the effective direct-rule sequence and then classify every later direct
+  // rule. Earlier harness/project rules are overridden by the projection.
+  // Later rules are allowed only when they are deterministically narrower,
+  // exact duplicate authorized allows, or confined to the isolated runtime
+  // root created by this adapter.
+  const directPermissionNames = new Set([
+    '*',
+    'read',
+    'edit',
+    'webfetch',
+    'websearch',
+    'external_directory',
+  ]);
+  const effectiveDirectRules = rules.filter(
+    (rule) => directPermissionNames.has(rule.permission),
+  );
+
+  let projectionStart = -1;
+  for (let start = 0; start <= effectiveDirectRules.length - expectedProjection.length; start += 1) {
+    const slice = effectiveDirectRules.slice(start, start + expectedProjection.length);
+    if (JSON.stringify(slice) === JSON.stringify(expectedProjection)) {
+      projectionStart = start;
+    }
+  }
+
+  const diagnosticBase = {
+    proof_semantics: 'ORDERED_LAST_MATCH_SEMANTIC_CONFORMANCE',
+    expected_projection: expectedProjection,
+    effective_direct_rules: effectiveDirectRules,
+    projection_start: projectionStart,
+  };
+
+  if (projectionStart < 0) {
+    throw new OpenCodeSurfaceError(
+      'EFFECTIVE_PERMISSION_UNPROVABLE',
+      'BLOCKED',
+      false,
+      JSON.stringify({
+        ...diagnosticBase,
+        reason: 'projected-direct-rules-not-observed-intact',
+      }),
+    );
+  }
+
+  const projectionEnd = projectionStart + expectedProjection.length;
+  const trailingRules = effectiveDirectRules.slice(projectionEnd);
+  const trailingClassification = trailingRules.map((rule) => ({
+    rule,
+    ...classifyTrailingDirectRule(rule, {
+      readScopes,
+      writeScopes,
+      webAllowed,
+      isolationRoot,
+    }),
+  }));
+
+  const material = trailingClassification.filter((entry) => !entry.non_broadening);
+  if (material.length > 0) {
+    throw new OpenCodeSurfaceError(
+      'EFFECTIVE_PERMISSION_BROADENING',
+      'BLOCKED',
+      false,
+      JSON.stringify({
+        ...diagnosticBase,
+        projection_end: projectionEnd,
+        trailing_rules: trailingClassification,
+        material_rules: material,
+      }),
+    );
+  }
+
+  return Object.freeze({
+    effective_permission_digest: digestValue(rules),
+    requested_permission_digest: digestValue({
+      read_scope: readScopes,
+      write_scope: writeScopes,
+      web: webAllowed,
+    }),
+    direct_permission_conformance: Object.freeze({
+      proof_semantics: 'ORDERED_LAST_MATCH_SEMANTIC_CONFORMANCE',
+      read_allow_patterns: Object.freeze([...readScopes]),
+      edit_allow_patterns: Object.freeze([...writeScopes]),
+      web_allowed: webAllowed,
+      external_directory_allowed: false,
+      projection_rule_count: expectedProjection.length,
+      projection_start: projectionStart,
+      trailing_rule_count: trailingRules.length,
+      trailing_rule_classification: Object.freeze(trailingClassification),
+    }),
+    non_broadening: true,
+  });
+}
+
+function assertAuthorizationPermissionBinding(request, surfaceInput) {
+  const authorization = request?.authorization;
+  if (
+    !authorization
+    || typeof authorization !== 'object'
+    || authorization.disposition !== 'AUTHORIZED'
+    || !Array.isArray(authorization.effect_constraints)
+  ) {
+    throw new OpenCodeSurfaceError('AUTHORIZATION_CONTEXT_INVALID', 'BLOCKED');
+  }
+
+  const constraints = authorization.effect_constraints;
+  const writeEffects = constraints.filter(
+    (entry) => entry
+      && typeof entry === 'object'
+      && ['repository_write', 'filesystem_write'].includes(entry.effect)
+      && typeof entry.scope === 'string'
+      && entry.scope,
+  );
+
+  if (surfaceInput.writeScopes.length > 0 && writeEffects.length === 0) {
+    throw new OpenCodeSurfaceError('WRITE_EFFECT_NOT_AUTHORIZED', 'BLOCKED');
+  }
+
+  return Object.freeze({
+    authority_reference: authorization.authority_reference,
+    effect_constraints_digest: digestValue(constraints),
+    write_effect_constraints: Object.freeze(
+      writeEffects.map((entry) => Object.freeze({ effect: entry.effect, scope: entry.scope })),
+    ),
+    requested_permission_digest: digestValue({
+      read_scope: surfaceInput.readScopes,
+      write_scope: surfaceInput.writeScopes,
+      web: surfaceInput.webAllowed,
+    }),
+  });
+}
+
+function validateOpenCodeEvents(events) {
+  if (!Array.isArray(events) || events.length === 0) return false;
+
+  const recognized = new Set([
+    'step_start',
+    'step_finish',
+    'text',
+    'reasoning',
+    'tool_use',
+    'error',
+  ]);
+
+  for (const event of events) {
+    if (!event || typeof event !== 'object' || Array.isArray(event)) return false;
+    if (typeof event.type !== 'string' || !recognized.has(event.type)) return false;
+
+    if (event.timestamp !== undefined && !Number.isFinite(event.timestamp)) return false;
+    if (event.sessionID !== undefined && (typeof event.sessionID !== 'string' || !event.sessionID)) return false;
+
+    if (event.type === 'text' || event.type === 'reasoning') {
+      const directText = typeof event.text === 'string';
+      const partText = event.part
+        && typeof event.part === 'object'
+        && !Array.isArray(event.part)
+        && typeof event.part.text === 'string';
+      if (!directText && !partText) return false;
+    }
+
+    if (event.type === 'tool_use') {
+      if (!event.part || typeof event.part !== 'object' || Array.isArray(event.part)) return false;
+      if (event.part.type !== undefined && event.part.type !== 'tool') return false;
+    }
+
+    if (event.type === 'step_start' || event.type === 'step_finish') {
+      if (!event.part || typeof event.part !== 'object' || Array.isArray(event.part)) return false;
+      const expectedPartType = event.type === 'step_start' ? 'step-start' : 'step-finish';
+      if (event.part.type !== undefined && event.part.type !== expectedPartType) return false;
+    }
+
+    if (event.type === 'error') {
+      if (event.error === undefined || event.error === null) return false;
+    }
+  }
+
+  return true;
+}
+
 function assertEffectiveConfig({
   resolvedConfig,
   agentConfig,
+  readScopes = [],
+  writeScopes = [],
+  webAllowed = false,
+  isolationRoot = null,
 }) {
   if (!resolvedConfig || typeof resolvedConfig !== 'object' || Array.isArray(resolvedConfig)) {
     throw new OpenCodeSurfaceError('EFFECTIVE_CONFIG_UNPROVABLE', 'BLOCKED');
@@ -435,11 +761,20 @@ function assertEffectiveConfig({
     throw new OpenCodeSurfaceError('EFFECTIVE_AGENT_CONFIG_UNPROVABLE', 'BLOCKED');
   }
 
+  const permissionConformance = assertEffectivePermissionBoundary({
+    agentConfig,
+    readScopes,
+    writeScopes,
+    webAllowed,
+    isolationRoot,
+  });
+
   return Object.freeze({
     resolved_config_digest: digestValue(resolvedConfig),
     agent_config_digest: digestValue(agentConfig),
     proof: 'PROJECT_SCOPED_EFFECTIVE_CONFIG_OBSERVATION',
     capability_observation: summarizeHarnessCapabilities(resolvedConfig, agentConfig),
+    permission_conformance: permissionConformance,
   });
 }
 
@@ -575,7 +910,6 @@ function createOpenCodeCLIAdapter(options = {}) {
   const {
     executablePath: customExecutable,
     runtimeId = ADAPTER_ID,
-    versionCheck = true,
     systemEnvironment = process.env,
     syncRunner = spawnSync,
     processRunner = runOpenCodeProcess,
@@ -601,7 +935,7 @@ function createOpenCodeCLIAdapter(options = {}) {
       existsSync,
     });
     if (!version) throw new OpenCodeSurfaceError('OPENCODE_VERSION_UNAVAILABLE', 'UNAVAILABLE');
-    if (versionCheck && !isVersionSupported(version)) {
+    if (!isVersionSupported(version)) {
       throw new OpenCodeSurfaceError('OPENCODE_VERSION_UNSUPPORTED', 'UNAVAILABLE', false, version);
     }
     cachedDiscovery = Object.freeze({ executable, version, runtime_id: runtimeId });
@@ -643,6 +977,10 @@ function createOpenCodeCLIAdapter(options = {}) {
       const proof = assertEffectiveConfig({
         resolvedConfig,
         agentConfig,
+        readScopes,
+        writeScopes,
+        webAllowed,
+        isolationRoot: isolation.root,
       });
       return Object.freeze({
         discovery,
@@ -678,6 +1016,7 @@ function createOpenCodeExecutionSurface(options = {}) {
       try {
         const identity = validateResolvedIdentity(request, adapter.runtimeId);
         const surfaceInput = normalizeSurfaceInput(request);
+        const permissionBinding = assertAuthorizationPermissionBinding(request, surfaceInput);
 
         probeResult = await adapter.probe({
           cwd: surfaceInput.cwd,
@@ -735,6 +1074,14 @@ function createOpenCodeExecutionSurface(options = {}) {
             },
           });
         }
+        if (!validateOpenCodeEvents(events)) {
+          return outcome(request, 'FAILED', true, 'OUTPUT_CONTRACT_VIOLATION', {
+            result: {
+              surface_id: ADAPTER_ID,
+              surface_version: probeResult.discovery.version,
+            },
+          });
+        }
 
         const evidence = {
           surface_id: ADAPTER_ID,
@@ -744,6 +1091,7 @@ function createOpenCodeExecutionSurface(options = {}) {
           model_id: identity.model_id,
           provider_id: identity.provider_id ?? null,
           config_proof: probeResult.proof,
+          authorization_permission_binding: permissionBinding,
           harness_conformance_ref: request.harness_conformance.evidence_ref,
           requested_surface_permissions_digest: digestValue({
             read_scope: surfaceInput.readScopes,
@@ -797,11 +1145,18 @@ module.exports = {
   discoverVersion,
   isVersionSupported,
   sanitizeEnvironment,
+  buildDirectPermissionProjection,
+  buildDirectPermissionProjectionRules,
   buildInlineConfig,
   createIsolation,
   runOpenCodeProcess,
   parseJsonOutput,
   assertEffectiveConfig,
+  assertEffectivePermissionBoundary,
+  pathPatternContainedInRoot,
+  classifyTrailingDirectRule,
+  assertAuthorizationPermissionBinding,
+  validateOpenCodeEvents,
   summarizeHarnessCapabilities,
   normalizeSurfaceInput,
   validateResolvedIdentity,

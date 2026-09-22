@@ -74,16 +74,17 @@ test('current Execution Coordinator consumes OpenCode as a replaceable surface w
         exitCode: 0,
         stdout: JSON.stringify({
           permission: [
-            { permission: '*', pattern: '*', action: 'deny' },
+            { permission: '*', pattern: '*', action: 'allow' },
+            { permission: 'bash', pattern: '*', action: 'allow' },
+            { permission: 'task', pattern: '*', action: 'deny' },
+            { permission: 'skill', pattern: '*', action: 'allow' },
+            { permission: 'read', pattern: '*', action: 'deny' },
             { permission: 'read', pattern: '**', action: 'allow' },
             { permission: 'edit', pattern: '*', action: 'deny' },
             { permission: 'edit', pattern: 'src/**', action: 'allow' },
-            { permission: 'bash', pattern: '*', action: 'allow' },
-            { permission: 'task', pattern: '*', action: 'deny' },
-            { permission: 'external_directory', pattern: '*', action: 'deny' },
-            { permission: 'skill', pattern: '*', action: 'allow' },
             { permission: 'webfetch', pattern: '*', action: 'deny' },
             { permission: 'websearch', pattern: '*', action: 'deny' },
+            { permission: 'external_directory', pattern: '*', action: 'deny' },
           ],
         }),
         stderr: '',
@@ -123,6 +124,20 @@ test('current Execution Coordinator consumes OpenCode as a replaceable surface w
   assert.equal(result.result.execution_surface.runtime_id, original.resolved_execution.runtime_id);
   assert.ok(result.evidence_refs.some((entry) => entry.kind === 'execution-surface-conformance'));
   assert.equal(result.result.execution_surface.harness_conformance_ref, 'evidence:opencode:conformance:001');
+  assert.equal(
+    result.result.execution_surface.authorization_permission_binding.authority_reference,
+    'authority:opencode:001',
+  );
+  assert.equal(result.result.execution_surface.config_proof.permission_conformance.non_broadening, true);
+  assert.equal(
+    result.result.execution_surface.config_proof.permission_conformance
+      .direct_permission_conformance.proof_semantics,
+    'ORDERED_LAST_MATCH_SEMANTIC_CONFORMANCE',
+  );
+  assert.deepEqual(
+    result.result.execution_surface.config_proof.permission_conformance.direct_permission_conformance.edit_allow_patterns,
+    ['src/**'],
+  );
   assert.deepEqual(result.result.execution_surface.config_proof.capability_observation.mcp_entries, ['project_docs']);
   assert.equal(calls.at(-1)[0], 'run');
   assert.equal(calls.at(-1).includes('--pure'), false);

@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
+const path = require('node:path');
 
 const {
   SUPPORTED_OPENCODE_VERSION,
@@ -10,10 +11,13 @@ const {
   OpenCodeSurfaceError,
   resolveOpenCodeCommand,
   sanitizeEnvironment,
+  buildDirectPermissionProjectionRules,
   buildInlineConfig,
   isVersionSupported,
   parseJsonOutput,
+  validateOpenCodeEvents,
   runOpenCodeProcess,
+  assertEffectivePermissionBoundary,
   createOpenCodeExecutionSurface,
 } = require('../../src/adapters/opencode-cli');
 
@@ -77,32 +81,37 @@ function conformingConfig() {
   };
 }
 
-function conformingAgentConfig({ write = true } = {}) {
+function conformingAgentConfig({ write = true, webAllowed = false } = {}) {
   return {
     permission: [
-      { permission: '*', pattern: '*', action: 'deny' },
-      { permission: 'read', pattern: '**', action: 'allow' },
-      { permission: 'edit', pattern: '*', action: 'deny' },
-      ...(write ? [{ permission: 'edit', pattern: 'src/**', action: 'allow' }] : []),
+      // Existing harness/project capabilities can be broad. The supported v1
+      // permission model is ordered and the final matching rule wins.
+      { permission: '*', pattern: '*', action: 'allow' },
       { permission: 'bash', pattern: '*', action: 'allow' },
       { permission: 'task', pattern: '*', action: 'deny' },
-      { permission: 'external_directory', pattern: '*', action: 'deny' },
       { permission: 'skill', pattern: '*', action: 'allow' },
-      { permission: 'webfetch', pattern: '*', action: 'deny' },
-      { permission: 'websearch', pattern: '*', action: 'deny' },
+      ...buildDirectPermissionProjectionRules({
+        readScopes: ['**'],
+        writeScopes: write ? ['src/**'] : [],
+        webAllowed,
+      }),
     ],
   };
 }
 
-function mockRunner({ run = { exitCode: 0, stdout: '{"type":"text","text":"ok"}\n', stderr: '' } } = {}) {
+function mockRunner({
+  run = { exitCode: 0, stdout: '{"type":"text","text":"ok"}\n', stderr: '' },
+  resolvedConfig = conformingConfig(),
+  agentConfig = conformingAgentConfig(),
+} = {}) {
   const calls = [];
   const runner = async (_executable, args, options) => {
     calls.push({ args: [...args], options });
     if (args[0] === 'debug' && args[1] === 'config') {
-      return { exitCode: 0, stdout: JSON.stringify(conformingConfig()), stderr: '' };
+      return { exitCode: 0, stdout: JSON.stringify(resolvedConfig), stderr: '' };
     }
     if (args[0] === 'debug' && args[1] === 'agent') {
-      return { exitCode: 0, stdout: JSON.stringify(conformingAgentConfig()), stderr: '' };
+      return { exitCode: 0, stdout: JSON.stringify(agentConfig), stderr: '' };
     }
     return { timedOut: false, aborted: false, ...run };
   };
@@ -116,6 +125,23 @@ test('tested OpenCode support boundary is explicit and version-specific', () => 
   assert.equal(isVersionSupported('1.18.31'), true);
   assert.equal(isVersionSupported('1.18.30'), false);
   assert.equal(isVersionSupported('1.18.32'), false);
+});
+
+test('unsupported OpenCode version cannot bypass exact tested support at adapter construction', async () => {
+  const { runner, calls } = mockRunner();
+  const surface = createOpenCodeExecutionSurface({
+    executablePath: process.execPath,
+    runtimeId: 'runtime:selected',
+    versionCheck: false,
+    syncRunner: () => ({ status: 0, stdout: 'opencode 9.9.9\n', stderr: '' }),
+    processRunner: runner,
+  });
+
+  const result = await surface.execute(validRequest());
+  assert.equal(result.status, 'UNAVAILABLE');
+  assert.equal(result.started, false);
+  assert.equal(result.reason, 'OPENCODE_VERSION_UNSUPPORTED');
+  assert.equal(calls.length, 0);
 });
 
 test('Windows .cmd resolution never invokes a shell', () => {
@@ -149,7 +175,7 @@ test('environment sanitization denies secrets, identity overrides and config ove
   );
 });
 
-test('inline config controls only surface-local side effects and does not author harness capabilities', () => {
+test('inline config projects only direct portable permissions and does not author harness capabilities', () => {
   const config = buildInlineConfig({
     actorId: 'implementer',
     readScopes: ['src/**'],
@@ -159,17 +185,46 @@ test('inline config controls only surface-local side effects and does not author
   assert.deepEqual(config, {
     autoupdate: false,
     share: 'disabled',
+    agent: {
+      implementer: {
+        permission: {
+          read: { '*': 'deny', 'src/**': 'allow' },
+          edit: { '*': 'deny' },
+          webfetch: 'deny',
+          websearch: 'deny',
+          external_directory: 'deny',
+        },
+      },
+    },
   });
   assert.equal(Object.hasOwn(config, 'permission'), false);
   assert.equal(Object.hasOwn(config, 'mcp'), false);
   assert.equal(Object.hasOwn(config, 'plugin'), false);
-  assert.equal(Object.hasOwn(config, 'agent'), false);
+  assert.equal(Object.hasOwn(config.agent.implementer.permission, 'skill'), false);
+  assert.equal(Object.hasOwn(config.agent.implementer.permission, 'bash'), false);
+  assert.equal(Object.hasOwn(config.agent.implementer.permission, 'task'), false);
 });
 
 test('JSON output normalization accepts one JSON value or newline-delimited events', () => {
   assert.deepEqual(parseJsonOutput('{"a":1}'), [{ a: 1 }]);
   assert.deepEqual(parseJsonOutput('{"a":1}\n{"b":2}\n'), [{ a: 1 }, { b: 2 }]);
   assert.equal(parseJsonOutput('not-json'), null);
+});
+
+test('semantic OpenCode output validator accepts recognized events and rejects unknown JSON shapes', () => {
+  assert.equal(validateOpenCodeEvents([{ type: 'text', text: 'ok' }]), true);
+  assert.equal(
+    validateOpenCodeEvents([{
+      type: 'step_start',
+      timestamp: 1,
+      sessionID: 'session-1',
+      part: { type: 'step-start' },
+    }]),
+    true,
+  );
+  assert.equal(validateOpenCodeEvents([{ unexpected: 'shape' }]), false);
+  assert.equal(validateOpenCodeEvents([{ type: 'unknown-event' }]), false);
+  assert.equal(validateOpenCodeEvents([{ type: 'text' }]), false);
 });
 
 test('low-level process runner contains an aborted child through the injected tree killer', async () => {
@@ -272,6 +327,171 @@ test('surface fails closed when provider and OpenCode model coordinate disagree'
   assert.equal(calls.length, 0);
 });
 
+
+test('surface blocks write scope when authorization contains no write effect', async () => {
+  const { runner, calls } = mockRunner();
+  const request = validRequest();
+  request.authorization.effect_constraints = [
+    { effect: 'repository_read', scope: 'candidate-only' },
+  ];
+
+  const surface = createOpenCodeExecutionSurface({
+    executablePath: process.execPath,
+    runtimeId: 'runtime:selected',
+    syncRunner: syncVersionRunner,
+    processRunner: runner,
+  });
+
+  const result = await surface.execute(request);
+  assert.equal(result.status, 'BLOCKED');
+  assert.equal(result.started, false);
+  assert.equal(result.reason, 'WRITE_EFFECT_NOT_AUTHORIZED');
+  assert.equal(calls.length, 0);
+});
+
+test('surface accepts earlier wildcard allow when final ordered projection narrows direct permissions', async () => {
+  const { runner, calls } = mockRunner({ agentConfig: conformingAgentConfig() });
+  const surface = createOpenCodeExecutionSurface({
+    executablePath: process.execPath,
+    runtimeId: 'runtime:selected',
+    syncRunner: syncVersionRunner,
+    processRunner: runner,
+  });
+
+  const result = await surface.execute(validRequest());
+  assert.equal(result.status, 'SUCCESS');
+  assert.equal(result.started, true);
+  assert.equal(calls.length, 3);
+  assert.equal(
+    result.result.execution_surface.config_proof.permission_conformance
+      .direct_permission_conformance.proof_semantics,
+    'ORDERED_LAST_MATCH_SEMANTIC_CONFORMANCE',
+  );
+});
+
+
+test('semantic permission proof accepts a runtime-managed allow confined to the isolated adapter root', () => {
+  const isolationRoot = path.join(process.cwd(), '.tmp-runtime-root');
+  const rules = conformingAgentConfig();
+  rules.permission.push({
+    permission: 'external_directory',
+    pattern: `${isolationRoot.replaceAll('\\', '/')}/*`,
+    action: 'allow',
+  });
+
+  const proof = assertEffectivePermissionBoundary({
+    agentConfig: rules,
+    readScopes: ['**'],
+    writeScopes: ['src/**'],
+    webAllowed: false,
+    isolationRoot,
+  });
+
+  assert.equal(proof.non_broadening, true);
+  assert.equal(
+    proof.direct_permission_conformance.trailing_rule_classification[0].classification,
+    'RUNTIME_ISOLATION_ROOT_ONLY',
+  );
+});
+
+test('semantic permission proof rejects a runtime-managed-looking allow outside the isolated adapter root', () => {
+  const isolationRoot = path.join(process.cwd(), '.tmp-runtime-root');
+  const rules = conformingAgentConfig();
+  rules.permission.push({
+    permission: 'external_directory',
+    pattern: path.resolve(process.cwd(), '..').replaceAll('\\', '/') + '/*',
+    action: 'allow',
+  });
+
+  assert.throws(
+    () => assertEffectivePermissionBoundary({
+      agentConfig: rules,
+      readScopes: ['**'],
+      writeScopes: ['src/**'],
+      webAllowed: false,
+      isolationRoot,
+    }),
+    (error) => error instanceof OpenCodeSurfaceError
+      && error.reasonCode === 'EFFECTIVE_PERMISSION_BROADENING'
+      && String(error.details).includes('MATERIAL_DIRECT_PERMISSION_EXPANSION'),
+  );
+});
+
+test('semantic permission proof accepts later deny as safely narrower', () => {
+  const rules = conformingAgentConfig();
+  rules.permission.push({ permission: 'edit', pattern: 'src/generated/**', action: 'deny' });
+
+  const proof = assertEffectivePermissionBoundary({
+    agentConfig: rules,
+    readScopes: ['**'],
+    writeScopes: ['src/**'],
+    webAllowed: false,
+    isolationRoot: process.cwd(),
+  });
+
+  assert.equal(proof.non_broadening, true);
+  assert.equal(
+    proof.direct_permission_conformance.trailing_rule_classification[0].classification,
+    'SAFELY_NARROWER_DENY',
+  );
+});
+
+test('semantic permission proof rejects later ask because interactive expansion is not authorized', () => {
+  const rules = conformingAgentConfig();
+  rules.permission.push({ permission: 'edit', pattern: '*', action: 'ask' });
+
+  assert.throws(
+    () => assertEffectivePermissionBoundary({
+      agentConfig: rules,
+      readScopes: ['**'],
+      writeScopes: ['src/**'],
+      webAllowed: false,
+      isolationRoot: process.cwd(),
+    }),
+    (error) => error instanceof OpenCodeSurfaceError
+      && error.reasonCode === 'EFFECTIVE_PERMISSION_BROADENING'
+      && String(error.details).includes('INTERACTIVE_EXPANSION_UNPROVABLE'),
+  );
+});
+
+test('surface blocks a later effective edit rule that broadens beyond the ordered projection', async () => {
+  const broadAgentConfig = conformingAgentConfig();
+  broadAgentConfig.permission.push({ permission: 'edit', pattern: '*', action: 'allow' });
+
+  const { runner, calls } = mockRunner({ agentConfig: broadAgentConfig });
+  const surface = createOpenCodeExecutionSurface({
+    executablePath: process.execPath,
+    runtimeId: 'runtime:selected',
+    syncRunner: syncVersionRunner,
+    processRunner: runner,
+  });
+
+  const result = await surface.execute(validRequest());
+  assert.equal(result.status, 'BLOCKED');
+  assert.equal(result.started, false);
+  assert.equal(result.reason, 'EFFECTIVE_PERMISSION_BROADENING');
+  assert.equal(calls.length, 2);
+});
+
+test('surface blocks a later effective web allow when web was not requested', async () => {
+  const webAgentConfig = conformingAgentConfig();
+  webAgentConfig.permission.push({ permission: 'websearch', pattern: '*', action: 'allow' });
+
+  const { runner, calls } = mockRunner({ agentConfig: webAgentConfig });
+  const surface = createOpenCodeExecutionSurface({
+    executablePath: process.execPath,
+    runtimeId: 'runtime:selected',
+    syncRunner: syncVersionRunner,
+    processRunner: runner,
+  });
+
+  const result = await surface.execute(validRequest());
+  assert.equal(result.status, 'BLOCKED');
+  assert.equal(result.started, false);
+  assert.equal(result.reason, 'EFFECTIVE_PERMISSION_BROADENING');
+  assert.equal(calls.length, 2);
+});
+
 test('surface observes project-scoped MCP/plugins/skills without originating harness policy', async () => {
   const { runner, calls } = mockRunner();
   const surface = createOpenCodeExecutionSurface({
@@ -331,4 +551,28 @@ test('surface fails closed on malformed machine-readable output', async () => {
   assert.equal(result.status, 'FAILED');
   assert.equal(result.started, true);
   assert.equal(result.reason, 'MALFORMED_ADAPTER_OUTPUT');
+});
+
+
+test('surface fails closed on syntactically valid but semantically unknown JSON output', async () => {
+  const { runner } = mockRunner({
+    run: {
+      exitCode: 0,
+      stdout: '{"unexpected":"shape"}\n',
+      stderr: '',
+      timedOut: false,
+      aborted: false,
+    },
+  });
+  const surface = createOpenCodeExecutionSurface({
+    executablePath: process.execPath,
+    runtimeId: 'runtime:selected',
+    syncRunner: syncVersionRunner,
+    processRunner: runner,
+  });
+
+  const result = await surface.execute(validRequest());
+  assert.equal(result.status, 'FAILED');
+  assert.equal(result.started, true);
+  assert.equal(result.reason, 'OUTPUT_CONTRACT_VIOLATION');
 });
