@@ -44,17 +44,11 @@ If implementation discovers that accepted behavior must change, the affected wor
 
 ## 2. Competent inputs and precedence
 
-Normative derivation order for implementation is:
+The accepted WP-003 SPEC is the source of the applicable authority precedence for this PLAN. This PLAN does not define, restate, reorder, reinterpret, or compete with that hierarchy.
 
-1. the accepted WP-003 SPEC and RF-201 through RF-207;
-2. competent Developer rulings for WP-003;
-3. current canonical contracts and ADRs for invariants, schemas, and interoperability;
-4. the accepted Milestone Plan for sequence, ownership, gates, and the WP-003/WP-004 boundary;
-5. `docs/task-lifecycle.md` for lifecycle semantics, worktrees, validation, review, acceptance, integration, publication, and closure separation;
-6. Current State only for confirmed implementation reality;
-7. Source of Truth only for navigation and precedence.
+For implementation planning, use the precedence declared by `docs/work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md`. If a planning decision appears to require a different authority ordering, stop the affected derivation and return to competent Developer/SPEC authority rather than resolving the conflict in this PLAN.
 
-Existing repository layout is implementation evidence, not competing authority. Historical documents may supply provenance or compatibility fixtures but may not be promoted by the validator or templates.
+This document therefore uses competent inputs only within the authority assigned by the accepted SPEC. It may reference current canonical contracts and ADRs, the accepted Milestone Plan, Task Lifecycle, Current State, and Source of Truth only in the roles already assigned to them by the accepted SPEC.
 
 ## 3. Artifact-authority boundary
 
