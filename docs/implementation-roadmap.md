@@ -2,8 +2,8 @@
 document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 3.6
-updated: 2026-09-22
+version: 3.7
+updated: 2026-09-23
 owner: tecnotron-ai
 ---
 
@@ -75,14 +75,14 @@ harness-agnostic. OpenCode permanece como superficie de ejecucion reemplazable
 y no adquiere ownership de coordinacion, lifecycle, routing, contexto,
 model/provider selection ni aceptacion.
 
-`WP-002` queda `SATISFIED_FOR_MILESTONE_ORDERING`. `WP-003` continua
-`PLANNING_PENDING_SPEC`, con dependencia sobre WP-002 satisfecha e
-inicializacion `NOT_AUTHORIZED`. Antes de autorizar su SPEC cycle, el Developer
-selecciono una reconciliacion acotada de higiene/deprecacion del repositorio:
-inventariar consumidores y clasificar configuraciones/YAML/compatibilidad/
-fixtures/historico como activo, compatibilidad requerida, evidencia historica,
-fixture, generado, huerfano o irresuelto. Esta responsabilidad no crea un nuevo
-Work Package ni altera el grafo aceptado del milestone.
+`WP-002` queda `SATISFIED_FOR_MILESTONE_ORDERING`. La reconciliacion acotada de
+higiene/deprecacion seleccionada antes de WP-003 esta `COMPLETE` y su efecto
+publicado queda observado en
+`tools@4c64f83811a1de810f948b09e492bd29e042b460`. Esta responsabilidad no creo
+un nuevo Work Package ni altero el grafo aceptado del milestone. `WP-003`
+continua `PLANNING_PENDING_SPEC`, con dependencia sobre WP-002 satisfecha e
+inicializacion `NOT_AUTHORIZED`; cualquier inicializacion posterior de su SPEC
+cycle requiere autorizacion Developer separada.
 
 Responsabilidades separadas previas siguen preservadas: el Execution
 Coordinator generico fue integrado en

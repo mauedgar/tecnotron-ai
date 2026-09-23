@@ -4,8 +4,8 @@ status: accepted
 materialization_status: ACCEPTED
 owner: tecnotron-ai
 type: milestone-plan
-version: 1.9
-updated: 2026-09-22
+version: 1.10
+updated: 2026-09-23
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 milestone_baseline: 41088a413d06ed1d58d63d92320e38d4b44b86ea
@@ -17,7 +17,7 @@ completed_work_packages:
   - WP-000
   - WP-001
   - WP-002
-next_gate: DEVELOPER_AUTHORIZE_TECNOTRON_REPOSITORY_HYGIENE_AND_DEPRECATION_RECONCILIATION_001
+next_gate: "NOT_ESTABLISHED; WP-003 initialization requires separate Developer authorization"
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -85,7 +85,7 @@ it enumerates; all other original-plan sections remain in force.
 | Integration target | `tools` |
 | Promotion target | `main` |
 | Completed work packages | `WP-000`, `WP-001`, `WP-002` |
-| Next gate | bounded repository hygiene/deprecation reconciliation before WP-003 SPEC authorization |
+| Next gate | `NOT_ESTABLISHED`; WP-003 initialization remains `NOT_AUTHORIZED` and requires separate Developer authorization |
 | Terminal authority | Developer |
 
 `tools` is the integration branch for this milestone. `main` receives the
@@ -301,7 +301,7 @@ developer_ready_gate: SATISFIED
 accepted_plan_source_sha256: d67b1b9fc582f6e5223a8b716a32476ee78d9bbc2cc74573fc1e3409309bf3b4
 task_materialization_authorized: true
 next_executable_task: NONE
-next_lifecycle_action: DEVELOPER_AUTHORIZE_TECNOTRON_REPOSITORY_HYGIENE_AND_DEPRECATION_RECONCILIATION_001
+next_lifecycle_action: NONE
 executable_tasks_created: true
 implementation_authority: CREATED
 implementation_status: IMPLEMENTED
@@ -378,9 +378,13 @@ integrated/published milestone state is
 `tools@8be03eda0dd3060024e154a6de9aa2b903ae5b5d`. Historical pre-completion
 `NOT_AUTHORIZED` state and baseline variance remain provenance only.
 
-Therefore WP-002 is `SATISFIED_FOR_MILESTONE_ORDERING`. Before WP-003 SPEC
-authorization, the Developer selected a bounded repository hygiene/deprecation
-reconciliation. This does not alter the accepted WP dependency graph.
+Therefore WP-002 is `SATISFIED_FOR_MILESTONE_ORDERING`. The bounded repository
+hygiene/deprecation reconciliation selected before WP-003 is `COMPLETE`; its
+published archival effect is present in
+`tools@4c64f83811a1de810f948b09e492bd29e042b460`. This did not alter the
+accepted WP dependency graph. WP-003 remains `PLANNING_PENDING_SPEC` with
+`initialization_authority: NOT_AUTHORIZED`; any later SPEC-cycle initialization
+requires separate Developer authorization.
 
 ### WP-003 — SDD Authority and Artifacts
 

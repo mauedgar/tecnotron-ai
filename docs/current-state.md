@@ -2,8 +2,8 @@
 document_id: TEC-STATE-001
 status: canonical
 machine_context: true
-version: 1.8
-updated: 2026-09-22
+version: 1.9
+updated: 2026-09-23
 owner: tecnotron-ai
 ---
 
@@ -160,10 +160,15 @@ entorno explicitas; los paths temporales no se persisten en Project Profile.
 - `WP-002` queda `SATISFIED_FOR_MILESTONE_ORDERING`. `WP-003` conserva estado
   `PLANNING_PENDING_SPEC`; su dependencia sobre WP-002 esta satisfecha, pero su
   inicializacion permanece `NOT_AUTHORIZED`.
-- Antes de iniciar WP-003, el Developer selecciono una reconciliacion acotada de
-  higiene/deprecacion del repositorio para clasificar configuraciones, YAML,
-  compatibilidad, fixtures e historico sin alterar el grafo aceptado de Work
-  Packages ni borrar evidencia por inferencia.
+- La reconciliacion acotada de higiene/deprecacion del repositorio esta
+  `COMPLETE`. El unico efecto publicado fue el archivado content-preserving de
+  `BASELINE_MANIFEST.sha256` en
+  `docs/archive/superseeded/BASELINE_MANIFEST.sha256`, observado en
+  `tools@4c64f83811a1de810f948b09e492bd29e042b460` con tree
+  `09542293a16fc6649a109300e207c7e2cbc2a94d`. No creo un nuevo Work Package ni
+  altero el grafo aceptado del milestone. `WP-003` permanece
+  `PLANNING_PENDING_SPEC` con inicializacion `NOT_AUTHORIZED`; no se afirma
+  promocion a `main`.
 - Los hallazgos de Programmatic Process son evidencia de investigacion sin
   transferencia automatica de ownership o arquitectura a Tecnotron.
 
