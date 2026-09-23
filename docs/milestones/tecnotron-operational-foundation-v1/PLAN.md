@@ -85,7 +85,7 @@ it enumerates; all other original-plan sections remain in force.
 | Integration target | `tools` |
 | Promotion target | `main` |
 | Completed work packages | `WP-000`, `WP-001`, `WP-002` |
-| Next gate | WP-003 SPEC is accepted; WP-003 WP PLAN and implementation remain separately `NOT_AUTHORIZED`, and WP-004 remains `NOT_INITIALIZED` |
+| Next gate | WP-003 SPEC and WP PLAN are accepted; WP PLAN review is `PASS` and integration/publication is complete at `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`; implementation remains `NOT_AUTHORIZED`, WP-003 remains incomplete, and WP-004 remains `NOT_INITIALIZED` |
 | Terminal authority | Developer |
 
 `tools` is the integration branch for this milestone. `main` receives the
@@ -382,16 +382,13 @@ Therefore WP-002 is `SATISFIED_FOR_MILESTONE_ORDERING`. The bounded repository
 hygiene/deprecation reconciliation selected before WP-003 is `COMPLETE`; its
 published archival effect is present in
 `tools@4c64f83811a1de810f948b09e492bd29e042b460`. This did not alter the
-accepted WP dependency graph. WP-003 now has SPEC `ACCEPTED`, independent review
-`PASS`, and integration/publication at `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`.
-Its WP PLAN and implementation remain separately `NOT_AUTHORIZED`; WP-004 remains
-`NOT_INITIALIZED`.
+accepted WP dependency graph. WP-003 now has SPEC `ACCEPTED` and WP PLAN `ACCEPTED`. The PLAN received independent review `PASS`, Developer acceptance `GRANTED`, and integration/publication at `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`. WP-003 implementation remains `NOT_AUTHORIZED`, the Work Package remains incomplete, and WP-004 remains `NOT_INITIALIZED`.
 
 ### WP-003 — SDD Authority and Artifacts
 
 ```yaml
 wave: W2
-status: SPEC_ACCEPTED
+status: PLAN_ACCEPTED
 spec_status: ACCEPTED
 developer_acceptance: GRANTED
 independent_review: PASS
@@ -414,12 +411,16 @@ gates: [WP-003_SPEC_accepted, ADR_accepted, templates_validated, no_parallel_aut
 acceptance_criteria: [stable_RF_and_RNF_ids, SPEC_defines_what_and_why, WP_PLAN_defines_how, TASK_assigns_requirements, split_required_blocks_READY]
 stop_conditions: [contract_conflict, design_md_authority, tasks_md_authority, apply_authority, documentation_without_owner]
 implementation_authority: NOT_AUTHORIZED
-wp_plan_authority: NOT_AUTHORIZED_BY_THIS_DECISION
+wp_plan_status: ACCEPTED
+wp_plan_developer_acceptance: GRANTED
+wp_plan_independent_review: PASS
+wp_plan_integrated_commit: 38cc34bf6b355734cd60606a40eb34613f6d88c8
+wp_plan_publication: COMPLETED
+wp_completion_status: INCOMPLETE
 ```
 
 WP-003 now has an accepted, independently reviewed, integrated and published SPEC at
-`e9f446a955e18d6f644e8b3199cbbb58a50729ec`. The Work Package itself is not complete:
-its WP PLAN and implementation remain separately unauthorized. It must not introduce
+`e9f446a955e18d6f644e8b3199cbbb58a50729ec`. The Work Package itself is not complete: its WP PLAN is accepted, independently reviewed `PASS`, Developer-accepted, integrated and published at `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`; WP-003 implementation remains unauthorized. It must not introduce
 `design.md`, `tasks.md`, or `apply` as competing authorities.
 
 ### WP-004 — Governed Task Cycle Lite

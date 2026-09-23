@@ -159,8 +159,7 @@ entorno explicitas; los paths temporales no se persisten en Project Profile.
   `dc5f42e3c4d905ac0f09d23455c7c5bd024690f2`.
 - `WP-002` queda `SATISFIED_FOR_MILESTONE_ORDERING`. La SPEC de `WP-003` esta
   `ACCEPTED`, con review independiente `PASS` e integrada/publicada en
-  `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`. El WP PLAN y la implementacion
-  de WP-003 permanecen `NOT_AUTHORIZED`; `WP-004` permanece `NOT_INITIALIZED`.
+  `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`. El WP PLAN de WP-003 tiene aceptacion del Developer `GRANTED`, review independiente `PASS`, integracion y publicacion completadas en `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`; la implementacion de WP-003 permanece `NOT_AUTHORIZED`, el Work Package permanece incompleto, `WP-004` permanece `NOT_INITIALIZED` y no hubo promocion a `main`.
 - La reconciliacion acotada de higiene/deprecacion del repositorio esta
   `COMPLETE`. El unico efecto publicado fue el archivado content-preserving de
   `BASELINE_MANIFEST.sha256` en

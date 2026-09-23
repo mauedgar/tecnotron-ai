@@ -21,7 +21,7 @@ queda como referencia historica sin autoridad operativa sobre este milestone.
 | 0 | `WP-000` | `DONE` | [Plan WP-000](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) |
 | 1 | `WP-001` | `ACCEPTED_INTEGRATED` | [SPEC](work-packages/wp-001-operational-profile-contracts/SPEC.md) · [Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) |
 | 2 | `WP-002` | `COMPLETE`; dependency `SATISFIED_FOR_MILESTONE_ORDERING` | [SPEC](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md) · [Plan](work-packages/wp-002-deterministic-opencode-launchers/PLAN.md) |
-| 3 | `WP-003` | SPEC `ACCEPTED`; implementation `NOT_AUTHORIZED` | [SPEC](work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md) → [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
+| 3 | `WP-003` | SPEC `ACCEPTED`; WP PLAN `ACCEPTED`; review `PASS`; implementation `NOT_AUTHORIZED` | [SPEC](work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md) · [Plan](work-packages/wp-003-sdd-authority-and-artifacts/PLAN.md) · [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
 | — | `WP-004`–`WP-006` | `PLANNING_PENDING_SPEC` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
 | — | `WP-007` | `PLANNING_PENDING_CONFIRMATION` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#wp-007--non-behavioral-milestone-closeout-boundary) |
 
@@ -80,10 +80,7 @@ model/provider selection ni aceptacion.
 higiene/deprecacion seleccionada antes de WP-003 esta `COMPLETE` y su efecto
 publicado queda observado en
 `tools@4c64f83811a1de810f948b09e492bd29e042b460`. Esta responsabilidad no creo
-un nuevo Work Package ni altero el grafo aceptado del milestone. `WP-003` tiene
-SPEC `ACCEPTED`, review independiente `PASS` e integracion/publicacion en
-`tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`; su WP PLAN e implementacion
-permanecen `NOT_AUTHORIZED`, y WP-004 permanece `NOT_INITIALIZED`.
+un nuevo Work Package ni altero el grafo aceptado del milestone. `WP-003` tiene SPEC `ACCEPTED`, WP PLAN `ACCEPTED`, review independiente del PLAN `PASS` y aceptacion del Developer `GRANTED`; el PLAN esta integrado/publicado en `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`. La implementacion permanece `NOT_AUTHORIZED`, WP-003 no esta completo como Work Package y WP-004 permanece `NOT_INITIALIZED`.
 
 Responsabilidades separadas previas siguen preservadas: el Execution
 Coordinator generico fue integrado en
