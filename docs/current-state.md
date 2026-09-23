@@ -157,18 +157,20 @@ entorno explicitas; los paths temporales no se persisten en Project Profile.
   El estado integrado/publicado observado de `tools` es
   `8be03eda0dd3060024e154a6de9aa2b903ae5b5d` con tree
   `dc5f42e3c4d905ac0f09d23455c7c5bd024690f2`.
-- `WP-002` queda `SATISFIED_FOR_MILESTONE_ORDERING`. `WP-003` conserva estado
-  `PLANNING_PENDING_SPEC`; su dependencia sobre WP-002 esta satisfecha, pero su
-  inicializacion permanece `NOT_AUTHORIZED`.
+- `WP-002` queda `SATISFIED_FOR_MILESTONE_ORDERING`. La SPEC de `WP-003` esta
+  `ACCEPTED`, con review independiente `PASS` e integrada/publicada en
+  `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`. El WP PLAN y la implementacion
+  de WP-003 permanecen `NOT_AUTHORIZED`; `WP-004` permanece `NOT_INITIALIZED`.
 - La reconciliacion acotada de higiene/deprecacion del repositorio esta
   `COMPLETE`. El unico efecto publicado fue el archivado content-preserving de
   `BASELINE_MANIFEST.sha256` en
   `docs/archive/superseeded/BASELINE_MANIFEST.sha256`, observado en
   `tools@4c64f83811a1de810f948b09e492bd29e042b460` con tree
   `09542293a16fc6649a109300e207c7e2cbc2a94d`. No creo un nuevo Work Package ni
-  altero el grafo aceptado del milestone. `WP-003` permanece
-  `PLANNING_PENDING_SPEC` con inicializacion `NOT_AUTHORIZED`; no se afirma
-  promocion a `main`.
+  altero el grafo aceptado del milestone. El estado posterior de WP-003 es SPEC
+  `ACCEPTED`, review independiente `PASS` e integracion/publicacion en
+  `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`; su implementacion permanece
+  `NOT_AUTHORIZED`, WP-004 permanece `NOT_INITIALIZED` y no hubo promocion a `main`.
 - Los hallazgos de Programmatic Process son evidencia de investigacion sin
   transferencia automatica de ownership o arquitectura a Tecnotron.
 

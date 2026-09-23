@@ -17,7 +17,7 @@ completed_work_packages:
   - WP-000
   - WP-001
   - WP-002
-next_gate: "NOT_ESTABLISHED; WP-003 initialization requires separate Developer authorization"
+next_gate: "WP-003 SPEC accepted; WP-003 implementation responsibility remains not selected or authorized"
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -85,7 +85,7 @@ it enumerates; all other original-plan sections remain in force.
 | Integration target | `tools` |
 | Promotion target | `main` |
 | Completed work packages | `WP-000`, `WP-001`, `WP-002` |
-| Next gate | `NOT_ESTABLISHED`; WP-003 initialization remains `NOT_AUTHORIZED` and requires separate Developer authorization |
+| Next gate | WP-003 SPEC is accepted; WP-003 WP PLAN and implementation remain separately `NOT_AUTHORIZED`, and WP-004 remains `NOT_INITIALIZED` |
 | Terminal authority | Developer |
 
 `tools` is the integration branch for this milestone. `main` receives the
@@ -382,15 +382,22 @@ Therefore WP-002 is `SATISFIED_FOR_MILESTONE_ORDERING`. The bounded repository
 hygiene/deprecation reconciliation selected before WP-003 is `COMPLETE`; its
 published archival effect is present in
 `tools@4c64f83811a1de810f948b09e492bd29e042b460`. This did not alter the
-accepted WP dependency graph. WP-003 remains `PLANNING_PENDING_SPEC` with
-`initialization_authority: NOT_AUTHORIZED`; any later SPEC-cycle initialization
-requires separate Developer authorization.
+accepted WP dependency graph. WP-003 now has SPEC `ACCEPTED`, independent review
+`PASS`, and integration/publication at `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`.
+Its WP PLAN and implementation remain separately `NOT_AUTHORIZED`; WP-004 remains
+`NOT_INITIALIZED`.
 
 ### WP-003 — SDD Authority and Artifacts
 
 ```yaml
 wave: W2
-status: PLANNING_PENDING_SPEC
+status: SPEC_ACCEPTED
+spec_status: ACCEPTED
+developer_acceptance: GRANTED
+independent_review: PASS
+integrated_commit: e9f446a955e18d6f644e8b3199cbbb58a50729ec
+integrated_tree: f8c87495877cf8cd9d8da1e9b8c4e9ba30a71de2
+publication: COMPLETED
 result: Unambiguous authority and validation for SPEC, WP PLAN, TASK, task PLAN, RESULT, and REVIEW
 complexity: high
 criticality: high
@@ -402,14 +409,17 @@ model_suggestions:
 model_evidence_required: [accepted_SPEC, valid_and_invalid_fixtures, template_validation, authority_review]
 dependencies: [WP-002]
 dependency_status: SATISFIED
-initialization_authority: NOT_AUTHORIZED
 ownership: {terminal_acceptance: Developer, semantics: Architect, writing: Doc_Curator}
 gates: [WP-003_SPEC_accepted, ADR_accepted, templates_validated, no_parallel_authority]
 acceptance_criteria: [stable_RF_and_RNF_ids, SPEC_defines_what_and_why, WP_PLAN_defines_how, TASK_assigns_requirements, split_required_blocks_READY]
 stop_conditions: [contract_conflict, design_md_authority, tasks_md_authority, apply_authority, documentation_without_owner]
+implementation_authority: NOT_AUTHORIZED
+wp_plan_authority: NOT_AUTHORIZED_BY_THIS_DECISION
 ```
 
-WP-003 formalizes the Change/SPEC and SDD rules. It must not introduce
+WP-003 now has an accepted, independently reviewed, integrated and published SPEC at
+`e9f446a955e18d6f644e8b3199cbbb58a50729ec`. The Work Package itself is not complete:
+its WP PLAN and implementation remain separately unauthorized. It must not introduce
 `design.md`, `tasks.md`, or `apply` as competing authorities.
 
 ### WP-004 — Governed Task Cycle Lite
@@ -597,7 +607,7 @@ repository, permissions, gate, result, or context budget changes.
 
 - [x] WP-001 SPEC approved by Developer and materialized at [WP-001 SPEC](../../work-packages/wp-001-operational-profile-contracts/SPEC.md); implementation and validation are complete, independent review passed, the Developer accepted the TASK, and PR #27 integrated it in `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publication, promotion to `main`, and cleanup remain `NOT_RUN`.
 - [x] WP-002 SPEC and WP PLAN approved by Developer; `TOF-W1-002` is closed with cleanup complete, and narrowed `TOF-W1-003` (`OPEN_CODE_EXECUTION_SURFACE_BOUNDARY`) is complete, independently reviewed `PASS`, Developer-accepted, integrated and remotely published. WP-002 is `SATISFIED_FOR_MILESTONE_ORDERING`.
-- [ ] WP-003 SPEC approved by Developer.
+- [x] WP-003 SPEC approved by Developer; independent review `PASS`, integrated and published at `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`. WP-003 implementation remains `NOT_AUTHORIZED`.
 - [ ] WP-004 SPEC approved by Developer.
 - [ ] WP-005 SPEC approved by Developer.
 - [ ] WP-006 SPEC approved by Developer.
