@@ -532,28 +532,40 @@ behavior, it stops and enters the Change/SPEC Cycle.
 
 ## 6. Accepted planning decomposition
 
-The following units are accepted as planning proposals, not executable TASKs.
-They require the applicable accepted SPEC, fresh `task_base`, Architect
-materialization, Developer READY gate, and Task Lifecycle isolation.
+This section preserves the accepted planning decomposition while distinguishing
+completed execution provenance from still-future planning proposals.
 
-| Candidate TASK | WP | Planned result |
-| --- | --- | --- |
-| `TOF-W1-001` | WP-001 | Implement accepted `tecnotron-agent-profile/v1`, portable registry/schema, fixtures, contract tests and minimal contract documentation |
-| `TOF-W1-002` | WP-002 | Nine project-scoped `.opencode/agents` profiles and static permission smokes |
-| `TOF-W1-003` | WP-002 | Generic launcher, `tecnotron-agent-launch/v1`, and local OpenCode conformance |
-| `TOF-W2-001` | WP-003 | SDD ADR, SPEC/WP/TASK templates, and validation |
-| `TOF-W2-002` | WP-004 | Canonical `tecnotron-task-lifecycle/v1` contract, mapping, and tests |
-| `TOF-W2-003` | WP-004 | Tecnotron lifecycle consumer migration |
-| `TOF-W2-004` | WP-004 | Conditional FitFlow lifecycle consumer migration or evidence-backed cancellation |
-| `TOF-W3-001` | WP-005 | Execution-observation schema and fixtures |
-| `TOF-W3-002` | WP-005 | Run Store/RunEvent correlation and RESULT references |
-| `TOF-W4-001` | WP-006 | Mechanical document moves and link repair |
-| `TOF-W4-002` | WP-006 | Derived System Guide and requirement navigation |
-| `TOF-W4-003` | WP-007 | Global conformance and promotion package |
+`TOF-W1-001`, `TOF-W1-002`, and `TOF-W1-003` are completed/materialized task
+identities and are **not** current future Candidate TASKs. Their originally
+planned results remain here only as historical planning provenance. In
+particular, the final narrowed responsibility of `TOF-W1-003`,
+`OPEN_CODE_EXECUTION_SURFACE_BOUNDARY`, is complete as recorded in the current
+WP-002 state above.
 
-These IDs do not authorize files, branches, worktrees, or implementation. A
-phase is split again whenever ownership, repository, permissions, gate, result,
-or context budget changes.
+`TOF-W2-001` onward remain planning proposals, not executable TASKs. They require
+their applicable accepted SPEC and gates, a fresh `task_base`, Architect
+materialization where required, Developer authorization, and Task Lifecycle
+isolation before execution.
+
+| Planning unit | WP | Planned result | Current disposition |
+| --- | --- | --- | --- |
+| `TOF-W1-001` | WP-001 | Implement accepted `tecnotron-agent-profile/v1`, portable registry/schema, fixtures, contract tests and minimal contract documentation | `COMPLETED_PROVENANCE_ONLY` |
+| `TOF-W1-002` | WP-002 | Nine project-scoped `.opencode/agents` profiles and static permission smokes | `COMPLETED_PROVENANCE_ONLY` |
+| `TOF-W1-003` | WP-002 | Generic launcher, `tecnotron-agent-launch/v1`, and local OpenCode conformance | `COMPLETED_PROVENANCE_ONLY`; narrowed final responsibility complete |
+| `TOF-W2-001` | WP-003 | SDD ADR, SPEC/WP/TASK templates, and validation | `FUTURE_PLANNING_PROPOSAL_NOT_AUTHORIZED` |
+| `TOF-W2-002` | WP-004 | Canonical `tecnotron-task-lifecycle/v1` contract, mapping, and tests | `FUTURE_PLANNING_PROPOSAL_NOT_AUTHORIZED` |
+| `TOF-W2-003` | WP-004 | Tecnotron lifecycle consumer migration | `FUTURE_PLANNING_PROPOSAL_NOT_AUTHORIZED` |
+| `TOF-W2-004` | WP-004 | Conditional FitFlow lifecycle consumer migration or evidence-backed cancellation | `FUTURE_PLANNING_PROPOSAL_NOT_AUTHORIZED` |
+| `TOF-W3-001` | WP-005 | Execution-observation schema and fixtures | `FUTURE_PLANNING_PROPOSAL_NOT_AUTHORIZED` |
+| `TOF-W3-002` | WP-005 | Run Store/RunEvent correlation and RESULT references | `FUTURE_PLANNING_PROPOSAL_NOT_AUTHORIZED` |
+| `TOF-W4-001` | WP-006 | Mechanical document moves and link repair | `FUTURE_PLANNING_PROPOSAL_NOT_AUTHORIZED` |
+| `TOF-W4-002` | WP-006 | Derived System Guide and requirement navigation | `FUTURE_PLANNING_PROPOSAL_NOT_AUTHORIZED` |
+| `TOF-W4-003` | WP-007 | Global conformance and promotion package | `FUTURE_PLANNING_PROPOSAL_NOT_AUTHORIZED` |
+
+Completed provenance rows do not reactivate execution authority. Future planning
+proposal IDs do not authorize files, branches, worktrees, implementation,
+integration, or promotion. A phase is split again whenever ownership,
+repository, permissions, gate, result, or context budget changes.
 
 ## 7. Milestone gates
 
