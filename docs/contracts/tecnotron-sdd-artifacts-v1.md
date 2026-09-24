@@ -3,9 +3,9 @@ document_id: TEC-CONTRACT-SDD-ARTIFACTS-V1
 status: implementation_candidate
 owner: tecnotron-ai
 type: contract
-version: 1.0
+version: 1.1
 contract_version: tecnotron-sdd-artifacts/v1
-updated: 2026-09-23
+updated: 2026-09-24
 machine_context: true
 task_id: TOF-WP003-WU00-001
 work_package_id: WP-003
@@ -74,20 +74,24 @@ never a reason to choose a convenient interpretation or default.
   "requirement_id_prefixes": ["RF-", "RNF-"],
   "kind_fields": {
     "SPEC": ["requirements"],
-    "WP_PLAN": ["requirement_refs", "relations"],
-    "TASK": ["requirement_refs", "assignment_authority_ref", "write_scope", "acceptance_criteria", "relations"],
+    "WP_PLAN": ["coverage", "requirement_refs", "relations"],
+    "TASK": ["coverage", "requirement_refs", "assignment_authority_ref", "write_scope", "acceptance_criteria", "relations"],
     "TASK_PLAN": ["relations"],
     "RESULT": ["subject_ref", "evidence_refs", "observations", "relations"],
     "REVIEW": ["candidate", "validation_evidence_refs", "assessment_ref"]
   },
   "allowed_artifact_relations": [
-    {"from": "WP_PLAN", "relation": "derives_from", "to": "SPEC"},
-    {"from": "TASK", "relation": "assigns_from", "to": "SPEC"},
+    {"from": "WP_PLAN", "relation": "derives_from", "to": "SPEC", "coverage_kind": "approved_spec"},
+    {"from": "TASK", "relation": "assigns_from", "to": "SPEC", "coverage_kind": "approved_spec"},
     {"from": "TASK", "relation": "follows", "to": "WP_PLAN"},
     {"from": "TASK_PLAN", "relation": "executes", "to": "TASK"},
     {"from": "RESULT", "relation": "records", "to": "TASK"},
     {"from": "REVIEW", "relation": "uses_evidence", "to": "RESULT"}
   ],
+  "coverage_alternatives": {
+    "approved_spec": {"required": ["spec_ref"]},
+    "competent_exception": {"required": ["exception_ref"]}
+  },
   "exception_required": ["authority_ref", "scope", "rationale"],
   "frozen_candidate_required": ["identity_ref"],
   "git_candidate_identity": ["repository", "commit", "tree", "parents"],
@@ -134,10 +138,11 @@ The representation contains no authoritative defaults or coercion of acceptance.
 | `scope` | Explicit bounded subject and applicable repository/paths or logical responsibility. Comparisons need declared containment evidence; no inference from directory proximity. |
 | `revision` | Explicit version, immutable commit/hash, or another reproducible revision appropriate to the owner. A mutable path alone is insufficient when exact reviewed identity is required. |
 | `authority_refs` | Nonempty references to competent authority for this artifact and responsibility. A reference transports an existing decision; it does not create or rank authority. |
+| `coverage` | Explicit RF-201 choice for WP_PLAN and TASK: `{kind: approved_spec, spec_ref: Reference}` or `{kind: competent_exception, exception_ref: Reference}`. Exactly one branch for the bounded coverage being declared; absence, unknown kind, mixed branch fields or ambiguous source fails closed. No branch is inferred from a missing SPEC. |
 | Reference `{ref, revision}` | `ref` is an explicit document ID, versioned path or immutable locator; `revision` disambiguates the source snapshot. Resolution uses declared repository-local inputs or exact immutable evidence supplied by the caller. Unresolved, mismatched or conflicting identities fail closed. No network/provider discovery is necessary. |
 | `requirement_refs` | Explicit list of `{source: Reference, id: string}` entries. `source` identifies the competent requirement source, normally the accepted SPEC. Each ID has `RF-` or `RNF-` plus a nonempty suffix and must exist with that identity in the source; syntax alone is insufficient. No numeric-only renumbering rule is introduced. |
-| `requirements` | SPEC-owned stable IDs and their normative content, with explicit supersession/retirement provenance where applicable. PLAN/TASK reference them and do not become a second registry. |
-| `relations` | Declared `{relation, target: Reference}` edges oriented from the current artifact to its input; target kind is resolved from the referenced snapshot. The permitted triples are in §2 and their conditions in §4. |
+| `requirements` | SPEC-owned stable IDs and their normative content, with explicit supersession/retirement provenance where applicable. Under the competent-exception branch, stable requirement references resolve to the competent authority identified by that exception; this does not fabricate a SPEC or transfer requirement ownership to PLAN/TASK. |
+| `relations` | Declared `{relation, target: Reference}` edges oriented from the current artifact to its input; target kind is resolved from the referenced snapshot. The permitted triples are in §2 and their conditions in §4. `coverage_kind` on a vocabulary entry limits that SPEC edge to the explicitly selected coverage branch. |
 | `assignment_authority_ref` | Explicit competent decision authorizing a TASK's bounded responsibility and requirement subset. SPEC acceptance, plan existence or generated TASK metadata cannot substitute for that decision. |
 | `write_scope`, `acceptance_criteria` | Explicit bounded effects and local checks within the assigned requirements. They neither widen the WP PLAN nor redefine SPEC semantics. |
 
@@ -160,14 +165,25 @@ precedence** and not a runtime lifecycle. Each edge targets an explicit revision
 | Kind | Required relationship / responsibility | Boundary |
 | --- | --- | --- |
 | SPEC | Owns WHAT and stable RF/RNF. Cites competent decisions/contracts through `authority_refs`. | A draft SPEC does not grant accepted behavior or implementation permission by existing. |
-| WP_PLAN | `derives_from` the competent SPEC; references covered requirements. | Defines HOW, decomposition, order and gates only. Uncovered expected behavior returns to the SPEC cycle. |
-| TASK | `assigns_from` the owning SPEC and `follows` its WP PLAN; declares assignment authority, bounded scope and requirement subset. | May define local acceptance checks, not copy/reinterpret SPEC or enlarge its plan. |
+| WP_PLAN | Declares `coverage` and references covered requirements. With `approved_spec`, requires `derives_from` that accepted SPEC. With `competent_exception`, requires the explicit `exception_ref` instead; no SPEC edge is required or fabricated. | Defines HOW, decomposition, order and gates only within the selected competent coverage. An exception does not let the plan authorize uncovered behavior. |
+| TASK | Declares coverage consistent with its WP PLAN, bounded requirement subset, assignment authority and scope. With `approved_spec`, requires `assigns_from` that SPEC; with `competent_exception`, uses the explicit `exception_ref` instead. `follows` its WP PLAN remains required in both branches. | May define local acceptance checks, not create or reinterpret requirements or enlarge its plan. Coverage is not implementation authorization. |
 | TASK_PLAN | `executes` its TASK. | Local execution strategy remains contained by that TASK. It cannot change expected behavior or assignment. |
 | RESULT | `records` its TASK; identifies exact observed subject/revision and evidence. | Records observations, including failures; does not revise expected requirements or accept work. |
 | REVIEW | Identifies the exact frozen candidate and its validation evidence. `uses_evidence` is allowed when the supplied evidence is a RESULT artifact. | Independent, read-only assessment. Other exact validation reports can be referenced directly without inventing a RESULT artifact. No candidate mutation or Developer acceptance. |
 
+Only the two SPEC-targeting edges are conditional on `coverage.kind`. Under
+`approved_spec`, each must target the same accepted identity as `spec_ref`.
+Under `competent_exception`, coverage is supplied by `exception_ref` in its
+dedicated field: neither of those SPEC edges applies. A WP_PLAN can explicitly
+declare `relations: []` in that branch because there is no mandatory SPEC edge;
+its nonempty authority and requirement references remain required. TASK still
+declares `follows` WP_PLAN, whose coverage source/revision must agree with the
+TASK's selected source, with the assigned requirements and scope contained in
+that plan and source. No new artifact kind or alternative graph edge is inferred.
+
 Authority/exception references and candidate/evidence references have their own
 fields. They are not arbitrary extra edges in the six-artifact relation graph.
+This correction changes no REVIEW evidence relation or dedicated evidence field.
 An unknown relationship is rejected; a convenience filename never supplies a
 missing edge. Accepted-state evidence must accompany the source when required;
 an artifact's own status declaration cannot self-certify acceptance. Frozen
@@ -181,13 +197,25 @@ an explicit competent exception with `authority_ref`, `scope` and `rationale`.
 If existing authority does not cover the exception, a Developer ruling is
 required. A missing SPEC never creates an exception.
 
-A supplied exception can stand in for the SPEC-coverage reference only within
-its authorized scope; it is **not** a synthetic SPEC, an additional artifact
-kind, or a general waiver of stable IDs, ownership, bounded assignment, WP PLAN,
-review or acceptance constraints. If other required relationships cannot be
-established, validation still fails closed for competent resolution. Any
-requirement reference must resolve to actual competent authority, including
-explicit exceptional authority when applicable; never invent requirement IDs.
+`exception_ref` resolves to the explicit exception record with `authority_ref`,
+`scope` and `rationale`. Its authority must demonstrably cover the exception and
+the declared requirements; otherwise a competent Developer ruling is needed.
+The WP_PLAN and TASK reference that same record/revision within its authorized
+scope. This replaces **only** the ordinary SPEC coverage and the two corresponding
+SPEC-edge requirements, so a valid exception branch requires no SPEC at all.
+The exception is **not** a synthetic SPEC, an additional artifact kind, or a
+general waiver of stable IDs, ownership, bounded assignment, WP PLAN, review or
+acceptance constraints. Any requirement reference must resolve to actual
+competent authority identified by the exception; never invent requirement IDs
+or use PLAN/TASK as their behavioral source. If any unaffected required boundary
+cannot be established, validation still fails closed for competent resolution.
+
+An exception's scope/rationale alone grants neither TASK execution nor candidate
+acceptance. Uncovered behavior still returns to competent SPEC authority or an
+explicit competent RF-201 exception disposition before acquiring authority; the
+current exception cannot silently expand. Without either accepted SPEC coverage
+or a proved competent scoped exception, the capability remains rejected. An
+unknown source, convenience file or self-declared exception is not a third branch.
 
 A purely mechanical unit remains traced to the owning accepted SPEC without a
 separate SPEC if it only materializes/verifies already-authorized behavior and
