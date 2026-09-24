@@ -2,8 +2,8 @@
 document_id: TEC-STATE-001
 status: canonical
 machine_context: true
-version: 1.9
-updated: 2026-09-23
+version: 1.10
+updated: 2026-09-24
 owner: tecnotron-ai
 ---
 
@@ -159,7 +159,18 @@ entorno explicitas; los paths temporales no se persisten en Project Profile.
   `dc5f42e3c4d905ac0f09d23455c7c5bd024690f2`.
 - `WP-002` queda `SATISFIED_FOR_MILESTONE_ORDERING`. La SPEC de `WP-003` esta
   `ACCEPTED`, con review independiente `PASS` e integrada/publicada en
-  `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`. El WP PLAN de WP-003 tiene aceptacion del Developer `GRANTED`, review independiente `PASS`, integracion y publicacion completadas en `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`; la implementacion de WP-003 permanece `NOT_AUTHORIZED`, el Work Package permanece incompleto, `WP-004` permanece `NOT_INITIALIZED` y no hubo promocion a `main`.
+  `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`. El WP PLAN de WP-003 tiene
+  aceptacion del Developer `GRANTED`, review independiente `PASS`, integracion
+  y publicacion completadas en `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`.
+  `WP003-WU-00` (`MATERIALIZE_WP003_AUTHORITY_AND_CONTRACT_FOUNDATION`) esta
+  `CLOSED_PASS`: implementacion completa, correccion `F-001` `CLOSED_PASS`,
+  validacion `PASS`, review independiente
+  `IND-REVIEW-TECNOTRON-WP003-WU00-AUTHORITY-CONTRACT-FOUNDATION-002` `PASS`,
+  aceptacion del Developer, integracion y publicacion completadas en
+  `tools@971c956b329c03f4999a6562411195d2cab662c8` con tree
+  `7b9bb59ab831de137570fe67a0a15643c7a1be04`. WP-003 permanece incompleto;
+  `WP003-WU-01` no esta inicializado, `WP-004` permanece `NOT_INITIALIZED`,
+  Operational Bootstrap Wave 1 no fue iniciada y no hubo promocion a `main`.
 - La reconciliacion acotada de higiene/deprecacion del repositorio esta
   `COMPLETE`. El unico efecto publicado fue el archivado content-preserving de
   `BASELINE_MANIFEST.sha256` en
@@ -168,8 +179,11 @@ entorno explicitas; los paths temporales no se persisten en Project Profile.
   `09542293a16fc6649a109300e207c7e2cbc2a94d`. No creo un nuevo Work Package ni
   altero el grafo aceptado del milestone. El estado posterior de WP-003 es SPEC
   `ACCEPTED`, review independiente `PASS` e integracion/publicacion en
-  `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`; su implementacion permanece
-  `NOT_AUTHORIZED`, WP-004 permanece `NOT_INITIALIZED` y no hubo promocion a `main`.
+  `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`; `WP003-WU-00` esta
+  `CLOSED_PASS` en `tools@971c956b329c03f4999a6562411195d2cab662c8` con tree
+  `7b9bb59ab831de137570fe67a0a15643c7a1be04`; `F-001` esta `CLOSED_PASS`.
+  WP-003 sigue incompleto, `WP003-WU-01` no esta inicializado, `WP-004`
+  permanece `NOT_INITIALIZED` y no hubo promocion a `main`.
 - Los hallazgos de Programmatic Process son evidencia de investigacion sin
   transferencia automatica de ownership o arquitectura a Tecnotron.
 

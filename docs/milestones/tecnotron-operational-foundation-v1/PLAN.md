@@ -4,8 +4,8 @@ status: accepted
 materialization_status: ACCEPTED
 owner: tecnotron-ai
 type: milestone-plan
-version: 1.10
-updated: 2026-09-23
+version: 1.11
+updated: 2026-09-24
 machine_context: true
 milestone_id: tecnotron-operational-foundation-v1
 milestone_baseline: 41088a413d06ed1d58d63d92320e38d4b44b86ea
@@ -17,7 +17,7 @@ completed_work_packages:
   - WP-000
   - WP-001
   - WP-002
-next_gate: "WP-003 SPEC accepted; WP-003 implementation responsibility remains not selected or authorized"
+next_gate: "WP003-WU-00 CLOSED_PASS; next product responsibility is not selected by this TaskCycle"
 complexity: high
 criticality: high
 scope_fit: SPLIT_REQUIRED
@@ -85,7 +85,7 @@ it enumerates; all other original-plan sections remain in force.
 | Integration target | `tools` |
 | Promotion target | `main` |
 | Completed work packages | `WP-000`, `WP-001`, `WP-002` |
-| Next gate | WP-003 SPEC and WP PLAN are accepted; WP PLAN review is `PASS` and integration/publication is complete at `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`; implementation remains `NOT_AUTHORIZED`, WP-003 remains incomplete, and WP-004 remains `NOT_INITIALIZED` |
+| Next gate | `WP003-WU-00` is `CLOSED_PASS` at `tools@971c956b329c03f4999a6562411195d2cab662c8`; WP-003 remains incomplete, `WP003-WU-01` is not initialized, and the next product responsibility is not selected by this TaskCycle |
 | Terminal authority | Developer |
 
 `tools` is the integration branch for this milestone. `main` receives the
@@ -382,13 +382,23 @@ Therefore WP-002 is `SATISFIED_FOR_MILESTONE_ORDERING`. The bounded repository
 hygiene/deprecation reconciliation selected before WP-003 is `COMPLETE`; its
 published archival effect is present in
 `tools@4c64f83811a1de810f948b09e492bd29e042b460`. This did not alter the
-accepted WP dependency graph. WP-003 now has SPEC `ACCEPTED` and WP PLAN `ACCEPTED`. The PLAN received independent review `PASS`, Developer acceptance `GRANTED`, and integration/publication at `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`. WP-003 implementation remains `NOT_AUTHORIZED`, the Work Package remains incomplete, and WP-004 remains `NOT_INITIALIZED`.
+accepted WP dependency graph. WP-003 now has SPEC `ACCEPTED` and WP PLAN
+`ACCEPTED`. The PLAN received independent review `PASS`, Developer acceptance
+`GRANTED`, and integration/publication at
+`tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`. `WP003-WU-00`
+(`MATERIALIZE_WP003_AUTHORITY_AND_CONTRACT_FOUNDATION`) is `CLOSED_PASS`:
+implementation, validation, independent review, Developer acceptance,
+integration, and publication completed at
+`tools@971c956b329c03f4999a6562411195d2cab662c8` with tree
+`7b9bb59ab831de137570fe67a0a15643c7a1be04`; `F-001` is `CLOSED_PASS`.
+WP-003 remains incomplete, `WP003-WU-01` is not initialized, and WP-004 remains
+`NOT_INITIALIZED`.
 
 ### WP-003 — SDD Authority and Artifacts
 
 ```yaml
 wave: W2
-status: PLAN_ACCEPTED
+status: WU00_CLOSED_PASS_WP_INCOMPLETE
 spec_status: ACCEPTED
 developer_acceptance: GRANTED
 independent_review: PASS
@@ -410,7 +420,20 @@ ownership: {terminal_acceptance: Developer, semantics: Architect, writing: Doc_C
 gates: [WP-003_SPEC_accepted, ADR_accepted, templates_validated, no_parallel_authority]
 acceptance_criteria: [stable_RF_and_RNF_ids, SPEC_defines_what_and_why, WP_PLAN_defines_how, TASK_assigns_requirements, split_required_blocks_READY]
 stop_conditions: [contract_conflict, design_md_authority, tasks_md_authority, apply_authority, documentation_without_owner]
-implementation_authority: NOT_AUTHORIZED
+implementation_authority: NO_ADDITIONAL_WU_AUTHORIZED
+wu00:
+  responsibility: MATERIALIZE_WP003_AUTHORITY_AND_CONTRACT_FOUNDATION
+  implementation: COMPLETE
+  validation: PASS
+  independent_review: PASS
+  developer_acceptance: GRANTED
+  integration: COMPLETE
+  publication: COMPLETE
+  canonical_commit: 971c956b329c03f4999a6562411195d2cab662c8
+  canonical_tree: 7b9bb59ab831de137570fe67a0a15643c7a1be04
+  f_001: CLOSED_PASS
+  terminal_state: CLOSED_PASS
+wu01_initialized: false
 wp_plan_status: ACCEPTED
 wp_plan_developer_acceptance: GRANTED
 wp_plan_independent_review: PASS
@@ -419,9 +442,17 @@ wp_plan_publication: COMPLETED
 wp_completion_status: INCOMPLETE
 ```
 
-WP-003 now has an accepted, independently reviewed, integrated and published SPEC at
-`e9f446a955e18d6f644e8b3199cbbb58a50729ec`. The Work Package itself is not complete: its WP PLAN is accepted, independently reviewed `PASS`, Developer-accepted, integrated and published at `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`; WP-003 implementation remains unauthorized. It must not introduce
-`design.md`, `tasks.md`, or `apply` as competing authorities.
+WP-003 has an accepted, independently reviewed, integrated and published SPEC at
+`e9f446a955e18d6f644e8b3199cbbb58a50729ec`. Its WP PLAN is accepted,
+independently reviewed `PASS`, Developer-accepted, integrated and published at
+`tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`. `WP003-WU-00` is
+`CLOSED_PASS` at `tools@971c956b329c03f4999a6562411195d2cab662c8` with tree
+`7b9bb59ab831de137570fe67a0a15643c7a1be04`; `F-001` is `CLOSED_PASS`.
+The Work Package itself is not complete, `WP003-WU-01` is not initialized, and
+the next product responsibility is not selected by this TaskCycle. The
+continuity direction is `DEVLAB-TECNOTRON-OPERATIONAL-CONVERGENCE-001`; it does
+not authorize or initialize operational bootstrap work. WP-003 must not
+introduce `design.md`, `tasks.md`, or `apply` as competing authorities.
 
 ### WP-004 — Governed Task Cycle Lite
 
@@ -608,7 +639,7 @@ repository, permissions, gate, result, or context budget changes.
 
 - [x] WP-001 SPEC approved by Developer and materialized at [WP-001 SPEC](../../work-packages/wp-001-operational-profile-contracts/SPEC.md); implementation and validation are complete, independent review passed, the Developer accepted the TASK, and PR #27 integrated it in `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publication, promotion to `main`, and cleanup remain `NOT_RUN`.
 - [x] WP-002 SPEC and WP PLAN approved by Developer; `TOF-W1-002` is closed with cleanup complete, and narrowed `TOF-W1-003` (`OPEN_CODE_EXECUTION_SURFACE_BOUNDARY`) is complete, independently reviewed `PASS`, Developer-accepted, integrated and remotely published. WP-002 is `SATISFIED_FOR_MILESTONE_ORDERING`.
-- [x] WP-003 SPEC approved by Developer; independent review `PASS`, integrated and published at `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`. WP-003 implementation remains `NOT_AUTHORIZED`.
+- [x] WP-003 SPEC approved by Developer; independent review `PASS`, integrated and published at `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`. `WP003-WU-00` is `CLOSED_PASS` at `tools@971c956b329c03f4999a6562411195d2cab662c8`; WP-003 remains incomplete and `WP003-WU-01` is not initialized.
 - [ ] WP-004 SPEC approved by Developer.
 - [ ] WP-005 SPEC approved by Developer.
 - [ ] WP-006 SPEC approved by Developer.

@@ -2,8 +2,8 @@
 document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 3.7
-updated: 2026-09-23
+version: 3.8
+updated: 2026-09-24
 owner: tecnotron-ai
 ---
 
@@ -21,7 +21,7 @@ queda como referencia historica sin autoridad operativa sobre este milestone.
 | 0 | `WP-000` | `DONE` | [Plan WP-000](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) |
 | 1 | `WP-001` | `ACCEPTED_INTEGRATED` | [SPEC](work-packages/wp-001-operational-profile-contracts/SPEC.md) · [Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) |
 | 2 | `WP-002` | `COMPLETE`; dependency `SATISFIED_FOR_MILESTONE_ORDERING` | [SPEC](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md) · [Plan](work-packages/wp-002-deterministic-opencode-launchers/PLAN.md) |
-| 3 | `WP-003` | SPEC `ACCEPTED`; WP PLAN `ACCEPTED`; review `PASS`; implementation `NOT_AUTHORIZED` | [SPEC](work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md) · [Plan](work-packages/wp-003-sdd-authority-and-artifacts/PLAN.md) · [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
+| 3 | `WP-003` | `WP003-WU-00` `CLOSED_PASS`; WP-003 aun incompleto; siguiente responsabilidad no seleccionada | [SPEC](work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md) · [Plan](work-packages/wp-003-sdd-authority-and-artifacts/PLAN.md) · [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
 | — | `WP-004`–`WP-006` | `PLANNING_PENDING_SPEC` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#4-work-packages) |
 | — | `WP-007` | `PLANNING_PENDING_CONFIRMATION` | [Milestone Plan](milestones/tecnotron-operational-foundation-v1/PLAN.md#wp-007--non-behavioral-milestone-closeout-boundary) |
 
@@ -80,7 +80,20 @@ model/provider selection ni aceptacion.
 higiene/deprecacion seleccionada antes de WP-003 esta `COMPLETE` y su efecto
 publicado queda observado en
 `tools@4c64f83811a1de810f948b09e492bd29e042b460`. Esta responsabilidad no creo
-un nuevo Work Package ni altero el grafo aceptado del milestone. `WP-003` tiene SPEC `ACCEPTED`, WP PLAN `ACCEPTED`, review independiente del PLAN `PASS` y aceptacion del Developer `GRANTED`; el PLAN esta integrado/publicado en `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`. La implementacion permanece `NOT_AUTHORIZED`, WP-003 no esta completo como Work Package y WP-004 permanece `NOT_INITIALIZED`.
+un nuevo Work Package ni altero el grafo aceptado del milestone. `WP-003` tiene
+SPEC `ACCEPTED`, WP PLAN `ACCEPTED`, review independiente del PLAN `PASS` y
+aceptacion del Developer `GRANTED`; el PLAN esta integrado/publicado en
+`tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`. Su
+`WP003-WU-00` (`MATERIALIZE_WP003_AUTHORITY_AND_CONTRACT_FOUNDATION`) esta
+`CLOSED_PASS`: implementacion, validacion, review independiente, aceptacion,
+integracion y publicacion completadas en
+`tools@971c956b329c03f4999a6562411195d2cab662c8` con tree
+`7b9bb59ab831de137570fe67a0a15643c7a1be04`; `F-001` esta `CLOSED_PASS`.
+WP-003 no esta completo como Work Package. `WP003-WU-01` no esta inicializado,
+WP-004 permanece `NOT_INITIALIZED`, Operational Bootstrap Wave 1 no fue
+iniciada, y la proxima responsabilidad de producto no fue seleccionada por este
+TaskCycle: la direccion de continuidad retorna a
+`DEVLAB-TECNOTRON-OPERATIONAL-CONVERGENCE-001`.
 
 Responsabilidades separadas previas siguen preservadas: el Execution
 Coordinator generico fue integrado en
