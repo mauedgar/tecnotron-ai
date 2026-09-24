@@ -93,13 +93,21 @@ function transition(store, expectedRevision, kind, id, target, options = {}) {
     return { kind, id, at, action: `TRANSITION:${target}` };
   });
 }
-function satisfy(store, expectedRevision, id, obligationId, authorityRef) {
+function satisfy(store, expectedRevision, id, obligationId, authorityRef, authorityReference) {
   const at = now();
   return store.mutate(expectedRevision, state => {
     const item = existing(state, 'TaskCycle', id);
     const obligation = item.obligations.find(o => o.id === obligationId);
     demand(obligation && obligation.status === 'PENDING', 'INVALID_TRANSITION', 'obligation missing or already satisfied');
-    if (obligation.authority_ref !== null) demand(authorityRef === obligation.authority_ref && item.authority_refs.some(r => r.kind === 'AUTHORITY' && r.id === authorityRef), 'MISSING_REQUIRED_AUTHORITY', 'obligation authority');
+    if (obligation.authority_ref !== null) {
+      demand(authorityRef === obligation.authority_ref, 'MISSING_REQUIRED_AUTHORITY', 'obligation authority identity');
+      if (!item.authority_refs.some(r => r.kind === 'AUTHORITY' && r.id === authorityRef)) {
+        demand(authorityReference !== undefined, 'MISSING_REQUIRED_AUTHORITY', 'new authority reference required');
+        refs([authorityReference]);
+        demand(authorityReference.kind === 'AUTHORITY' && authorityReference.id === authorityRef, 'MISSING_REQUIRED_AUTHORITY', 'authority reference mismatch');
+        item.authority_refs.push(authorityReference);
+      }
+    }
     obligation.status = 'SATISFIED'; item.revision++; item.updated_at = at;
     return { kind: 'TaskCycle', id, at, action: `SATISFY:${obligationId}` };
   });

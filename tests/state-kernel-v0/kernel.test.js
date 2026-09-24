@@ -155,3 +155,13 @@ test('unsafe aggregate IDs and orphan initialization fail closed', t => {
   fs.mkdirSync(path.join(another, 'state/kernel-v0/orphan'), { recursive: true });
   assert.throws(() => new FilesystemStateStore(another).initialize(), error => error.code === 'INVALID_TRANSITION');
 });
+test('future authority reference is recorded in the obligation satisfaction event', t => {
+  const { store } = fixture(t);
+  create(store, 0, 'TaskCycle', 'TC-FUTURE', { responsibility: 'future acceptance', obligations: [{ id: 'ACCEPTANCE', authority_ref: 'FUTURE-RULING' }] }, auth);
+  unchanged(store, () => satisfy(store, 1, 'TC-FUTURE', 'ACCEPTANCE', 'FUTURE-RULING'), 'MISSING_REQUIRED_AUTHORITY');
+  satisfy(store, 1, 'TC-FUTURE', 'ACCEPTANCE', 'FUTURE-RULING', { kind: 'AUTHORITY', id: 'FUTURE-RULING', location: 'evidence/ruling.json', sha256: 'b'.repeat(64) });
+  const item = inspect(store, 'TaskCycle', 'TC-FUTURE').aggregate;
+  assert.equal(item.obligations[0].status, 'SATISFIED');
+  assert.equal(item.authority_refs.at(-1).id, 'FUTURE-RULING');
+  assert.equal(store.verify().event_count, 2);
+});

@@ -16,7 +16,7 @@ function main(argv) {
     case 'TaskCycleInspect': return inspect(store, 'TaskCycle', r.id);
     case 'TaskCycleObligations': return obligations(store, r.id);
     case 'TaskCycleTransition': return transition(store, revision, 'TaskCycle', r.id, r.target, r.options);
-    case 'TaskCycleSatisfy': return satisfy(store, revision, r.id, r.obligation_id, r.authority_ref);
+    case 'TaskCycleSatisfy': return satisfy(store, revision, r.id, r.obligation_id, r.authority_ref, r.authority_reference);
     case 'OperationCreate': return create(store, revision, 'Operation', r.id, { taskcycle_id: r.taskcycle_id, objective: r.objective }, r.authority_refs);
     case 'OperationTransition': return transition(store, revision, 'Operation', r.id, r.target, r.options);
     case 'AttemptStart': return create(store, revision, 'ExecutionAttempt', r.id, { operation_id: r.operation_id }, r.authority_refs);
