@@ -5,10 +5,19 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { FilesystemStateStore, create, transition, satisfy, inspect, obligations, render } = require('../../src/state-kernel-v0');
+const { FilesystemStateStore, create, bootstrapTaskCycle, transition, satisfy, inspect, obligations, render } = require('../../src/state-kernel-v0');
 const { validateAggregate, validateState } = require('../../src/state-kernel-v0/contracts');
 const auth = [{ kind: 'AUTHORITY', id: 'DEV-001' }];
 const evidence = [{ kind: 'EVIDENCE', id: 'OBS-001', location: 'evidence/obs.json', sha256: 'a'.repeat(64) }];
+const bootstrapAuthority = [{ kind: 'AUTHORITY', id: 'DEV-BOOTSTRAP', location: 'evidence/developer-ruling.json', sha256: 'b'.repeat(64) }];
+const bootstrapEvidence = [{ kind: 'EVIDENCE', id: 'WAVE1-ESTABLISHED', location: 'evidence/wave1-established.json', sha256: 'c'.repeat(64) }];
+const bootstrapProvenance = {
+  mode: 'IMPORTED_ESTABLISHED_STATE',
+  cutover_at: '2026-09-24T10:00:00.000Z',
+  historical_events_reconstructed: false,
+  authority_refs: bootstrapAuthority,
+  evidence_refs: bootstrapEvidence,
+};
 function fixture(t) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'tecnotron-kernel-'));
   t.after(() => fs.rmSync(home, { recursive: true, force: true }));
@@ -164,4 +173,147 @@ test('future authority reference is recorded in the obligation satisfaction even
   assert.equal(item.obligations[0].status, 'SATISFIED');
   assert.equal(item.authority_refs.at(-1).id, 'FUTURE-RULING');
   assert.equal(store.verify().event_count, 2);
+});
+test('bootstrap import records established state as one provenance event without fabricated lifecycle history', t => {
+  const { store } = fixture(t);
+  bootstrapTaskCycle(store, 0, {
+    id: 'TC-IMPORT',
+    responsibility: 'IMPORT_ESTABLISHED_WAVE',
+    state: 'ACTIVE',
+    obligations: [
+      { id: 'implementation', status: 'SATISFIED', authority_ref: null },
+      { id: 'Developer_acceptance', status: 'SATISFIED', authority_ref: 'DEV-BOOTSTRAP' },
+      { id: 'lifecycle_reconciliation', status: 'PENDING', authority_ref: 'DEV-BOOTSTRAP' },
+    ],
+    bootstrap_provenance: bootstrapProvenance,
+  });
+  const { aggregate } = inspect(store, 'TaskCycle', 'TC-IMPORT');
+  assert.equal(aggregate.state, 'ACTIVE');
+  assert.deepEqual(aggregate.obligations.map(({ id, status }) => [id, status]), [
+    ['implementation', 'SATISFIED'],
+    ['Developer_acceptance', 'SATISFIED'],
+    ['lifecycle_reconciliation', 'PENDING'],
+  ]);
+  const { events } = store.read();
+  assert.equal(events.length, 1);
+  assert.equal(events[0].action, 'BOOTSTRAP_IMPORT');
+  assert.equal(events[0].bootstrap_provenance.historical_events_reconstructed, false);
+  assert.deepEqual(events[0].bootstrap_provenance, bootstrapProvenance);
+  assert.equal(events[0].after.created_at, bootstrapProvenance.cutover_at);
+  assert.deepEqual(events[0].after.authority_refs, bootstrapProvenance.authority_refs);
+  assert.equal(events.some(event => event.action === 'CREATE' || event.action.startsWith('SATISFY:') || event.action.startsWith('TRANSITION:')), false);
+});
+test('bootstrap import provenance survives replay and process/store reload', t => {
+  const { home, store } = fixture(t);
+  bootstrapTaskCycle(store, 0, {
+    id: 'TC-RELOAD',
+    responsibility: 'RELOAD_IMPORTED_STATE',
+    state: 'ACTIVE',
+    obligations: [{ id: 'remaining', status: 'PENDING', authority_ref: null }],
+    bootstrap_provenance: bootstrapProvenance,
+  });
+  const reloaded = new FilesystemStateStore(home);
+  assert.deepEqual(reloaded.read(), store.read());
+  assert.deepEqual(reloaded.read().events[0].bootstrap_provenance, bootstrapProvenance);
+  const cli = path.join(__dirname, '../../src/state-kernel-v0/cli.js');
+  const verify = spawnSync(process.execPath, [cli, '--home', home, '--command', 'StateVerify'], { encoding: 'utf8' });
+  assert.equal(verify.status, 0, verify.stderr);
+  assert.deepEqual(JSON.parse(verify.stdout), { valid: true, revision: 1, event_count: 1 });
+});
+test('bootstrap import stale revision, malformed provenance, missing imported authority and duplicate identity fail closed', t => {
+  const { store } = fixture(t);
+  create(store, 0, 'Milestone', 'M-BOOT', { title: 'bootstrap guard' });
+  unchanged(store, () => bootstrapTaskCycle(store, 0, {
+    id: 'TC-STALE',
+    responsibility: 'STALE',
+    state: 'ACTIVE',
+    obligations: [],
+    bootstrap_provenance: bootstrapProvenance,
+  }), 'STALE_REVISION');
+  const badHistory = { ...bootstrapProvenance, historical_events_reconstructed: true };
+  unchanged(store, () => bootstrapTaskCycle(store, 1, {
+    id: 'TC-BAD',
+    responsibility: 'BAD',
+    state: 'ACTIVE',
+    obligations: [],
+    bootstrap_provenance: badHistory,
+  }), 'INVALID_CONTRACT');
+  unchanged(store, () => bootstrapTaskCycle(store, 1, {
+    id: 'TC-MISSING-AUTH',
+    responsibility: 'BAD AUTH',
+    state: 'ACTIVE',
+    obligations: [{ id: 'accepted', status: 'SATISFIED', authority_ref: 'OTHER-AUTHORITY' }],
+    bootstrap_provenance: bootstrapProvenance,
+  }), 'MISSING_REQUIRED_AUTHORITY');
+  bootstrapTaskCycle(store, 1, {
+    id: 'TC-ONCE',
+    responsibility: 'ONCE',
+    state: 'ACTIVE',
+    obligations: [],
+    bootstrap_provenance: bootstrapProvenance,
+  });
+  unchanged(store, () => bootstrapTaskCycle(store, 2, {
+    id: 'TC-ONCE',
+    responsibility: 'DUPLICATE',
+    state: 'ACTIVE',
+    obligations: [],
+    bootstrap_provenance: bootstrapProvenance,
+  }), 'INVALID_TRANSITION');
+});
+test('bootstrap import rejects terminal lifecycle and inconsistent pending-acceptance state', t => {
+  const { store } = fixture(t);
+  unchanged(store, () => bootstrapTaskCycle(store, 0, {
+    id: 'TC-CLOSED',
+    responsibility: 'NO TERMINAL IMPORT',
+    state: 'CLOSED',
+    obligations: [],
+    bootstrap_provenance: bootstrapProvenance,
+  }), 'INVALID_CONTRACT');
+  unchanged(store, () => bootstrapTaskCycle(store, 0, {
+    id: 'TC-PENDING',
+    responsibility: 'PENDING',
+    state: 'PENDING_ACCEPTANCE',
+    obligations: [{ id: 'open', status: 'PENDING', authority_ref: null }],
+    bootstrap_provenance: bootstrapProvenance,
+  }), 'UNSATISFIED_OBLIGATION');
+});
+test('post-cutover satisfaction and closure are real kernel-observed events after bootstrap import', t => {
+  const { store } = fixture(t);
+  bootstrapTaskCycle(store, 0, {
+    id: 'TC-CUTOVER',
+    responsibility: 'CUTOVER',
+    state: 'ACTIVE',
+    obligations: [
+      { id: 'implementation', status: 'SATISFIED', authority_ref: null },
+      { id: 'lifecycle_reconciliation', status: 'PENDING', authority_ref: 'DEV-BOOTSTRAP' },
+    ],
+    bootstrap_provenance: bootstrapProvenance,
+  });
+  satisfy(store, 1, 'TC-CUTOVER', 'lifecycle_reconciliation', 'DEV-BOOTSTRAP');
+  transition(store, 2, 'TaskCycle', 'TC-CUTOVER', 'CLOSED', { authority_ref: 'DEV-BOOTSTRAP', disposition_ref: 'TECNOTRON_STATE_KERNEL_V0_WAVE1_CLOSED_PASS' });
+  const { state, events } = store.read();
+  assert.equal(state.aggregates.TaskCycle['TC-CUTOVER'].state, 'CLOSED');
+  assert.deepEqual(events.map(event => event.action), ['BOOTSTRAP_IMPORT', 'SATISFY:lifecycle_reconciliation', 'TRANSITION:CLOSED']);
+  assert.equal(events[0].bootstrap_provenance.historical_events_reconstructed, false);
+  assert.equal(events[1].bootstrap_provenance, undefined);
+  assert.equal(events[2].bootstrap_provenance, undefined);
+});
+test('CLI exposes TaskCycleBootstrapImport without changing TaskCycleCreate semantics', t => {
+  const { home, store } = fixture(t);
+  const cli = path.join(__dirname, '../../src/state-kernel-v0/cli.js');
+  const request = {
+    expected_revision: 0,
+    id: 'TC-CLI-IMPORT',
+    responsibility: 'CLI IMPORT',
+    state: 'ACTIVE',
+    obligations: [{ id: 'remaining', status: 'PENDING', authority_ref: null }],
+    bootstrap_provenance: bootstrapProvenance,
+  };
+  const imported = spawnSync(process.execPath, [cli, '--home', home, '--command', 'TaskCycleBootstrapImport', '--request', JSON.stringify(request)], { encoding: 'utf8' });
+  assert.equal(imported.status, 0, imported.stderr);
+  assert.equal(inspect(store, 'TaskCycle', 'TC-CLI-IMPORT').aggregate.state, 'ACTIVE');
+  const createRequest = { expected_revision: 1, id: 'TC-NORMAL', responsibility: 'NORMAL', obligations: [{ id: 'gate', status: 'SATISFIED', authority_ref: null }], authority_refs: [] };
+  const created = spawnSync(process.execPath, [cli, '--home', home, '--command', 'TaskCycleCreate', '--request', JSON.stringify(createRequest)], { encoding: 'utf8' });
+  assert.equal(created.status, 0, created.stderr);
+  assert.equal(inspect(store, 'TaskCycle', 'TC-NORMAL').aggregate.obligations[0].status, 'PENDING');
 });

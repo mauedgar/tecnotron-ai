@@ -1,6 +1,6 @@
 'use strict';
 const { FilesystemStateStore } = require('./store');
-const { TRANSITIONS, KernelError, demand, string, strings, refs } = require('./contracts');
+const { TRANSITIONS, KernelError, demand, string, strings, refs, validateBootstrapProvenance } = require('./contracts');
 const VERSION = 'tecnotron-state-kernel/v0';
 const now = () => new Date().toISOString();
 const clone = value => structuredClone(value);
@@ -52,6 +52,36 @@ function create(store, expectedRevision, kind, id, fields, authority_refs = []) 
     }
     state.aggregates[kind][id] = item;
     return { kind, id, at, action: 'CREATE' };
+  });
+}
+function bootstrapTaskCycle(store, expectedRevision, request) {
+  const importedAt = now();
+  const provenance = validateBootstrapProvenance(request.bootstrap_provenance);
+  const importedState = request.state;
+  demand(string(request.id) && string(request.responsibility) && Array.isArray(request.obligations), 'INVALID_CONTRACT', 'bootstrap identity, responsibility and obligations');
+  demand(['READY', 'ACTIVE', 'BLOCKED', 'PENDING_ACCEPTANCE'].includes(importedState), 'INVALID_CONTRACT', 'bootstrap TaskCycle state must be nonterminal');
+  const obligations = request.obligations.map(obligation => ({
+    id: obligation.id,
+    status: obligation.status,
+    authority_ref: obligation.authority_ref ?? null,
+  }));
+  if (importedState === 'PENDING_ACCEPTANCE') demand(obligations.every(obligation => obligation.status === 'SATISFIED'), 'UNSATISFIED_OBLIGATION', 'PENDING_ACCEPTANCE bootstrap requires satisfied obligations');
+  const importedAuthorityIds = new Set(provenance.authority_refs.map(ref => ref.id));
+  for (const obligation of obligations) {
+    if (obligation.status === 'SATISFIED' && obligation.authority_ref !== null) {
+      demand(importedAuthorityIds.has(obligation.authority_ref), 'MISSING_REQUIRED_AUTHORITY', `imported satisfied obligation ${obligation.id} requires matching bootstrap authority`);
+    }
+  }
+  return store.mutate(expectedRevision, state => {
+    demand(!Object.hasOwn(state.aggregates.TaskCycle, request.id), 'INVALID_TRANSITION', 'identity already exists');
+    const item = {
+      ...base('TaskCycle', request.id, importedState, clone(provenance.authority_refs), [], provenance.cutover_at),
+      responsibility: request.responsibility,
+      obligations,
+      terminal_disposition_ref: null,
+    };
+    state.aggregates.TaskCycle[request.id] = item;
+    return { kind: 'TaskCycle', id: request.id, at: importedAt, action: 'BOOTSTRAP_IMPORT', bootstrap_provenance: clone(provenance) };
   });
 }
 function transition(store, expectedRevision, kind, id, target, options = {}) {
@@ -130,4 +160,4 @@ function render(store) {
   }
   return `${rows.join('\n')}\n`;
 }
-module.exports = { FilesystemStateStore, create, transition, satisfy, inspect, obligations, nextTransitions, render, KernelError };
+module.exports = { FilesystemStateStore, create, bootstrapTaskCycle, transition, satisfy, inspect, obligations, nextTransitions, render, KernelError };

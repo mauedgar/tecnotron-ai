@@ -16,6 +16,13 @@ const TRANSITIONS = Object.freeze({
 });
 const nonempty = z.string().min(1);
 const referenceSchema = z.object({ kind: z.enum(['AUTHORITY', 'EVIDENCE', 'ARTIFACT', 'GIT_OBJECT']), id: nonempty, location: nonempty.optional(), sha256: z.string().regex(/^[a-f0-9]{64}$/).optional(), git_oid: z.string().regex(/^[a-f0-9]{40,64}$/).optional() }).strict();
+const bootstrapProvenanceSchema = z.object({
+  mode: z.literal('IMPORTED_ESTABLISHED_STATE'),
+  cutover_at: z.iso.datetime(),
+  historical_events_reconstructed: z.literal(false),
+  authority_refs: z.array(referenceSchema).min(1),
+  evidence_refs: z.array(referenceSchema).min(1),
+}).strict();
 const obligationSchema = z.object({ id: nonempty, status: z.enum(['PENDING', 'SATISFIED']), authority_ref: nonempty.nullable() }).strict();
 const common = { schema_version: z.literal('tecnotron-state-kernel/v0'), kind: z.enum(KINDS), id: nonempty, revision: z.number().int().positive(), state: nonempty, created_at: z.iso.datetime(), updated_at: z.iso.datetime(), authority_refs: z.array(referenceSchema), related_ids: z.array(nonempty), last_event_id: nonempty.nullable() };
 const aggregateSchemas = {
@@ -47,6 +54,18 @@ function refs(value) {
     demand(ref.git_oid === undefined || /^[a-f0-9]{40,64}$/.test(ref.git_oid), 'INVALID_CONTRACT', 'Git OID identity');
     demand(ref.kind !== 'GIT_OBJECT' || ref.git_oid !== undefined, 'INVALID_CONTRACT', 'Git object requires OID');
   }
+}
+function validateBootstrapProvenance(value) {
+  parseSchema(bootstrapProvenanceSchema, value);
+  exact(value, ['mode', 'cutover_at', 'historical_events_reconstructed', 'authority_refs', 'evidence_refs'], 'bootstrap provenance');
+  demand(value.mode === 'IMPORTED_ESTABLISHED_STATE', 'INVALID_CONTRACT', 'bootstrap provenance mode');
+  demand(iso(value.cutover_at), 'INVALID_CONTRACT', 'bootstrap cutover timestamp');
+  demand(value.historical_events_reconstructed === false, 'INVALID_CONTRACT', 'bootstrap must not reconstruct historical events');
+  refs(value.authority_refs);
+  refs(value.evidence_refs);
+  demand(value.authority_refs.length > 0 && value.authority_refs.every(ref => ref.kind === 'AUTHORITY'), 'INVALID_CONTRACT', 'bootstrap authority references');
+  demand(value.evidence_refs.length > 0 && value.evidence_refs.every(ref => ref.kind === 'EVIDENCE'), 'INVALID_CONTRACT', 'bootstrap evidence references');
+  return value;
 }
 function validateAggregate(a) {
   if (a && aggregateSchemas[a.kind]) parseSchema(aggregateSchemas[a.kind], a);
@@ -90,4 +109,4 @@ function validateState(s) {
   }
   return s;
 }
-module.exports = { KINDS, STATES, TRANSITIONS, aggregateSchemas, stateSchema, referenceSchema, KernelError, demand, string, strings, refs, validateAggregate, validateState };
+module.exports = { KINDS, STATES, TRANSITIONS, aggregateSchemas, stateSchema, referenceSchema, bootstrapProvenanceSchema, KernelError, demand, string, strings, refs, validateBootstrapProvenance, validateAggregate, validateState };

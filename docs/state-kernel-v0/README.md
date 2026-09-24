@@ -22,7 +22,7 @@ This design relies on local filesystem rename and durability guarantees. It does
 
 `node src/state-kernel-v0/cli.js --home ABSOLUTE_PATH --command StateInit`
 
-All other commands accept `--request JSON` when arguments are needed. The mutators require `expected_revision` from `StateInspect` or `StateVerify`: `TaskCycleCreate`, `TaskCycleSatisfy`, `TaskCycleTransition`, `OperationCreate`, `OperationTransition`, `AttemptStart`, `AttemptRecord`, `MilestoneCreate`, `MilestoneTransition`. The read commands are `StateInspect`, `StateVerify`, `StateRender`, `TaskCycleInspect` and `TaskCycleObligations`. Errors print a structured `code` and `detail` to stderr and exit nonzero. Stable primary error codes are `INVALID_TRANSITION`, `STALE_REVISION`, `MALFORMED_STATE`, `MISSING_REQUIRED_AUTHORITY`, `UNSATISFIED_OBLIGATION`, and `UNKNOWN_EFFECT_REQUIRES_RECONCILIATION`; malformed requests also use `INVALID_CONTRACT` or `INVALID_REQUEST`.
+All other commands accept `--request JSON` when arguments are needed. The mutators require `expected_revision` from `StateInspect` or `StateVerify`: `TaskCycleCreate`, `TaskCycleBootstrapImport`, `TaskCycleSatisfy`, `TaskCycleTransition`, `OperationCreate`, `OperationTransition`, `AttemptStart`, `AttemptRecord`, `MilestoneCreate`, `MilestoneTransition`. The read commands are `StateInspect`, `StateVerify`, `StateRender`, `TaskCycleInspect` and `TaskCycleObligations`. Errors print a structured `code` and `detail` to stderr and exit nonzero. Stable primary error codes are `INVALID_TRANSITION`, `STALE_REVISION`, `MALFORMED_STATE`, `MISSING_REQUIRED_AUTHORITY`, `UNSATISFIED_OBLIGATION`, and `UNKNOWN_EFFECT_REQUIRES_RECONCILIATION`; malformed requests also use `INVALID_CONTRACT` or `INVALID_REQUEST`.
 
 Example request for `TaskCycleCreate`:
 
@@ -33,6 +33,14 @@ Example request for `TaskCycleCreate`:
 `StateRender` is a deterministic read-only Markdown projection. It does not write `docs/current-state.md`. The latter currently has canonical status under `docs/SOURCE_OF_TRUTH.md`; only a separate Developer adoption can change that authority relationship. No migration from historical markdown, TASK files, Git refs or previous run state is inferred. A future adoption needs a bounded mapping/reconciliation decision and an independently reviewed integration.
 
 Typed references distinguish an authority, evidence, portable artifact and Git object; SHA-256 is an optional exact file identity, Git OID is a separate Git identity, and neither establishes semantic equivalence or authority. Relative locations cannot encode a developer-machine path.
+
+## Bootstrap/import cutover semantics
+
+`TaskCycleBootstrapImport` is the bounded cutover operation for a TaskCycle whose lifecycle began before State Kernel adoption. It creates one nonterminal TaskCycle aggregate from explicitly supplied established facts and emits exactly one `BOOTSTRAP_IMPORT` event. It does **not** synthesize historical `CREATE`, `SATISFY:*` or `TRANSITION:*` events. Normal `TaskCycleCreate` remains unchanged and always initializes supplied obligations as `PENDING`.
+
+The request must provide `bootstrap_provenance` with `mode=IMPORTED_ESTABLISHED_STATE`, an ISO-8601 `cutover_at`, `historical_events_reconstructed=false`, at least one typed `AUTHORITY` reference and at least one typed `EVIDENCE` reference. These references record the external basis for the imported state; they do not cause the kernel to determine that the referenced real-world authority is competent. A `SATISFIED` imported obligation that names an authority must name one of the imported authority references. Terminal TaskCycle states are rejected by this V0 import operation, so post-cutover satisfaction and closure remain ordinary kernel-observed events.
+
+The bootstrap event retains its provenance in the hash-chained event history and is validated again during replay. The aggregate begins at revision 1; the kernel does not invent aggregate revisions for unobserved pre-cutover transitions.
 
 ## Validation and deferred debt
 

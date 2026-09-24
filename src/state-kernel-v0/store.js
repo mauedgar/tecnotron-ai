@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { isDeepStrictEqual } = require('node:util');
-const { KINDS, KernelError, demand, validateState } = require('./contracts');
+const { KINDS, KernelError, demand, validateBootstrapProvenance, validateState } = require('./contracts');
 const sha = value => crypto.createHash('sha256').update(value).digest('hex');
 const serialize = value => `${JSON.stringify(value, null, 2)}\n`;
 function syncDir(dir) { const fd = fs.openSync(dir, 'r'); try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); } }
@@ -54,6 +54,15 @@ class FilesystemStateStore {
       const event = parse(line, 'event');
       const { hash, ...payload } = event;
       demand(hash === sha(JSON.stringify(payload)) && payload.previous_hash === previousHash && payload.sequence === reconstructed.revision + 1 && KINDS.includes(payload.kind), 'MALFORMED_STATE', 'event chain mismatch');
+      if (payload.action === 'BOOTSTRAP_IMPORT') {
+        demand(payload.kind === 'TaskCycle' && payload.before_revision === 0 && payload.bootstrap_provenance !== undefined, 'MALFORMED_STATE', 'bootstrap event shape');
+        try { validateBootstrapProvenance(payload.bootstrap_provenance); } catch (error) { throw new KernelError('MALFORMED_STATE', error.message); }
+        demand(payload.after?.created_at === payload.bootstrap_provenance.cutover_at && payload.after?.updated_at === payload.bootstrap_provenance.cutover_at, 'MALFORMED_STATE', 'bootstrap cutover correspondence');
+        demand(isDeepStrictEqual(payload.after?.authority_refs, payload.bootstrap_provenance.authority_refs), 'MALFORMED_STATE', 'bootstrap authority correspondence');
+        demand(payload.after?.terminal_disposition_ref === null && !['CLOSED', 'CANCELLED'].includes(payload.after?.state), 'MALFORMED_STATE', 'bootstrap must be nonterminal');
+      } else {
+        demand(payload.bootstrap_provenance === undefined, 'MALFORMED_STATE', 'bootstrap provenance on non-bootstrap event');
+      }
       const prior = reconstructed.aggregates[payload.kind][payload.aggregate_id];
       demand((prior?.revision ?? 0) === payload.before_revision && payload.after?.id === payload.aggregate_id && payload.after?.kind === payload.kind && payload.after.revision === payload.before_revision + 1 && payload.after.last_event_id === payload.id, 'MALFORMED_STATE', 'event correspondence mismatch');
       reconstructed.aggregates[payload.kind][payload.aggregate_id] = payload.after;
@@ -109,7 +118,10 @@ class FilesystemStateStore {
       after.last_event_id = id;
       validateState(proposed);
       const previous_hash = events.length ? events.at(-1).hash : null;
+      demand((update.action === 'BOOTSTRAP_IMPORT') === (update.bootstrap_provenance !== undefined), 'INVALID_CONTRACT', 'bootstrap provenance/action correspondence');
+      if (update.bootstrap_provenance !== undefined) validateBootstrapProvenance(update.bootstrap_provenance);
       const payload = { id, sequence: proposed.revision, kind: update.kind, aggregate_id: update.id, before_revision: before?.revision ?? 0, after, previous_hash, at: update.at, action: update.action };
+      if (update.bootstrap_provenance !== undefined) payload.bootstrap_provenance = update.bootstrap_provenance;
       const event = { ...payload, hash: sha(JSON.stringify(payload)) };
       const head = this.commit(proposed, `${eventBytes}${JSON.stringify(event)}\n`);
       return { revision: head.revision, event_id: id, event_hash: event.hash, kind: update.kind, aggregate_id: update.id, aggregate_revision: after.revision };
