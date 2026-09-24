@@ -154,7 +154,7 @@ test('missing surface reports UNAVAILABLE with no hidden fallback', async () => 
   assert.equal(result.reason, 'EXECUTION_SURFACE_UNAVAILABLE');
 });
 
-test('malformed surface result fails closed and preserves coordinator identities', async () => {
+test('malformed post-invocation surface result becomes UNKNOWN and preserves coordinator identities', async () => {
   const coordinator = createExecutionCoordinator({
     executionSurface: {
       async execute() {
@@ -167,13 +167,14 @@ test('malformed surface result fails closed and preserves coordinator identities
 
   const result = await coordinator.execute(validRequest());
 
-  assert.equal(result.status, 'FAILED');
+  assert.equal(result.status, 'UNKNOWN');
+  assert.equal(result.started, true);
   assert.equal(result.operation_id, 'OP-001');
   assert.equal(result.execution_attempt_id, 'ATTEMPT-001');
-  assert.equal(result.reason, 'EXECUTION_SURFACE_RESULT_NONCONFORMANT');
+  assert.equal(result.reason, 'EXECUTION_SURFACE_RESULT_NONCONFORMANT_AFTER_INVOCATION');
 });
 
-test('surface identity mismatch fails closed instead of adopting substituted identity', async () => {
+test('post-invocation surface identity mismatch becomes UNKNOWN instead of adopting substituted identity', async () => {
   const coordinator = createExecutionCoordinator({
     executionSurface: {
       async execute(request) {
@@ -191,9 +192,10 @@ test('surface identity mismatch fails closed instead of adopting substituted ide
 
   const result = await coordinator.execute(validRequest());
 
-  assert.equal(result.status, 'FAILED');
+  assert.equal(result.status, 'UNKNOWN');
+  assert.equal(result.started, true);
   assert.equal(result.operation_id, 'OP-001');
-  assert.equal(result.reason, 'EXECUTION_SURFACE_IDENTITY_MISMATCH');
+  assert.equal(result.reason, 'EXECUTION_SURFACE_IDENTITY_MISMATCH_AFTER_INVOCATION');
 });
 
 test('partial result and in-flight cancellation remain explicit', async () => {
@@ -252,4 +254,41 @@ test('distinct attempts may execute for one Operation without collapsing identit
   await coordinator.execute(validRequest({ execution_attempt_id: 'ATTEMPT-B' }));
 
   assert.deepEqual(seen, ['ATTEMPT-A', 'ATTEMPT-B']);
+});
+
+test('runAttempt alias preserves UNKNOWN returned by a conforming execution surface', async () => {
+  const coordinator = createExecutionCoordinator({
+    executionSurface: {
+      async execute(request) {
+        return {
+          operation_id: request.operation_id,
+          execution_attempt_id: request.execution_attempt_id,
+          status: 'UNKNOWN',
+          started: true,
+          reason: 'EFFECT_AMBIGUOUS_AFTER_DISPATCH',
+          evidence_refs: [],
+        };
+      },
+    },
+  });
+
+  assert.equal(typeof coordinator.runAttempt, 'function');
+  const result = await coordinator.runAttempt(validRequest());
+  assert.equal(result.status, 'UNKNOWN');
+  assert.equal(result.started, true);
+});
+
+test('surface exception after invocation becomes UNKNOWN because effect cannot be excluded', async () => {
+  const coordinator = createExecutionCoordinator({
+    executionSurface: {
+      async execute() {
+        throw new Error('transport lost');
+      },
+    },
+  });
+
+  const result = await coordinator.runAttempt(validRequest());
+  assert.equal(result.status, 'UNKNOWN');
+  assert.equal(result.started, true);
+  assert.equal(result.reason, 'EXECUTION_SURFACE_ERROR_AFTER_INVOCATION');
 });

@@ -19,8 +19,7 @@ function localOutcome(request, status, reason, extras = {}) {
 }
 
 function createExecutionCoordinator({ executionSurface }) {
-  return {
-    async execute(rawRequest) {
+  async function runAttempt(rawRequest) {
       const request = ExecutionAttemptRequest.parse(rawRequest);
 
       if (request.cancellation_requested) {
@@ -54,9 +53,9 @@ function createExecutionCoordinator({ executionSurface }) {
         return ExecutionOutcome.parse({
           operation_id: request.operation_id,
           execution_attempt_id: request.execution_attempt_id,
-          status: 'FAILED',
-          started: false,
-          reason: 'EXECUTION_SURFACE_ERROR_BEFORE_CONFIRMED_START',
+          status: 'UNKNOWN',
+          started: true,
+          reason: 'EXECUTION_SURFACE_ERROR_AFTER_INVOCATION',
           result: {
             error_name: error && error.name ? error.name : 'Error',
             error_message: error && error.message ? error.message : String(error),
@@ -70,9 +69,9 @@ function createExecutionCoordinator({ executionSurface }) {
         return ExecutionOutcome.parse({
           operation_id: request.operation_id,
           execution_attempt_id: request.execution_attempt_id,
-          status: 'FAILED',
-          started: false,
-          reason: 'EXECUTION_SURFACE_RESULT_NONCONFORMANT',
+          status: 'UNKNOWN',
+          started: true,
+          reason: 'EXECUTION_SURFACE_RESULT_NONCONFORMANT_AFTER_INVOCATION',
           evidence_refs: request.evidence_refs,
         });
       }
@@ -86,9 +85,9 @@ function createExecutionCoordinator({ executionSurface }) {
         return ExecutionOutcome.parse({
           operation_id: request.operation_id,
           execution_attempt_id: request.execution_attempt_id,
-          status: 'FAILED',
-          started: false,
-          reason: 'EXECUTION_SURFACE_IDENTITY_MISMATCH',
+          status: 'UNKNOWN',
+          started: true,
+          reason: 'EXECUTION_SURFACE_IDENTITY_MISMATCH_AFTER_INVOCATION',
           evidence_refs: request.evidence_refs,
         });
       }
@@ -97,7 +96,11 @@ function createExecutionCoordinator({ executionSurface }) {
         ...outcome,
         evidence_refs: mergeEvidenceRefs(request.evidence_refs, outcome.evidence_refs),
       });
-    },
+  }
+
+  return {
+    execute: runAttempt,
+    runAttempt,
   };
 }
 

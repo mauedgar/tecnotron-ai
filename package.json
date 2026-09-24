@@ -20,7 +20,8 @@
   "scripts": {
     "test": "node --test tests/**/*.test.js scripts/doctor/tests/**/*.test.js",
     "contracts:check": "node src/contracts/validate-package.js",
-    "contracts:publish": "npm publish ./src/contracts"
+    "contracts:publish": "npm publish ./src/contracts",
+    "workspace:verify": "node scripts/workspace/verify.js"
   },
   "allowScripts": {
     "better-sqlite3@13.0.3": true,

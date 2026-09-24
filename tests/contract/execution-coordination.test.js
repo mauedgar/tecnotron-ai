@@ -59,7 +59,7 @@ test('request requires explicit authorization and effect constraints', () => {
   })));
 });
 
-test('partial result, cancellation, blocked, unavailable and failed are explicit outcomes', () => {
+test('partial result, cancellation, blocked, unavailable, failed and UNKNOWN are explicit outcomes', () => {
   const common = {
     operation_id: 'OP-001',
     execution_attempt_id: 'ATTEMPT-001',
@@ -96,6 +96,13 @@ test('partial result, cancellation, blocked, unavailable and failed are explicit
     started: false,
     reason: 'FAILED_BEFORE_CONFIRMED_START',
   }).status, 'FAILED');
+
+  assert.equal(ExecutionOutcome.parse({
+    ...common,
+    status: 'UNKNOWN',
+    started: true,
+    reason: 'EFFECT_AMBIGUOUS_AFTER_DISPATCH',
+  }).status, 'UNKNOWN');
 });
 
 test('NO_START is explicit and cannot claim started=true', () => {

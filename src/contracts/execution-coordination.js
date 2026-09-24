@@ -58,6 +58,7 @@ const OutcomeStatus = z.enum([
   'BLOCKED',
   'UNAVAILABLE',
   'CANCELLED',
+  'UNKNOWN',
 ]);
 
 const ExecutionOutcome = z.object({
@@ -78,7 +79,7 @@ const ExecutionOutcome = z.object({
     });
   }
 
-  if (['SUCCESS', 'PARTIAL_RESULT', 'CANCELLED'].includes(value.status) && value.started !== true) {
+  if (['SUCCESS', 'PARTIAL_RESULT', 'CANCELLED', 'UNKNOWN'].includes(value.status) && value.started !== true) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['started'],
