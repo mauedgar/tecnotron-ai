@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -13,6 +14,84 @@ const {
 } = require('../../src/self-hosting-reconciliation-v0');
 
 const observation = (sourceRef, observed) => ({ source_ref: sourceRef, observed });
+
+const TASKCYCLE_EVIDENCE_KINDS = Object.freeze({
+  candidate_identity: 'CANDIDATE_IDENTITY',
+  terminal_results: 'TERMINAL_RESULTS',
+  independent_review: 'INDEPENDENT_REVIEW_RESULT',
+  developer_acceptance: 'DEVELOPER_ACCEPTANCE',
+  canonical_integration: 'CANONICAL_INTEGRATION',
+  remote_publication: 'REMOTE_PUBLICATION',
+  canonical_state_delta: 'CANONICAL_STATE_DELTA',
+});
+
+const MILESTONE_EVIDENCE_KINDS = Object.freeze({
+  planned_responsibilities: 'PLANNED_RESPONSIBILITIES',
+  completed_responsibilities: 'COMPLETED_RESPONSIBILITIES',
+  deferred_or_cancelled_responsibilities: 'DEFERRED_OR_CANCELLED_RESPONSIBILITIES',
+  open_findings: 'OPEN_FINDINGS',
+  accepted_architectural_changes: 'ACCEPTED_ARCHITECTURAL_CHANGES',
+  actual_repository_state: 'ACTUAL_REPOSITORY_STATE',
+});
+
+function sha256(text) {
+  return crypto.createHash('sha256').update(text).digest('hex');
+}
+
+function authorityCompetenceFor(field, authorityRef = 'authority:developer-001') {
+  const kinds = {
+    independent_review: 'INDEPENDENT_REVIEW',
+    developer_acceptance: 'DEVELOPER',
+    canonical_integration: 'EFFECT_AUTHORITY',
+    remote_publication: 'EFFECT_AUTHORITY',
+    deferred_or_cancelled_responsibilities: 'VALIDATION_FIXTURE',
+    accepted_architectural_changes: 'VALIDATION_FIXTURE',
+  };
+  if (!kinds[field]) return null;
+  return {
+    status: 'ESTABLISHED',
+    kind: kinds[field],
+    authority_ref: authorityRef,
+    basis_ref: `basis:${field}`,
+  };
+}
+
+function verifiedEvidence({
+  ref,
+  kind,
+  subjectKind,
+  subjectId,
+  field,
+  observed,
+  authorityCompetence = authorityCompetenceFor(field),
+}) {
+  const artifact = {
+    schema_version: 'tecnotron-reconciliation-evidence/v0',
+    kind,
+    subject: { kind: subjectKind, id: subjectId, field },
+    observed,
+    verification: {
+      status: 'VERIFIED',
+      verification_ref: `verification:${ref}`,
+      verifier_ref: 'verifier:fixture',
+      authority_competence: authorityCompetence,
+    },
+  };
+  const artifactJson = JSON.stringify(artifact);
+  return { ref, sha256: sha256(artifactJson), artifact_json: artifactJson };
+}
+
+function evidenceForObservations({ observations, subjectKind, subjectId, kinds }) {
+  return Object.entries(observations).flatMap(([field, entries]) =>
+    entries.map(entry => verifiedEvidence({
+      ref: entry.source_ref,
+      kind: kinds[field],
+      subjectKind,
+      subjectId,
+      field,
+      observed: entry.observed,
+    })));
+}
 
 function taskCycle(overrides = {}) {
   return {
@@ -96,8 +175,38 @@ function milestoneObservations() {
   };
 }
 
+function completeTaskCycleRequest() {
+  const subject = taskCycle();
+  const observations = completeTaskCycleObservations();
+  return {
+    taskcycle: subject,
+    observations,
+    evidence: evidenceForObservations({
+      observations,
+      subjectKind: 'TaskCycle',
+      subjectId: subject.id,
+      kinds: TASKCYCLE_EVIDENCE_KINDS,
+    }),
+  };
+}
+
+function completeMilestoneRequest() {
+  const milestone = { id: 'MILESTONE-001', title: 'Operational bootstrap', state: 'ACTIVE' };
+  const observations = milestoneObservations();
+  return {
+    milestone,
+    observations,
+    evidence: evidenceForObservations({
+      observations,
+      subjectKind: 'Milestone',
+      subjectId: milestone.id,
+      kinds: MILESTONE_EVIDENCE_KINDS,
+    }),
+  };
+}
+
 test('post-TaskCycle reconciliation resolves sufficient coincident evidence and reports remaining obligations', () => {
-  const request = { taskcycle: taskCycle(), observations: completeTaskCycleObservations() };
+  const request = completeTaskCycleRequest();
   const before = structuredClone(request);
 
   const result = reconcilePostTaskCycle(request);
@@ -120,7 +229,7 @@ test('post-TaskCycle reconciliation resolves sufficient coincident evidence and 
 });
 
 test('post-TaskCycle reconciliation classifies missing evidence without fabricating facts', () => {
-  const result = reconcilePostTaskCycle({ taskcycle: taskCycle(), observations: {} });
+  const result = reconcilePostTaskCycle({ taskcycle: taskCycle(), observations: {}, evidence: [] });
 
   assert.equal(result.disposition, 'UNRESOLVED');
   assert.equal(result.classifications.candidate_identity.reason, 'MISSING_EVIDENCE');
@@ -144,7 +253,14 @@ test('post-TaskCycle reconciliation distinguishes contradictory and ambiguous ev
     reference: 'review:incomplete',
   })];
 
-  const result = reconcilePostTaskCycle({ taskcycle: taskCycle(), observations });
+  const subject = taskCycle();
+  const evidence = evidenceForObservations({
+    observations,
+    subjectKind: 'TaskCycle',
+    subjectId: subject.id,
+    kinds: TASKCYCLE_EVIDENCE_KINDS,
+  });
+  const result = reconcilePostTaskCycle({ taskcycle: subject, observations, evidence });
 
   assert.equal(result.classifications.candidate_identity.reason, 'CONTRADICTORY_EVIDENCE');
   assert.equal(result.classifications.independent_review.reason, 'AMBIGUOUS_EVIDENCE');
@@ -161,8 +277,14 @@ test('post-TaskCycle reconciliation never infers Developer acceptance from a sat
   });
   const observations = completeTaskCycleObservations();
   observations.developer_acceptance = [];
+  const evidence = evidenceForObservations({
+    observations,
+    subjectKind: 'TaskCycle',
+    subjectId: acceptedInKernel.id,
+    kinds: TASKCYCLE_EVIDENCE_KINDS,
+  });
 
-  const result = reconcilePostTaskCycle({ taskcycle: acceptedInKernel, observations });
+  const result = reconcilePostTaskCycle({ taskcycle: acceptedInKernel, observations, evidence });
 
   assert.equal(result.classifications.developer_acceptance.reason, 'MISSING_EVIDENCE');
   assert.equal(result.observed_facts.developer_acceptance, null);
@@ -177,8 +299,15 @@ test('post-TaskCycle reconciliation preserves UNKNOWN, BLOCKED, FAILED and UNAVA
     { reference: 'result:3', subject_id: 'ATTEMPT-3', status: 'FAILED' },
     { reference: 'result:4', subject_id: 'ATTEMPT-4', status: 'UNAVAILABLE' },
   ])];
+  const subject = taskCycle();
+  const evidence = evidenceForObservations({
+    observations,
+    subjectKind: 'TaskCycle',
+    subjectId: subject.id,
+    kinds: TASKCYCLE_EVIDENCE_KINDS,
+  });
 
-  const result = reconcilePostTaskCycle({ taskcycle: taskCycle(), observations });
+  const result = reconcilePostTaskCycle({ taskcycle: subject, observations, evidence });
 
   assert.deepEqual(
     result.observed_facts.terminal_results.map(item => item.status),
@@ -187,10 +316,7 @@ test('post-TaskCycle reconciliation preserves UNKNOWN, BLOCKED, FAILED and UNAVA
 });
 
 test('post-milestone reconciliation preserves deferred work and findings while keeping the next responsibility external', () => {
-  const result = reconcilePostMilestone({
-    milestone: { id: 'MILESTONE-001', title: 'Operational bootstrap', state: 'ACTIVE' },
-    observations: milestoneObservations(),
-  });
+  const result = reconcilePostMilestone(completeMilestoneRequest());
 
   assert.equal(result.disposition, 'RESOLVED');
   assert.deepEqual(
@@ -203,14 +329,174 @@ test('post-milestone reconciliation preserves deferred work and findings while k
   assert.equal(result.automatic_roadmap_decision, 'NONE');
 });
 
+test('reviewer reproduction: arbitrary unverified references cannot establish authority-bearing facts', () => {
+  const observations = completeTaskCycleObservations();
+  observations.independent_review = [observation('unverified:any', {
+    reference: 'review:any',
+    disposition: 'PASS',
+  })];
+  observations.developer_acceptance = [observation('unverified:any', {
+    reference: 'authority:any',
+    disposition: 'ACCEPTED',
+  })];
+  observations.canonical_integration = [observation('unverified:any', {
+    reference: 'git:any',
+    status: 'INTEGRATED',
+  })];
+  observations.remote_publication = [observation('unverified:any', {
+    reference: 'remote:any',
+    status: 'PUBLISHED',
+  })];
+
+  const result = reconcilePostTaskCycle({ taskcycle: taskCycle(), observations });
+
+  assert.equal(result.disposition, 'UNRESOLVED');
+  for (const field of [
+    'independent_review',
+    'developer_acceptance',
+    'canonical_integration',
+    'remote_publication',
+  ]) {
+    assert.equal(result.observed_facts[field], null);
+    assert.equal(result.classifications[field].status, 'UNRESOLVED');
+  }
+});
+
+test('an arbitrary authority_ref cannot establish milestone authority competence', () => {
+  const request = completeMilestoneRequest();
+  const observed = [
+    { id: 'RESP-002', disposition: 'DEFERRED', authority_ref: 'authority:any' },
+  ];
+  request.observations.deferred_or_cancelled_responsibilities = [
+    observation('evidence:milestone-untrusted', observed),
+  ];
+  request.evidence = request.evidence.filter(record => record.ref !== 'ruling:milestone-001');
+  request.evidence.push(verifiedEvidence({
+    ref: 'evidence:milestone-untrusted',
+    kind: MILESTONE_EVIDENCE_KINDS.deferred_or_cancelled_responsibilities,
+    subjectKind: 'Milestone',
+    subjectId: request.milestone.id,
+    field: 'deferred_or_cancelled_responsibilities',
+    observed,
+    authorityCompetence: null,
+  }));
+
+  const result = reconcilePostMilestone(request);
+
+  assert.equal(result.observed_facts.deferred_or_cancelled_responsibilities, null);
+  assert.equal(result.classifications.deferred_or_cancelled_responsibilities.status, 'UNRESOLVED');
+});
+
+test('a missing referenced evidence artifact leaves the claim unresolved', () => {
+  const request = completeTaskCycleRequest();
+  request.evidence = request.evidence.filter(record => record.ref !== 'candidate-identity.json');
+
+  const result = reconcilePostTaskCycle(request);
+
+  assert.equal(result.observed_facts.candidate_identity, null);
+  assert.equal(result.classifications.candidate_identity.status, 'UNRESOLVED');
+});
+
+test('a referenced evidence artifact with a hash mismatch leaves the claim unresolved', () => {
+  const request = completeTaskCycleRequest();
+  const record = request.evidence.find(item => item.ref === 'review:001');
+  record.sha256 = '0'.repeat(64);
+
+  const result = reconcilePostTaskCycle(request);
+
+  assert.equal(result.observed_facts.independent_review, null);
+  assert.equal(result.classifications.independent_review.status, 'UNRESOLVED');
+});
+
+test('a referenced evidence artifact of the wrong kind leaves the claim unresolved', () => {
+  const request = completeTaskCycleRequest();
+  request.evidence = request.evidence.filter(record => record.ref !== 'review:001');
+  request.evidence.push(verifiedEvidence({
+    ref: 'review:001',
+    kind: 'REMOTE_PUBLICATION',
+    subjectKind: 'TaskCycle',
+    subjectId: request.taskcycle.id,
+    field: 'independent_review',
+    observed: request.observations.independent_review[0].observed,
+  }));
+
+  const result = reconcilePostTaskCycle(request);
+
+  assert.equal(result.observed_facts.independent_review, null);
+  assert.equal(result.classifications.independent_review.status, 'UNRESOLVED');
+});
+
+test('valid typed and hash-verified evidence resolves a claim', () => {
+  const result = reconcilePostTaskCycle(completeTaskCycleRequest());
+
+  assert.deepEqual(result.observed_facts.independent_review, {
+    reference: 'review:001',
+    disposition: 'PASS',
+  });
+  assert.equal(result.classifications.independent_review.status, 'RESOLVED');
+});
+
+test('coincident independently verified observations resolve to one fact', () => {
+  const request = completeTaskCycleRequest();
+  const observed = { reference: 'review:001', disposition: 'PASS' };
+  request.observations.independent_review.push(observation('review:002', observed));
+  request.evidence.push(verifiedEvidence({
+    ref: 'review:002',
+    kind: TASKCYCLE_EVIDENCE_KINDS.independent_review,
+    subjectKind: 'TaskCycle',
+    subjectId: request.taskcycle.id,
+    field: 'independent_review',
+    observed,
+  }));
+
+  const result = reconcilePostTaskCycle(request);
+
+  assert.deepEqual(result.observed_facts.independent_review, observed);
+  assert.deepEqual(result.classifications.independent_review.source_refs, ['review:001', 'review:002']);
+});
+
+test('contradictory independently verified observations remain unresolved', () => {
+  const request = completeTaskCycleRequest();
+  const observed = { reference: 'review:002', disposition: 'FAIL' };
+  request.observations.independent_review.push(observation('review:002', observed));
+  request.evidence.push(verifiedEvidence({
+    ref: 'review:002',
+    kind: TASKCYCLE_EVIDENCE_KINDS.independent_review,
+    subjectKind: 'TaskCycle',
+    subjectId: request.taskcycle.id,
+    field: 'independent_review',
+    observed,
+  }));
+
+  const result = reconcilePostTaskCycle(request);
+
+  assert.equal(result.observed_facts.independent_review, null);
+  assert.equal(result.classifications.independent_review.reason, 'CONTRADICTORY_EVIDENCE');
+});
+
+test('hash-valid evidence whose subject or value does not correspond to the observation is unresolved', () => {
+  const request = completeTaskCycleRequest();
+  request.evidence = request.evidence.filter(record => record.ref !== 'result:operation-001');
+  request.evidence.push(verifiedEvidence({
+    ref: 'result:operation-001',
+    kind: TASKCYCLE_EVIDENCE_KINDS.terminal_results,
+    subjectKind: 'TaskCycle',
+    subjectId: 'TC-OTHER',
+    field: 'terminal_results',
+    observed: request.observations.terminal_results[0].observed,
+  }));
+
+  const result = reconcilePostTaskCycle(request);
+
+  assert.equal(result.observed_facts.terminal_results, null);
+  assert.equal(result.classifications.terminal_results.status, 'UNRESOLVED');
+});
+
 test('CLI produces identical output in separate fresh processes', t => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'tecnotron-reconciliation-'));
   t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
   const requestPath = path.join(temporary, 'request.json');
-  fs.writeFileSync(requestPath, JSON.stringify({
-    taskcycle: taskCycle(),
-    observations: completeTaskCycleObservations(),
-  }));
+  fs.writeFileSync(requestPath, JSON.stringify(completeTaskCycleRequest()));
   const cli = path.join(__dirname, '../../src/self-hosting-reconciliation-v0/cli.js');
   const invoke = () => spawnSync(process.execPath, [cli, 'post-taskcycle', requestPath], {
     encoding: 'utf8',

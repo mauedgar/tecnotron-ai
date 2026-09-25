@@ -1,5 +1,7 @@
 'use strict';
 
+const crypto = require('node:crypto');
+
 const TASKCYCLE_FIELDS = Object.freeze([
   'candidate_identity',
   'terminal_results',
@@ -18,6 +20,33 @@ const MILESTONE_FIELDS = Object.freeze([
   'accepted_architectural_changes',
   'actual_repository_state',
 ]);
+
+const TASKCYCLE_EVIDENCE_SPECS = Object.freeze({
+  candidate_identity: { kind: 'CANDIDATE_IDENTITY' },
+  terminal_results: { kind: 'TERMINAL_RESULTS' },
+  independent_review: { kind: 'INDEPENDENT_REVIEW_RESULT', authority_kinds: ['INDEPENDENT_REVIEW'] },
+  developer_acceptance: { kind: 'DEVELOPER_ACCEPTANCE', authority_kinds: ['DEVELOPER'] },
+  canonical_integration: { kind: 'CANONICAL_INTEGRATION', authority_kinds: ['EFFECT_AUTHORITY'] },
+  remote_publication: { kind: 'REMOTE_PUBLICATION', authority_kinds: ['EFFECT_AUTHORITY'] },
+  canonical_state_delta: { kind: 'CANONICAL_STATE_DELTA' },
+});
+
+const MILESTONE_EVIDENCE_SPECS = Object.freeze({
+  planned_responsibilities: { kind: 'PLANNED_RESPONSIBILITIES' },
+  completed_responsibilities: { kind: 'COMPLETED_RESPONSIBILITIES' },
+  deferred_or_cancelled_responsibilities: {
+    kind: 'DEFERRED_OR_CANCELLED_RESPONSIBILITIES',
+    authority_kinds: ['DEVELOPER', 'VALIDATION_FIXTURE'],
+    authority_refs_from_observed: true,
+  },
+  open_findings: { kind: 'OPEN_FINDINGS' },
+  accepted_architectural_changes: {
+    kind: 'ACCEPTED_ARCHITECTURAL_CHANGES',
+    authority_kinds: ['DEVELOPER', 'VALIDATION_FIXTURE'],
+    authority_refs_from_observed: true,
+  },
+  actual_repository_state: { kind: 'ACTUAL_REPOSITORY_STATE' },
+});
 
 class ReconciliationContractError extends Error {
   constructor(message) {
@@ -55,6 +84,17 @@ function exactKeys(value, expected, label) {
   const wanted = [...expected].sort();
   if (actual.length !== wanted.length || actual.some((key, index) => key !== wanted[index])) {
     fail(`${label} must contain exactly: ${wanted.join(', ')}`);
+  }
+  return value;
+}
+
+function exactKeysWithOptionalEvidence(value, required, label) {
+  const actual = Object.keys(requireObject(value, label)).sort();
+  const withoutEvidence = [...required].sort();
+  const withEvidence = [...required, 'evidence'].sort();
+  const matches = wanted => actual.length === wanted.length && actual.every((key, index) => key === wanted[index]);
+  if (!matches(withoutEvidence) && !matches(withEvidence)) {
+    fail(`${label} must contain exactly: ${withoutEvidence.join(', ')}; optionally with evidence`);
   }
   return value;
 }
@@ -306,6 +346,143 @@ function validateObservationEnvelope(value, label) {
   return requireString(value.source_ref, `${label}.source_ref`);
 }
 
+function buildEvidenceRegistry(evidence) {
+  if (evidence === undefined) return new Map();
+  if (!Array.isArray(evidence)) fail('evidence must be an array');
+  const registry = new Map();
+  for (const record of evidence) {
+    if (!isObject(record) || typeof record.ref !== 'string' || record.ref.length === 0) continue;
+    const records = registry.get(record.ref) || [];
+    records.push(record);
+    registry.set(record.ref, records);
+  }
+  return registry;
+}
+
+function evidenceDiagnostic(code, sourceRef, message) {
+  return { code, source_ref: sourceRef, message };
+}
+
+function authorityReferences(field, observed, spec) {
+  if (field === 'developer_acceptance') return [observed.reference];
+  if (!spec.authority_refs_from_observed) return [];
+  return [...new Set(observed.map(item => item.authority_ref))].sort();
+}
+
+function verifyReferencedEvidence({ sourceRef, observed, normalize, field, spec, subjectKind, subjectId, registry }) {
+  const records = registry.get(sourceRef) || [];
+  if (records.length === 0) {
+    return { ok: false, diagnostic: evidenceDiagnostic(
+      'MISSING_REFERENCED_EVIDENCE', sourceRef, `no evidence artifact resolves ${sourceRef}`,
+    ) };
+  }
+  if (records.length !== 1) {
+    return { ok: false, diagnostic: evidenceDiagnostic(
+      'AMBIGUOUS_REFERENCED_EVIDENCE', sourceRef, `multiple evidence artifacts resolve ${sourceRef}`,
+    ) };
+  }
+
+  try {
+    const record = exactKeys(records[0], ['ref', 'sha256', 'artifact_json'], `evidence ${sourceRef}`);
+    requireString(record.ref, `evidence ${sourceRef}.ref`);
+    const expectedDigest = normalizeSha256(record.sha256, `evidence ${sourceRef}.sha256`);
+    const artifactJson = requireString(record.artifact_json, `evidence ${sourceRef}.artifact_json`);
+    const actualDigest = crypto.createHash('sha256').update(artifactJson).digest('hex');
+    if (actualDigest !== expectedDigest) {
+      return { ok: false, diagnostic: evidenceDiagnostic(
+        'EVIDENCE_IDENTITY_MISMATCH', sourceRef, `SHA-256 mismatch for ${sourceRef}`,
+      ) };
+    }
+
+    let artifact;
+    try {
+      artifact = JSON.parse(artifactJson);
+    } catch {
+      return { ok: false, diagnostic: evidenceDiagnostic(
+        'MALFORMED_REFERENCED_EVIDENCE', sourceRef, `artifact_json for ${sourceRef} is not valid JSON`,
+      ) };
+    }
+    exactKeys(artifact, ['schema_version', 'kind', 'subject', 'observed', 'verification'], `artifact ${sourceRef}`);
+    if (artifact.schema_version !== 'tecnotron-reconciliation-evidence/v0') {
+      return { ok: false, diagnostic: evidenceDiagnostic(
+        'EVIDENCE_SCHEMA_MISMATCH', sourceRef, `unsupported evidence schema for ${sourceRef}`,
+      ) };
+    }
+    if (artifact.kind !== spec.kind) {
+      return { ok: false, diagnostic: evidenceDiagnostic(
+        'EVIDENCE_KIND_MISMATCH', sourceRef, `evidence kind for ${sourceRef} does not match ${field}`,
+      ) };
+    }
+
+    exactKeys(artifact.subject, ['kind', 'id', 'field'], `artifact ${sourceRef}.subject`);
+    if (
+      artifact.subject.kind !== subjectKind ||
+      artifact.subject.id !== subjectId ||
+      artifact.subject.field !== field
+    ) {
+      return { ok: false, diagnostic: evidenceDiagnostic(
+        'EVIDENCE_CORRESPONDENCE_MISMATCH', sourceRef, `evidence subject for ${sourceRef} does not match the claim`,
+      ) };
+    }
+    const artifactObserved = normalize(artifact.observed);
+    if (stableStringify(artifactObserved, 0) !== stableStringify(observed, 0)) {
+      return { ok: false, diagnostic: evidenceDiagnostic(
+        'EVIDENCE_CORRESPONDENCE_MISMATCH', sourceRef, `evidence value for ${sourceRef} does not match the claim`,
+      ) };
+    }
+
+    exactKeys(
+      artifact.verification,
+      ['status', 'verification_ref', 'verifier_ref', 'authority_competence'],
+      `artifact ${sourceRef}.verification`,
+    );
+    if (artifact.verification.status !== 'VERIFIED') {
+      return { ok: false, diagnostic: evidenceDiagnostic(
+        'EVIDENCE_NOT_VERIFIED', sourceRef, `evidence ${sourceRef} is not verified`,
+      ) };
+    }
+    requireString(artifact.verification.verification_ref, `artifact ${sourceRef}.verification_ref`);
+    requireString(artifact.verification.verifier_ref, `artifact ${sourceRef}.verifier_ref`);
+
+    const competence = artifact.verification.authority_competence;
+    if (spec.authority_kinds) {
+      exactKeys(competence, ['status', 'kind', 'authority_ref', 'basis_ref'], `artifact ${sourceRef}.authority_competence`);
+      if (competence.status !== 'ESTABLISHED' || !spec.authority_kinds.includes(competence.kind)) {
+        return { ok: false, diagnostic: evidenceDiagnostic(
+          'AUTHORITY_COMPETENCE_UNESTABLISHED', sourceRef, `authority competence for ${sourceRef} is not established`,
+        ) };
+      }
+      requireString(competence.authority_ref, `artifact ${sourceRef}.authority_competence.authority_ref`);
+      requireString(competence.basis_ref, `artifact ${sourceRef}.authority_competence.basis_ref`);
+      const claimedAuthorityRefs = authorityReferences(field, observed, spec);
+      if (claimedAuthorityRefs.some(ref => ref !== competence.authority_ref)) {
+        return { ok: false, diagnostic: evidenceDiagnostic(
+          'AUTHORITY_COMPETENCE_MISMATCH', sourceRef, `authority competence for ${sourceRef} does not match the claim`,
+        ) };
+      }
+    } else if (competence !== null) {
+      exactKeys(competence, ['status', 'kind', 'authority_ref', 'basis_ref'], `artifact ${sourceRef}.authority_competence`);
+    }
+
+    return {
+      ok: true,
+      evidence: {
+        ref: sourceRef,
+        sha256: actualDigest,
+        kind: artifact.kind,
+        verification_ref: artifact.verification.verification_ref,
+        verifier_ref: artifact.verification.verifier_ref,
+      },
+    };
+  } catch (error) {
+    return { ok: false, diagnostic: evidenceDiagnostic(
+      'MALFORMED_REFERENCED_EVIDENCE',
+      sourceRef,
+      error instanceof Error ? error.message : String(error),
+    ) };
+  }
+}
+
 function unresolvedClassification(reason, details = {}) {
   return {
     status: 'UNRESOLVED',
@@ -314,7 +491,7 @@ function unresolvedClassification(reason, details = {}) {
   };
 }
 
-function resolveObservations(entries, normalize, field) {
+function resolveObservations(entries, normalize, field, evidenceContext) {
   if (entries === undefined || (Array.isArray(entries) && entries.length === 0)) {
     return {
       fact: null,
@@ -352,11 +529,35 @@ function resolveObservations(entries, normalize, field) {
     };
   }
 
-  const groups = new Map();
+  const verified = [];
+  const evidenceDiagnostics = [];
   for (const item of valid) {
+    const verification = verifyReferencedEvidence({
+      sourceRef: item.source_ref,
+      observed: item.observed,
+      normalize,
+      field,
+      ...evidenceContext,
+    });
+    if (verification.ok) verified.push({ ...item, evidence: verification.evidence });
+    else evidenceDiagnostics.push(verification.diagnostic);
+  }
+  if (evidenceDiagnostics.length > 0) {
+    return {
+      fact: null,
+      classification: unresolvedClassification('UNVERIFIED_EVIDENCE', {
+        source_refs: stableSort(valid.map(item => item.source_ref)),
+        diagnostics: stableSort(evidenceDiagnostics),
+      }),
+    };
+  }
+
+  const groups = new Map();
+  for (const item of verified) {
     const key = stableStringify(item.observed, 0);
-    const group = groups.get(key) || { value: item.observed, source_refs: [] };
+    const group = groups.get(key) || { value: item.observed, source_refs: [], verified_evidence: [] };
     group.source_refs.push(item.source_ref);
+    group.verified_evidence.push(item.evidence);
     groups.set(key, group);
   }
 
@@ -364,6 +565,7 @@ function resolveObservations(entries, normalize, field) {
     const alternatives = stableSort([...groups.values()].map(group => ({
       source_refs: [...new Set(group.source_refs)].sort(),
       observed: group.value,
+      verified_evidence: stableSort(group.verified_evidence),
     })));
     return {
       fact: null,
@@ -376,8 +578,9 @@ function resolveObservations(entries, normalize, field) {
     fact: resolved.value,
     classification: {
       status: 'RESOLVED',
-      reason: 'COINCIDENT_COMPETENT_EVIDENCE',
+      reason: 'COINCIDENT_VERIFIED_EVIDENCE',
       source_refs: [...new Set(resolved.source_refs)].sort(),
+      verified_evidence: stableSort(resolved.verified_evidence),
     },
   };
 }
@@ -422,13 +625,18 @@ function validateObservationKeys(observations, allowed, label) {
   if (unexpected.length > 0) fail(`${label} contains unsupported fields: ${unexpected.sort().join(', ')}`);
 }
 
-function materializeResolution({ fields, observations, normalizers }) {
+function materializeResolution({ fields, observations, normalizers, evidence, evidenceSpecs, subjectKind, subjectId }) {
   const observedFacts = {};
   const classifications = {};
   const unresolved = [];
 
   for (const field of fields) {
-    const resolution = resolveObservations(observations[field], normalizers[field], field);
+    const resolution = resolveObservations(observations[field], normalizers[field], field, {
+      registry: evidence,
+      spec: evidenceSpecs[field],
+      subjectKind,
+      subjectId,
+    });
     observedFacts[field] = resolution.fact;
     classifications[field] = resolution.classification;
     if (resolution.classification.status === 'UNRESOLVED') {
@@ -440,13 +648,18 @@ function materializeResolution({ fields, observations, normalizers }) {
 }
 
 function reconcilePostTaskCycle(request) {
-  exactKeys(request, ['taskcycle', 'observations'], 'post-TaskCycle request');
+  exactKeysWithOptionalEvidence(request, ['taskcycle', 'observations'], 'post-TaskCycle request');
   const subject = validateTaskCycle(request.taskcycle);
   validateObservationKeys(request.observations, TASKCYCLE_FIELDS, 'post-TaskCycle observations');
+  const evidence = buildEvidenceRegistry(request.evidence);
   const resolution = materializeResolution({
     fields: TASKCYCLE_FIELDS,
     observations: request.observations,
     normalizers: TASKCYCLE_NORMALIZERS,
+    evidence,
+    evidenceSpecs: TASKCYCLE_EVIDENCE_SPECS,
+    subjectKind: 'TaskCycle',
+    subjectId: subject.id,
   });
 
   const remaining = stableSort(subject.obligations.filter(item => item.status === 'PENDING'));
@@ -480,13 +693,18 @@ function reconcilePostTaskCycle(request) {
 }
 
 function reconcilePostMilestone(request) {
-  exactKeys(request, ['milestone', 'observations'], 'post-milestone request');
+  exactKeysWithOptionalEvidence(request, ['milestone', 'observations'], 'post-milestone request');
   const subject = validateMilestone(request.milestone);
   validateObservationKeys(request.observations, MILESTONE_FIELDS, 'post-milestone observations');
+  const evidence = buildEvidenceRegistry(request.evidence);
   const resolution = materializeResolution({
     fields: MILESTONE_FIELDS,
     observations: request.observations,
     normalizers: MILESTONE_NORMALIZERS,
+    evidence,
+    evidenceSpecs: MILESTONE_EVIDENCE_SPECS,
+    subjectKind: 'Milestone',
+    subjectId: subject.id,
   });
 
   return {
