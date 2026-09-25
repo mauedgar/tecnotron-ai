@@ -188,6 +188,64 @@ test('rejects missing and structurally ambiguous authority references', () => {
   assert.ok(findingCodes(validate(ambiguous)).includes('AMBIGUOUS_AUTHORITY_REFERENCE'));
 });
 
+test('rejects resolved artifacts, evidence and provider records as authority', () => {
+  const cases = [
+    { name: 'artifact', authorityRef: ref('SPEC-001') },
+    { name: 'evidence', authorityRef: ref('EVIDENCE-001') },
+    { name: 'assessment', authorityRef: ref('ASSESSMENT-001') },
+    {
+      name: 'provider record',
+      authorityRef: ref('PROVIDER-001'),
+      extra: { ...ref('PROVIDER-001'), kind: 'provider_record', provider: 'workspace' },
+    },
+  ];
+
+  for (const { name, authorityRef, extra } of cases) {
+    const graph = validGraph();
+    graph[3].authority_refs = [authorityRef];
+    const external = externalReferences();
+    if (extra) external.push(extra);
+    assert.ok(
+      findingCodes(validate(graph, external)).includes('INVALID_AUTHORITY_REFERENCE'),
+      `${name} identity must not satisfy authority_refs`,
+    );
+  }
+});
+
+test('requires assignment and competent-exception authority refs to be authority records', () => {
+  const assignment = validGraph();
+  assignment[2].assignment_authority_ref = ref('EVIDENCE-001');
+  assert.ok(findingCodes(validate(assignment)).includes('INVALID_AUTHORITY_REFERENCE'));
+
+  const exception = ref('EXCEPTION-INVALID-AUTHORITY');
+  const wpPlan = {
+    ...base('WP_PLAN', 'WP-PLAN-INVALID-AUTHORITY'),
+    coverage: { kind: 'competent_exception', exception_ref: exception },
+    requirement_refs: [requirementRef('RF-EX-1', exception)],
+    relations: [],
+  };
+  const external = [
+    ...externalReferences(),
+    {
+      ...exception,
+      kind: 'competent_exception',
+      authority_ref: ref('EVIDENCE-001'),
+      scope: 'scope:exception',
+      rationale: 'Explicit bounded exception',
+      requirements: [{ id: 'RF-EX-1', statement: 'Bounded requirement' }],
+    },
+  ];
+  assert.ok(findingCodes(validate([wpPlan], external)).includes('INVALID_AUTHORITY_REFERENCE'));
+});
+
+test('approved SPEC coverage requires resolved authority evidence on the source', () => {
+  const graph = validGraph();
+  graph[0].authority_refs = [ref('EVIDENCE-001')];
+
+  const result = validate(graph);
+  assert.ok(findingCodes(result).includes('INVALID_APPROVED_SPEC_SOURCE'));
+});
+
 test('checks requirement existence, source identity and bounded TASK subset', () => {
   const missingRequirement = validGraph();
   missingRequirement[2].requirement_refs.push(requirementRef('RF-999'));
@@ -216,6 +274,47 @@ test('rejects duplicate or conflicting stable requirement identities', () => {
     statement: 'Changed meaning',
   });
   assert.ok(findingCodes(validate(conflicting)).includes('CONFLICTING_REQUIREMENT_ID'));
+});
+
+test('resolves replacement requirement source and identity for superseded requirements', () => {
+  const validReplacement = validGraph();
+  validReplacement[0].requirements[0] = {
+    ...validReplacement[0].requirements[0],
+    status: 'superseded',
+    replacement_ref: requirementRef('RF-202'),
+  };
+  assert.equal(validate(validReplacement).outcome, 'PASS');
+
+  const missingSource = validGraph();
+  missingSource[0].requirements[0] = {
+    ...missingSource[0].requirements[0],
+    status: 'superseded',
+    replacement_ref: requirementRef('RF-202', ref('SPEC-MISSING')),
+  };
+  assert.ok(findingCodes(validate(missingSource)).includes('UNRESOLVED_REQUIREMENT_SOURCE'));
+
+  const missingReplacement = validGraph();
+  missingReplacement[0].requirements[0] = {
+    ...missingReplacement[0].requirements[0],
+    status: 'retired',
+    replacement_ref: requirementRef('RF-999'),
+  };
+  assert.ok(findingCodes(validate(missingReplacement)).includes('UNKNOWN_REQUIREMENT_REFERENCE'));
+
+  const invalidSource = validGraph();
+  invalidSource[0].requirements[0] = {
+    ...invalidSource[0].requirements[0],
+    status: 'superseded',
+    replacement_ref: requirementRef('RF-FAKE', ref('EVIDENCE-REQUIREMENTS')),
+  };
+  const external = externalReferences();
+  external.push({
+    ...ref('EVIDENCE-REQUIREMENTS'),
+    kind: 'evidence',
+    subject_ref: ref('CANDIDATE-001'),
+    requirements: [{ id: 'RF-FAKE', statement: 'Not an authority-owned requirement' }],
+  });
+  assert.ok(findingCodes(validate(invalidSource, external)).includes('INVALID_REQUIREMENT_SOURCE'));
 });
 
 test('blocks split_required READY and rejects autonomous authority claims', () => {
@@ -303,4 +402,44 @@ test('preserves conflicting RESULT observations as a failure instead of normaliz
   });
 
   assert.ok(findingCodes(validate(graph)).includes('CONFLICTING_RESULT_OBSERVATION'));
+});
+
+test('requires RESULT subject and evidence references to resolve', () => {
+  const missingSubject = validGraph();
+  missingSubject[4].subject_ref = ref('CANDIDATE-MISSING');
+  assert.ok(findingCodes(validate(missingSubject)).includes('UNRESOLVED_RESULT_SUBJECT'));
+
+  const missingEvidence = validGraph();
+  missingEvidence[4].evidence_refs = [ref('EVIDENCE-MISSING')];
+  assert.ok(findingCodes(validate(missingEvidence)).includes('UNRESOLVED_RESULT_EVIDENCE'));
+
+  const missingObservationEvidence = validGraph();
+  missingObservationEvidence[4].observations[0].evidence_refs = [ref('EVIDENCE-MISSING')];
+  assert.ok(findingCodes(validate(missingObservationEvidence)).includes('UNRESOLVED_RESULT_EVIDENCE'));
+});
+
+test('requires RESULT evidence identity and subject correspondence', () => {
+  const wrongSubjectKind = validGraph();
+  wrongSubjectKind[4].subject_ref = ref('ASSESSMENT-001');
+  assert.ok(findingCodes(validate(wrongSubjectKind)).includes('INVALID_RESULT_SUBJECT'));
+
+  const wrongKind = validGraph();
+  wrongKind[4].evidence_refs = [ref('ASSESSMENT-001')];
+  assert.ok(findingCodes(validate(wrongKind)).includes('INVALID_RESULT_EVIDENCE'));
+
+  const mismatchedTopLevel = externalReferences();
+  mismatchedTopLevel.find((entry) => entry.ref === 'EVIDENCE-001').subject_ref = ref('TASK-001');
+  assert.ok(findingCodes(validate(validGraph(), mismatchedTopLevel)).includes('RESULT_EVIDENCE_SUBJECT_MISMATCH'));
+
+  const mismatchedObservation = validGraph();
+  mismatchedObservation[4].observations[0].evidence_refs = [ref('EVIDENCE-002')];
+  const external = externalReferences();
+  external.push({
+    ...ref('EVIDENCE-002'),
+    kind: 'evidence',
+    subject_ref: ref('TASK-001'),
+  });
+  assert.ok(
+    findingCodes(validate(mismatchedObservation, external)).includes('RESULT_EVIDENCE_SUBJECT_MISMATCH'),
+  );
 });

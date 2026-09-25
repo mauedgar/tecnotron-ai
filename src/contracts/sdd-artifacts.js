@@ -325,6 +325,25 @@ function resolveReference(index, reference) {
   return values.length === 1 ? values[0] : null;
 }
 
+function validateAuthorityReference(index, authorityRef, findings, details, label) {
+  const resolved = resolveReference(index, authorityRef);
+  if (!resolved) {
+    findings.push(finding('UNRESOLVED_AUTHORITY_REFERENCE', `${label} does not resolve exactly once`, {
+      ...details,
+      ref: referenceKey(authorityRef),
+    }));
+    return false;
+  }
+  if (resolved.entry?.kind !== 'authority') {
+    findings.push(finding('INVALID_AUTHORITY_REFERENCE', `${label} must resolve to an authority record`, {
+      ...details,
+      ref: referenceKey(authorityRef),
+    }));
+    return false;
+  }
+  return true;
+}
+
 function relationRule(from, relation) {
   return ALLOWED_RELATIONS.find((candidate) => (
     candidate.from === from && candidate.relation === relation
@@ -350,12 +369,13 @@ function validateAuthorityReferences(artifact, index, findings) {
     revisions.add(authorityRef.revision);
     revisionsByRef.set(authorityRef.ref, revisions);
 
-    if (!resolveReference(index, authorityRef)) {
-      findings.push(finding('UNRESOLVED_AUTHORITY_REFERENCE', 'Authority reference does not resolve exactly once', {
-        document_id: artifact.document_id,
-        ref: referenceKey(authorityRef),
-      }));
-    }
+    validateAuthorityReference(
+      index,
+      authorityRef,
+      findings,
+      { document_id: artifact.document_id },
+      'Authority reference',
+    );
   }
 
   for (const [ref, revisions] of revisionsByRef.entries()) {
@@ -367,15 +387,18 @@ function validateAuthorityReferences(artifact, index, findings) {
     }
   }
 
-  if (artifact.assignment_authority_ref && !resolveReference(index, artifact.assignment_authority_ref)) {
-    findings.push(finding('UNRESOLVED_AUTHORITY_REFERENCE', 'Assignment authority does not resolve exactly once', {
-      document_id: artifact.document_id,
-      ref: referenceKey(artifact.assignment_authority_ref),
-    }));
+  if (artifact.assignment_authority_ref) {
+    validateAuthorityReference(
+      index,
+      artifact.assignment_authority_ref,
+      findings,
+      { document_id: artifact.document_id },
+      'Assignment authority',
+    );
   }
 }
 
-function validateRequirementInventory(artifact, findings) {
+function validateRequirementInventory(artifact, index, findings) {
   if (artifact.artifact_kind !== 'SPEC') return;
   const inventory = new Map();
   for (const requirement of artifact.requirements) {
@@ -390,12 +413,44 @@ function validateRequirementInventory(artifact, findings) {
       ));
     }
     inventory.set(requirement.id, requirement);
+
+    if (requirement.replacement_ref) {
+      validateRequirementReference(artifact, requirement.replacement_ref, index, findings);
+    }
   }
 }
 
 function sourceRequirements(resolved) {
   const requirements = resolved?.entry?.requirements;
   return Array.isArray(requirements) ? requirements : [];
+}
+
+function validateRequirementReference(artifact, requirementReference, index, findings) {
+  const source = resolveReference(index, requirementReference.source);
+  if (!source) {
+    findings.push(finding('UNRESOLVED_REQUIREMENT_SOURCE', 'Requirement source does not resolve exactly once', {
+      document_id: artifact.document_id,
+      requirement_id: requirementReference.id,
+      ref: referenceKey(requirementReference.source),
+    }));
+    return;
+  }
+  const validSource = source.entry?.artifact_kind === 'SPEC'
+    || source.entry?.kind === 'competent_exception';
+  if (!validSource) {
+    findings.push(finding('INVALID_REQUIREMENT_SOURCE', 'Requirement source is not a declared requirement authority', {
+      document_id: artifact.document_id,
+      requirement_id: requirementReference.id,
+      ref: referenceKey(requirementReference.source),
+    }));
+    return;
+  }
+  if (!sourceRequirements(source).some(({ id }) => id === requirementReference.id)) {
+    findings.push(finding('UNKNOWN_REQUIREMENT_REFERENCE', 'Requirement ID is absent from the declared source', {
+      document_id: artifact.document_id,
+      requirement_id: requirementReference.id,
+    }));
+  }
 }
 
 function validateRequirementReferences(artifact, index, findings) {
@@ -412,21 +467,7 @@ function validateRequirementReferences(artifact, index, findings) {
     }
     seen.add(key);
 
-    const source = resolveReference(index, requirementReference.source);
-    if (!source) {
-      findings.push(finding('UNRESOLVED_REQUIREMENT_SOURCE', 'Requirement source does not resolve exactly once', {
-        document_id: artifact.document_id,
-        requirement_id: requirementReference.id,
-        ref: referenceKey(requirementReference.source),
-      }));
-      continue;
-    }
-    if (!sourceRequirements(source).some(({ id }) => id === requirementReference.id)) {
-      findings.push(finding('UNKNOWN_REQUIREMENT_REFERENCE', 'Requirement ID is absent from the declared source', {
-        document_id: artifact.document_id,
-        requirement_id: requirementReference.id,
-      }));
-    }
+    validateRequirementReference(artifact, requirementReference, index, findings);
   }
 }
 
@@ -450,6 +491,20 @@ function validateCoverage(artifact, index, findings) {
       findings.push(finding('INVALID_COVERAGE_SOURCE', 'approved_spec must resolve to a SPEC artifact', {
         document_id: artifact.document_id,
       }));
+      return;
+    }
+    const authorityRefs = resolved.entry.authority_refs;
+    const hasAcceptedSourceEvidence = Array.isArray(authorityRefs)
+      && authorityRefs.length > 0
+      && authorityRefs.every((authorityRef) => (
+        resolveReference(index, authorityRef)?.entry?.kind === 'authority'
+      ));
+    if (!hasAcceptedSourceEvidence) {
+      findings.push(finding(
+        'INVALID_APPROVED_SPEC_SOURCE',
+        'approved_spec requires explicit authority evidence on the SPEC source',
+        { document_id: artifact.document_id, ref: referenceKey(coverageRef) },
+      ));
     }
     return;
   }
@@ -467,12 +522,13 @@ function validateCoverage(artifact, index, findings) {
     }));
     return;
   }
-  if (!resolveReference(index, exception.authority_ref)) {
-    findings.push(finding('UNRESOLVED_AUTHORITY_REFERENCE', 'Exception authority does not resolve exactly once', {
-      document_id: artifact.document_id,
-      ref: referenceKey(exception.authority_ref),
-    }));
-  }
+  validateAuthorityReference(
+    index,
+    exception.authority_ref,
+    findings,
+    { document_id: artifact.document_id },
+    'Exception authority',
+  );
 }
 
 function validateRelations(artifact, index, findings) {
@@ -579,10 +635,59 @@ function validateScopeState(artifact, findings) {
   }
 }
 
-function validateResult(artifact, findings) {
+function validateResultEvidenceReference(artifact, evidenceRef, index, findings) {
+  const resolved = resolveReference(index, evidenceRef);
+  if (!resolved) {
+    findings.push(finding('UNRESOLVED_RESULT_EVIDENCE', 'RESULT evidence does not resolve exactly once', {
+      document_id: artifact.document_id,
+      ref: referenceKey(evidenceRef),
+    }));
+    return;
+  }
+  const evidence = resolved.entry;
+  if (evidence?.kind !== 'evidence' || !Reference.safeParse(evidence.subject_ref).success) {
+    findings.push(finding('INVALID_RESULT_EVIDENCE', 'RESULT evidence requires an explicit subject identity', {
+      document_id: artifact.document_id,
+      ref: referenceKey(evidenceRef),
+    }));
+    return;
+  }
+  if (!sameReference(evidence.subject_ref, artifact.subject_ref)) {
+    findings.push(finding('RESULT_EVIDENCE_SUBJECT_MISMATCH', 'RESULT evidence subject must match RESULT subject', {
+      document_id: artifact.document_id,
+      ref: referenceKey(evidenceRef),
+    }));
+  }
+}
+
+function validateResult(artifact, index, findings) {
   if (artifact.artifact_kind !== 'RESULT') return;
+  const subject = resolveReference(index, artifact.subject_ref);
+  if (!subject) {
+    findings.push(finding('UNRESOLVED_RESULT_SUBJECT', 'RESULT subject does not resolve exactly once', {
+      document_id: artifact.document_id,
+      ref: referenceKey(artifact.subject_ref),
+    }));
+  } else {
+    const validTaskSubject = subject.entry?.artifact_kind === 'TASK';
+    const validCandidateSubject = ['git_candidate', 'immutable_candidate'].includes(subject.entry?.kind);
+    if (!validTaskSubject && !validCandidateSubject) {
+      findings.push(finding('INVALID_RESULT_SUBJECT', 'RESULT subject must be a TASK or immutable candidate identity', {
+        document_id: artifact.document_id,
+        ref: referenceKey(artifact.subject_ref),
+      }));
+    }
+  }
+
+  for (const evidenceRef of artifact.evidence_refs) {
+    validateResultEvidenceReference(artifact, evidenceRef, index, findings);
+  }
+
   const observations = new Map();
   for (const observation of artifact.observations) {
+    for (const evidenceRef of observation.evidence_refs) {
+      validateResultEvidenceReference(artifact, evidenceRef, index, findings);
+    }
     const previous = observations.get(observation.observation_id);
     if (previous && previous !== observation.outcome) {
       findings.push(finding('CONFLICTING_RESULT_OBSERVATION', 'One observation identity cannot be relabeled', {
@@ -664,13 +769,13 @@ function validateSddArtifactSet(sources, options = {}) {
 
   for (const artifact of artifacts) {
     validateAuthorityReferences(artifact, index, findings);
-    validateRequirementInventory(artifact, findings);
+    validateRequirementInventory(artifact, index, findings);
     validateRequirementReferences(artifact, index, findings);
     validateCoverage(artifact, index, findings);
     validateRelations(artifact, index, findings);
     validateTaskContainment(artifact, index, findings);
     validateScopeState(artifact, findings);
-    validateResult(artifact, findings);
+    validateResult(artifact, index, findings);
     validateReview(artifact, index, findings);
   }
 
