@@ -36,13 +36,13 @@ const MILESTONE_EVIDENCE_SPECS = Object.freeze({
   completed_responsibilities: { kind: 'COMPLETED_RESPONSIBILITIES' },
   deferred_or_cancelled_responsibilities: {
     kind: 'DEFERRED_OR_CANCELLED_RESPONSIBILITIES',
-    authority_kinds: ['DEVELOPER', 'VALIDATION_FIXTURE'],
+    authority_kinds: ['DEVELOPER'],
     authority_refs_from_observed: true,
   },
   open_findings: { kind: 'OPEN_FINDINGS' },
   accepted_architectural_changes: {
     kind: 'ACCEPTED_ARCHITECTURAL_CHANGES',
-    authority_kinds: ['DEVELOPER', 'VALIDATION_FIXTURE'],
+    authority_kinds: ['DEVELOPER'],
     authority_refs_from_observed: true,
   },
   actual_repository_state: { kind: 'ACTUAL_REPOSITORY_STATE' },

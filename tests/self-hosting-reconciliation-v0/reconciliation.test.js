@@ -44,8 +44,8 @@ function authorityCompetenceFor(field, authorityRef = 'authority:developer-001')
     developer_acceptance: 'DEVELOPER',
     canonical_integration: 'EFFECT_AUTHORITY',
     remote_publication: 'EFFECT_AUTHORITY',
-    deferred_or_cancelled_responsibilities: 'VALIDATION_FIXTURE',
-    accepted_architectural_changes: 'VALIDATION_FIXTURE',
+    deferred_or_cancelled_responsibilities: 'DEVELOPER',
+    accepted_architectural_changes: 'DEVELOPER',
   };
   if (!kinds[field]) return null;
   return {
@@ -205,6 +205,44 @@ function completeMilestoneRequest() {
   };
 }
 
+function validationFixtureProductMilestoneRequest(overrides = {}) {
+  const milestone = {
+    id: 'REAL-PRODUCT-MILESTONE-001',
+    title: 'Real Product milestone',
+    state: 'ACTIVE',
+    ...overrides,
+  };
+  const observations = milestoneObservations();
+  const fixtureAuthority = 'authority:not-a-developer';
+  observations.deferred_or_cancelled_responsibilities[0].observed = [
+    { id: 'RESP-002', disposition: 'DEFERRED', authority_ref: fixtureAuthority },
+  ];
+  observations.accepted_architectural_changes[0].observed = [
+    { id: 'ADR-001', decision_ref: 'adr:001', authority_ref: fixtureAuthority },
+  ];
+  const fixtureCompetence = {
+    status: 'ESTABLISHED',
+    kind: 'VALIDATION_FIXTURE',
+    authority_ref: fixtureAuthority,
+    basis_ref: 'validation-fixture:self-declared',
+  };
+  const authorityFields = new Set([
+    'deferred_or_cancelled_responsibilities',
+    'accepted_architectural_changes',
+  ]);
+  const evidence = Object.entries(observations).flatMap(([field, entries]) =>
+    entries.map(entry => verifiedEvidence({
+      ref: entry.source_ref,
+      kind: MILESTONE_EVIDENCE_KINDS[field],
+      subjectKind: 'Milestone',
+      subjectId: milestone.id,
+      field,
+      observed: entry.observed,
+      authorityCompetence: authorityFields.has(field) ? fixtureCompetence : null,
+    })));
+  return { milestone, observations, evidence };
+}
+
 test('post-TaskCycle reconciliation resolves sufficient coincident evidence and reports remaining obligations', () => {
   const request = completeTaskCycleRequest();
   const before = structuredClone(request);
@@ -327,6 +365,67 @@ test('post-milestone reconciliation preserves deferred work and findings while k
   assert.deepEqual(result.external_semantic_decisions_required, ['NEXT_PRODUCT_RESPONSIBILITY']);
   assert.equal(Object.hasOwn(result, 'next_responsibility'), false);
   assert.equal(result.automatic_roadmap_decision, 'NONE');
+});
+
+test('reviewer reproduction: validation fixture competence cannot resolve Product milestone authority facts', () => {
+  const result = reconcilePostMilestone(validationFixtureProductMilestoneRequest());
+
+  assert.equal(result.disposition, 'UNRESOLVED');
+  assert.equal(result.observed_facts.deferred_or_cancelled_responsibilities, null);
+  assert.equal(result.observed_facts.accepted_architectural_changes, null);
+  assert.equal(result.classifications.deferred_or_cancelled_responsibilities.status, 'UNRESOLVED');
+  assert.equal(result.classifications.accepted_architectural_changes.status, 'UNRESOLVED');
+});
+
+test('milestone id or title cannot opt Product reconciliation into fixture authority', () => {
+  for (const milestone of [
+    { id: 'VALIDATION-MILESTONE-LOOKALIKE', title: 'Real Product milestone' },
+    { id: 'REAL-PRODUCT-MILESTONE-002', title: 'Synthetic validation fixture' },
+  ]) {
+    const result = reconcilePostMilestone(validationFixtureProductMilestoneRequest(milestone));
+
+    assert.equal(result.observed_facts.deferred_or_cancelled_responsibilities, null);
+    assert.equal(result.observed_facts.accepted_architectural_changes, null);
+  }
+});
+
+test('caller-controlled fixture markers cannot establish a Product authority boundary', () => {
+  for (const marker of [
+    { validation_fixture: true },
+    { context_kind: 'VALIDATION_FIXTURE' },
+  ]) {
+    const request = { ...validationFixtureProductMilestoneRequest(), ...marker };
+    assert.throws(
+      () => reconcilePostMilestone(request),
+      error => error && error.code === 'INVALID_RECONCILIATION_REQUEST',
+    );
+  }
+});
+
+test('verified Developer authority still resolves Product milestone authority facts', () => {
+  const result = reconcilePostMilestone(completeMilestoneRequest());
+
+  assert.deepEqual(result.observed_facts.deferred_or_cancelled_responsibilities, [
+    { id: 'RESP-002', disposition: 'DEFERRED', authority_ref: 'authority:developer-001' },
+    { id: 'RESP-003', disposition: 'CANCELLED', authority_ref: 'authority:developer-001' },
+  ]);
+  assert.deepEqual(result.observed_facts.accepted_architectural_changes, [
+    { id: 'ADR-001', decision_ref: 'adr:001', authority_ref: 'authority:developer-001' },
+  ]);
+});
+
+test('synthetic evidence can exercise non-authority mechanics without granting Product authority', () => {
+  const result = reconcilePostMilestone(validationFixtureProductMilestoneRequest({
+    id: 'SYNTHETIC-MECHANICS-ONLY',
+    title: 'Synthetic mechanics exercise',
+  }));
+
+  assert.deepEqual(result.observed_facts.planned_responsibilities, [
+    { id: 'RESP-001', description: 'Completed responsibility' },
+    { id: 'RESP-002', description: 'Deferred responsibility' },
+  ]);
+  assert.equal(result.observed_facts.deferred_or_cancelled_responsibilities, null);
+  assert.equal(result.observed_facts.accepted_architectural_changes, null);
 });
 
 test('reviewer reproduction: arbitrary unverified references cannot establish authority-bearing facts', () => {
