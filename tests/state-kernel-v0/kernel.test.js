@@ -174,6 +174,62 @@ test('future authority reference is recorded in the obligation satisfaction even
   assert.equal(item.authority_refs.at(-1).id, 'FUTURE-RULING');
   assert.equal(store.verify().event_count, 2);
 });
+
+test('late-bound authority can be attached while satisfying an authority-free obligation', t => {
+  const { store } = fixture(t);
+  create(store, 0, 'TaskCycle', 'TC-LATE', { responsibility: 'late authority', obligations: [{ id: 'ACCEPTANCE', authority_ref: null }] }, auth);
+  const authority = { kind: 'AUTHORITY', id: 'LATE-RULING', location: 'evidence/late-ruling.json', sha256: 'c'.repeat(64) };
+  satisfy(store, 1, 'TC-LATE', 'ACCEPTANCE', 'LATE-RULING', authority);
+  const item = inspect(store, 'TaskCycle', 'TC-LATE').aggregate;
+  assert.equal(item.obligations[0].status, 'SATISFIED');
+  assert.equal(item.obligations[0].authority_ref, 'LATE-RULING');
+  assert.deepEqual(item.authority_refs.at(-1), authority);
+});
+
+test('late-bound authority fails closed on incomplete or mismatched authority input', t => {
+  const { store } = fixture(t);
+  create(store, 0, 'TaskCycle', 'TC-LATE-FAIL', { responsibility: 'late authority fail closed', obligations: [{ id: 'ACCEPTANCE', authority_ref: null }] }, auth);
+  unchanged(store, () => satisfy(store, 1, 'TC-LATE-FAIL', 'ACCEPTANCE', undefined, { kind: 'AUTHORITY', id: 'LATE-RULING' }), 'MISSING_REQUIRED_AUTHORITY');
+  unchanged(store, () => satisfy(store, 1, 'TC-LATE-FAIL', 'ACCEPTANCE', 'LATE-RULING'), 'MISSING_REQUIRED_AUTHORITY');
+  unchanged(store, () => satisfy(store, 1, 'TC-LATE-FAIL', 'ACCEPTANCE', 'LATE-RULING', { kind: 'AUTHORITY', id: 'OTHER-RULING' }), 'MISSING_REQUIRED_AUTHORITY');
+});
+
+test('authority-free obligation satisfaction remains backward compatible', t => {
+  const { store } = fixture(t);
+  create(store, 0, 'TaskCycle', 'TC-NO-AUTH', { responsibility: 'no authority required', obligations: [{ id: 'VALIDATION', authority_ref: null }] }, auth);
+  satisfy(store, 1, 'TC-NO-AUTH', 'VALIDATION');
+  const item = inspect(store, 'TaskCycle', 'TC-NO-AUTH').aggregate;
+  assert.equal(item.obligations[0].status, 'SATISFIED');
+  assert.equal(item.obligations[0].authority_ref, null);
+});
+
+test('late-bound Developer authority supports real post-review closure shape', t => {
+  const { store } = fixture(t);
+  create(store, 0, 'TaskCycle', 'TC-LATE-CLOSE', { responsibility: 'post-review closure', obligations: [
+    { id: 'implementation', authority_ref: null },
+    { id: 'validation', authority_ref: null },
+    { id: 'independent_review', authority_ref: null },
+    { id: 'Developer_acceptance', authority_ref: null },
+    { id: 'canonical_integration', authority_ref: null },
+    { id: 'remote_publication', authority_ref: null },
+    { id: 'lifecycle_reconciliation', authority_ref: null },
+  ] }, auth);
+  transition(store, 1, 'TaskCycle', 'TC-LATE-CLOSE', 'ACTIVE');
+  satisfy(store, 2, 'TC-LATE-CLOSE', 'implementation');
+  satisfy(store, 3, 'TC-LATE-CLOSE', 'validation');
+  satisfy(store, 4, 'TC-LATE-CLOSE', 'independent_review');
+  const authority = { kind: 'AUTHORITY', id: 'DEV-ACCEPT-LATE', location: 'evidence/dev-accept.json', sha256: 'd'.repeat(64) };
+  satisfy(store, 5, 'TC-LATE-CLOSE', 'Developer_acceptance', 'DEV-ACCEPT-LATE', authority);
+  satisfy(store, 6, 'TC-LATE-CLOSE', 'canonical_integration', 'DEV-ACCEPT-LATE');
+  satisfy(store, 7, 'TC-LATE-CLOSE', 'remote_publication', 'DEV-ACCEPT-LATE');
+  satisfy(store, 8, 'TC-LATE-CLOSE', 'lifecycle_reconciliation', 'DEV-ACCEPT-LATE');
+  transition(store, 9, 'TaskCycle', 'TC-LATE-CLOSE', 'CLOSED', { authority_ref: 'DEV-ACCEPT-LATE', disposition_ref: 'result:closed' });
+  const item = inspect(store, 'TaskCycle', 'TC-LATE-CLOSE').aggregate;
+  assert.equal(item.state, 'CLOSED');
+  assert.ok(item.obligations.every(obligation => obligation.status === 'SATISFIED'));
+  assert.ok(item.obligations.slice(3).every(obligation => obligation.authority_ref === 'DEV-ACCEPT-LATE'));
+  assert.equal(item.terminal_disposition_ref, 'result:closed');
+});
 test('bootstrap import records established state as one provenance event without fabricated lifecycle history', t => {
   const { store } = fixture(t);
   bootstrapTaskCycle(store, 0, {

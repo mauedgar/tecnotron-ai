@@ -137,6 +137,18 @@ function satisfy(store, expectedRevision, id, obligationId, authorityRef, author
         demand(authorityReference.kind === 'AUTHORITY' && authorityReference.id === authorityRef, 'MISSING_REQUIRED_AUTHORITY', 'authority reference mismatch');
         item.authority_refs.push(authorityReference);
       }
+    } else if (authorityRef !== undefined || authorityReference !== undefined) {
+      demand(string(authorityRef), 'MISSING_REQUIRED_AUTHORITY', 'late-bound obligation authority identity');
+      const existingAuthority = item.authority_refs.find(r => r.kind === 'AUTHORITY' && r.id === authorityRef);
+      if (authorityReference !== undefined) {
+        refs([authorityReference]);
+        demand(authorityReference.kind === 'AUTHORITY' && authorityReference.id === authorityRef, 'MISSING_REQUIRED_AUTHORITY', 'authority reference mismatch');
+      }
+      if (!existingAuthority) {
+        demand(authorityReference !== undefined, 'MISSING_REQUIRED_AUTHORITY', 'late-bound authority reference required');
+        item.authority_refs.push(authorityReference);
+      }
+      obligation.authority_ref = authorityRef;
     }
     obligation.status = 'SATISFIED'; item.revision++; item.updated_at = at;
     return { kind: 'TaskCycle', id, at, action: `SATISFY:${obligationId}` };
