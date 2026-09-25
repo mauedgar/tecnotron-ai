@@ -2,7 +2,7 @@
 status: canonical
 owner: tecnotron-ai
 type: reference
-updated: 2026-09-22
+updated: 2026-09-25
 related:
   - "[[architecture]]"
   - "[[operational-architecture]]"
@@ -13,57 +13,86 @@ related:
   - "[[capability-map]]"
 ---
 
-# Source Of Truth de Tecnotron-ai
+# Source of Truth — Tecnotron
 
-Este es el índice determinista de navegación y precedencia de la documentación
-canónica de Tecnotron-ai, un sistema de desarrollo independiente. Los índices
-derivados, paquetes generados, caches, sesiones de agentes, metadata de
-workspace y vistas de Obsidian no son source of truth.
+This document is the active navigation and precedence index for Tecnotron. It is
+intentionally thin. Historical TASK trees and accepted predecessor plans remain
+available as provenance but are not active top-level navigation.
 
-| Documento | Autoridad |
+## 1. Stable Product and architecture authority
+
+| Source | Responsibility |
 | --- | --- |
-| [Architecture](architecture.md) | Invariantes arquitectónicos estables del AI Core y frontera del repositorio. |
-| [Operational Architecture](operational-architecture.md) | Responsabilidades operativas, implementaciones reemplazables y fronteras del control plane; incluye la arquitectura vigente `THIN_DEDICATED_EXECUTION_COORDINATOR` detras de `ExecutionSurfacePort`. |
-| [Task Lifecycle](task-lifecycle.md) | Lifecycle lógico, política de worktrees y contratos de aceptación, integración y cleanup. |
-| [Context Strategy](context-strategy.md) | Objetivo de contexto, política de retrieval, telemetría y gates de evaluación. |
-| [Current State](current-state.md) | Solo realidad de implementacion confirmada y evidencia de validacion, incluidos los avances posteriores de Execution Coordinator y substrate V0. |
-| [Implementation Roadmap](implementation-roadmap.md) | Secuencia y trabajo de implementación planificado. |
-| [Milestone tecnotron-operational-foundation-v1](milestones/tecnotron-operational-foundation-v1/PLAN.md) | Planificación aceptada del milestone en baseline `41088a4`; su `integration_branch` vigente es `tools` y los milestones aceptados se promueven a `main`. |
-| [WP-000 Cross-repo Project Profile Baseline](work-packages/wp-000-cross-repo-project-profile-baseline/PLAN.md) | Predecesor completado de Project Profile obligatorio, inyección de entorno y conformance cross-repo; integrado en FitFlow `develop` y Tecnotron-ai `tools`. |
-| [WP-001 Operational Profile Contracts SPEC](work-packages/wp-001-operational-profile-contracts/SPEC.md) | Comportamiento y fronteras aceptadas de `tecnotron-agent-profile/v1`, incluidos nueve perfiles, permisos deny-by-default y separación de modelo. |
-| [WP-001 Operational Profile Contracts Plan](work-packages/wp-001-operational-profile-contracts/PLAN.md) | Solución técnica y gates de implementación derivados de la SPEC aceptada. |
-| [WP-002 Deterministic OpenCode Launchers SPEC](work-packages/wp-002-deterministic-opencode-launchers/SPEC.md) | Comportamiento y fronteras aceptadas de `tecnotron-agent-launch/v1`; el gate `WP-002_SPEC_ACCEPTANCE` está satisfecho sin crear autoridad de implementación. |
-| [WP-002 Deterministic OpenCode Launchers Plan](work-packages/wp-002-deterministic-opencode-launchers/PLAN.md) | Solución técnica y descomposición aceptadas. `TOF-W1-002` y la responsabilidad estrechada `OPEN_CODE_EXECUTION_SURFACE_BOUNDARY` de `TOF-W1-003` están completadas; WP-002 satisface el orden del milestone. |
-| [WP-003 SDD Authority and Artifacts SPEC](work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md) | WHAT: comportamiento esperado y fronteras de autoridad aceptadas de WP-003; define responsabilidades de SPEC, WP PLAN, TASK, task PLAN, RESULT y REVIEW sin autorizar implementación. |
-| [WP-003 SDD Authority and Artifacts Plan](work-packages/wp-003-sdd-authority-and-artifacts/PLAN.md) | HOW: estrategia técnica, descomposición y gates derivados de la SPEC aceptada. No redefine WHAT ni altera las fronteras de autoridad; este índice conserva función de navegación/precedencia sin autoridad conductual propia. |
-| [Task TOF-W1-003](tasks/TOF-W1-003/TASK.md) | TASK históricamente `RESCOPE_NARROW`; la responsabilidad final `OPEN_CODE_EXECUTION_SURFACE_BOUNDARY` está `COMPLETE`, con validación `COMPLETE`, review independiente `PASS`, aceptación Developer `GRANTED`, integración y publicación completadas. Los estados previos `NOT_AUTHORIZED` y la varianza de baseline quedan como provenance histórica. OpenCode sigue siendo una superficie reemplazable y no absorbe coordinación genérica ni Router / ModelResolver / FinOps. |
-| [Task TOF-W1-002](tasks/TOF-W1-002/TASK.md) | Contrato para `WP002-WU-00` y `WP002-WU-01`; snapshot inmutable `a744d0746c50f4d411006cf99923c2f64e467797` validado, revisado con `PASS`, aceptado por el Developer e integrado mediante PR #28 en `tools@5b9cf94116d66dd09143d0b5a458c4babfc89cf4`. Cierre `DONE`, cleanup `CLEANUP_COMPLETE`; [RESULT](tasks/TOF-W1-002/RESULT.md) y [REVIEW](tasks/TOF-W1-002/REVIEW.md) preservan la evidencia. |
-| [Task TOF-W1-001](tasks/TOF-W1-001/TASK.md) | Contrato de scope histórico de `tecnotron-agent-profile/v1`; validación `PASS` (11/11, 19/19 y 154/154), review independiente `PASS`, aceptación del Developer e integración en `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publicación, promoción a `main` y cleanup: `NOT_RUN`. |
-| [Task TOF-W0-001](tasks/TOF-W0-001/TASK.md) | Contrato de scope histórico para Project Profile de FitFlow y planificación de configuración activa. |
-| [Task TOF-W0-002](tasks/TOF-W0-002/TASK.md) | Contrato de scope histórico para resolución de proyecto, inyección de entorno y planificación de conformance cross-repo. |
-| [Task FF-AI-VNEXT-008](tasks/FF-AI-VNEXT-008/TASK.md) | Definición canónica, ownership, criterios de aceptación y frontera de scope para conformance de `Explorer` y Agent Runtime. |
-| [Task FF-AI-VNEXT-009](tasks/FF-AI-VNEXT-009/TASK.md) | Definición canónica, ownership, criterios de aceptación y frontera de scope para composition root del Agent MVP y sincronización documental. |
-| [Compatibility Baseline](compatibility-baseline.md) | Compatibilidad observada de herramientas y evidencia reproducible del baseline. |
-| [Development Pipeline Adapter](development-pipeline-adapter.md) | Frontera canónica del adapter y su estado vigente. |
-| [Capability Map](capability-map.md) | Índice de reconciliación CURRENT / HISTORICAL_RECONCILED / DEFERRED / UNRESOLVED. Agrega referencias y disposiciones; no reemplaza las autoridades canónicas de cada materia. |
-| Role registry v3 | IDs de roles vigentes y política de routing determinista fijo. La versión v2 no está soportada. El schema ejecutable es [`src/registries/schemas/roles.js`](../src/registries/schemas/roles.js); el `roles.yaml` activo pertenece a la configuración del proyecto que lo declara. |
-| Model registry v3 | Elegibilidad explícita de modelos y metadata de selección determinista. La versión v2 no está soportada. El schema ejecutable es [`src/registries/schemas/models.js`](../src/registries/schemas/models.js); el `models.yaml` activo pertenece a la configuración del proyecto que lo declara. |
+| [Architecture](architecture.md) | Stable Product boundaries and platform independence. |
+| [Operational Architecture](operational-architecture.md) | Current operational capability boundaries and post-bootstrap substrate. |
+| [WP003 SDD contract](contracts/tecnotron-sdd-artifacts-v1.md) | Versioned SDD artifact vocabulary/policy within accepted WP003 authority. |
+| [WP003 ADR](adr/ADR-WP003-SDD-AUTHORITY.md) | Accepted WP003 authority/contract foundation; subordinate to the accepted SPEC/PLAN. |
 
-Cuando los documentos discrepen, se resuelve por la autoridad de la materia
-indicada en esta tabla. Current State no promueve arquitectura planificada a
-implementación; Roadmap no reemplaza invariantes arquitectónicos; el role
-registry ejecutable controla los IDs concretos de roles. El `Developer` es el
-orquestador real y conserva la aceptación terminal.
+## 2. Current implementation reality
 
-Las autoridades vigentes de arquitectura, operación, lifecycle, contexto,
-estado, roadmap, compatibilidad y adapters describen Tecnotron-ai. Las entradas
-de FitFlow identifican exclusivamente un producto consumidor o evidencia
-cross-repo/histórica delimitada; no transfieren identidad, ownership ni
-autoridad canónica a FitFlow.
+| Source | Responsibility |
+| --- | --- |
+| [Current State](current-state.md) | Confirmed current implementation/state at the named evidence cutoff. |
+| [State Kernel V0](state-kernel-v0/README.md) | Durable operational-state substrate documentation. |
 
-Para `tecnotron-operational-foundation-v1`, el parámetro `integration_branch`
-tiene el valor vigente `tools`; `main` es el destino de promoción de un
-milestone aceptado y `tooling` es histórico. `tools` no es una constante
-universal del Task Lifecycle. Este ruling específico del milestone no reactiva
-ni reescribe TASKs anteriores al baseline
-`41088a413d06ed1d58d63d92320e38d4b44b86ea`.
+Operational Spine V0 and Self-Hosting Reconciliation V0 are implemented source
+capabilities under `src/operational-spine-v0/` and
+`src/self-hosting-reconciliation-v0/`; their Product meaning is bounded by
+[Operational Architecture](operational-architecture.md) and current-state
+evidence rather than by execution-surface state.
+
+## 3. Current planning authority
+
+| Source | Responsibility |
+| --- | --- |
+| [Active pre-alpha milestone](milestones/tecnotron-prealpha-normalization-and-integral-cycle-v1/PLAN.md) | Current milestone sequence and stage boundaries. |
+| [Implementation Roadmap](implementation-roadmap.md) | Current implementation ordering derived from accepted Product state. |
+| [WP003 SPEC](work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md) | Canonical WHAT for SDD Authority and Artifacts, including RF-201–RF-207. |
+| [WP003 PLAN](work-packages/wp-003-sdd-authority-and-artifacts/PLAN.md) | Canonical HOW/decomposition for WP003. |
+
+WP000/WP001/WP002 accepted artifacts remain competent historical Product
+results. They are not active future-work navigation. The accepted predecessor
+[Operational Foundation v1 plan](milestones/tecnotron-operational-foundation-v1/PLAN.md)
+remains immutable provenance and does not mechanically reactivate historical
+WP004/WP005/WP006/WP007 sequencing.
+
+## 4. Current execution/process guidance
+
+| Source | Responsibility |
+| --- | --- |
+| [Task Lifecycle](task-lifecycle.md) | Transitional repository/process policy where still applicable. |
+| [Context Strategy](context-strategy.md) | Minimum sufficient verifiable context and retrieval policy. |
+| `AGENTS.md` | Subordinate repository/harness guidance; never independent Product authority. |
+
+## 5. Derived/reference material
+
+| Source | Responsibility |
+| --- | --- |
+| [Capability Map](capability-map.md) | Derived CURRENT/HISTORICAL/DEFERRED reconciliation index. |
+| [Compatibility Baseline](compatibility-baseline.md) | Bounded observed compatibility evidence. |
+| `docs/guides/**` and `docs/research/**` | Derived or research material only. |
+
+## 6. Historical provenance
+
+`docs/tasks/**`, `docs/archive/**`, predecessor milestone plans, completed
+work-package artifacts, and FitFlow-era lineage are preserved during pre-alpha
+where useful. Historical presence does not imply current authority or future
+work.
+
+## 7. Explicit non-authorities
+
+The following cannot create or refresh Product authority by themselves:
+
+- chat history or LLM memory;
+- harness/model/provider configuration;
+- runtime output, sessions, workspaces, caches, or local state;
+- generated context packages or derived indexes;
+- archive or research documents;
+- task-management provider state;
+- execution-surface selection;
+- validation success, semantic review, integration, or publication when the
+  competent acceptance/authorization dimension is separate.
+
+When sources disagree, use the source competent for the subject and the most
+recent explicit competent ruling. Discussion is not decision; decision is not
+authority; authority is not canonical implementation.

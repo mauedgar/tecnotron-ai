@@ -2,8 +2,8 @@
 document_id: TEC-ARCH-001
 status: canonical
 machine_context: true
-version: 3.2
-updated: 2026-08-30
+version: 3.3
+updated: 2026-09-25
 owner: tecnotron-ai
 type: architecture
 related:
@@ -13,47 +13,55 @@ related:
   - "[[SOURCE_OF_TRUTH]]"
 ---
 
-# Arquitectura de Tecnotron-ai
+# Architecture — Tecnotron
 
-## Invariantes
+## Product identity
 
-```text
-Tecnotron-ai es un sistema de desarrollo independiente y reutilizable.
-Los productos consumidores, como FitFlow, permanecen independientes y no
-adquieren una dependencia de producto hacia Tecnotron-ai.
-```
+Tecnotron is a progressively harness-agnostic software-engineering control
+plane. Consumer products remain independent and retain their own Product
+authority, domain architecture, configuration, and repository lifecycle.
 
-- Los contratos portables de proyecto, repositorio y root preceden a cualquier
-  integracion especifica de herramienta.
-- Git worktree es el limite de aislamiento para tareas de escritura; los
-  worktrees de task son normalmente efimeros.
-- Orca es el control plane actual de workspace y sesion, y es reemplazable.
-- OpenCode es el Agent Runtime preferido actual, y es intercambiable.
-- Los providers de modelo solo aportan inferencia.
-- Las implementaciones de tooling no definen arquitectura ni source of truth.
-- Las decisiones y validaciones usan deterministic-first cuando sea posible.
-- `Developer` conserva la autoridad terminal; `Implementer` realiza la
-  implementación acotada y no administra el Task Lifecycle.
+## Stable invariants
 
-## Limites del AI Core
+- Explicit portable contracts precede tool-specific integration.
+- Product authority, semantic responsibility, execution, validation, review,
+  acceptance, integration, publication, and canonical adoption remain distinct
+  dimensions unless a competent contract explicitly combines mechanics inside
+  an already-valid grant.
+- The Developer retains terminal acceptance authority.
+- Deterministic mechanisms are preferred when equivalent to semantic reasoning.
+- Execution surfaces, workspace/session providers, model providers, planning
+  providers, storage implementations, and LLM harnesses are replaceable
+  capabilities rather than architecture or source of truth.
+- Missing, ambiguous, or unknown authority-relevant facts fail closed rather
+  than being inferred from convenience state.
+- Historical artifacts remain provenance unless competent authority explicitly
+  re-adopts them.
 
-Tecnotron-ai es source of truth para la arquitectura genérica del AI Core,
-tooling, contexto y contratos operativos reutilizables. Cada producto consumidor
-conserva su producto, Project Profile, TASK, runs, ADR y configuración
-específica; FitFlow es un consumidor posible, no la identidad de Tecnotron-ai.
+## Product / consumer boundary
 
-Research Knowledge Module queda fuera de la arquitectura de Tecnotron-ai. El
-Markdown canonico puede usar frontmatter portable, links explicitos,
-navegacion de indice a detalle, backlinks y lint determinista. Obsidian es una
-proyeccion para Developer, no source of truth ni dependencia runtime.
+Tecnotron owns reusable engineering-control-plane contracts, policies,
+coordination capabilities, context boundaries, and implementation state.
+A consumer such as FitFlow owns its Product requirements, active project
+configuration, domain state, and acceptance decisions for its own Product.
+Cross-repository operations use explicit ports/contracts and never infer
+ownership from filesystem proximity.
 
-## Documentos de detalle
+## Execution-surface independence
 
-- [Operational Architecture](operational-architecture.md): responsabilidades y
-  limites operativos.
-- [Task Lifecycle](task-lifecycle.md): estados, ownership y worktrees.
-- [Context Strategy](context-strategy.md): retrieval, telemetria y evaluacion.
-- [Source of Truth](SOURCE_OF_TRUTH.md): precedencia y navegacion canonica.
+Git worktrees may provide repository isolation; OpenCode, Orca, ChatGPT, Codex,
+or other tools may provide execution/workspace capabilities. None is the
+canonical Product role by default. Current work deliberately defers permanent
+harness/model optimization until the integral development cycle is stable.
 
-El estado de implementacion pertenece a [Current State](current-state.md) y la
-secuencia de trabajo a [Implementation Roadmap](implementation-roadmap.md).
+## Canonical knowledge
+
+Versioned canonical repository sources are authoritative for the matters they
+own. Obsidian, generated indexes, caches, context packages, chat memory, runtime
+state, and task-management views may project or transport knowledge but do not
+become independent Product authority.
+
+See [Operational Architecture](operational-architecture.md) for the current
+post-bootstrap operational substrate, [Current State](current-state.md) for
+confirmed implementation reality, and [Source of Truth](SOURCE_OF_TRUTH.md) for
+precedence/navigation.

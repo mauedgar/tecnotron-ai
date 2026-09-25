@@ -2,217 +2,110 @@
 document_id: TEC-STATE-001
 status: canonical
 machine_context: true
-version: 1.10
-updated: 2026-09-24
+version: 2.0
+updated: 2026-09-25
 owner: tecnotron-ai
 ---
 
-# Estado actual de Tecnotron-ai
+# Current State — Tecnotron
 
-Todas las referencias a la rama `tooling` de este documento registran evidencia
-histórica anterior al milestone vigente; no le atribuyen autoridad operativa
-actual. Para `tecnotron-operational-foundation-v1`, el valor vigente de
-`integration_branch` es `tools`.
+## Evidence cutoff
 
-## Implementacion confirmada
+```yaml
+repository: mauedgar/tecnotron-ai
+branch: tools
+commit: f5c5d087e270a62c1e965ec917cd70a69c4e4264
+tree: 67db7a6213fe991a01230661fed75d88083ddfcb
+bootstrap_terminal: TECNOTRON_MVP_SELF_HOSTING_OPERATIONAL_BASELINE
+wave3_terminal: TECNOTRON_SELF_HOSTING_DEVELOPMENT_V0_CLOSED_PASS
+```
 
-- `FF-AI-VNEXT-001` a `004`: `DONE` por promocion del desarrollador.
-- Doctor y discovery sin installs: implementados.
-- Contracts Zod y registries loaders: implementados.
-- State Machine, eventos JSONL, Run Store y proyeccion SQLite: implementados.
-- `repo-packager`: reparado e integrado en `tooling` por PR #2; tests 4/4
-  `PASS` en este worktree.
-- ContextPackager v2: contrato Zod y core implementados. Orquesta materializers
-  inyectados, aplica el budget global, entrega `COMPLETE`/`PARTIAL`/`EMPTY` y
-  emite telemetria determinista por entrega. `repo-packager` permanece como
-  materializer y no recibe decisiones de suficiencia.
-- `FF-AI-VNEXT-005`: Project Profile, resolucion portable de roots y adapters
-  implementados y aceptados en el baseline previo.
-- `FF-AI-VNEXT-007`: Router, Model Resolver y FinOps v1 implementados como MVP
-  determinista y aceptados por el desarrollador (`DONE`). Model Registry v3 y
-  Role Registry v3
-  son los unicos formatos activos; v2 falla con errores estables. Router deriva
-  rol y requisitos desde policy; Resolver solo propone provider/runtime y no
-  ejecuta modelos ni runtimes. Paid API permanece deshabilitada.
-- `FF-AI-VNEXT-008`: Explorer, Agent Runtime y effective runtime identity
-  implementados y validados; review independiente `ACCEPT`, aceptados por el
-  Developer (`DONE`). Agent MVP, Observer,
-  retrieval, MCP y Temporal permanecen pendientes segun roadmap.
-- `FF-AI-VNEXT-009`: **Agent MVP composition root implementado, validado y
-  aceptado explicitamente por el Developer como `DONE`** (con gaps documentados
-  y orden de integracion registrado). Composition root en `src/agent-mvp/index.js`
-  orquesta Router -> ModelResolver/FinOps -> ContextPackager -> Explorer ->
-  AgentRuntime con dependencias inyectadas. **Boundary validation M1 (RESOLVED
-  tras re-review):** `STAGE.INPUT` con `INVALID_AGENT_MVP_INPUT`,
-  `validation_errors` determinista, reutiliza `TaskRoutingInput`/
-  `EvidenceRequirement`, sin duplicar registry-policy. Tests unitarios **24/24
-  PASS** (10 orchestration + 14 M1 boundary) y test de integracion local (1/1
-  PASS) confirman flujo completo con adapters simulados. Test de integracion
-  externo requiere `FF_PROJECT_*` (SKIP sin env vars). Regresion completa: **133
-  tests, 130 PASS, 3 SKIP, 0 FAIL**. Evidencia registrada en
-  `docs/tasks/FF-AI-VNEXT-009/RESULT.md`. Excepcion historica: base real
-  `main@ceae62a`, destino de integracion `tooling`. `opencode.json` era cambio
-  pre-existente en el feature worktree y `tooling` ya contiene la version canonica
-   valida con `$schema`; queda aislado intencionalmente de 009 y no debe ser
-   atribuido ni reapicado por el squash merge. Reconciliacion contra `tooling`,
-   validacion final de integracion y limpieza del worktree son **pendientes del
-   Task Cycle deterministico**, aun no completadas.
-- `WP-000`: **DONE** tras aceptacion terminal del Developer. `TOF-W0-001` y
-  `TOF-W0-002` integran el Profile y configuracion activa de FitFlow, inyeccion
-  reproducible de `FF_PROJECT_ROOT`, `FF_PROJECT_PROFILE` y `FF_AI_CORE_ROOT`,
-  y resolucion fail-closed sin inferencia de repositorios hermanos. Las
-  integraciones son Tecnotron-ai
-  `tools@423714572af5332b2defa7265ff1514d0fd0c81a` y FitFlow
-  `develop@0c092b927acc4c46e2059fc91d3606ea41f3c9af`. La evidencia focalizada
-  confirma resolver/doctor 15/15 y registries 8/8 `PASS`.
-- `TOF-W1-001`: `tecnotron-agent-profile/v1` está implementado con nueve
-  perfiles, `subagent_depth: 0`, permisos deny-by-default, loader, fixtures y
-  contract tests. La validación reproducida es 11/11 focalizada, 19/19 combinada
-  y 154/154 completa con el Project Profile y AI Core inyectados explícitamente.
-  El review independiente fue `PASS`, el Developer lo aceptó y PR #27 lo integró
-  en `tools@d7e1e7e4784cae455782b38797c199e380173804`. Publicación, promoción a
-  `main` y cleanup permanecen `NOT_RUN`.
+The baseline above is the predecessor for the current Stage-B documentation
+candidate. Stage B itself has no canonical or remote effect until independent
+review, Developer acceptance, and separately authorized integration.
 
-- Execution Coordinator: arquitectura `THIN_DEDICATED_EXECUTION_COORDINATOR`
-  integrada en `tools@3de72f1c04d9386ab5f95b099922871306bbb2fe`.
-  Consume decisioning ya resuelto, preserva autorizacion y conformance como
-  inputs independientes, conserva `Operation` y `execution_attempt` como
-  identidades distintas y opera a traves de un `ExecutionSurfacePort`
-  harness-agnostic. OpenCode, ChatGPT u otra superficie no adquieren ownership
-  arquitectonico por este boundary.
-- Deterministic TaskCycle Substrate Prototype V0: integrado en
-  `tools@f0cea71b328f80f08220a97ee6bb9d96dc399999`. Demuestra continuacion
-  portable acotada, preservacion de responsabilidad/authority basis,
-  correspondencia mecanica explicita y consumo cross-surface. Es un prototipo
-  acotado; no adopta generalized executor, TaskCycle universal, state machine
-  universal ni reemplaza el Task Lifecycle canonico de Tecnotron.
+## Confirmed post-bootstrap substrate
 
-La promocion `002-004` consta en el commit FitFlow `52d729c`. Algunos
-run-state/result JSON y el backlog machine-readable de FitFlow conservan
-`PENDING_ACCEPTANCE`; son artefactos stale, no una reversa de la decision del
-desarrollador. No se modifican sin ownership de FitFlow.
+At the evidence cutoff the repository contains and has accepted/integrated the
+following relevant Product capabilities:
 
-## Siguiente trabajo
+- State Kernel V0: durable operational state with explicit authority/effect
+  separation and fail-closed semantics;
+- Operational Spine V0: Operation/recipe/execution-attempt resolution and
+  deterministic execution mechanics, including accepted-candidate integration
+  support;
+- Self-Hosting Reconciliation V0: bounded post-effect reconciliation without
+  manufacturing authority;
+- thin dedicated Execution Coordinator behind a harness-agnostic
+  `ExecutionSurfacePort`;
+- deterministic TaskCycle substrate prototype evidence without adopting a
+  universal lifecycle/state machine;
+- Project Profile, operational profiles, OpenCode execution-surface boundary,
+  ContextPackager/Explorer, Router/ModelResolver/FinOps, Agent Runtime and Agent
+  MVP capabilities preserved from accepted predecessor work.
 
-- `FF-AI-VNEXT-006`: `DONE`; implementado ContextPackager v2 con contrato
-  estructurado y telemetria determinista. No cambia el estado de la TASK,
-  que conserva autoridad del desarrollador.
-- `FF-AI-VNEXT-007`: `DONE`; aceptado por el desarrollador tras revision
-  independiente con veredicto `ACCEPT_WITH_NON_BLOCKING_FINDINGS`.
-- `FF-AI-VNEXT-008`: `DONE`; aceptado por el Developer.
-- `FF-AI-VNEXT-009`: `DONE`; aceptado explicitamente por el Developer tras review
-  independiente `ACCEPT_WITH_NON_BLOCKING_FINDINGS` (M1 `RESOLVED`).
-  Reconciliacion contra `tooling`, validacion final de integracion y limpieza del
-  worktree pendientes del Task Cycle deterministico (no completadas).
+These capabilities do not make any harness, provider, workspace, model, or
+planning system Product authority.
 
-## Plataforma operativa
+## Canonical SDD state
 
-- Orca controla workspace, sesion, restore e hibernation.
-- Git worktree es el isolation boundary.
-- El Folder Workspace Tecnotron aporta contexto multi-repo, no aislamiento.
-- OpenCode funciona como Agent CLI actual bajo Orca y es intercambiable.
-- Otros Agent CLI pueden operar bajo Orca sin cambiar la arquitectura.
-- Model Provider aporta inferencia; no gobierna workflow ni estados.
+```yaml
+WP003:
+  canonical: true
+  SPEC: ACCEPTED
+  PLAN: ACCEPTED
+  WU00: CLOSED_PASS
+  WU01_WU03: STILL_REQUIRED
+  WU04: REINTERPRET_AFTER_WU01_WU03
+  RF_201_RF_207: PRESERVED_UNCHANGED
+```
 
-Estas son capacidades de plataforma confirmadas por el desarrollador y por el
-runtime Orca; no se presentan como implementaciones propias de Tecnotron-ai.
+The Stage-B candidate does not initialize or implement `WP003-WU-01`.
 
-## Evidencia y limitaciones
+## Pre-alpha normalization state
 
-Validacion MVP ejecutada el 2026-08-24:
+```yaml
+milestone: TECNOTRON-PREALPHA-NORMALIZATION-AND-INTEGRAL-CYCLE-MILESTONE-PLAN-001
+stage_A:
+  disposition: PASS
+  terminal: true
+stage_B:
+  responsibility: CANONICAL_REPOSITORY_NORMALIZATION
+  phase: PHASE_1
+  current_gate: INDEPENDENT_REVIEW_AFTER_FREEZE
+```
 
-| Comando | Resultado |
-| --- | --- |
-| `node --test tests/core/routing.test.js` | Router, Resolver, FinOps y evidencia determinista `PASS` |
-| `node --test tests/contract/registries.test.js tests/contract/contracts.test.js` | schemas v3, rechazo v2 y contratos discriminados `PASS` |
-| `node --test tests/core/state-machine.test.js` | StateMachine y transiciones estrictas `PASS` |
-| `node --test tests/integration/routing.test.js tests/integration/runtime-conformance.test.js tests/integration/agent-mvp.test.js` | **5/5 PASS, 0 SKIP** (external integration command across routing.test.js, runtime-conformance.test.js, agent-mvp.test.js) |
-| `node --test tests/core/agent-runtime.test.js tests/core/explorer.test.js tests/contract/runtime-identity.test.js` | **PASS** (core 008 components: agent-runtime, explorer, runtime-identity) |
-| `node --test tests/core/agent-mvp.test.js` | **24/24 PASS** (10 orchestration + 14 M1 boundary validation) |
-| `node --test tests/integration/agent-mvp.test.js` | **1 PASS, 1 SKIP** (local e2e PASS; external SKIP sin FF_PROJECT_*) |
-| `node --test` (suite completa / `npm test`) | **133 tests: 130 PASS, 3 SKIP, 0 FAIL** |
-| `node src/contracts/validate-package.js` | **PASS** |
-| `python tests/repo-packager/pack.test.py` | **4/4 PASS** |
-| `git diff --check` | **PASS** (warning LF/CRLF en opencode.json, no errores) |
-| `git diff package.json package-lock.json` | **VACÍO** (sin cambios en manifiestos) |
-| test de integracion con overrides `FF_PROJECT_*` | Project Profile y configuracion FitFlow activa `PASS`; declared runtime simulation completed with active v3 registries and paid API false |
+The purpose of Stage B is to make active repository navigation reflect the
+post-bootstrap state without deleting or cosmetically rewriting historical
+provenance.
 
-No se instalaron dependencias nuevas en manifiesto; instalacion de `node_modules` autorizada por Developer sin diff en lockfile.
+## Historical/deferred disposition
 
-La evidencia historica de `001-004` permanece en TASK, VALIDATION, REVIEW y
-RESULT de FitFlow. Los worktrees coordinados se resuelven por variables de
-entorno explicitas; los paths temporales no se persisten en Project Profile.
+- Historical `tecnotron-operational-foundation-v1` remains in place as accepted
+  provenance but is no longer active-next-work navigation.
+- Historical WP004 is not mechanically resumed. Its principal vertical-cycle
+  purpose has been absorbed by the post-bootstrap substrate; only demonstrated
+  residual debt may be reconsidered later under new authority.
+- Historical WP005/Observer direction is not mechanically resumed.
+- Broad documentation baseline cleanup is deferred to BETA.
+- Context Package Recipe, reusable Independent Review specification/template,
+  Observer/fitness, MCP, semantic retrieval, Temporal/generalized
+  orchestration, task-management provider selection, and harness/model
+  optimization remain deferred according to the active milestone.
 
-### Limitaciones conocidas
+## Current next Product responsibility
 
-- El test de integracion externo (`active v3 registries complete a declared simulation with paid API disabled`) queda `SKIP` sin variables `FF_PROJECT_*`; no se reporta `PASS` ni `FAIL` sin evidencia real.
-- Cobertura de grafo: archivos nuevos de esta task no indexados al momento de verificacion; evidencia basada en source read directo y ejecucion de comandos.
-- Review semantica independiente: `COMPLETED` / veredicto `ACCEPT_WITH_NON_BLOCKING_FINDINGS` (M1 `RESOLVED` tras re-review).
-- Divergencia baseline `ceae62a` vs `tooling` owned by Task Lifecycle; no resuelta en esta task. **Baseline de integracion faltante:** commits `e75e930` (package publication), `daae49d` (package.json), `de300da` (.gitignore, compatibility, task-lifecycle baseline policy) — prerequisito de integracion para Task Cycle tras validacion Developer, **no bloquea** validacion worktree actual, **no autoriza** rebase/merge ahora.
+After Stage B is independently reviewed, accepted, integrated, and reconciled,
+the next canonical Product frontier is continuation of WP003, beginning with a
+separately authorized bounded responsibility derived from `WP003-WU-01`.
+Stage B does not provide that authorization.
 
-- `TOF-W1-003`: la responsabilidad estrechada
-  `OPEN_CODE_EXECUTION_SURFACE_BOUNDARY` esta `COMPLETE`. La validacion esta
-  `COMPLETE`, el review independiente fue `PASS`, la aceptacion del Developer
-  fue `GRANTED`, y la integracion local y publicacion remota fueron completadas.
-  El estado integrado/publicado observado de `tools` es
-  `8be03eda0dd3060024e154a6de9aa2b903ae5b5d` con tree
-  `dc5f42e3c4d905ac0f09d23455c7c5bd024690f2`.
-- `WP-002` queda `SATISFIED_FOR_MILESTONE_ORDERING`. La SPEC de `WP-003` esta
-  `ACCEPTED`, con review independiente `PASS` e integrada/publicada en
-  `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`. El WP PLAN de WP-003 tiene
-  aceptacion del Developer `GRANTED`, review independiente `PASS`, integracion
-  y publicacion completadas en `tools@38cc34bf6b355734cd60606a40eb34613f6d88c8`.
-  `WP003-WU-00` (`MATERIALIZE_WP003_AUTHORITY_AND_CONTRACT_FOUNDATION`) esta
-  `CLOSED_PASS`: implementacion completa, correccion `F-001` `CLOSED_PASS`,
-  validacion `PASS`, review independiente
-  `IND-REVIEW-TECNOTRON-WP003-WU00-AUTHORITY-CONTRACT-FOUNDATION-002` `PASS`,
-  aceptacion del Developer, integracion y publicacion completadas en
-  `tools@971c956b329c03f4999a6562411195d2cab662c8` con tree
-  `7b9bb59ab831de137570fe67a0a15643c7a1be04`. WP-003 permanece incompleto;
-  `WP003-WU-01` no esta inicializado, `WP-004` permanece `NOT_INITIALIZED`,
-  Operational Bootstrap Wave 1 no fue iniciada y no hubo promocion a `main`.
-- La reconciliacion acotada de higiene/deprecacion del repositorio esta
-  `COMPLETE`. El unico efecto publicado fue el archivado content-preserving de
-  `BASELINE_MANIFEST.sha256` en
-  `docs/archive/superseeded/BASELINE_MANIFEST.sha256`, observado en
-  `tools@4c64f83811a1de810f948b09e492bd29e042b460` con tree
-  `09542293a16fc6649a109300e207c7e2cbc2a94d`. No creo un nuevo Work Package ni
-  altero el grafo aceptado del milestone. El estado posterior de WP-003 es SPEC
-  `ACCEPTED`, review independiente `PASS` e integracion/publicacion en
-  `tools@e9f446a955e18d6f644e8b3199cbbb58a50729ec`; `WP003-WU-00` esta
-  `CLOSED_PASS` en `tools@971c956b329c03f4999a6562411195d2cab662c8` con tree
-  `7b9bb59ab831de137570fe67a0a15643c7a1be04`; `F-001` esta `CLOSED_PASS`.
-  WP-003 sigue incompleto, `WP003-WU-01` no esta inicializado, `WP-004`
-  permanece `NOT_INITIALIZED` y no hubo promocion a `main`.
-- Los hallazgos de Programmatic Process son evidencia de investigacion sin
-  transferencia automatica de ownership o arquitectura a Tecnotron.
+## Known limitations
 
-## Prioridades
-
-Reducir contexto y optimizar calidad/token continua siendo prioridad. Explorer
-debe pedir evidencia minima suficiente y `repo-packager` debe empaquetar la
-solicitud sin decidir suficiencia. Calidad, privacidad y reduccion de retrabajo
-preceden a minimizar tokens de forma aislada.
-
-ContextPackager v2 registra `budget_tokens`, tokens entregados, paths y evidence
-requested/included/omitted/missing, cobertura, fallback y providers. Cuando no
-se inyecta un tokenizer exacto, usa `characters_divided_by_4` y declara que es
-una aproximacion frente al tokenizer del modelo objetivo. La cobertura se deriva
-solo de evidence requirements, nunca del conteo de tokens.
-
-No existian consumidores de ContextPackager en este repositorio para adaptar;
-el core exporta el resultado v2 estructurado para los consumidores posteriores.
-
-## Ownership pendiente
-
-FitFlow aun contiene documentacion generica de AI Core y el backlog/config
-machine-readable. No mover automaticamente esos artefactos. Permanecen
-`PENDING` para una task con ownership explicito:
-
-- backlog vNext y su sincronizacion con GitHub/TASK;
-- publicacion o ubicacion de contracts JSON;
-- defaults reutilizables frente a configuracion activa de producto;
-- links y roots entre repositorios.
-
-El Project Profile, TASK, runs y configuracion especifica del producto
-permanecen en FitFlow.
+- This document intentionally omits exhaustive historical test counts, old
+  branch mechanics, and execution-surface-era narrative; those remain in
+  historical evidence.
+- `docs/task-lifecycle.md` remains transitional and may be narrowed or replaced
+  only by a later competent operational-maturation responsibility.
+- The repository package metadata still carries historical naming; Stage B is
+  explicitly forbidden from modifying `package.json` or source/runtime files.

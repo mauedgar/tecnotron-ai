@@ -1,63 +1,53 @@
-# FitFlow-ai
+# Tecnotron
 
-AI Core reutilizable para workflows de desarrollo asistido. FitFlow es el
-primer Project Profile consumidor.
+Tecnotron is a progressively harness-agnostic software-engineering control plane.
+It coordinates bounded Product work while keeping Product authority, execution
+surfaces, workspace providers, runtimes, models, planning providers, and
+consumer repositories as separate concerns.
 
-## Estado
+## Current pre-alpha baseline
 
-Baseline vNext aceptada. `FF-AI-VNEXT-001` a `004` estan `DONE` por decision del
-desarrollador. Contracts, registries loaders, State Machine y Run Store estan
-implementados. El Agent MVP y los adapters GitHub/OpenSpec no lo estan.
+The current `tools` baseline is post-bootstrap. The implemented operational
+substrate includes State Kernel V0, Operational Spine V0, self-hosting
+reconciliation, the thin Execution Coordinator behind `ExecutionSurfacePort`,
+and the previously accepted reusable AI-core capabilities recorded in
+[Current State](docs/current-state.md).
 
-La reparacion de `repo-packager` esta integrada en `tooling` mediante el PR #2.
-`FF-AI-VNEXT-005` es el siguiente bloque y `FF-AI-VNEXT-006` esta `READY`; no se
-declaran `IN_PROGRESS` ni `DONE`.
+The active Product responsibility after the current documentation normalization
+is canonical WP003 SDD. `WP003-WU-01` through `WP003-WU-03` remain required;
+`WP003-WU-04` is to be reinterpreted only after those work units produce real
+evidence. Historical WP004/WP005 are not mechanically resumed.
 
-## Frontera
+## Start here
 
-- FitFlow-ai posee arquitectura, roadmap, estado de implementacion, tooling,
-  contexto, ports, policies, adapters y compatibility baseline del AI Core.
-- FitFlow posee producto, doctrina, Project Profile, configuracion activa,
-  TASK, runs y contratos de intercambio del consumidor.
-- `project-profile.yaml` describe FitFlow y permanece en FitFlow.
-- FitFlow-ai opera sobre FitFlow. FitFlow no depende del runtime de FitFlow-ai.
+- [Source of Truth](docs/SOURCE_OF_TRUTH.md) — active authority/navigation.
+- [Current State](docs/current-state.md) — confirmed implementation reality.
+- [Implementation Roadmap](docs/implementation-roadmap.md) — current sequence.
+- [Active pre-alpha milestone](docs/milestones/tecnotron-prealpha-normalization-and-integral-cycle-v1/PLAN.md).
+- [WP003 SPEC](docs/work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md) and
+  [WP003 PLAN](docs/work-packages/wp-003-sdd-authority-and-artifacts/PLAN.md).
 
-Los repositorios son hermanos e independientes. `<FitFlow-ai-root>` y
-`<FitFlow-root>` designan roots logicos del modelo y sus contratos; no existe un
-resolver cross-repo portable implementado. Su resolucion queda pendiente de
-`FF-AI-VNEXT-005` y no debe reemplazarse por paths fisicos hardcodeados.
+Historical plans, TASK/PLAN/RESULT/REVIEW trees, and archived material remain in
+place as provenance during pre-alpha, but they are not active navigation unless
+a current authority explicitly points to them.
 
-## Arquitectura operativa
+## Authority boundary
 
-- Orca: Workspace / Session Control Plane.
-- Git worktree: isolation boundary.
-- Agent CLI: execution runtime intercambiable.
-- Model Provider: inferencia.
-- `AGENTS.md` y documentacion canonica: contrato portable.
-- GitHub: planificacion, integracion y validacion.
-- FitFlow-ai: tooling, contexto y policies.
-- FitFlow: producto.
+Discussion, runtime output, chat history, LLM memory, harness configuration,
+generated context, derived indexes, caches, workspace state, research material,
+and execution-surface selection do not create Product authority. The Developer
+retains terminal acceptance authority. Canonical repository sources and explicit
+competent rulings control Product state.
 
-OpenCode funciona como Agent CLI actual, no como dependencia arquitectonica.
-Orca puede alojar otros Agent CLI. GitHub y OpenSpec son adapters separados.
-`repo-packager` empaqueta contexto de forma determinista; Explorer decide que
-evidencia necesita.
+## Execution surfaces
 
-## Secuencia
-
-Documentacion canonica del AI Core:
-
-- `docs/architecture.md`;
-- `docs/current-state.md`;
-- `docs/implementation-roadmap.md`;
-- `docs/compatibility-baseline.md`;
-- `docs/development-pipeline-adapter.md`.
-
-`docs/indexing-pipeline.md` conserva estado `planned`. Embeddings, MCP y
-Temporal permanecen posteriores a sus gates.
+Git worktrees, OpenCode, Orca, ChatGPT, other harnesses, model providers, and
+planning providers are replaceable capabilities. Their availability or use does
+not make them Tecnotron architecture or Product authority.
 
 ## Branches
 
-`tooling` es la branch de integracion, `origin/tooling` es el Base Ref de tasks
-nuevas, `main` conserva milestones estables y `feat/*` contiene trabajo. La
-branch `master` es transitoria y no pertenece al modelo objetivo.
+For the current pre-alpha Product work, `tools` is the canonical integration
+branch. `main` is outside this Stage-B responsibility and is not promoted by
+this documentation normalization. Historical `tooling` references remain
+provenance only.
