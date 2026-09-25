@@ -10,6 +10,8 @@ module.exports = {
   route: require('./route'),
   modelResolution: require('./model-resolution'),
   runtimeIdentity: require('./runtime-identity'),
+  sddArtifacts: require('./sdd-artifacts'),
 };
 
 Object.assign(module.exports, require('./execution-coordination'));
+Object.assign(module.exports, require('./sdd-artifacts'));
