@@ -1,0 +1,47 @@
+{
+  "case_id": "NEG-07-RESULT-RELABELS-FAILURE",
+  "description": "One observation identity is relabeled from FAIL to PASS instead of preserving both revisions.",
+  "obligation_refs": ["SPEC-8.2-7"],
+  "artifacts": [{
+    "contract_version": "tecnotron-sdd-artifacts/v1",
+    "document_id": "RESULT-NEG-07",
+    "artifact_kind": "RESULT",
+    "owner": "tecnotron-ai",
+    "scope": "evidence:neg-07",
+    "revision": "rev:neg-07",
+    "authority_refs": [{"ref": "AUTH-NEG-07", "revision": "rev:neg-07"}],
+    "subject_ref": {"ref": "CANDIDATE-NEG-07", "revision": "rev:neg-07"},
+    "evidence_refs": [{"ref": "EVIDENCE-NEG-07", "revision": "rev:neg-07"}],
+    "observations": [
+      {
+        "observation_id": "OBS-NEG-07",
+        "outcome": "FAIL",
+        "evidence_refs": [{"ref": "EVIDENCE-NEG-07", "revision": "rev:neg-07"}]
+      },
+      {
+        "observation_id": "OBS-NEG-07",
+        "outcome": "PASS",
+        "evidence_refs": [{"ref": "EVIDENCE-NEG-07", "revision": "rev:neg-07"}]
+      }
+    ],
+    "relations": [{"relation": "records", "target": {"ref": "TASK-NEG-07", "revision": "rev:neg-07"}}]
+  }],
+  "external_references": [
+    {"ref": "AUTH-NEG-07", "revision": "rev:neg-07", "kind": "authority"},
+    {"ref": "TASK-NEG-07", "revision": "rev:neg-07", "artifact_kind": "TASK"},
+    {
+      "ref": "CANDIDATE-NEG-07",
+      "revision": "rev:neg-07",
+      "kind": "immutable_candidate",
+      "owner": "tecnotron-ai",
+      "identity": "content-addressed:neg-07"
+    },
+    {
+      "ref": "EVIDENCE-NEG-07",
+      "revision": "rev:neg-07",
+      "kind": "evidence",
+      "subject_ref": {"ref": "CANDIDATE-NEG-07", "revision": "rev:neg-07"}
+    }
+  ],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["CONFLICTING_RESULT_OBSERVATION"]}
+}

@@ -1,0 +1,37 @@
+{
+  "case_id": "NEG-06-REVIEW-CANDIDATE-MISMATCH",
+  "description": "REVIEW evidence identifies a subject different from the frozen candidate.",
+  "obligation_refs": ["SPEC-8.2-6"],
+  "artifacts": [{
+    "contract_version": "tecnotron-sdd-artifacts/v1",
+    "document_id": "REVIEW-NEG-06",
+    "artifact_kind": "REVIEW",
+    "owner": "independent-reviewer",
+    "scope": "review:neg-06",
+    "revision": "rev:neg-06",
+    "authority_refs": [{"ref": "AUTH-NEG-06", "revision": "rev:neg-06"}],
+    "candidate": {"identity_ref": {"ref": "CANDIDATE-NEG-06", "revision": "rev:neg-06"}},
+    "validation_evidence_refs": [{"ref": "EVIDENCE-NEG-06", "revision": "rev:neg-06"}],
+    "assessment_ref": {"ref": "ASSESSMENT-NEG-06", "revision": "rev:neg-06"}
+  }],
+  "external_references": [
+    {"ref": "AUTH-NEG-06", "revision": "rev:neg-06", "kind": "authority"},
+    {
+      "ref": "CANDIDATE-NEG-06",
+      "revision": "rev:neg-06",
+      "kind": "git_candidate",
+      "repository": "mauedgar/tecnotron-ai",
+      "commit": "4444444444444444444444444444444444444444",
+      "tree": "5555555555555555555555555555555555555555",
+      "parents": ["6666666666666666666666666666666666666666"]
+    },
+    {
+      "ref": "EVIDENCE-NEG-06",
+      "revision": "rev:neg-06",
+      "kind": "evidence",
+      "subject_ref": {"ref": "OTHER-CANDIDATE-NEG-06", "revision": "rev:neg-06"}
+    },
+    {"ref": "ASSESSMENT-NEG-06", "revision": "rev:neg-06", "kind": "assessment"}
+  ],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["REVIEW_EVIDENCE_SUBJECT_MISMATCH"]}
+}

@@ -1,0 +1,19 @@
+{
+  "case_id": "NEG-11-AMBIGUOUS-MECHANICAL-IMPLICIT-EXCEPTION",
+  "description": "An ambiguous mechanical classification attempts to create an implicit exception coverage branch.",
+  "obligation_refs": ["PLAN-12-11"],
+  "artifacts": [{
+    "contract_version": "tecnotron-sdd-artifacts/v1",
+    "document_id": "WP-PLAN-NEG-11",
+    "artifact_kind": "WP_PLAN",
+    "owner": "tecnotron-ai",
+    "scope": "plan:ambiguous-mechanical",
+    "revision": "rev:neg-11",
+    "authority_refs": [{"ref": "AUTH-NEG-11", "revision": "rev:neg-11"}],
+    "coverage": {"kind": "implicit_exception", "classification": "mechanical_or_behavioral"},
+    "requirement_refs": [{"source": {"ref": "UNKNOWN-NEG-11", "revision": "rev:neg-11"}, "id": "RF-AMBIGUOUS"}],
+    "relations": []
+  }],
+  "external_references": [{"ref": "AUTH-NEG-11", "revision": "rev:neg-11", "kind": "authority"}],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["INVALID_METADATA"]}
+}

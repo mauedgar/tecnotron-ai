@@ -1,0 +1,47 @@
+{
+  "case_id": "POS-03-COMPETENT-EXCEPTION",
+  "description": "An explicit competent RF-201 exception is bounded by scope and rationale without fabricating a SPEC.",
+  "obligation_refs": ["SPEC-8.1-3"],
+  "artifacts": [
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "WP-PLAN-POS-03",
+      "artifact_kind": "WP_PLAN",
+      "owner": "tecnotron-ai",
+      "scope": "plan:bounded-exception",
+      "revision": "rev:pos-03",
+      "authority_refs": [{"ref": "AUTH-POS-03", "revision": "rev:pos-03"}],
+      "coverage": {"kind": "competent_exception", "exception_ref": {"ref": "EXCEPTION-POS-03", "revision": "rev:pos-03"}},
+      "requirement_refs": [{"source": {"ref": "EXCEPTION-POS-03", "revision": "rev:pos-03"}, "id": "RF-EX-03"}],
+      "relations": []
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "TASK-POS-03",
+      "artifact_kind": "TASK",
+      "owner": "tecnotron-ai",
+      "scope": "task:bounded-exception",
+      "revision": "rev:pos-03",
+      "authority_refs": [{"ref": "AUTH-POS-03", "revision": "rev:pos-03"}],
+      "coverage": {"kind": "competent_exception", "exception_ref": {"ref": "EXCEPTION-POS-03", "revision": "rev:pos-03"}},
+      "requirement_refs": [{"source": {"ref": "EXCEPTION-POS-03", "revision": "rev:pos-03"}, "id": "RF-EX-03"}],
+      "assignment_authority_ref": {"ref": "AUTH-POS-03", "revision": "rev:pos-03"},
+      "write_scope": ["bounded/mechanical/output"],
+      "acceptance_criteria": ["Effect stays within the recorded exception scope."],
+      "relations": [{"relation": "follows", "target": {"ref": "WP-PLAN-POS-03", "revision": "rev:pos-03"}}]
+    }
+  ],
+  "external_references": [
+    {"ref": "AUTH-POS-03", "revision": "rev:pos-03", "kind": "authority"},
+    {
+      "ref": "EXCEPTION-POS-03",
+      "revision": "rev:pos-03",
+      "kind": "competent_exception",
+      "authority_ref": {"ref": "AUTH-POS-03", "revision": "rev:pos-03"},
+      "scope": "bounded/mechanical/output",
+      "rationale": "Competent explicit exception limited to one mechanical output.",
+      "requirements": [{"id": "RF-EX-03", "statement": "Produce the bounded mechanical output."}]
+    }
+  ],
+  "expected": {"validator_outcome": "PASS", "finding_codes": []}
+}

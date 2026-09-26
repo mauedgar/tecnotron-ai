@@ -2,6 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   parseSddArtifact,
@@ -489,4 +491,161 @@ test('requires RESULT evidence identity and subject correspondence', () => {
   assert.ok(
     findingCodes(validate(mismatchedObservation, external)).includes('RESULT_EVIDENCE_SUBJECT_MISMATCH'),
   );
+});
+
+const repositoryRoot = path.resolve(__dirname, '../..');
+const templateDirectory = path.join(repositoryRoot, 'docs/templates/sdd');
+const fixtureDirectory = path.join(repositoryRoot, 'tests/fixtures/sdd-authority');
+
+const templateCases = {
+  'SPEC.md': {
+    artifact_kind: 'SPEC',
+    requirements: [{ id: 'RF-EXAMPLE', statement: 'Competently supplied requirement' }],
+  },
+  'WP_PLAN.md': {
+    artifact_kind: 'WP_PLAN',
+    coverage: { kind: 'approved_spec', spec_ref: ref('SPEC-TEMPLATE') },
+    requirement_refs: [requirementRef('RF-EXAMPLE', ref('SPEC-TEMPLATE'))],
+    relations: [{ relation: 'derives_from', target: ref('SPEC-TEMPLATE') }],
+  },
+  'TASK.md': {
+    artifact_kind: 'TASK',
+    coverage: { kind: 'approved_spec', spec_ref: ref('SPEC-TEMPLATE') },
+    requirement_refs: [requirementRef('RF-EXAMPLE', ref('SPEC-TEMPLATE'))],
+    assignment_authority_ref: ref('AUTH-TEMPLATE'),
+    write_scope: ['path/supplied/by/authority'],
+    acceptance_criteria: ['Competently supplied criterion'],
+    relations: [
+      { relation: 'assigns_from', target: ref('SPEC-TEMPLATE') },
+      { relation: 'follows', target: ref('WP-PLAN-TEMPLATE') },
+    ],
+  },
+  'TASK_PLAN.md': {
+    artifact_kind: 'TASK_PLAN',
+    relations: [{ relation: 'executes', target: ref('TASK-TEMPLATE') }],
+  },
+  'RESULT.md': {
+    artifact_kind: 'RESULT',
+    subject_ref: ref('CANDIDATE-TEMPLATE'),
+    evidence_refs: [ref('EVIDENCE-TEMPLATE')],
+    observations: [{
+      observation_id: 'OBS-TEMPLATE',
+      outcome: 'NOT_RUN',
+      evidence_refs: [ref('EVIDENCE-TEMPLATE')],
+    }],
+    relations: [{ relation: 'records', target: ref('TASK-TEMPLATE') }],
+  },
+  'REVIEW.md': {
+    artifact_kind: 'REVIEW',
+    candidate: { identity_ref: ref('CANDIDATE-TEMPLATE') },
+    validation_evidence_refs: [ref('RESULT-TEMPLATE')],
+    assessment_ref: ref('ASSESSMENT-TEMPLATE'),
+    relations: [{ relation: 'uses_evidence', target: ref('RESULT-TEMPLATE') }],
+  },
+};
+
+function renderTemplate(source, values) {
+  const common = {
+    document_id: `TEMPLATE-${values.artifact_kind}`,
+    owner: 'competent-owner',
+    scope: 'competently-bounded-scope',
+    revision,
+    authority_refs: [ref('AUTH-TEMPLATE')],
+  };
+  return source.replace(/\{\{([a-z_]+)\}\}/g, (_, key) => {
+    assert.ok(Object.hasOwn({ ...common, ...values }, key), `missing test value for ${key}`);
+    return JSON.stringify({ ...common, ...values }[key]);
+  });
+}
+
+test('materializes exactly six non-authoritative SDD templates against the WU01 parser', () => {
+  const names = fs.readdirSync(templateDirectory).sort();
+  assert.deepEqual(names, Object.keys(templateCases).sort());
+
+  for (const [name, values] of Object.entries(templateCases)) {
+    const source = fs.readFileSync(path.join(templateDirectory, name), 'utf8');
+    assert.match(source, /Derived template only/);
+    assert.match(source, /does not\s+grant\s+acceptance, authority, or lifecycle effects/);
+    assert.doesNotMatch(source, /^(?:developer_acceptance|integration|publication|closure):/m);
+    assert.match(source, /\{\{owner\}\}/);
+
+    const parsed = parseSddArtifact(renderTemplate(source, values));
+    assert.equal(parsed.outcome, 'PASS', `${name}: ${JSON.stringify(parsed.findings)}`);
+    assert.equal(parsed.artifact.artifact_kind, values.artifact_kind);
+  }
+});
+
+const positiveFixtures = [
+  '01-complete-spec-to-review-chain.json',
+  '02-mechanical-unit-owned-spec.json',
+  '03-competent-bounded-exception.json',
+];
+
+const negativeFixtures = [
+  '01-plan-introduces-uncovered-behavior.json',
+  '02-task-copies-and-reinterprets-spec.json',
+  '03-split-required-ready.json',
+  '04-behavior-change-only-in-task.json',
+  '05-convenience-surface-authority.json',
+  '06-review-candidate-mismatch.json',
+  '07-result-relabels-failure.json',
+  '08-historical-index-authority.json',
+  '09-metadata-completed-by-convenience.json',
+  '10-independent-capability-without-rf201.json',
+  '11-ambiguous-mechanical-implicit-exception.json',
+];
+
+function loadFixture(group, name) {
+  return JSON.parse(fs.readFileSync(path.join(fixtureDirectory, group, name), 'utf8'));
+}
+
+test('executes the complete positive WU02 fixture corpus with the WU01 validator', () => {
+  const names = fs.readdirSync(path.join(fixtureDirectory, 'positive')).sort();
+  assert.deepEqual(names, positiveFixtures);
+  const covered = new Set();
+
+  for (const name of names) {
+    const fixture = loadFixture('positive', name);
+    fixture.obligation_refs.forEach((entry) => covered.add(entry));
+    const result = validateSddArtifactSet(fixture.artifacts, {
+      external_references: fixture.external_references,
+    });
+    assert.equal(result.outcome, fixture.expected.validator_outcome, `${name}: ${JSON.stringify(result.findings)}`);
+    assert.deepEqual(result.findings, [], name);
+  }
+
+  assert.deepEqual([...covered].sort(), ['SPEC-8.1-1', 'SPEC-8.1-2', 'SPEC-8.1-3']);
+});
+
+test('executes every mandatory negative WU02 fixture and preserves its intended finding', () => {
+  const names = fs.readdirSync(path.join(fixtureDirectory, 'negative')).sort();
+  assert.deepEqual(names, negativeFixtures);
+  const covered = new Set();
+
+  for (const name of names) {
+    const fixture = loadFixture('negative', name);
+    fixture.obligation_refs.forEach((entry) => covered.add(entry));
+    const result = validateSddArtifactSet(fixture.artifacts, {
+      external_references: fixture.external_references,
+    });
+    const codes = findingCodes(result);
+    assert.equal(result.outcome, 'FAIL', `${name} unexpectedly passed`);
+    for (const expectedCode of fixture.expected.finding_codes) {
+      assert.ok(codes.includes(expectedCode), `${name} missing ${expectedCode}; got ${codes.join(', ')}`);
+    }
+  }
+
+  assert.deepEqual([...covered].sort(), [
+    'PLAN-12-10',
+    'PLAN-12-11',
+    'SPEC-8.2-1',
+    'SPEC-8.2-2',
+    'SPEC-8.2-3',
+    'SPEC-8.2-4',
+    'SPEC-8.2-5',
+    'SPEC-8.2-6',
+    'SPEC-8.2-7',
+    'SPEC-8.2-8',
+    'SPEC-8.2-9',
+  ]);
 });

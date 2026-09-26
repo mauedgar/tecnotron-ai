@@ -1,0 +1,22 @@
+{
+  "case_id": "NEG-08-HISTORICAL-INDEX-AUTHORITY",
+  "description": "A derived historical index is cited as current authority without competent adoption.",
+  "obligation_refs": ["SPEC-8.2-8"],
+  "artifacts": [{
+    "contract_version": "tecnotron-sdd-artifacts/v1",
+    "document_id": "SPEC-NEG-08",
+    "artifact_kind": "SPEC",
+    "owner": "tecnotron-ai",
+    "scope": "capability:neg-08",
+    "revision": "rev:neg-08",
+    "authority_refs": [{"ref": "HISTORICAL-INDEX-NEG-08", "revision": "rev:neg-08"}],
+    "requirements": [{"id": "RF-207", "statement": "Historical indexes remain non-authoritative."}]
+  }],
+  "external_references": [{
+    "ref": "HISTORICAL-INDEX-NEG-08",
+    "revision": "rev:neg-08",
+    "kind": "derived_index",
+    "historical": true
+  }],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["INVALID_AUTHORITY_REFERENCE"]}
+}

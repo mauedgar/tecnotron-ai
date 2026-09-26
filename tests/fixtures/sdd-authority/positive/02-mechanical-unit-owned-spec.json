@@ -1,0 +1,58 @@
+{
+  "case_id": "POS-02-MECHANICAL-UNIT",
+  "description": "A purely mechanical unit remains covered by its owning accepted SPEC.",
+  "obligation_refs": ["SPEC-8.1-2"],
+  "artifacts": [
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "SPEC-POS-02",
+      "artifact_kind": "SPEC",
+      "owner": "tecnotron-ai",
+      "scope": "capability:mechanical-projection",
+      "revision": "rev:pos-02",
+      "authority_refs": [{"ref": "AUTH-POS-02", "revision": "rev:pos-02"}],
+      "requirements": [{"id": "RF-201", "statement": "Mechanical projections remain under the owning SPEC."}]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "WP-PLAN-POS-02",
+      "artifact_kind": "WP_PLAN",
+      "owner": "tecnotron-ai",
+      "scope": "plan:mechanical-projection",
+      "revision": "rev:pos-02",
+      "authority_refs": [{"ref": "AUTH-POS-02", "revision": "rev:pos-02"}],
+      "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-POS-02", "revision": "rev:pos-02"}},
+      "requirement_refs": [{"source": {"ref": "SPEC-POS-02", "revision": "rev:pos-02"}, "id": "RF-201"}],
+      "relations": [{"relation": "derives_from", "target": {"ref": "SPEC-POS-02", "revision": "rev:pos-02"}}]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "TASK-POS-02",
+      "artifact_kind": "TASK",
+      "owner": "tecnotron-ai",
+      "scope": "task:materialize-derived-template",
+      "revision": "rev:pos-02",
+      "authority_refs": [{"ref": "AUTH-POS-02", "revision": "rev:pos-02"}],
+      "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-POS-02", "revision": "rev:pos-02"}},
+      "requirement_refs": [{"source": {"ref": "SPEC-POS-02", "revision": "rev:pos-02"}, "id": "RF-201"}],
+      "assignment_authority_ref": {"ref": "AUTH-POS-02", "revision": "rev:pos-02"},
+      "write_scope": ["docs/templates/derived.md"],
+      "acceptance_criteria": ["Projection adds no observable semantics."],
+      "relations": [
+        {"relation": "assigns_from", "target": {"ref": "SPEC-POS-02", "revision": "rev:pos-02"}},
+        {"relation": "follows", "target": {"ref": "WP-PLAN-POS-02", "revision": "rev:pos-02"}}
+      ]
+    }
+  ],
+  "external_references": [{
+    "ref": "AUTH-POS-02",
+    "revision": "rev:pos-02",
+    "kind": "authority",
+    "decision": {
+      "state": "accepted",
+      "subject_ref": {"ref": "SPEC-POS-02", "revision": "rev:pos-02"},
+      "applicable_scope": "capability:mechanical-projection"
+    }
+  }],
+  "expected": {"validator_outcome": "PASS", "finding_codes": []}
+}

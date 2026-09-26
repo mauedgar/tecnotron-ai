@@ -1,0 +1,58 @@
+{
+  "case_id": "NEG-10-INDEPENDENT-CAPABILITY-NO-RF201",
+  "description": "A reusable capability is assigned through a requirement identity absent from the selected accepted SPEC.",
+  "obligation_refs": ["PLAN-12-10"],
+  "artifacts": [
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "SPEC-NEG-10",
+      "artifact_kind": "SPEC",
+      "owner": "tecnotron-ai",
+      "scope": "capability:existing-only",
+      "revision": "rev:neg-10",
+      "authority_refs": [{"ref": "AUTH-NEG-10", "revision": "rev:neg-10"}],
+      "requirements": [{"id": "RF-201", "statement": "Independent capability coverage must be explicit."}]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "WP-PLAN-NEG-10",
+      "artifact_kind": "WP_PLAN",
+      "owner": "tecnotron-ai",
+      "scope": "plan:new-reusable-capability",
+      "revision": "rev:neg-10",
+      "authority_refs": [{"ref": "AUTH-NEG-10", "revision": "rev:neg-10"}],
+      "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-NEG-10", "revision": "rev:neg-10"}},
+      "requirement_refs": [{"source": {"ref": "SPEC-NEG-10", "revision": "rev:neg-10"}, "id": "RF-NEW-CAPABILITY"}],
+      "relations": [{"relation": "derives_from", "target": {"ref": "SPEC-NEG-10", "revision": "rev:neg-10"}}]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "TASK-NEG-10",
+      "artifact_kind": "TASK",
+      "owner": "tecnotron-ai",
+      "scope": "task:new-reusable-capability",
+      "revision": "rev:neg-10",
+      "authority_refs": [{"ref": "AUTH-NEG-10", "revision": "rev:neg-10"}],
+      "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-NEG-10", "revision": "rev:neg-10"}},
+      "requirement_refs": [{"source": {"ref": "SPEC-NEG-10", "revision": "rev:neg-10"}, "id": "RF-NEW-CAPABILITY"}],
+      "assignment_authority_ref": {"ref": "AUTH-NEG-10", "revision": "rev:neg-10"},
+      "write_scope": ["src/new-reusable-capability.js"],
+      "acceptance_criteria": ["New capability behaves as invented here."],
+      "relations": [
+        {"relation": "assigns_from", "target": {"ref": "SPEC-NEG-10", "revision": "rev:neg-10"}},
+        {"relation": "follows", "target": {"ref": "WP-PLAN-NEG-10", "revision": "rev:neg-10"}}
+      ]
+    }
+  ],
+  "external_references": [{
+    "ref": "AUTH-NEG-10",
+    "revision": "rev:neg-10",
+    "kind": "authority",
+    "decision": {
+      "state": "accepted",
+      "subject_ref": {"ref": "SPEC-NEG-10", "revision": "rev:neg-10"},
+      "applicable_scope": "capability:existing-only"
+    }
+  }],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["UNKNOWN_REQUIREMENT_REFERENCE"]}
+}

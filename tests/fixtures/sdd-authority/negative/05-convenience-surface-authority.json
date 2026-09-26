@@ -1,0 +1,22 @@
+{
+  "case_id": "NEG-05-CONVENIENCE-AUTHORITY",
+  "description": "A provider/convenience record attempts to satisfy an authority reference.",
+  "obligation_refs": ["SPEC-8.2-5"],
+  "artifacts": [{
+    "contract_version": "tecnotron-sdd-artifacts/v1",
+    "document_id": "SPEC-NEG-05",
+    "artifact_kind": "SPEC",
+    "owner": "tecnotron-ai",
+    "scope": "capability:neg-05",
+    "revision": "rev:neg-05",
+    "authority_refs": [{"ref": "PROVIDER-NEG-05", "revision": "rev:neg-05"}],
+    "requirements": [{"id": "RF-207", "statement": "Convenience surfaces are not authority."}]
+  }],
+  "external_references": [{
+    "ref": "PROVIDER-NEG-05",
+    "revision": "rev:neg-05",
+    "kind": "provider_record",
+    "provider": "workspace"
+  }],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["INVALID_AUTHORITY_REFERENCE"]}
+}

@@ -1,0 +1,23 @@
+{
+  "case_id": "NEG-04-BEHAVIOR-CHANGE-IN-TASK",
+  "description": "A TASK adds an authority-bearing behavior change field outside the accepted vocabulary.",
+  "obligation_refs": ["SPEC-8.2-4"],
+  "artifacts": [{
+    "contract_version": "tecnotron-sdd-artifacts/v1",
+    "document_id": "TASK-NEG-04",
+    "artifact_kind": "TASK",
+    "owner": "tecnotron-ai",
+    "scope": "task:neg-04",
+    "revision": "rev:neg-04",
+    "authority_refs": [{"ref": "AUTH-NEG-04", "revision": "rev:neg-04"}],
+    "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-NEG-04", "revision": "rev:neg-04"}},
+    "requirement_refs": [{"source": {"ref": "SPEC-NEG-04", "revision": "rev:neg-04"}, "id": "RF-206"}],
+    "assignment_authority_ref": {"ref": "AUTH-NEG-04", "revision": "rev:neg-04"},
+    "write_scope": ["derived/output"],
+    "acceptance_criteria": ["Local check."],
+    "relations": [],
+    "behavior_changes": ["New normative behavior introduced only here."]
+  }],
+  "external_references": [{"ref": "AUTH-NEG-04", "revision": "rev:neg-04", "kind": "authority"}],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["UNKNOWN_METADATA_FIELD"]}
+}

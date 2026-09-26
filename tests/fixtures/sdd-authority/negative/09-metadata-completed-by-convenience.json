@@ -1,0 +1,19 @@
+{
+  "case_id": "NEG-09-CONVENIENCE-METADATA",
+  "description": "Required owner metadata is absent while a provider-specific owner field attempts to fill it.",
+  "obligation_refs": ["SPEC-8.2-9"],
+  "artifacts": [{
+    "contract_version": "tecnotron-sdd-artifacts/v1",
+    "document_id": "WP-PLAN-NEG-09",
+    "artifact_kind": "WP_PLAN",
+    "provider_owner": "workspace-user",
+    "scope": "plan:neg-09",
+    "revision": "rev:neg-09",
+    "authority_refs": [{"ref": "AUTH-NEG-09", "revision": "rev:neg-09"}],
+    "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-NEG-09", "revision": "rev:neg-09"}},
+    "requirement_refs": [{"source": {"ref": "SPEC-NEG-09", "revision": "rev:neg-09"}, "id": "RF-201"}],
+    "relations": []
+  }],
+  "external_references": [{"ref": "AUTH-NEG-09", "revision": "rev:neg-09", "kind": "authority"}],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["REQUIRED_METADATA_MISSING", "UNKNOWN_METADATA_FIELD"]}
+}

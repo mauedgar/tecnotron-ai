@@ -1,0 +1,60 @@
+{
+  "case_id": "NEG-03-SPLIT-REQUIRED-READY",
+  "description": "A split-required TASK attempts to declare READY without competent division.",
+  "obligation_refs": ["SPEC-8.2-3"],
+  "artifacts": [
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "SPEC-NEG-03",
+      "artifact_kind": "SPEC",
+      "owner": "tecnotron-ai",
+      "scope": "capability:neg-03",
+      "revision": "rev:neg-03",
+      "authority_refs": [{"ref": "AUTH-NEG-03", "revision": "rev:neg-03"}],
+      "requirements": [{"id": "RF-205", "statement": "split_required blocks READY."}]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "WP-PLAN-NEG-03",
+      "artifact_kind": "WP_PLAN",
+      "owner": "tecnotron-ai",
+      "scope": "plan:neg-03",
+      "revision": "rev:neg-03",
+      "authority_refs": [{"ref": "AUTH-NEG-03", "revision": "rev:neg-03"}],
+      "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-NEG-03", "revision": "rev:neg-03"}},
+      "requirement_refs": [{"source": {"ref": "SPEC-NEG-03", "revision": "rev:neg-03"}, "id": "RF-205"}],
+      "relations": [{"relation": "derives_from", "target": {"ref": "SPEC-NEG-03", "revision": "rev:neg-03"}}]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "TASK-NEG-03",
+      "artifact_kind": "TASK",
+      "owner": "tecnotron-ai",
+      "scope": "task:neg-03",
+      "revision": "rev:neg-03",
+      "authority_refs": [{"ref": "AUTH-NEG-03", "revision": "rev:neg-03"}],
+      "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-NEG-03", "revision": "rev:neg-03"}},
+      "requirement_refs": [{"source": {"ref": "SPEC-NEG-03", "revision": "rev:neg-03"}, "id": "RF-205"}],
+      "assignment_authority_ref": {"ref": "AUTH-NEG-03", "revision": "rev:neg-03"},
+      "write_scope": ["ambiguous/a", "ambiguous/b"],
+      "acceptance_criteria": ["Must be split before READY."],
+      "relations": [
+        {"relation": "assigns_from", "target": {"ref": "SPEC-NEG-03", "revision": "rev:neg-03"}},
+        {"relation": "follows", "target": {"ref": "WP-PLAN-NEG-03", "revision": "rev:neg-03"}}
+      ],
+      "scope_fit": "split_required",
+      "state_dimensions": {"task_contract": "READY"}
+    }
+  ],
+  "external_references": [{
+    "ref": "AUTH-NEG-03",
+    "revision": "rev:neg-03",
+    "kind": "authority",
+    "decision": {
+      "state": "accepted",
+      "subject_ref": {"ref": "SPEC-NEG-03", "revision": "rev:neg-03"},
+      "applicable_scope": "capability:neg-03"
+    }
+  }],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["SPLIT_REQUIRED_BLOCKS_READY"]}
+}

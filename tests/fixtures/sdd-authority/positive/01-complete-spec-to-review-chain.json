@@ -1,0 +1,129 @@
+{
+  "case_id": "POS-01-COMPLETE-CHAIN",
+  "description": "Accepted SPEC through exact frozen-candidate REVIEW evidence.",
+  "obligation_refs": ["SPEC-8.1-1"],
+  "artifacts": [
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "SPEC-POS-01",
+      "artifact_kind": "SPEC",
+      "owner": "tecnotron-ai",
+      "scope": "capability:positive-chain",
+      "revision": "rev:pos-01",
+      "authority_refs": [{"ref": "AUTH-POS-01", "revision": "rev:pos-01"}],
+      "requirements": [
+        {"id": "RF-201", "statement": "Capability coverage is explicit."},
+        {"id": "RF-204", "statement": "TASK assignment remains bounded."},
+        {"id": "RF-207", "statement": "Convenience surfaces are non-authoritative."}
+      ]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "WP-PLAN-POS-01",
+      "artifact_kind": "WP_PLAN",
+      "owner": "tecnotron-ai",
+      "scope": "plan:positive-chain",
+      "revision": "rev:pos-01",
+      "authority_refs": [{"ref": "AUTH-POS-01", "revision": "rev:pos-01"}],
+      "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-POS-01", "revision": "rev:pos-01"}},
+      "requirement_refs": [
+        {"source": {"ref": "SPEC-POS-01", "revision": "rev:pos-01"}, "id": "RF-201"},
+        {"source": {"ref": "SPEC-POS-01", "revision": "rev:pos-01"}, "id": "RF-204"},
+        {"source": {"ref": "SPEC-POS-01", "revision": "rev:pos-01"}, "id": "RF-207"}
+      ],
+      "relations": [{"relation": "derives_from", "target": {"ref": "SPEC-POS-01", "revision": "rev:pos-01"}}]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "TASK-POS-01",
+      "artifact_kind": "TASK",
+      "owner": "tecnotron-ai",
+      "scope": "task:positive-chain",
+      "revision": "rev:pos-01",
+      "authority_refs": [{"ref": "AUTH-POS-01", "revision": "rev:pos-01"}],
+      "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-POS-01", "revision": "rev:pos-01"}},
+      "requirement_refs": [
+        {"source": {"ref": "SPEC-POS-01", "revision": "rev:pos-01"}, "id": "RF-201"},
+        {"source": {"ref": "SPEC-POS-01", "revision": "rev:pos-01"}, "id": "RF-204"}
+      ],
+      "assignment_authority_ref": {"ref": "AUTH-POS-01", "revision": "rev:pos-01"},
+      "write_scope": ["derived/example"],
+      "acceptance_criteria": ["Declared structure validates."],
+      "relations": [
+        {"relation": "assigns_from", "target": {"ref": "SPEC-POS-01", "revision": "rev:pos-01"}},
+        {"relation": "follows", "target": {"ref": "WP-PLAN-POS-01", "revision": "rev:pos-01"}}
+      ],
+      "scope_fit": "FIT",
+      "state_dimensions": {"task_contract": "READY"}
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "TASK-PLAN-POS-01",
+      "artifact_kind": "TASK_PLAN",
+      "owner": "tecnotron-ai",
+      "scope": "strategy:positive-chain",
+      "revision": "rev:pos-01",
+      "authority_refs": [{"ref": "AUTH-POS-01", "revision": "rev:pos-01"}],
+      "relations": [{"relation": "executes", "target": {"ref": "TASK-POS-01", "revision": "rev:pos-01"}}]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "RESULT-POS-01",
+      "artifact_kind": "RESULT",
+      "owner": "tecnotron-ai",
+      "scope": "evidence:positive-chain",
+      "revision": "rev:pos-01",
+      "authority_refs": [{"ref": "AUTH-POS-01", "revision": "rev:pos-01"}],
+      "subject_ref": {"ref": "CANDIDATE-POS-01", "revision": "rev:pos-01"},
+      "evidence_refs": [{"ref": "EVIDENCE-POS-01", "revision": "rev:pos-01"}],
+      "observations": [{
+        "observation_id": "OBS-POS-01",
+        "outcome": "PASS",
+        "evidence_refs": [{"ref": "EVIDENCE-POS-01", "revision": "rev:pos-01"}]
+      }],
+      "relations": [{"relation": "records", "target": {"ref": "TASK-POS-01", "revision": "rev:pos-01"}}]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "REVIEW-POS-01",
+      "artifact_kind": "REVIEW",
+      "owner": "independent-reviewer",
+      "scope": "review:positive-chain",
+      "revision": "rev:pos-01",
+      "authority_refs": [{"ref": "AUTH-POS-01", "revision": "rev:pos-01"}],
+      "candidate": {"identity_ref": {"ref": "CANDIDATE-POS-01", "revision": "rev:pos-01"}},
+      "validation_evidence_refs": [{"ref": "RESULT-POS-01", "revision": "rev:pos-01"}],
+      "assessment_ref": {"ref": "ASSESSMENT-POS-01", "revision": "rev:pos-01"},
+      "relations": [{"relation": "uses_evidence", "target": {"ref": "RESULT-POS-01", "revision": "rev:pos-01"}}]
+    }
+  ],
+  "external_references": [
+    {
+      "ref": "AUTH-POS-01",
+      "revision": "rev:pos-01",
+      "kind": "authority",
+      "decision": {
+        "state": "accepted",
+        "subject_ref": {"ref": "SPEC-POS-01", "revision": "rev:pos-01"},
+        "applicable_scope": "capability:positive-chain"
+      }
+    },
+    {
+      "ref": "CANDIDATE-POS-01",
+      "revision": "rev:pos-01",
+      "kind": "git_candidate",
+      "repository": "mauedgar/tecnotron-ai",
+      "commit": "1111111111111111111111111111111111111111",
+      "tree": "2222222222222222222222222222222222222222",
+      "parents": ["3333333333333333333333333333333333333333"]
+    },
+    {
+      "ref": "EVIDENCE-POS-01",
+      "revision": "rev:pos-01",
+      "kind": "evidence",
+      "subject_ref": {"ref": "CANDIDATE-POS-01", "revision": "rev:pos-01"}
+    },
+    {"ref": "ASSESSMENT-POS-01", "revision": "rev:pos-01", "kind": "assessment"}
+  ],
+  "expected": {"validator_outcome": "PASS", "finding_codes": []}
+}

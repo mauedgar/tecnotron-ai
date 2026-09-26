@@ -1,0 +1,23 @@
+{
+  "case_id": "NEG-02-TASK-COPIES-SPEC",
+  "description": "A TASK embeds a changed requirement inventory instead of assigning stable references.",
+  "obligation_refs": ["SPEC-8.2-2"],
+  "artifacts": [{
+    "contract_version": "tecnotron-sdd-artifacts/v1",
+    "document_id": "TASK-NEG-02",
+    "artifact_kind": "TASK",
+    "owner": "tecnotron-ai",
+    "scope": "task:neg-02",
+    "revision": "rev:neg-02",
+    "authority_refs": [{"ref": "AUTH-NEG-02", "revision": "rev:neg-02"}],
+    "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-NEG-02", "revision": "rev:neg-02"}},
+    "requirement_refs": [{"source": {"ref": "SPEC-NEG-02", "revision": "rev:neg-02"}, "id": "RF-204"}],
+    "requirements": [{"id": "RF-204", "statement": "Changed meaning copied into the TASK."}],
+    "assignment_authority_ref": {"ref": "AUTH-NEG-02", "revision": "rev:neg-02"},
+    "write_scope": ["derived/output"],
+    "acceptance_criteria": ["Local check."],
+    "relations": []
+  }],
+  "external_references": [{"ref": "AUTH-NEG-02", "revision": "rev:neg-02", "kind": "authority"}],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["UNKNOWN_METADATA_FIELD"]}
+}

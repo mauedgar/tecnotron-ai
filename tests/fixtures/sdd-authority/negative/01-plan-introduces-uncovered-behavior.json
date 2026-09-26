@@ -1,0 +1,40 @@
+{
+  "case_id": "NEG-01-UNCOVERED-PLAN-BEHAVIOR",
+  "description": "A WP PLAN references behavior that does not exist in its accepted SPEC inventory.",
+  "obligation_refs": ["SPEC-8.2-1"],
+  "artifacts": [
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "SPEC-NEG-01",
+      "artifact_kind": "SPEC",
+      "owner": "tecnotron-ai",
+      "scope": "capability:neg-01",
+      "revision": "rev:neg-01",
+      "authority_refs": [{"ref": "AUTH-NEG-01", "revision": "rev:neg-01"}],
+      "requirements": [{"id": "RF-201", "statement": "Only declared behavior is covered."}]
+    },
+    {
+      "contract_version": "tecnotron-sdd-artifacts/v1",
+      "document_id": "WP-PLAN-NEG-01",
+      "artifact_kind": "WP_PLAN",
+      "owner": "tecnotron-ai",
+      "scope": "plan:neg-01",
+      "revision": "rev:neg-01",
+      "authority_refs": [{"ref": "AUTH-NEG-01", "revision": "rev:neg-01"}],
+      "coverage": {"kind": "approved_spec", "spec_ref": {"ref": "SPEC-NEG-01", "revision": "rev:neg-01"}},
+      "requirement_refs": [{"source": {"ref": "SPEC-NEG-01", "revision": "rev:neg-01"}, "id": "RF-999"}],
+      "relations": [{"relation": "derives_from", "target": {"ref": "SPEC-NEG-01", "revision": "rev:neg-01"}}]
+    }
+  ],
+  "external_references": [{
+    "ref": "AUTH-NEG-01",
+    "revision": "rev:neg-01",
+    "kind": "authority",
+    "decision": {
+      "state": "accepted",
+      "subject_ref": {"ref": "SPEC-NEG-01", "revision": "rev:neg-01"},
+      "applicable_scope": "capability:neg-01"
+    }
+  }],
+  "expected": {"validator_outcome": "FAIL", "finding_codes": ["UNKNOWN_REQUIREMENT_REFERENCE"]}
+}
