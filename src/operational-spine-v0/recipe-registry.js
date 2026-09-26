@@ -1,6 +1,8 @@
 'use strict';
 
+const { z } = require('zod');
 const {
+  EffectDescriptor,
   RecipeDefinition,
   RecipeRequest,
   RecipeReceipt,
@@ -8,6 +10,20 @@ const {
 
 function key(definition) {
   return `${definition.id}@${definition.version}`;
+}
+
+function dynamicEffectProfile(rawEffects) {
+  const effects = z.array(EffectDescriptor).parse(rawEffects);
+  const seen = new Set();
+  const normalized = effects.map((descriptor) => {
+    const identity = `${descriptor.effect}\u0000${descriptor.scope}`;
+    if (seen.has(identity)) throw new Error(`duplicate dynamic effect descriptor: ${descriptor.effect}/${descriptor.scope}`);
+    seen.add(identity);
+    return descriptor;
+  });
+  return normalized.sort((left, right) => (
+    left.effect.localeCompare(right.effect, 'en') || left.scope.localeCompare(right.scope, 'en')
+  ));
 }
 
 class RecipeRegistry {
@@ -22,6 +38,9 @@ class RecipeRegistry {
     if (recipe.preflight !== undefined && typeof recipe.preflight !== 'function') {
       throw new TypeError('recipe.preflight must be a function when supplied');
     }
+    if (recipe.effectsForInput !== undefined && typeof recipe.effectsForInput !== 'function') {
+      throw new TypeError('recipe.effectsForInput must be a function when supplied');
+    }
 
     const registryKey = key(definition);
     if (this.recipes.has(registryKey)) {
@@ -32,6 +51,7 @@ class RecipeRegistry {
       definition,
       preflight: recipe.preflight || (async () => ({ status: 'READY' })),
       execute: recipe.execute,
+      effectsForInput: recipe.effectsForInput,
     });
     return definition;
   }
@@ -65,6 +85,12 @@ class RecipeRegistry {
     return candidates[0];
   }
 
+  resolveEffects(recipeId, version, input) {
+    const recipe = this.find(recipeId, version);
+    if (recipe.effectsForInput === undefined) return recipe.definition.effects;
+    return dynamicEffectProfile(recipe.effectsForInput(input));
+  }
+
   async preflight(rawRequest) {
     const request = RecipeRequest.parse(rawRequest);
     const recipe = this.find(request.recipe_id, request.recipe_version);
@@ -92,4 +118,5 @@ class RecipeRegistry {
 
 module.exports = {
   RecipeRegistry,
+  dynamicEffectProfile,
 };

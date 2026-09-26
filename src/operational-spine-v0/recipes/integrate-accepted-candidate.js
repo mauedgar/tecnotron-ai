@@ -11,6 +11,11 @@ const {
 const GitOid = z.string().regex(/^[a-f0-9]{40,64}$/);
 const BranchRef = z.string().regex(/^refs\/heads\/[A-Za-z0-9._\/-]+$/);
 const GitRemoteName = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
+const RemotePublicationInput = z.object({
+  remote: GitRemoteName,
+  target_ref: BranchRef,
+  expected_commit: GitOid,
+}).strict();
 
 const IntegrateAcceptedCandidateInput = z.object({
   target_ref: BranchRef,
@@ -18,11 +23,7 @@ const IntegrateAcceptedCandidateInput = z.object({
   candidate_commit: GitOid,
   candidate_parent: GitOid,
   candidate_tree: GitOid.optional(),
-  remote: z.object({
-    remote: GitRemoteName,
-    target_ref: BranchRef,
-    expected_commit: GitOid,
-  }).strict(),
+  remote: RemotePublicationInput.optional(),
 }).strict();
 
 function createGitCliAdapter({ command = 'git' } = {}) {
@@ -136,13 +137,48 @@ function readRemoteOid(result) {
   return /^[a-f0-9]{40,64}$/.test(oid) ? oid : null;
 }
 
+function authorizationCovers(authorization, effect, scope) {
+  if (!authorization || authorization.disposition !== 'AUTHORIZED') return false;
+  return (authorization.effect_constraints || []).some((constraint) =>
+    constraint.effect === effect && constraint.scope === scope);
+}
+
+function integrationEvidence(input, {
+  publicationAuthorized,
+  publicationPerformed,
+  remoteAfter = null,
+}) {
+  return {
+    candidate: {
+      commit: input.candidate_commit,
+      parent: input.candidate_parent,
+      tree: input.candidate_tree || null,
+    },
+    local: {
+      target_ref: input.target_ref,
+      before: input.expected_target_commit,
+      after: input.candidate_commit,
+      exact_correspondence: true,
+    },
+    remote: {
+      publication_requested: Boolean(input.remote),
+      publication_authorized: Boolean(input.remote) && publicationAuthorized,
+      publication_performed: publicationPerformed,
+      target_ref: input.remote?.target_ref || null,
+      before: input.remote?.expected_commit || null,
+      after: remoteAfter,
+      exact_correspondence: input.remote ? remoteAfter === input.candidate_commit : null,
+    },
+  };
+}
+
 function receipt(request, {
   status,
   effectState,
   reason,
   output,
   resultRefs = [],
-  evidenceRefs = [],
+  evidenceRefs = request.evidence_refs || [],
 }) {
   return RecipeReceipt.parse({
     schema_version: 'tecnotron-recipe-receipt/v0',
@@ -160,6 +196,18 @@ function receipt(request, {
   });
 }
 
+
+function effectsForInput(rawInput) {
+  const input = IntegrateAcceptedCandidateInput.parse(rawInput);
+  const effects = [
+    { effect: 'git.integration', scope: 'exact target ref only' },
+  ];
+  if (input.remote) {
+    effects.push({ effect: 'git.remote.write', scope: 'exact remote target ref only' });
+  }
+  return effects;
+}
+
 function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } = {}) {
   const definition = RecipeDefinition.parse({
     id: 'integrate_accepted_candidate',
@@ -170,7 +218,6 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       'expected_target_commit',
       'candidate_commit',
       'candidate_parent',
-      'remote',
     ],
     preconditions: [
       'repository path exists',
@@ -181,15 +228,15 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       'candidate parent exactly matches target baseline',
       'candidate tree identity matches when supplied',
       'candidate is a fast-forward descendant of target',
-      'remote target exactly matches expected remote commit',
+      'remote publication has explicit effect authority when requested',
+      'remote target exactly matches expected remote commit when publication is requested',
     ],
     effects: [
       { effect: 'git.integration', scope: 'exact target ref only' },
-      { effect: 'git.remote.write', scope: 'exact remote target ref only' },
     ],
     postconditions: [
       'local target ref exactly equals candidate commit',
-      'remote target ref exactly equals candidate commit',
+      'remote target ref exactly equals candidate commit when publication is requested',
       'worktree remains clean',
     ],
   });
@@ -213,16 +260,22 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       return { status: 'BLOCKED', reason: 'EXECUTION_CONTEXT_GIT_MISMATCH' };
     }
 
-    if (input.remote.target_ref !== input.target_ref) {
-      return { status: 'BLOCKED', reason: 'REMOTE_TARGET_REF_MISMATCH' };
-    }
-
-    if (input.remote.expected_commit !== input.expected_target_commit) {
-      return { status: 'BLOCKED', reason: 'LOCAL_REMOTE_BASELINE_MISMATCH' };
-    }
-
     if (input.candidate_parent !== input.expected_target_commit) {
       return { status: 'BLOCKED', reason: 'CANDIDATE_PARENT_NOT_TARGET_BASELINE' };
+    }
+
+    if (input.remote) {
+      if (input.remote.target_ref !== input.target_ref) {
+        return { status: 'BLOCKED', reason: 'REMOTE_TARGET_REF_MISMATCH' };
+      }
+
+      if (input.remote.expected_commit !== input.expected_target_commit) {
+        return { status: 'BLOCKED', reason: 'LOCAL_REMOTE_BASELINE_MISMATCH' };
+      }
+
+      if (!authorizationCovers(request.authorization, 'git.remote.write', 'exact remote target ref only')) {
+        return { status: 'BLOCKED', reason: 'REMOTE_PUBLICATION_AUTHORIZATION_REQUIRED' };
+      }
     }
 
     const version = git.version(repositoryPath);
@@ -234,7 +287,6 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
     if (rewrite.exit_code === 0 && exactLine(rewrite) !== '') {
       return { status: 'BLOCKED', reason: 'GIT_URL_REWRITE_CONFIG_PRESENT' };
     }
-    // git config --get-regexp returns 1 when there are no matches.
     if (![0, 1].includes(rewrite.exit_code)) {
       return { status: 'UNAVAILABLE', reason: 'GIT_URL_REWRITE_AUDIT_UNAVAILABLE' };
     }
@@ -274,14 +326,16 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       return { status: 'BLOCKED', reason: 'NON_FAST_FORWARD_CANDIDATE' };
     }
 
-    const remote = git.lsRemote(repositoryPath, input.remote.remote, input.remote.target_ref);
-    if (remote.exit_code !== 0) {
-      return { status: 'UNAVAILABLE', reason: 'REMOTE_STATE_UNAVAILABLE' };
-    }
+    if (input.remote) {
+      const remote = git.lsRemote(repositoryPath, input.remote.remote, input.remote.target_ref);
+      if (remote.exit_code !== 0) {
+        return { status: 'UNAVAILABLE', reason: 'REMOTE_STATE_UNAVAILABLE' };
+      }
 
-    const remoteOid = readRemoteOid(remote);
-    if (remoteOid !== input.remote.expected_commit) {
-      return { status: 'BLOCKED', reason: 'REMOTE_TARGET_DRIFT' };
+      const remoteOid = readRemoteOid(remote);
+      if (remoteOid !== input.remote.expected_commit) {
+        return { status: 'BLOCKED', reason: 'REMOTE_TARGET_DRIFT' };
+      }
     }
 
     return { status: 'READY' };
@@ -290,6 +344,9 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
   async function execute(request) {
     const input = IntegrateAcceptedCandidateInput.parse(request.input);
     const repositoryPath = request.context.worktree?.location || request.context.repository.location;
+    const publicationAuthorized = input.remote
+      ? authorizationCovers(request.authorization, 'git.remote.write', 'exact remote target ref only')
+      : false;
 
     const recheck = await preflight(request);
     if (recheck.status !== 'READY') {
@@ -348,6 +405,18 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       });
     }
 
+    if (!input.remote) {
+      return receipt(request, {
+        status: 'PASS',
+        effectState: 'CONFIRMED',
+        output: integrationEvidence(input, {
+          publicationAuthorized: false,
+          publicationPerformed: false,
+        }),
+        resultRefs: localResultRefs,
+      });
+    }
+
     const push = git.pushExactRef(
       repositoryPath,
       input.remote.remote,
@@ -367,7 +436,14 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
         status: 'UNKNOWN',
         effectState: 'UNKNOWN',
         reason: 'REMOTE_PUBLICATION_EFFECT_AMBIGUOUS',
-        output: { push_exit_code: push.exit_code },
+        output: {
+          ...integrationEvidence(input, {
+            publicationAuthorized,
+            publicationPerformed: true,
+            remoteAfter: null,
+          }),
+          push_exit_code: push.exit_code,
+        },
         resultRefs: localResultRefs,
       });
     }
@@ -377,7 +453,14 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
         status: 'FAIL',
         effectState: 'CONFIRMED',
         reason: `REMOTE_PUBLICATION_POSTCONDITION_MISMATCH:${remoteOid}`,
-        output: { push_exit_code: push.exit_code, remote_observed: remoteOid },
+        output: {
+          ...integrationEvidence(input, {
+            publicationAuthorized,
+            publicationPerformed: true,
+            remoteAfter: remoteOid,
+          }),
+          push_exit_code: push.exit_code,
+        },
         resultRefs: localResultRefs,
       });
     }
@@ -407,10 +490,12 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       status: 'PASS',
       effectState: 'CONFIRMED',
       output: {
-        target_ref: input.target_ref,
-        remote: input.remote.remote,
-        remote_target_ref: input.remote.target_ref,
-        candidate_commit: input.candidate_commit,
+        ...integrationEvidence(input, {
+          publicationAuthorized,
+          publicationPerformed: true,
+          remoteAfter: remoteOid,
+        }),
+        remote_name: input.remote.remote,
         push_exit_code: push.exit_code,
       },
       resultRefs: [
@@ -420,7 +505,7 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
     });
   }
 
-  return { definition, preflight, execute };
+  return { definition, effectsForInput, preflight, execute };
 }
 
 module.exports = {
@@ -429,4 +514,6 @@ module.exports = {
   createGitCliAdapter,
   createIntegrateAcceptedCandidateRecipe,
   readRemoteOid,
+  authorizationCovers,
+  effectsForInput,
 };

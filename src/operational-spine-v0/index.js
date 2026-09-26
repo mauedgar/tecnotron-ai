@@ -70,6 +70,13 @@ function authorityReferenceMatchesPlan(executionPlan, authorization) {
     ref.kind === 'AUTHORITY' && ref.id === authorization.authority_reference);
 }
 
+function effectProfileKey(effects) {
+  return [...effects]
+    .map(({ effect, scope }) => `${effect}\u0000${scope}`)
+    .sort((left, right) => left.localeCompare(right, 'en'))
+    .join('\u0001');
+}
+
 function createOperationalSpine({
   stateKernel,
   recipeRegistry,
@@ -95,9 +102,10 @@ function createOperationalSpine({
     requiredCapabilities,
     authorityRefs,
     evidenceRefs,
+    input,
   }) {
     const observed = stateKernel.inspectOperation(operationId).aggregate;
-    const executionPlan = materializeExecutionPlan({
+    let executionPlan = materializeExecutionPlan({
       operation: observed,
       executionContext,
       requiredCapabilities,
@@ -105,6 +113,21 @@ function createOperationalSpine({
       authorityRefs,
       evidenceRefs,
     });
+
+    if (executionPlan.resolution === 'DETERMINISTIC_RECIPE') {
+      const expectedEffects = typeof recipeRegistry.resolveEffects === 'function'
+        ? recipeRegistry.resolveEffects(
+            executionPlan.recipe.id,
+            executionPlan.recipe.version,
+            input,
+          )
+        : executionPlan.expected_effects;
+      executionPlan = ExecutionPlan.parse({
+        ...executionPlan,
+        expected_effects: expectedEffects,
+      });
+    }
+
     executionRecordStore.savePlan(executionPlan);
     return executionPlan;
   }
@@ -122,6 +145,37 @@ function createOperationalSpine({
     if (executionPlan.resolution === 'SEMANTIC_ESCALATION_REQUIRED') {
       return {
         status: 'SEMANTIC_ESCALATION_REQUIRED',
+        plan: executionPlan,
+        attempt: null,
+        operation: stateKernel.inspectOperation(executionPlan.operation_id),
+        plan_ref: planRef,
+      };
+    }
+
+    let executionEffects;
+    try {
+      executionEffects = typeof recipeRegistry.resolveEffects === 'function'
+        ? recipeRegistry.resolveEffects(
+            executionPlan.recipe.id,
+            executionPlan.recipe.version,
+            input,
+          )
+        : executionPlan.expected_effects;
+    } catch (error) {
+      return {
+        status: 'BLOCKED',
+        reason: `EFFECT_PROFILE_RESOLUTION_FAILED:${error && error.message ? error.message : String(error)}`,
+        plan: executionPlan,
+        attempt: null,
+        operation: stateKernel.inspectOperation(executionPlan.operation_id),
+        plan_ref: planRef,
+      };
+    }
+
+    if (effectProfileKey(executionEffects) !== effectProfileKey(executionPlan.expected_effects)) {
+      return {
+        status: 'BLOCKED',
+        reason: 'EXECUTION_INPUT_EFFECT_PROFILE_MISMATCH',
         plan: executionPlan,
         attempt: null,
         operation: stateKernel.inspectOperation(executionPlan.operation_id),
@@ -437,5 +491,6 @@ module.exports = {
   ...require('./state-kernel-adapter'),
   ...require('./execution-record-store'),
   ...require('./recipes/integrate-accepted-candidate'),
+  ...require('./recipes/reconcile-and-close-taskcycle'),
   ...require('./recipes/render-current-state'),
 };
