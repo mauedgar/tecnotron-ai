@@ -92,7 +92,15 @@ function validGraph() {
 
 function externalReferences() {
   return [
-    { ...ref('AUTH-DEVELOPER-001'), kind: 'authority' },
+    {
+      ...ref('AUTH-DEVELOPER-001'),
+      kind: 'authority',
+      decision: {
+        state: 'accepted',
+        subject_ref: ref('SPEC-001'),
+        applicable_scope: 'scope:SPEC-001',
+      },
+    },
     { ...ref('EVIDENCE-001'), kind: 'evidence', subject_ref: ref('CANDIDATE-001') },
     {
       ...ref('CANDIDATE-001'),
@@ -244,6 +252,45 @@ test('approved SPEC coverage requires resolved authority evidence on the source'
 
   const result = validate(graph);
   assert.ok(findingCodes(result).includes('INVALID_APPROVED_SPEC_SOURCE'));
+});
+
+test('approved SPEC coverage rejects a generic authority without an accepted-source decision', () => {
+  const external = externalReferences();
+  external[0] = { ...ref('AUTH-DEVELOPER-001'), kind: 'authority' };
+
+  const result = validate(validGraph(), external);
+
+  assert.equal(result.outcome, 'FAIL');
+  assert.ok(findingCodes(result).includes('INVALID_APPROVED_SPEC_SOURCE'));
+});
+
+test('approved SPEC accepted-source decision requires exact state, subject revision and scope', () => {
+  const invalidDecisions = [
+    {
+      state: 'proposed',
+      subject_ref: ref('SPEC-001'),
+      applicable_scope: 'scope:SPEC-001',
+    },
+    {
+      state: 'accepted',
+      subject_ref: ref('SPEC-001', 'sha256:' + '9'.repeat(64)),
+      applicable_scope: 'scope:SPEC-001',
+    },
+    {
+      state: 'accepted',
+      subject_ref: ref('SPEC-001'),
+      applicable_scope: 'scope:unrelated',
+    },
+  ];
+
+  for (const decision of invalidDecisions) {
+    const external = externalReferences();
+    external[0].decision = decision;
+    const result = validate(validGraph(), external);
+
+    assert.equal(result.outcome, 'FAIL');
+    assert.ok(findingCodes(result).includes('INVALID_APPROVED_SPEC_SOURCE'));
+  }
 });
 
 test('checks requirement existence, source identity and bounded TASK subset', () => {

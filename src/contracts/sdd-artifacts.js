@@ -1,5 +1,6 @@
 'use strict';
 
+const { isDeepStrictEqual } = require('node:util');
 const YAML = require('yaml');
 const { z } = require('zod');
 
@@ -284,6 +285,16 @@ function sameReference(left, right) {
   return left && right && left.ref === right.ref && left.revision === right.revision;
 }
 
+function isAcceptedSpecDecision(authority, specRef, specScope) {
+  const decision = authority?.decision;
+  return authority?.kind === 'authority'
+    && decision?.state === 'accepted'
+    && Reference.safeParse(decision.subject_ref).success
+    && sameReference(decision.subject_ref, specRef)
+    && Scope.safeParse(decision.applicable_scope).success
+    && isDeepStrictEqual(decision.applicable_scope, specScope);
+}
+
 function requirementKey(requirementReference) {
   return `${referenceKey(requirementReference.source)}\u0000${requirementReference.id}`;
 }
@@ -496,13 +507,17 @@ function validateCoverage(artifact, index, findings) {
     const authorityRefs = resolved.entry.authority_refs;
     const hasAcceptedSourceEvidence = Array.isArray(authorityRefs)
       && authorityRefs.length > 0
-      && authorityRefs.every((authorityRef) => (
-        resolveReference(index, authorityRef)?.entry?.kind === 'authority'
+      && authorityRefs.some((authorityRef) => (
+        isAcceptedSpecDecision(
+          resolveReference(index, authorityRef)?.entry,
+          coverageRef,
+          resolved.entry.scope,
+        )
       ));
     if (!hasAcceptedSourceEvidence) {
       findings.push(finding(
         'INVALID_APPROVED_SPEC_SOURCE',
-        'approved_spec requires explicit authority evidence on the SPEC source',
+        'approved_spec requires an accepted authority decision for the exact SPEC identity and scope',
         { document_id: artifact.document_id, ref: referenceKey(coverageRef) },
       ));
     }
