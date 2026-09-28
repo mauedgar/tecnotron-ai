@@ -21,14 +21,15 @@ competent for their bounded responsibilities.
 Stage A — historical reconciliation                         PASS
 Stage B — canonical repository normalization                PASS
     ↓
-Stage C — complete canonical WP003 SDD                      EXIT RECONCILIATION
+Stage C — complete canonical WP003 SDD                      PASS
     WU01 — deterministic parser / relation validator        CLOSED_PASS
     WU02 — templates + positive/negative fixture corpus     CLOSED_PASS
     WU03 — fail-closed CLI/lint                             CLOSED_PASS
     WU04 — adoption/conformance disposition                 NO_IMPLEMENTATION_REQUIRED
     ↓
-Stage D — post-bootstrap operational maturation decision    NOT ENTERED
-    residual debt only under later competent reconciliation
+Stage D — post-bootstrap operational maturation decision    ENTERED / CURRENT
+    WP-PB-001 — Reusable Independent Review Protocol        PRODUCT DEFINITION CANDIDATE
+    implementation                                          NOT STARTED / NOT AUTHORIZED
     ↓
 Stage E — one integral real-cycle proof                     NOT ENTERED
     ↓
@@ -50,12 +51,13 @@ WP003:
   WU02: CLOSED_PASS
   WU03: CLOSED_PASS
   WU04: NO_IMPLEMENTATION_REQUIRED
-  status: COMPLETE_SUBJECT_TO_STAGE_C_EXIT
+  status: COMPLETE
   RF_201_RF_207: UNCHANGED
 ```
 
-Deterministic Phase-2 recipe maturation is `CLOSED_PASS` and is already-matured
-input for later competent residual-debt reconciliation. Stage D is not entered.
+Deterministic Phase-2 recipe maturation is `CLOSED_PASS`. Stage D is entered under
+explicit Developer authority; that entry does not reopen or modify the matured Phase-2
+responsibility.
 
 ## Historical predecessor disposition
 
@@ -72,15 +74,20 @@ historical_WP005:
   mechanical_resume: false
 ```
 
-If later cycle evidence demonstrates a real residual operational responsibility,
-Stage D may define a new post-bootstrap WP with its own SPEC/PLAN. It must not
-revive a historical implementation merely because the old roadmap listed it.
+Stage-D characterization selected exactly one current Product responsibility:
+`TECNOTRON-REUSABLE-INDEPENDENT-REVIEW-PROTOCOL`. `WP-PB-001` is its provisional
+post-bootstrap identity and current Product-definition candidate. Implementation remains
+not started and not authorized; Independent Review and Developer acceptance of the
+definition remain future gates.
 
 ## Explicitly deferred
 
 - documentation baseline cleanup until BETA;
-- Context Package Recipe;
-- reusable Independent Review spec/template and package/result mechanics;
+- F03 context/evidence identity until its accepted natural trigger;
+- F07 generic environment preparation until an accepted consumer demonstrates need;
+- F08 execution-record crash durability before unattended/crash-safe claims;
+- F09 test orchestration until nearby tooling change or repeated friction is material;
+- Context Package Recipe and dedicated review-package Recipe;
 - Observer / fitness optimization;
 - MCP;
 - semantic retrieval;
@@ -89,4 +96,4 @@ revive a historical implementation merely because the old roadmap listed it.
 - permanent harness selection or model/provider optimization;
 - parallelization infrastructure before the integral-cycle proof.
 
-These are not hidden acceptance criteria for WP003 or Stage C.
+These are not hidden acceptance criteria for WP-PB-001 and do not expand its scope.

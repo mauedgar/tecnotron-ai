@@ -250,6 +250,8 @@ This decomposition is a normal engineering practice and must not depend on a par
 - WU04 has a competent disposition;
 - future Product work can create bounded Tasks without inventing authority in prompts/chats/harness configuration.
 
+Current disposition: `PASS`, terminal. WP003 is `COMPLETE`.
+
 ## 8. Stage D — Post-bootstrap operational cycle maturation
 
 ### Entry condition
@@ -262,9 +264,26 @@ Determine the actual remaining operational debt after bootstrap + SOT normalizat
 
 Historical WP004/WP005 are evidence inputs, not executable authority. If a real residual responsibility exists, define a new post-bootstrap WP with its own SPEC and PLAN instead of reviving the historical implementations.
 
-### Candidate residual concerns
+### Current Stage-D disposition
 
-Only if demonstrated necessary by current cycles:
+Stage D is entered and nonterminal. The accepted characterization selected:
+
+- Product responsibility: `TECNOTRON-REUSABLE-INDEPENDENT-REVIEW-PROTOCOL`;
+- provisional Work Package: `WP-PB-001` — Reusable Independent Review Protocol;
+- current gate: Product definition only;
+- implementation: not started and not authorized;
+- Stage E: not entered.
+
+F03 context/evidence identity, F07 generic environment preparation, F08 execution-record
+crash durability, and F09 test orchestration remain deferred until their accepted natural
+triggers. Deterministic Phase-2 recipe maturation is already `CLOSED_PASS` and is not
+reopened by WP-PB-001.
+
+### Candidate residual concerns — characterization provenance
+
+The original candidate concern set below remains provenance for Stage-D characterization.
+It does not expand the selected `WP-PB-001` responsibility or authorize another concern.
+Only separately selected competent authority may activate one of these concerns:
 
 - reusable Independent Review specification/template;
 - deterministic rendering/materialization of bounded review requests/packages;
@@ -382,26 +401,33 @@ stage_B:
   disposition: PASS
   terminal: true
 stage_C:
-  position: EXIT_RECONCILIATION
-  terminal: false
+  disposition: PASS
+  terminal: true
 WP003:
   WU00: CLOSED_PASS
   WU01: CLOSED_PASS
   WU02: CLOSED_PASS
   WU03: CLOSED_PASS
   WU04: NO_IMPLEMENTATION_REQUIRED
-  status: COMPLETE_SUBJECT_TO_STAGE_C_EXIT
+  status: COMPLETE
 Phase2_deterministic_recipe_maturation:
   state: CLOSED_PASS
 stage_D:
-  entered: false
+  entered: true
+  terminal: false
+  characterization: ACCEPTED_RETRY1
+  selected_responsibility: TECNOTRON-REUSABLE-INDEPENDENT-REVIEW-PROTOCOL
+  work_package: WP-PB-001
+  product_definition: CANDIDATE
+  implementation_authorized: false
 stage_E:
   entered: false
 canonical_repository_effect:
   before_acceptance_and_phase2: NONE
 ```
 
-Stage C remains nonterminal until a later competent exit gate. This working-status
-reconciliation does not authorize Stage D, Stage E, historical WP004/WP005
-resumption, FitFlow mutation, or `main` promotion.
+Stage C is terminal `PASS`. Stage D is entered only for the currently selected
+Product-definition responsibility. This candidate does not authorize implementation,
+Stage-D closure, Stage-E entry, historical WP004/WP005 resumption, FitFlow mutation,
+or `main` promotion.
 

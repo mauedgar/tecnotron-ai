@@ -14,16 +14,16 @@ owner: tecnotron-ai
 ```yaml
 repository: mauedgar/tecnotron-ai
 branch: tools
-commit: a747f6168651448f453d10d6592428851692100c
-tree: 02ca4c5aef89490d7610966504a0aeec76b71998
+commit: c35170839f020475e1a483f73cf00f7bd55b5dae
+tree: ba39201263c1899f709c44900c85553020ecd28c
 bootstrap_terminal: TECNOTRON_MVP_SELF_HOSTING_OPERATIONAL_BASELINE
 wave3_terminal: TECNOTRON_SELF_HOSTING_DEVELOPMENT_V0_CLOSED_PASS
-current_position: STAGE_C_EXIT_RECONCILIATION
+current_position: STAGE_D_PRODUCT_DEFINITION
 ```
 
-The baseline above is the canonical predecessor for the current Stage-C exit
-navigation reconciliation. Stage C remains nonterminal and this reconciliation
-does not authorize Stage D.
+The baseline above is the canonical parent for the current Stage-D Product-definition
+candidate. Stage D entry and responsibility selection are already established by the
+Developer ruling; this candidate does not authorize implementation or Stage-E entry.
 
 ## Confirmed post-bootstrap substrate
 
@@ -60,7 +60,7 @@ WP003:
   WU02: CLOSED_PASS
   WU03: CLOSED_PASS
   WU04: NO_IMPLEMENTATION_REQUIRED
-  status: COMPLETE_SUBJECT_TO_STAGE_C_EXIT
+  status: COMPLETE
   RF_201_RF_207: PRESERVED_UNCHANGED
 ```
 
@@ -78,16 +78,23 @@ stage_B:
   disposition: PASS
   terminal: true
 stage_C:
-  position: EXIT_RECONCILIATION
-  terminal: false
+  disposition: PASS
+  terminal: true
 stage_D:
-  entered: false
+  entered: true
+  terminal: false
+  characterization: ACCEPTED_RETRY1
+  selected_responsibility: TECNOTRON-REUSABLE-INDEPENDENT-REVIEW-PROTOCOL
+  work_package: WP-PB-001
+  product_definition: CANDIDATE
+  implementation_authorized: false
 stage_E:
   entered: false
 ```
 
-The current Stage-C responsibility reconciles stale canonical navigation to
-already-established state without deleting or rewriting historical provenance.
+Stage C is terminal `PASS`. Stage D is entered and currently owns Product definition
+for the Developer-selected reusable Independent Review protocol. The definition set is
+candidate-only; implementation remains unauthorized.
 
 ## Historical/deferred disposition
 
@@ -98,18 +105,20 @@ already-established state without deleting or rewriting historical provenance.
   residual debt may be reconsidered later under new authority.
 - Historical WP005/Observer direction is not mechanically resumed.
 - Broad documentation baseline cleanup is deferred to BETA.
-- Context Package Recipe, reusable Independent Review specification/template,
-  Observer/fitness, MCP, semantic retrieval, Temporal/generalized
-  orchestration, task-management provider selection, and harness/model
-  optimization remain deferred according to the active milestone.
+- F03 context/evidence identity, F07 generic environment preparation, F08 execution
+  record crash durability, and F09 test orchestration remain deferred until their
+  accepted natural triggers; they are not WP-PB-001 implementation scope.
+- Context Package Recipe, Observer/fitness, MCP, semantic retrieval,
+  Temporal/generalized orchestration, task-management provider selection, and
+  harness/model optimization remain deferred according to the active milestone.
 
 ## Current Product position
 
-Stage C is at exit reconciliation. Deterministic Phase-2 recipe maturation is
-`CLOSED_PASS` and is already-matured input for later competent residual-debt
-reconciliation. Residual operational maturation remains owned by that later
-competent reconciliation; Stage C does not absorb it. Stage D and Stage E have
-not been entered.
+Stage C is terminal `PASS`, WP003 is `COMPLETE`, and deterministic Phase-2 recipe
+maturation is `CLOSED_PASS`. Stage D is entered and nonterminal. Its selected current
+responsibility is definition of `WP-PB-001` — Reusable Independent Review Protocol.
+Independent Review of this definition has not run, Developer acceptance is not granted,
+implementation is not started or authorized, and Stage E has not been entered.
 
 ## Known limitations
 
@@ -117,6 +126,6 @@ not been entered.
   branch mechanics, and execution-surface-era narrative; those remain in
   historical evidence.
 - `docs/task-lifecycle.md` remains transitional and may be narrowed or replaced
-  only by a later competent operational-maturation responsibility.
+  only by a later competent responsibility.
 - The repository package metadata still carries historical naming; this
-  reconciliation does not modify `package.json` or source/runtime files.
+  Product-definition candidate does not modify `package.json` or source/runtime files.
