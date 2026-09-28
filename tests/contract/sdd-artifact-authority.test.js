@@ -649,3 +649,88 @@ test('executes every mandatory negative WU02 fixture and preserves its intended 
     'SPEC-8.2-9',
   ]);
 });
+
+// WU03 fail-closed CLI/lint facade. Existing WU01/WU02 assertions above remain unchanged.
+const { spawnSync: spawnSddLintProcess } = require('node:child_process');
+const cryptoForSddLint = require('node:crypto');
+const osForSddLint = require('node:os');
+const sddLintCli = path.join(repositoryRoot, 'scripts/validate-sdd-artifacts.js');
+
+function runSddLint(args) {
+  const execution = spawnSddLintProcess(process.execPath, [sddLintCli, ...args], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(execution.signal, null);
+  assert.equal(execution.error, undefined);
+  assert.equal(execution.stderr, '');
+  assert.ok(execution.stdout.trim().length > 0);
+  return {
+    status: execution.status,
+    payload: JSON.parse(execution.stdout),
+  };
+}
+
+function fileSha256(file) {
+  return cryptoForSddLint.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+test('WU03 CLI exposes the complete WU02 fixture matrix without mutating fixture bytes', () => {
+  const cases = [
+    ...positiveFixtures.map((name) => ({ group: 'positive', name })),
+    ...negativeFixtures.map((name) => ({ group: 'negative', name })),
+  ];
+  const paths = cases.map(({ group, name }) => path.join(fixtureDirectory, group, name));
+  const before = paths.map(fileSha256);
+
+  for (const { group, name } of cases) {
+    const fixturePath = path.join(fixtureDirectory, group, name);
+    const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+    const execution = runSddLint(['--input', fixturePath]);
+    assert.equal(execution.payload.outcome, fixture.expected.validator_outcome, name);
+    assert.equal(execution.status, fixture.expected.validator_outcome === 'PASS' ? 0 : 1, name);
+    const codes = findingCodes(execution.payload);
+    for (const expectedCode of fixture.expected.finding_codes) {
+      assert.ok(codes.includes(expectedCode), `${name} missing ${expectedCode}; got ${codes.join(', ')}`);
+    }
+  }
+
+  assert.deepEqual(paths.map(fileSha256), before);
+});
+
+test('WU03 CLI reports NOT_RUN and UNAVAILABLE fail-closed and has no repair mode', () => {
+  const notRun = runSddLint([]);
+  assert.equal(notRun.status, 2);
+  assert.equal(notRun.payload.outcome, 'NOT_RUN');
+  assert.notEqual(notRun.payload.outcome, 'PASS');
+
+  const unavailable = runSddLint(['--input', path.join(repositoryRoot, '__missing_sdd_lint_input__.json')]);
+  assert.equal(unavailable.status, 2);
+  assert.equal(unavailable.payload.outcome, 'UNAVAILABLE');
+  assert.notEqual(unavailable.payload.outcome, 'PASS');
+
+  const fixAttempt = runSddLint(['--fix', path.join(fixtureDirectory, 'positive', positiveFixtures[0])]);
+  assert.equal(fixAttempt.status, 2);
+  assert.equal(fixAttempt.payload.outcome, 'NOT_RUN');
+  assert.ok(findingCodes(fixAttempt.payload).includes('CLI_ARGUMENTS_INVALID'));
+});
+
+test('WU03 CLI requires explicit external references and contains no filesystem write path', () => {
+  const temporaryDirectory = fs.mkdtempSync(path.join(osForSddLint.tmpdir(), 'tecnotron-wu03-'));
+  try {
+    const invalidEnvelope = path.join(temporaryDirectory, 'missing-external-references.json');
+    fs.writeFileSync(invalidEnvelope, JSON.stringify({ artifacts: [] }));
+    const execution = runSddLint(['--input', invalidEnvelope]);
+    assert.equal(execution.status, 1);
+    assert.equal(execution.payload.outcome, 'FAIL');
+    assert.ok(findingCodes(execution.payload).includes('CLI_INPUT_INVALID'));
+  } finally {
+    fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+
+  const source = fs.readFileSync(sddLintCli, 'utf8');
+  assert.doesNotMatch(
+    source,
+    /\b(?:writeFile|appendFile|rename|unlink|rm|mkdir|copyFile|truncate)(?:Sync)?\s*\(/,
+  );
+});
