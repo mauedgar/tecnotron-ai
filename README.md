@@ -13,10 +13,11 @@ reconciliation, the thin Execution Coordinator behind `ExecutionSurfacePort`,
 and the previously accepted reusable AI-core capabilities recorded in
 [Current State](docs/current-state.md).
 
-The active Product responsibility after the current documentation normalization
-is canonical WP003 SDD. `WP003-WU-01` through `WP003-WU-03` remain required;
-`WP003-WU-04` is to be reinterpreted only after those work units produce real
-evidence. Historical WP004/WP005 are not mechanically resumed.
+The active milestone position is Stage-C exit reconciliation. WP003 WU00
+through WU03 are `CLOSED_PASS`; WU04 is `NO_IMPLEMENTATION_REQUIRED`. WP003 is
+complete subject to the Stage-C exit gate. Stage C is not terminal, and Stage D
+and Stage E have not been entered. Historical WP004/WP005 are not mechanically
+resumed.
 
 ## Start here
 
@@ -48,6 +49,6 @@ not make them Tecnotron architecture or Product authority.
 ## Branches
 
 For the current pre-alpha Product work, `tools` is the canonical integration
-branch. `main` is outside this Stage-B responsibility and is not promoted by
-this documentation normalization. Historical `tooling` references remain
+branch. `main` is outside this Stage-C exit reconciliation and is not promoted
+by this documentation change. Historical `tooling` references remain
 provenance only.

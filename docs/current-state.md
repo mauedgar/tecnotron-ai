@@ -14,15 +14,16 @@ owner: tecnotron-ai
 ```yaml
 repository: mauedgar/tecnotron-ai
 branch: tools
-commit: f5c5d087e270a62c1e965ec917cd70a69c4e4264
-tree: 67db7a6213fe991a01230661fed75d88083ddfcb
+commit: a747f6168651448f453d10d6592428851692100c
+tree: 02ca4c5aef89490d7610966504a0aeec76b71998
 bootstrap_terminal: TECNOTRON_MVP_SELF_HOSTING_OPERATIONAL_BASELINE
 wave3_terminal: TECNOTRON_SELF_HOSTING_DEVELOPMENT_V0_CLOSED_PASS
+current_position: STAGE_C_EXIT_RECONCILIATION
 ```
 
-The baseline above is the predecessor for the current Stage-B documentation
-candidate. Stage B itself has no canonical or remote effect until independent
-review, Developer acceptance, and separately authorized integration.
+The baseline above is the canonical predecessor for the current Stage-C exit
+navigation reconciliation. Stage C remains nonterminal and this reconciliation
+does not authorize Stage D.
 
 ## Confirmed post-bootstrap substrate
 
@@ -55,12 +56,16 @@ WP003:
   SPEC: ACCEPTED
   PLAN: ACCEPTED
   WU00: CLOSED_PASS
-  WU01_WU03: STILL_REQUIRED
-  WU04: REINTERPRET_AFTER_WU01_WU03
+  WU01: CLOSED_PASS
+  WU02: CLOSED_PASS
+  WU03: CLOSED_PASS
+  WU04: NO_IMPLEMENTATION_REQUIRED
+  status: COMPLETE_SUBJECT_TO_STAGE_C_EXIT
   RF_201_RF_207: PRESERVED_UNCHANGED
 ```
 
-The Stage-B candidate does not initialize or implement `WP003-WU-01`.
+WU00-WU03 are terminal. WU04 requires no implementation TaskCycle under the
+competent Developer disposition.
 
 ## Pre-alpha normalization state
 
@@ -70,14 +75,19 @@ stage_A:
   disposition: PASS
   terminal: true
 stage_B:
-  responsibility: CANONICAL_REPOSITORY_NORMALIZATION
-  phase: PHASE_1
-  current_gate: INDEPENDENT_REVIEW_AFTER_FREEZE
+  disposition: PASS
+  terminal: true
+stage_C:
+  position: EXIT_RECONCILIATION
+  terminal: false
+stage_D:
+  entered: false
+stage_E:
+  entered: false
 ```
 
-The purpose of Stage B is to make active repository navigation reflect the
-post-bootstrap state without deleting or cosmetically rewriting historical
-provenance.
+The current Stage-C responsibility reconciles stale canonical navigation to
+already-established state without deleting or rewriting historical provenance.
 
 ## Historical/deferred disposition
 
@@ -93,12 +103,13 @@ provenance.
   orchestration, task-management provider selection, and harness/model
   optimization remain deferred according to the active milestone.
 
-## Current next Product responsibility
+## Current Product position
 
-After Stage B is independently reviewed, accepted, integrated, and reconciled,
-the next canonical Product frontier is continuation of WP003, beginning with a
-separately authorized bounded responsibility derived from `WP003-WU-01`.
-Stage B does not provide that authorization.
+Stage C is at exit reconciliation. Deterministic Phase-2 recipe maturation is
+`CLOSED_PASS` and is already-matured input for later competent residual-debt
+reconciliation. Residual operational maturation remains owned by that later
+competent reconciliation; Stage C does not absorb it. Stage D and Stage E have
+not been entered.
 
 ## Known limitations
 
@@ -107,5 +118,5 @@ Stage B does not provide that authorization.
   historical evidence.
 - `docs/task-lifecycle.md` remains transitional and may be narrowed or replaced
   only by a later competent operational-maturation responsibility.
-- The repository package metadata still carries historical naming; Stage B is
-  explicitly forbidden from modifying `package.json` or source/runtime files.
+- The repository package metadata still carries historical naming; this
+  reconciliation does not modify `package.json` or source/runtime files.

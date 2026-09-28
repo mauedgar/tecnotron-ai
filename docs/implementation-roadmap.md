@@ -19,25 +19,25 @@ competent for their bounded responsibilities.
 
 ```text
 Stage A — historical reconciliation                         PASS
-Stage B — canonical repository normalization                CURRENT
+Stage B — canonical repository normalization                PASS
     ↓
-Stage C — complete canonical WP003 SDD
-    WU01 — deterministic parser / relation validator
-    WU02 — templates + positive/negative fixture corpus
-    WU03 — fail-closed CLI/lint
-    WU04 — reinterpret smallest adoption/conformance delta
+Stage C — complete canonical WP003 SDD                      EXIT RECONCILIATION
+    WU01 — deterministic parser / relation validator        CLOSED_PASS
+    WU02 — templates + positive/negative fixture corpus     CLOSED_PASS
+    WU03 — fail-closed CLI/lint                             CLOSED_PASS
+    WU04 — adoption/conformance disposition                 NO_IMPLEMENTATION_REQUIRED
     ↓
-Stage D — post-bootstrap operational maturation decision
-    only demonstrated residual debt
+Stage D — post-bootstrap operational maturation decision    NOT ENTERED
+    residual debt only under later competent reconciliation
     ↓
-Stage E — one integral real-cycle proof
+Stage E — one integral real-cycle proof                     NOT ENTERED
     ↓
 ready to evaluate parallel development
 ```
 
 ## WP003 disposition
 
-WP003 remains canonical and incomplete. Preserve the accepted
+WP003 remains canonical. Preserve the accepted
 [SPEC](work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md),
 [PLAN](work-packages/wp-003-sdd-authority-and-artifacts/PLAN.md), SDD contract,
 and ADR without semantic rewrite.
@@ -46,13 +46,16 @@ and ADR without semantic rewrite.
 WP003:
   canonical: true
   WU00: CLOSED_PASS
-  WU01_WU03: STILL_REQUIRED
-  WU04: REINTERPRET_AFTER_WU01_WU03
+  WU01: CLOSED_PASS
+  WU02: CLOSED_PASS
+  WU03: CLOSED_PASS
+  WU04: NO_IMPLEMENTATION_REQUIRED
+  status: COMPLETE_SUBJECT_TO_STAGE_C_EXIT
   RF_201_RF_207: UNCHANGED
 ```
 
-No Stage-B documentation state initializes WU01 or grants its implementation
-authority.
+Deterministic Phase-2 recipe maturation is `CLOSED_PASS` and is already-matured
+input for later competent residual-debt reconciliation. Stage D is not entered.
 
 ## Historical predecessor disposition
 
@@ -86,4 +89,4 @@ revive a historical implementation merely because the old roadmap listed it.
 - permanent harness selection or model/provider optimization;
 - parallelization infrastructure before the integral-cycle proof.
 
-These are not hidden acceptance criteria for WP003 or Stage B.
+These are not hidden acceptance criteria for WP003 or Stage C.

@@ -379,13 +379,29 @@ stage_A:
   disposition: PASS
   terminal: true
 stage_B:
-  responsibility: CANONICAL_REPOSITORY_NORMALIZATION
-  phase: PHASE_1
-  candidate_state: FROZEN_FOR_INDEPENDENT_REVIEW_WHEN_THIS_DELTA_IS_FROZEN
-  next_gate: NEW_INDEPENDENT_REVIEW
+  disposition: PASS
+  terminal: true
+stage_C:
+  position: EXIT_RECONCILIATION
+  terminal: false
+WP003:
+  WU00: CLOSED_PASS
+  WU01: CLOSED_PASS
+  WU02: CLOSED_PASS
+  WU03: CLOSED_PASS
+  WU04: NO_IMPLEMENTATION_REQUIRED
+  status: COMPLETE_SUBJECT_TO_STAGE_C_EXIT
+Phase2_deterministic_recipe_maturation:
+  state: CLOSED_PASS
+stage_D:
+  entered: false
+stage_E:
+  entered: false
 canonical_repository_effect:
   before_acceptance_and_phase2: NONE
 ```
 
-Stage B does not initialize WP003-WU01, historical WP004/WP005, Phase 2A, Phase 2B, or `main` promotion.
+Stage C remains nonterminal until a later competent exit gate. This working-status
+reconciliation does not authorize Stage D, Stage E, historical WP004/WP005
+resumption, FitFlow mutation, or `main` promotion.
 

@@ -33,7 +33,7 @@ remains with the competent canonical source for each capability.
 | Router / ModelResolver / FinOps | deterministic decisioning/eligibility; no execution authority | current source/contracts |
 | Agent Runtime / Agent MVP | reusable execution/composition capabilities within their accepted boundaries | current source/evidence |
 | Operational profiles | bounded role/permission projections; no terminal Product authority | accepted WP001 contract |
-| WP003 SDD foundation | accepted SPEC/PLAN + WU00 authority/contract foundation | WP003 SPEC/PLAN/contract/ADR |
+| WP003 SDD | accepted SPEC/PLAN; WU00-WU03 `CLOSED_PASS`; WU04 `NO_IMPLEMENTATION_REQUIRED`; complete subject to Stage-C exit | WP003 SPEC/PLAN/contract/ADR + accepted WU evidence |
 | Task Lifecycle | transitional repository/process policy only | `docs/task-lifecycle.md` |
 
 Current does not mean every capability is required for every Operation, nor that
@@ -54,18 +54,36 @@ The following remain available but are not active-next-work authority:
 Historical material is preserved during pre-alpha where useful and may be
 removed only by later BETA documentation normalization after competent review.
 
-## CANONICAL REMAINING PRODUCT WORK
+## CURRENT MILESTONE POSITION
 
 ```yaml
+Stage_A:
+  disposition: PASS
+  terminal: true
+Stage_B:
+  disposition: PASS
+  terminal: true
+Stage_C:
+  position: EXIT_RECONCILIATION
+  terminal: false
 WP003:
   canonical: true
-  WU01: REQUIRED_NOT_INITIALIZED
-  WU02: REQUIRED_AFTER_WU01
-  WU03: REQUIRED_AFTER_WU02
-  WU04: REINTERPRET_AFTER_WU01_WU03
+  WU00: CLOSED_PASS
+  WU01: CLOSED_PASS
+  WU02: CLOSED_PASS
+  WU03: CLOSED_PASS
+  WU04: NO_IMPLEMENTATION_REQUIRED
+  status: COMPLETE_SUBJECT_TO_STAGE_C_EXIT
+Phase2_deterministic_recipe_maturation:
+  state: CLOSED_PASS
+Stage_D:
+  entered: false
+Stage_E:
+  entered: false
 ```
 
-Stage-B normalization does not initialize any of these work units.
+Residual operational maturation remains owned by later competent reconciliation;
+Stage C does not absorb it.
 
 ## DEFERRED / SUCCESSOR CONCERNS
 
