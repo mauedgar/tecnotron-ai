@@ -493,4 +493,5 @@ module.exports = {
   ...require('./recipes/integrate-accepted-candidate'),
   ...require('./recipes/reconcile-and-close-taskcycle'),
   ...require('./recipes/render-current-state'),
+  ...require('./recipes/materialize-frozen-review-interface'),
 };
