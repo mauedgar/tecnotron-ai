@@ -4,8 +4,10 @@
   "description": "Contratos canonicos de FitFlow-ai",
   "type": "commonjs",
   "main": "./index.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": {
+      "types": "./index.d.ts",
       "require": "./index.js",
       "import": "./index.mjs"
     },
@@ -13,7 +15,8 @@
   },
   "files": [
     "*.js",
-    "*.mjs"
+    "*.mjs",
+    "*.d.ts"
   ],
   "publishConfig": {
     "registry": "https://github.com"

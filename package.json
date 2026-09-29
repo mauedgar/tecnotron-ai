@@ -15,10 +15,15 @@
   },
   "devDependencies": {
     "@playwright/cli": "^0.1.18",
+    "@types/node": "22.18.6",
+    "typescript": "7.0.2",
     "vitest": "^4.1.11"
   },
   "scripts": {
-    "test": "node --test tests/**/*.test.js scripts/doctor/tests/**/*.test.js",
+    "typecheck": "tsc -p tsconfig.typecheck.json --pretty false",
+    "build": "tsc -p tsconfig.build.json --pretty false",
+    "test:typed-core": "npm run build && node --test tests/contract/execution-coordination.test.js tests/core/execution-coordinator.test.js tests/operational-spine-v0/contracts-and-resolution.test.js tests/contracts/package-modes.test.js",
+    "test": "npm run build && node --test tests/**/*.test.js scripts/doctor/tests/**/*.test.js",
     "contracts:check": "node src/contracts/validate-package.js",
     "contracts:publish": "npm publish ./src/contracts",
     "workspace:verify": "node scripts/workspace/verify.js"

@@ -8,7 +8,10 @@ const { builtinModules } = require('node:module');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const packagePath = path.join(repoRoot, 'package.json');
 const lockPath = path.join(repoRoot, 'package-lock.json');
-const sourceRoot = path.join(repoRoot, 'src');
+const sourceRoots = [
+  { root: path.join(repoRoot, 'src'), runtime: true },
+  { root: path.join(repoRoot, 'src-typescript'), runtime: false },
+];
 const nodeModulesRoot = path.join(repoRoot, 'node_modules');
 
 function fail(code, detail) {
@@ -26,7 +29,7 @@ function walkSource(root) {
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     const full = path.join(root, entry.name);
     if (entry.isDirectory()) result.push(...walkSource(full));
-    else if (entry.isFile() && /\.(?:js|mjs|cjs)$/.test(entry.name)) result.push(full);
+    else if (entry.isFile() && /\.(?:js|mjs|cjs|ts|mts|cts)$/.test(entry.name)) result.push(full);
   }
   return result;
 }
@@ -36,31 +39,35 @@ function sourceDependencies() {
     ...builtinModules,
     ...builtinModules.map((name) => `node:${name}`),
   ]);
-  const dependencies = new Set();
+  const runtimeDependencies = new Set();
+  const installDependencies = new Set();
   const patterns = [
     /require\(\s*['"]([^'"]+)['"]\s*\)/g,
     /(?:import|export)\s+(?:[^'";]+?\s+from\s+)?['"]([^'"]+)['"]/g,
     /import\(\s*['"]([^'"]+)['"]\s*\)/g,
   ];
 
-  for (const file of walkSource(sourceRoot)) {
-    const source = fs.readFileSync(file, 'utf8');
-    for (const pattern of patterns) {
-      pattern.lastIndex = 0;
-      let match;
-      while ((match = pattern.exec(source)) !== null) {
-        const specifier = match[1];
-        if (
-          specifier.startsWith('.') ||
-          specifier.startsWith('/') ||
-          builtins.has(specifier)
-        ) continue;
-        dependencies.add(packageName(specifier));
+  for (const { root, runtime } of sourceRoots) {
+    for (const file of walkSource(root)) {
+      const source = fs.readFileSync(file, 'utf8');
+      for (const pattern of patterns) {
+        pattern.lastIndex = 0;
+        let match;
+        while ((match = pattern.exec(source)) !== null) {
+          const specifier = match[1];
+          if (specifier.startsWith('.') || specifier.startsWith('/') || builtins.has(specifier)) continue;
+          const name = packageName(specifier);
+          installDependencies.add(name);
+          if (runtime && !file.endsWith('.d.ts')) runtimeDependencies.add(name);
+        }
       }
     }
   }
 
-  return [...dependencies].sort();
+  return {
+    runtime: [...runtimeDependencies].sort(),
+    install: [...installDependencies].sort(),
+  };
 }
 
 if (!fs.existsSync(packagePath) || !fs.existsSync(lockPath)) {
@@ -84,7 +91,9 @@ if (!fs.existsSync(packagePath) || !fs.existsSync(lockPath)) {
   };
   const required = sourceDependencies();
 
-  const undeclared = required.filter((name) => !Object.hasOwn(declaredRuntime, name));
+  const undeclaredRuntime = required.runtime.filter((name) => !Object.hasOwn(declaredRuntime, name));
+  const undeclaredInstall = required.install.filter((name) => !Object.hasOwn(declaredInstall, name));
+  const undeclared = [...new Set([...undeclaredRuntime, ...undeclaredInstall])].sort();
   const rootLockMismatch = Object.entries(declaredInstall)
     .filter(([name, range]) => lockDeclared[name] !== range)
     .map(([name, range]) => ({
@@ -95,11 +104,11 @@ if (!fs.existsSync(packagePath) || !fs.existsSync(lockPath)) {
   const rootLockExtra = Object.keys(lockDeclared)
     .filter((name) => !Object.hasOwn(declaredInstall, name))
     .sort();
-  const unlocked = required.filter((name) => !lock.packages?.[`node_modules/${name}`]);
+  const unlocked = required.install.filter((name) => !lock.packages?.[`node_modules/${name}`]);
 
   const unresolved = [];
   const outsideWorkspace = [];
-  for (const name of required) {
+  for (const name of required.install) {
     try {
       const resolved = require.resolve(name, { paths: [repoRoot] });
       const relative = path.relative(nodeModulesRoot, resolved);
@@ -127,7 +136,8 @@ if (!fs.existsSync(packagePath) || !fs.existsSync(lockPath)) {
     runtime_requirement: manifest.engines?.node || null,
     test_command: testCommand,
     workspace_verify_command: workspaceVerifyCommand,
-    canonical_source_dependencies: required,
+    canonical_source_dependencies: required.install,
+    runtime_source_dependencies: required.runtime,
     dependency_manifest_complete: undeclared.length === 0,
     lockfile_consistent: rootLockMismatch.length === 0 && rootLockExtra.length === 0 && unlocked.length === 0,
     canonical_source_dependencies_declared: undeclared.length === 0,
