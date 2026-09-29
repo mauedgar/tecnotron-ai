@@ -3,6 +3,7 @@ export * from './resolution';
 export * from './recipe-registry';
 export * from './recipe-execution-surface';
 export * from './execution-record-store';
+export * from './recipes/validate-fitflow-http-contract-candidate';
 
 export function createStateKernelAdapter(...args: any[]): any;
 export const IntegrateAcceptedCandidateInput: any;

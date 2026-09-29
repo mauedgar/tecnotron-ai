@@ -11,4 +11,5 @@ module.exports = {
   ...require('./recipes/reconcile-and-close-taskcycle'),
   ...require('./recipes/render-current-state'),
   ...require('./recipes/materialize-frozen-review-interface'),
+  ...require('./recipes/validate-fitflow-http-contract-candidate'),
 };
