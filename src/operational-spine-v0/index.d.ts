@@ -3,6 +3,9 @@ export * from './resolution';
 export * from './recipe-registry';
 export * from './recipe-execution-surface';
 export * from './execution-record-store';
+export * from './invocation-contracts';
+export * from './surface-resolution';
+export * from './recipe-invocation';
 
 export function createStateKernelAdapter(...args: any[]): any;
 export const IntegrateAcceptedCandidateInput: any;
