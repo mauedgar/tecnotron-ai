@@ -13,7 +13,8 @@ export interface RuntimeCorrespondenceValue {
   source_recipe: {
     id: 'prepare_fitflow_test_runtime';
     version: 'v0';
-    receipt_ref?: string;
+    receipt_ref: string;
+    evidence_ref: Reference;
   };
   repository_identity: string;
   candidate_ref: string;
@@ -34,18 +35,21 @@ export interface RuntimeCorrespondenceValue {
   };
 }
 
+export type FullBackendRegressionValue =
+  | { requested: false }
+  | { requested: true; args: string[] };
+
+export type ScopedValidationStepValue =
+  | { requested: false }
+  | { requested: true; scope: string[] };
+
 export interface ValidationProfileValue {
   targeted_pytest_selectors: string[];
   expected_behavior_ref?: Reference;
-  full_backend_regression: { requested: boolean; args?: string[] };
-  ruff: { requested: boolean; scope?: string[] };
-  pyright: { requested: boolean; scope?: string[] };
-  extra_probes?: Array<{
-    id: string;
-    purpose: 'CORRESPONDENCE';
-    command: CommandBinding;
-    args?: string[];
-  }>;
+  full_backend_regression: FullBackendRegressionValue;
+  ruff: ScopedValidationStepValue;
+  pyright: ScopedValidationStepValue;
+  extra_probes: Array<{ id: string }>;
 }
 
 export interface ValidateFitFlowHttpContractCandidateInputValue {
@@ -60,7 +64,7 @@ export interface ValidateFitFlowHttpContractCandidateInputValue {
     parent: string;
     commit: string;
     tree: string;
-    allowed_changed_paths?: string[];
+    allowed_changed_paths: string[];
   };
   runtime_correspondence: RuntimeCorrespondenceValue;
   validation_profile: ValidationProfileValue;
@@ -96,8 +100,21 @@ export interface ValidationGitAdapter {
   diffCheck(repositoryPath: string, parent: string, commit: string): ValidationCommandResult;
 }
 
+export interface ExtraProbeDefinitionValue {
+  id: string;
+  purpose: 'CORRESPONDENCE';
+  effects: Array<{ effect: string; scope: string }>;
+  command: CommandBinding;
+  args?: string[];
+}
+
+export type ExtraProbeRegistry =
+  | Readonly<Record<string, ExtraProbeDefinitionValue>>
+  | ReadonlyMap<string, ExtraProbeDefinitionValue>;
+
 export declare const RuntimeCorrespondence: z.ZodType<RuntimeCorrespondenceValue>;
 export declare const ValidationProfile: z.ZodType<ValidationProfileValue>;
+export declare const ExtraProbeDefinition: z.ZodType<ExtraProbeDefinitionValue>;
 export declare const ValidateFitFlowHttpContractCandidateInput: z.ZodType<ValidateFitFlowHttpContractCandidateInputValue>;
 
 export declare function createValidationProcessRunner(): ValidationRunner;
@@ -105,4 +122,7 @@ export declare function createValidationGitAdapter(options?: { command?: string 
 export declare function createValidateFitFlowHttpContractCandidateRecipe(options?: {
   git?: ValidationGitAdapter;
   runner?: ValidationRunner;
+  probeRegistry?: ExtraProbeRegistry;
 }): RecipePort;
+export declare function normalizeProbeRegistry(registry: ExtraProbeRegistry): Map<string, ExtraProbeDefinitionValue>;
+export declare function observeCandidate(...args: any[]): any;
