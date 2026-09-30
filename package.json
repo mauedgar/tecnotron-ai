@@ -23,10 +23,12 @@
     "typecheck": "tsc -p tsconfig.typecheck.json --pretty false",
     "build": "tsc -p tsconfig.build.json --pretty false",
     "test:typed-core": "npm run build && node --test tests/contract/execution-coordination.test.js tests/core/execution-coordinator.test.js tests/operational-spine-v0/contracts-and-resolution.test.js tests/contracts/package-modes.test.js",
+    "test:recipe-invocation": "npm run build && node --test tests/operational-spine-v0/recipe-invocation.test.js tests/operational-spine-v0/recipe-invocation-worker.test.js",
     "test": "npm run build && node --test tests/**/*.test.js scripts/doctor/tests/**/*.test.js",
     "contracts:check": "node src/contracts/validate-package.js",
     "contracts:publish": "npm publish ./src/contracts",
-    "workspace:verify": "node scripts/workspace/verify.js"
+    "workspace:verify": "node scripts/workspace/verify.js",
+    "recipe:invoke": "node src/operational-spine-v0/recipe-invocation-cli.js"
   },
   "allowScripts": {
     "better-sqlite3@13.0.3": true,
