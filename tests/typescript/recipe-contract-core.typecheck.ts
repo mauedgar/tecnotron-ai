@@ -18,7 +18,11 @@ import {
 import type { ExecutionOutcome as PublicExecutionOutcome } from '../../src/contracts';
 import contracts from '../../src/contracts';
 import type { StateKernelPort } from '../../src-typescript/operational-spine-v0/core';
+import { FitFlowRuntimeFailureClass as PublicFitFlowRuntimeFailureClass } from '../../src/operational-spine-v0';
 
+
+const publicFitFlowRuntimeFailureClass = PublicFitFlowRuntimeFailureClass.parse('PRECONDITION');
+void publicFitFlowRuntimeFailureClass;
 const request = ExecutionAttemptRequest.parse({
   operation_id: 'OP-001',
   execution_attempt_id: 'ATTEMPT-001',

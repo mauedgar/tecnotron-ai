@@ -18,6 +18,7 @@ export function sourceSatisfied(...args: any[]): any;
 export function createRenderCurrentStateRecipe(...args: any[]): any;
 export const FITFLOW: any;
 export const PrepareFitFlowTestRuntimeInput: any;
+export const FitFlowRuntimeFailureClass: any;
 export function createProcessCommandRunner(...args: any[]): any;
 export function createPrepareFitFlowTestRuntimeRecipe(...args: any[]): any;
 export function configuredComposeIdentity(...args: any[]): any;
