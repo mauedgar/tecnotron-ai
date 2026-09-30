@@ -332,6 +332,17 @@ test('unknown or effectful extra probes fail closed', async t => {
     status: 'BLOCKED',
     reason: 'EFFECTFUL_EXTRA_PROBE_REJECTED:mutate',
   });
+
+  assert.throws(() => createValidateFitFlowHttpContractCandidateRecipe({
+    probeRegistry: {
+      missingProfile: {
+        id: 'missingProfile',
+        purpose: 'CORRESPONDENCE',
+        command: { executable: 'tool', probe_args: ['--version'] },
+        args: [],
+      },
+    },
+  }), /effects/);
 });
 
 test('caller cannot inject an arbitrary executable through extra probe input', async t => {

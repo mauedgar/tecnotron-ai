@@ -103,7 +103,7 @@ export interface ValidationGitAdapter {
 export interface ExtraProbeDefinitionValue {
   id: string;
   purpose: 'CORRESPONDENCE';
-  effects?: Array<{ effect: string; scope: string }>;
+  effects: Array<{ effect: string; scope: string }>;
   command: CommandBinding;
   args?: string[];
 }

@@ -116,7 +116,7 @@ const ExtraProbeDefinition = z.object({
   effects: z.array(z.object({
     effect: NonEmpty,
     scope: NonEmpty,
-  }).strict()).default([]),
+  }).strict()),
   command: CommandBinding,
   args: z.array(z.string().max(512)).max(128).default([]),
 }).strict();
