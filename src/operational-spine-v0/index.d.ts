@@ -34,3 +34,4 @@ export function createTar(...args: any[]): any;
 export function effectsForInput(...args: any[]): any;
 export function readTar(...args: any[]): any;
 export function verifyArchive(...args: any[]): any;
+export * from './recipes/validate-fitflow-http-contract-candidate';
