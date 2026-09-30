@@ -101,20 +101,20 @@ const missingChangedPaths: ValidateFitFlowHttpContractCandidateInputValue = {
   },
 };
 
-// @ts-expect-error Requested full regression requires exact explicit args.
 const missingRegressionArgs: ValidateFitFlowHttpContractCandidateInputValue = {
   ...input,
   validation_profile: {
     ...input.validation_profile,
+    // @ts-expect-error Requested full regression requires exact explicit args.
     full_backend_regression: { requested: true },
   },
 };
 
-// @ts-expect-error Extra probes are identity-only caller requests; executable injection is not part of the contract.
 const executableProbeInjection: ValidateFitFlowHttpContractCandidateInputValue = {
   ...input,
   validation_profile: {
     ...input.validation_profile,
+    // @ts-expect-error Extra probes are identity-only caller requests; executable injection is not part of the contract.
     extra_probes: [{ id: 'db-current', command: { executable: 'pwsh', probe_args: ['whoami'] } }],
   },
 };
