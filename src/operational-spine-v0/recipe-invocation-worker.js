@@ -15,6 +15,8 @@ const { createRenderCurrentStateRecipe } = require('./recipes/render-current-sta
 const { createIntegrateAcceptedCandidateRecipe } = require('./recipes/integrate-accepted-candidate');
 const { createMaterializeFrozenReviewInterfaceRecipe } = require('./recipes/materialize-frozen-review-interface');
 const { createReconcileAndCloseTaskCycleRecipe } = require('./recipes/reconcile-and-close-taskcycle');
+const { createPrepareFitFlowTestRuntimeRecipe } = require('./recipes/prepare-fitflow-test-runtime');
+const { createValidateFitFlowHttpContractCandidateRecipe } = require('./recipes/validate-fitflow-http-contract-candidate');
 function terminalBase(envelope) {
     return {
         schema_version: 'tecnotron-recipe-invocation-result/v0',
@@ -85,6 +87,10 @@ function createBuiltinRecipe(recipeId, recipeVersion, store) {
             return createMaterializeFrozenReviewInterfaceRecipe();
         case 'reconcile_and_close_taskcycle':
             return createReconcileAndCloseTaskCycleRecipe({ stateKernel: closureKernel(store) });
+        case 'prepare_fitflow_test_runtime':
+            return createPrepareFitFlowTestRuntimeRecipe();
+        case 'validate_fitflow_http_contract_candidate':
+            return createValidateFitFlowHttpContractCandidateRecipe();
         default:
             return null;
     }

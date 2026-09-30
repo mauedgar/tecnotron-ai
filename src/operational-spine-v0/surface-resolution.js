@@ -76,6 +76,11 @@ function executionRequirementsForRecipe(recipe, input, additional = []) {
         }
         case 'reconcile_and_close_taskcycle':
             break;
+        case 'prepare_fitflow_test_runtime':
+        case 'validate_fitflow_http_contract_candidate':
+            required.add('REPOSITORY_ACCESS');
+            required.add('CHILD_PROCESS');
+            break;
         default:
             return null;
     }

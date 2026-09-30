@@ -40,6 +40,12 @@ const { createMaterializeFrozenReviewInterfaceRecipe } = require('./recipes/mate
 const { createReconcileAndCloseTaskCycleRecipe } = require('./recipes/reconcile-and-close-taskcycle') as {
   createReconcileAndCloseTaskCycleRecipe(args: { stateKernel: unknown }): RecipePort;
 };
+const { createPrepareFitFlowTestRuntimeRecipe } = require('./recipes/prepare-fitflow-test-runtime') as {
+  createPrepareFitFlowTestRuntimeRecipe(): RecipePort;
+};
+const { createValidateFitFlowHttpContractCandidateRecipe } = require('./recipes/validate-fitflow-http-contract-candidate') as {
+  createValidateFitFlowHttpContractCandidateRecipe(): RecipePort;
+};
 
 function terminalBase(envelope: WorkerInvocationEnvelopeValue) {
   return {
@@ -118,6 +124,10 @@ function createBuiltinRecipe(recipeId: string, recipeVersion: string, store: Sta
       return createMaterializeFrozenReviewInterfaceRecipe();
     case 'reconcile_and_close_taskcycle':
       return createReconcileAndCloseTaskCycleRecipe({ stateKernel: closureKernel(store) });
+    case 'prepare_fitflow_test_runtime':
+      return createPrepareFitFlowTestRuntimeRecipe();
+    case 'validate_fitflow_http_contract_candidate':
+      return createValidateFitFlowHttpContractCandidateRecipe();
     default:
       return null;
   }

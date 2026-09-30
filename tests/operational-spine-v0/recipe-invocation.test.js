@@ -154,6 +154,24 @@ test('recipe requirements add Linux only when the caller explicitly requires it'
   assert.equal(linux.includes('LINUX_SEMANTICS'), true);
 });
 
+test('matured FitFlow Recipes require only their demonstrated execution mechanics', () => {
+  const expected = [
+    'CHILD_PROCESS',
+    'DURABLE_DIRECTORY_FSYNC',
+    'FILESYSTEM_WRITE',
+    'NODE_RUNTIME',
+    'REPOSITORY_ACCESS',
+  ];
+  assert.deepEqual(executionRequirementsForRecipe(
+    { id: 'prepare_fitflow_test_runtime', version: 'v0' },
+    undefined,
+  ), expected);
+  assert.deepEqual(executionRequirementsForRecipe(
+    { id: 'validate_fitflow_http_contract_candidate', version: 'v0' },
+    undefined,
+  ), expected);
+});
+
 test('stable entrypoint invokes selected surface exactly once and receipt status remains effect authority', async () => {
   const native = surface('native', 'NATIVE_NODE', ['NODE_RUNTIME', 'FILESYSTEM_WRITE', 'DURABLE_DIRECTORY_FSYNC']);
   let calls = 0;
