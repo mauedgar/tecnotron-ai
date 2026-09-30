@@ -9,6 +9,7 @@ const { spawnSync } = require('node:child_process');
 
 const {
   IntegrateAcceptedCandidateInput,
+  createGitCliAdapter,
   createIntegrateAcceptedCandidateRecipe,
 } = require('../../src/operational-spine-v0/recipes/integrate-accepted-candidate');
 
@@ -424,4 +425,164 @@ test('malformed dynamic effect profile fails closed instead of falling back to s
     async execute() { throw new Error('must not execute'); },
   });
   assert.throws(() => registry.resolveEffects('bad-effects', 'v0', {}));
+});
+function rangeFixture(t) {
+  const f = fixture(t);
+  git(f.repo, ['checkout', 'candidate']);
+  for (const [name, body] of [['candidate-2.txt','candidate-2\n'],['candidate-3.txt','candidate-3\n']]) {
+    fs.writeFileSync(path.join(f.repo, name), body);
+    git(f.repo, ['add', '.']);
+    git(f.repo, ['commit', '-m', name]);
+  }
+  const tip = git(f.repo, ['rev-parse', 'HEAD']);
+  const tipParent = git(f.repo, ['rev-parse', 'HEAD^1']);
+  const tipTree = git(f.repo, ['rev-parse', 'HEAD^{tree}']);
+  const commits = git(f.repo, ['rev-list', '--reverse', '--topo-order', `${f.base}..${tip}`]).split(/\r?\n/).filter(Boolean);
+  const changedPaths = git(f.repo, ['diff', '--name-only', '--no-renames', f.base, tip, '--']).split(/\r?\n/).filter(Boolean).sort();
+  git(f.repo, ['checkout', 'tools']);
+  return { ...f, tip, tipParent, tipTree, commits, changedPaths };
+}
+function rangeRequest(f, range = {}, { publish = false, authorization = integrationAuthority } = {}) {
+  return {
+    ...request(f, { authorization }),
+    input: {
+      target_ref: 'refs/heads/tools',
+      accepted_range: {
+        integration_range_base: f.base,
+        accepted_tip: f.tip,
+        accepted_tip_parent: f.tipParent,
+        accepted_tip_tree: f.tipTree,
+        ordered_commit_range: [...f.commits],
+        commit_count: f.commits.length,
+        changed_paths: [...f.changedPaths],
+        ...range,
+      },
+      ...(publish ? { remote: { remote: 'origin', target_ref: 'refs/heads/tools', expected_commit: f.base } } : {}),
+    },
+  };
+}
+test('accepted range integrates exact multi-commit fast-forward under v0', async t => {
+  const f = rangeFixture(t);
+  const req = rangeRequest(f);
+  const recipe = createIntegrateAcceptedCandidateRecipe();
+  assert.deepEqual(await recipe.preflight(req), { status: 'READY' });
+  const receipt = await recipe.execute(req);
+  assert.equal(receipt.status, 'PASS');
+  assert.equal(receipt.effect_state, 'CONFIRMED');
+  assert.equal(receipt.recipe_version, 'v0');
+  assert.equal(git(f.repo, ['rev-parse', 'refs/heads/tools']), f.tip);
+  assert.equal(git(f.repo, ['ls-remote', '--heads', 'origin', 'refs/heads/tools']).split(/\s+/)[0], f.base);
+  assert.deepEqual(receipt.output.accepted_range, { ...req.input.accepted_range, exact_correspondence: true });
+});
+test('accepted range publishes exact tip with explicit authority', async t => {
+  const f = rangeFixture(t);
+  const receipt = await createIntegrateAcceptedCandidateRecipe().execute(
+    rangeRequest(f, {}, { publish: true, authorization: publishAuthority }),
+  );
+  assert.equal(receipt.status, 'PASS');
+  assert.equal(git(f.repo, ['rev-parse', 'refs/heads/tools']), f.tip);
+  assert.equal(git(f.repo, ['ls-remote', '--heads', 'origin', 'refs/heads/tools']).split(/\s+/)[0], f.tip);
+  assert.equal(receipt.output.remote.exact_correspondence, true);
+});
+test('accepted range blocks target drift and non-descendant tips', async t => {
+  const f = rangeFixture(t);
+  fs.writeFileSync(path.join(f.repo, 'drift.txt'), 'drift\n');
+  git(f.repo, ['add', '.']); git(f.repo, ['commit', '-m', 'drift']);
+  assert.deepEqual(await createIntegrateAcceptedCandidateRecipe().preflight(rangeRequest(f)),
+    { status: 'BLOCKED', reason: 'TARGET_REF_DRIFT' });
+
+  git(f.repo, ['checkout', '--orphan', 'outside']);
+  git(f.repo, ['rm', '-rf', '.']);
+  fs.writeFileSync(path.join(f.repo, 'outside.txt'), 'outside\n');
+  git(f.repo, ['add', '.']); git(f.repo, ['commit', '-m', 'outside']);
+  const outside = git(f.repo, ['rev-parse', 'HEAD']);
+  const outsideTree = git(f.repo, ['rev-parse', 'HEAD^{tree}']);
+  git(f.repo, ['checkout', 'tools']);
+  const req = rangeRequest(f, {
+    accepted_tip: outside, accepted_tip_parent: outside,
+    accepted_tip_tree: outsideTree, ordered_commit_range: [outside], commit_count: 1,
+  });
+  assert.equal((await createIntegrateAcceptedCandidateRecipe().preflight(req)).status, 'BLOCKED');
+});
+test('accepted range blocks exact identity and correspondence mismatches', async t => {
+  const f = rangeFixture(t);
+  const recipe = createIntegrateAcceptedCandidateRecipe();
+  const cases = [
+    [{ ordered_commit_range: [f.commits[0], f.commits[0], f.tip] }, 'ACCEPTED_RANGE_ORDERED_COMMIT_RANGE_MISMATCH'],
+    [{ commit_count: f.commits.length + 1 }, 'ACCEPTED_RANGE_COMMIT_COUNT_MISMATCH'],
+    [{ accepted_tip_parent: f.base }, 'CANDIDATE_PARENT_MISMATCH'],
+    [{ accepted_tip_tree: 'f'.repeat(40) }, 'CANDIDATE_TREE_MISMATCH'],
+    [{ changed_paths: [...f.changedPaths, 'not-present.txt'].sort() }, 'ACCEPTED_RANGE_CHANGED_PATHS_MISMATCH'],
+  ];
+  for (const [delta, reason] of cases) {
+    assert.deepEqual(await recipe.preflight(rangeRequest(f, delta)), { status: 'BLOCKED', reason });
+  }
+  assert.equal((await recipe.preflight(rangeRequest(f, { accepted_tip: f.commits[1] }))).status, 'BLOCKED');
+});
+test('accepted range rejects hidden merges and force-shaped input', async t => {
+  const f = fixture(t);
+  git(f.repo, ['checkout', 'candidate']);
+  fs.writeFileSync(path.join(f.repo, 'linear.txt'), 'linear\n');
+  git(f.repo, ['add', '.']); git(f.repo, ['commit', '-m', 'linear']);
+  git(f.repo, ['checkout', '-b', 'side', f.candidate]);
+  fs.writeFileSync(path.join(f.repo, 'side.txt'), 'side\n');
+  git(f.repo, ['add', '.']); git(f.repo, ['commit', '-m', 'side']);
+  git(f.repo, ['checkout', 'candidate']); git(f.repo, ['merge', '--no-ff', 'side', '-m', 'merge']);
+  const tip=git(f.repo,['rev-parse','HEAD']), tipParent=git(f.repo,['rev-parse','HEAD^1']), tipTree=git(f.repo,['rev-parse','HEAD^{tree}']);
+  const commits=git(f.repo,['rev-list','--reverse','--topo-order',`${f.base}..${tip}`]).split(/\r?\n/).filter(Boolean);
+  const changedPaths=git(f.repo,['diff','--name-only','--no-renames',f.base,tip,'--']).split(/\r?\n/).filter(Boolean).sort();
+  git(f.repo, ['checkout', 'tools']);
+  const range = { ...f, tip, tipParent, tipTree, commits, changedPaths };
+  const result = await createIntegrateAcceptedCandidateRecipe().preflight(rangeRequest(range));
+  assert.equal(result.status, 'BLOCKED');
+  assert.ok(['ACCEPTED_RANGE_NON_LINEAR','ACCEPTED_RANGE_HIDDEN_MERGE_OR_NON_LINEAR'].includes(result.reason));
+  assert.throws(() => IntegrateAcceptedCandidateInput.parse({ ...rangeRequest(range).input, force: true }));
+});
+
+test('exact lease rejects remote drift after re-preflight before dispatch', async t => {
+  const f = fixture(t);
+  git(f.repo, ['checkout', 'candidate']);
+  fs.writeFileSync(path.join(f.repo, 'race-tip.txt'), 'race-tip\n');
+  git(f.repo, ['add', '.']);
+  git(f.repo, ['commit', '-m', 'race-tip']);
+  const tip = git(f.repo, ['rev-parse', 'HEAD']);
+  const tipTree = git(f.repo, ['rev-parse', 'HEAD^{tree}']);
+  const changedPaths = git(f.repo, ['diff', '--name-only', '--no-renames', f.base, tip, '--']).split(/\r?\n/).filter(Boolean).sort();
+  git(f.repo, ['checkout', 'tools']);
+
+  const realGit = createGitCliAdapter();
+  const racingGit = {
+    ...realGit,
+    fastForwardLocal(repositoryPath, targetRef, candidateCommit, expectedTargetCommit) {
+      const result = realGit.fastForwardLocal(repositoryPath, targetRef, candidateCommit, expectedTargetCommit);
+      assert.equal(result.exit_code, 0);
+      git(f.repo, ['push', 'origin', f.candidate + ':refs/heads/tools']);
+      return result;
+    },
+  };
+
+  const req = request(f, { publish: true, authorization: publishAuthority });
+  req.input = {
+    target_ref: 'refs/heads/tools',
+    accepted_range: {
+      integration_range_base: f.base,
+      accepted_tip: tip,
+      accepted_tip_parent: f.candidate,
+      accepted_tip_tree: tipTree,
+      ordered_commit_range: [f.candidate, tip],
+      commit_count: 2,
+      changed_paths: changedPaths,
+    },
+    remote: { remote: 'origin', target_ref: 'refs/heads/tools', expected_commit: f.base },
+  };
+
+  const recipe = createIntegrateAcceptedCandidateRecipe({ git: racingGit });
+  assert.deepEqual(await recipe.preflight(req), { status: 'READY' });
+  const receipt = await recipe.execute(req);
+  assert.notEqual(receipt.status, 'PASS');
+  assert.notDeepEqual([receipt.status, receipt.effect_state], ['PASS', 'CONFIRMED']);
+  assert.match(receipt.reason, /^REMOTE_PUBLICATION_POSTCONDITION_MISMATCH:/);
+  assert.equal(receipt.output.push_exit_code, 1);
+  assert.equal(receipt.output.remote.exact_correspondence, false);
+  assert.equal(git(f.repo, ['ls-remote', '--heads', 'origin', 'refs/heads/tools']).split(/\s+/)[0], f.candidate);
 });

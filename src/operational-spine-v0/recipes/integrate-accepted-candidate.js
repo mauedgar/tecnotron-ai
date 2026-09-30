@@ -17,7 +17,15 @@ const RemotePublicationInput = z.object({
   expected_commit: GitOid,
 }).strict();
 
-const IntegrateAcceptedCandidateInput = z.object({
+const RepoRelativePath = z.string().min(1).refine((value) => {
+  const segments = value.split('/');
+  return !value.startsWith('/') &&
+    !value.includes('\\') &&
+    !/[\r\n\0]/.test(value) &&
+    segments.every((segment) => segment !== '' && segment !== '.' && segment !== '..');
+}, 'changed path must be normalized repository-relative POSIX path');
+
+const DirectChildInput = z.object({
   target_ref: BranchRef,
   expected_target_commit: GitOid,
   candidate_commit: GitOid,
@@ -25,6 +33,24 @@ const IntegrateAcceptedCandidateInput = z.object({
   candidate_tree: GitOid.optional(),
   remote: RemotePublicationInput.optional(),
 }).strict();
+
+const AcceptedFastForwardRange = z.object({
+  integration_range_base: GitOid,
+  accepted_tip: GitOid,
+  accepted_tip_parent: GitOid,
+  accepted_tip_tree: GitOid,
+  ordered_commit_range: z.array(GitOid).min(1),
+  commit_count: z.number().int().positive(),
+  changed_paths: z.array(RepoRelativePath),
+}).strict();
+
+const AcceptedRangeInput = z.object({
+  target_ref: BranchRef,
+  accepted_range: AcceptedFastForwardRange,
+  remote: RemotePublicationInput.optional(),
+}).strict();
+
+const IntegrateAcceptedCandidateInput = z.union([DirectChildInput, AcceptedRangeInput]);
 
 function createGitCliAdapter({ command = 'git' } = {}) {
   function run(repositoryPath, args) {
@@ -70,6 +96,14 @@ function createGitCliAdapter({ command = 'git' } = {}) {
       return run(repositoryPath, ['merge-base', '--is-ancestor', ancestor, descendant]);
     },
 
+    commitRange(repositoryPath, baseCommit, tipCommit) {
+      return run(repositoryPath, ['rev-list', '--reverse', '--topo-order', baseCommit + '..' + tipCommit]);
+    },
+
+    changedPaths(repositoryPath, baseCommit, tipCommit) {
+      return run(repositoryPath, ['diff', '--name-only', '--no-renames', '-z', baseCommit, tipCommit, '--']);
+    },
+
     rewriteRules(repositoryPath) {
       return run(repositoryPath, ['config', '--get-regexp', '^url\\..*\\.(insteadOf|pushInsteadOf)$']);
     },
@@ -106,7 +140,7 @@ function createGitCliAdapter({ command = 'git' } = {}) {
       ]);
     },
 
-    pushExactRef(repositoryPath, remote, candidateCommit, targetRef) {
+    pushExactRef(repositoryPath, remote, candidateCommit, targetRef, expectedOldOid) {
       return run(repositoryPath, [
         '-c', 'http.followRedirects=false',
         'push',
@@ -114,6 +148,7 @@ function createGitCliAdapter({ command = 'git' } = {}) {
         '--no-follow-tags',
         '--no-recurse-submodules',
         '--no-verify',
+        `--force-with-lease=${targetRef}:${expectedOldOid}`,
         remote,
         `${candidateCommit}:${targetRef}`,
       ]);
@@ -143,12 +178,58 @@ function authorizationCovers(authorization, effect, scope) {
     constraint.effect === effect && constraint.scope === scope);
 }
 
-function integrationEvidence(input, {
+function normalizeIntegrationInput(rawInput) {
+  if (!rawInput.accepted_range) return rawInput;
+  return {
+    target_ref: rawInput.target_ref,
+    expected_target_commit: rawInput.accepted_range.integration_range_base,
+    candidate_commit: rawInput.accepted_range.accepted_tip,
+    candidate_parent: rawInput.accepted_range.accepted_tip_parent,
+    candidate_tree: rawInput.accepted_range.accepted_tip_tree,
+    accepted_range: rawInput.accepted_range,
+    remote: rawInput.remote,
+  };
+}
+
+function sameList(left, right) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function verifyAcceptedRange(git, repositoryPath, input) {
+  if (!input.accepted_range) return { status: 'READY' };
+  const declared = input.accepted_range;
+  if (declared.commit_count !== declared.ordered_commit_range.length) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_COMMIT_COUNT_MISMATCH' };
+  if (new Set(declared.ordered_commit_range).size !== declared.ordered_commit_range.length) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_ORDERED_COMMIT_RANGE_MISMATCH' };
+  if (declared.ordered_commit_range.at(-1) !== input.candidate_commit) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_ORDERED_COMMIT_RANGE_MISMATCH' };
+  const canonicalPaths = [...new Set(declared.changed_paths)].sort();
+  if (!sameList(declared.changed_paths, canonicalPaths)) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_CHANGED_PATHS_MISMATCH' };
+  const range = git.commitRange(repositoryPath, input.expected_target_commit, input.candidate_commit);
+  if (range.exit_code !== 0 || range.error) return { status: 'UNAVAILABLE', reason: 'ACCEPTED_RANGE_COMMIT_LIST_UNAVAILABLE' };
+  const observed = (range.stdout || '').trim().split(/\r?\n/).filter(Boolean);
+  if (!sameList(observed, declared.ordered_commit_range)) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_ORDERED_COMMIT_RANGE_MISMATCH' };
+  if (observed.length !== declared.commit_count) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_COMMIT_COUNT_MISMATCH' };
+  let expectedParent = input.expected_target_commit;
+  for (const commit of observed) {
+    const firstParent = git.revParse(repositoryPath, commit + '^1');
+    if (firstParent.exit_code !== 0 || exactLine(firstParent) !== expectedParent) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_NON_LINEAR' };
+    const secondParent = git.revParse(repositoryPath, commit + '^2');
+    if (secondParent.exit_code === 0) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_HIDDEN_MERGE_OR_NON_LINEAR' };
+    if (secondParent.error) return { status: 'UNAVAILABLE', reason: 'ACCEPTED_RANGE_PARENT_AUDIT_UNAVAILABLE' };
+    expectedParent = commit;
+  }
+  const paths = git.changedPaths(repositoryPath, input.expected_target_commit, input.candidate_commit);
+  if (paths.exit_code !== 0 || paths.error) return { status: 'UNAVAILABLE', reason: 'ACCEPTED_RANGE_CHANGED_PATHS_UNAVAILABLE' };
+  const observedPaths = [...new Set((paths.stdout || '').split('\0').filter(Boolean))].sort();
+  if (!sameList(observedPaths, declared.changed_paths)) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_CHANGED_PATHS_MISMATCH' };
+  return { status: 'READY' };
+}
+function integrationEvidence(rawInput, {
   publicationAuthorized,
   publicationPerformed,
   remoteAfter = null,
 }) {
-  return {
+  const input = normalizeIntegrationInput(rawInput);
+  const output = {
     candidate: {
       commit: input.candidate_commit,
       parent: input.candidate_parent,
@@ -170,6 +251,8 @@ function integrationEvidence(input, {
       exact_correspondence: input.remote ? remoteAfter === input.candidate_commit : null,
     },
   };
+  if (input.accepted_range) output.accepted_range = { ...input.accepted_range, exact_correspondence: true };
+  return output;
 }
 
 function receipt(request, {
@@ -198,7 +281,7 @@ function receipt(request, {
 
 
 function effectsForInput(rawInput) {
-  const input = IntegrateAcceptedCandidateInput.parse(rawInput);
+  const input = normalizeIntegrationInput(IntegrateAcceptedCandidateInput.parse(rawInput));
   const effects = [
     { effect: 'git.integration', scope: 'exact target ref only' },
   ];
@@ -215,9 +298,7 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
     provides: ['git.integration', 'git.remote.write'],
     required_inputs: [
       'target_ref',
-      'expected_target_commit',
-      'candidate_commit',
-      'candidate_parent',
+      'direct-child candidate identity or accepted_range',
     ],
     preconditions: [
       'repository path exists',
@@ -225,9 +306,10 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       'Git URL rewrite configuration is absent',
       'target ref exactly matches expected target commit',
       'candidate commit identity is exact',
-      'candidate parent exactly matches target baseline',
-      'candidate tree identity matches when supplied',
+      'direct-child candidate parent exactly matches target baseline',
+      'candidate tip parent and tree identities are exact',
       'candidate is a fast-forward descendant of target',
+      'accepted range commit order, count, linearity, and changed paths are exact when supplied',
       'remote publication has explicit effect authority when requested',
       'remote target exactly matches expected remote commit when publication is requested',
     ],
@@ -235,14 +317,15 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       { effect: 'git.integration', scope: 'exact target ref only' },
     ],
     postconditions: [
-      'local target ref exactly equals candidate commit',
-      'remote target ref exactly equals candidate commit when publication is requested',
+      'local target ref exactly equals accepted tip',
+      'accepted range correspondence remains exact when supplied',
+      'remote target ref exactly equals accepted tip when publication is requested',
       'worktree remains clean',
     ],
   });
 
   async function preflight(request) {
-    const input = IntegrateAcceptedCandidateInput.parse(request.input);
+    const input = normalizeIntegrationInput(IntegrateAcceptedCandidateInput.parse(request.input));
     const repositoryPath = request.context.worktree?.location || request.context.repository.location;
 
     if (!fs.existsSync(repositoryPath)) {
@@ -260,7 +343,7 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       return { status: 'BLOCKED', reason: 'EXECUTION_CONTEXT_GIT_MISMATCH' };
     }
 
-    if (input.candidate_parent !== input.expected_target_commit) {
+    if (!input.accepted_range && input.candidate_parent !== input.expected_target_commit) {
       return { status: 'BLOCKED', reason: 'CANDIDATE_PARENT_NOT_TARGET_BASELINE' };
     }
 
@@ -326,6 +409,9 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       return { status: 'BLOCKED', reason: 'NON_FAST_FORWARD_CANDIDATE' };
     }
 
+    const acceptedRange = verifyAcceptedRange(git, repositoryPath, input);
+    if (acceptedRange.status !== 'READY') return acceptedRange;
+
     if (input.remote) {
       const remote = git.lsRemote(repositoryPath, input.remote.remote, input.remote.target_ref);
       if (remote.exit_code !== 0) {
@@ -342,7 +428,7 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
   }
 
   async function execute(request) {
-    const input = IntegrateAcceptedCandidateInput.parse(request.input);
+    const input = normalizeIntegrationInput(IntegrateAcceptedCandidateInput.parse(request.input));
     const repositoryPath = request.context.worktree?.location || request.context.repository.location;
     const publicationAuthorized = input.remote
       ? authorizationCovers(request.authorization, 'git.remote.write', 'exact remote target ref only')
@@ -387,6 +473,12 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       { kind: 'GIT_OBJECT', id: 'integrated-target', git_oid: input.candidate_commit },
     ];
 
+    if (input.accepted_range) {
+      const rangePostcondition = verifyAcceptedRange(git, repositoryPath, input);
+      if (rangePostcondition.status === 'UNAVAILABLE') return receipt(request, { status: 'UNKNOWN', effectState: 'UNKNOWN', reason: 'LOCAL_ACCEPTED_RANGE_POSTCONDITION_UNAVAILABLE:' + rangePostcondition.reason, resultRefs: localResultRefs });
+      if (rangePostcondition.status !== 'READY') return receipt(request, { status: 'FAIL', effectState: 'CONFIRMED', reason: 'LOCAL_ACCEPTED_RANGE_POSTCONDITION_MISMATCH:' + rangePostcondition.reason, resultRefs: localResultRefs });
+    }
+
     const cleanAfterLocal = git.status(repositoryPath);
     if (cleanAfterLocal.exit_code !== 0) {
       return receipt(request, {
@@ -422,6 +514,7 @@ function createIntegrateAcceptedCandidateRecipe({ git = createGitCliAdapter() } 
       input.remote.remote,
       input.candidate_commit,
       input.remote.target_ref,
+      input.remote.expected_commit,
     );
 
     const remoteObserved = git.lsRemote(
