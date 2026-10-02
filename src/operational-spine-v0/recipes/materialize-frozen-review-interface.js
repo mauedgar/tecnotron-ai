@@ -19,6 +19,13 @@ const PackagePath = z.string().min(1).max(100).regex(/^[A-Za-z0-9][A-Za-z0-9._/-
   const normalized = path.posix.normalize(value);
   return value === normalized && !path.posix.isAbsolute(value) && !value.startsWith('../');
 }, 'package_path must be a normalized relative POSIX path of at most 100 bytes');
+const RepositoryPath = z.string().min(1).max(4096).regex(/^[A-Za-z0-9.][A-Za-z0-9._/-]*$/).refine((value) => {
+  const normalized = path.posix.normalize(value);
+  return value !== '.' && value !== '..'
+    && value === normalized
+    && !path.posix.isAbsolute(value)
+    && !value.startsWith('../');
+}, 'repository_path must be a normalized relative POSIX path');
 const AbsolutePath = NonEmpty.refine(
   (value) => path.isAbsolute(value) && path.resolve(value) === value,
   'path must be absolute and normalized',
@@ -37,7 +44,7 @@ const GitBlobArtifact = z.object({
   id: NonEmpty,
   kind: z.literal('GIT_BLOB'),
   revision: GitOid,
-  repository_path: PackagePath,
+  repository_path: RepositoryPath,
   package_path: PackagePath,
   git_oid: GitOid,
 }).strict();
@@ -60,7 +67,7 @@ const ExactSubject = z.object({
   parent: GitOid,
   commit: GitOid,
   tree: GitOid,
-  changed_paths: z.array(PackagePath),
+  changed_paths: z.array(RepositoryPath),
 }).strict();
 
 const AuthorityAndScope = z.object({
@@ -567,6 +574,8 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
 module.exports = {
   ArtifactSpecification,
   MaterializeFrozenReviewInterfaceInput,
+  PackagePath,
+  RepositoryPath,
   createMaterializeFrozenReviewInterfaceRecipe,
   createReviewGitAdapter,
   createTar,

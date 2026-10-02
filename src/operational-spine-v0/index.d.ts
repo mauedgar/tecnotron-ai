@@ -28,6 +28,8 @@ export function configuredComposeIdentity(...args: any[]): any;
 export function databaseIdentityFromUrl(...args: any[]): any;
 export const ArtifactSpecification: any;
 export const MaterializeFrozenReviewInterfaceInput: any;
+export const PackagePath: any;
+export const RepositoryPath: any;
 export function createMaterializeFrozenReviewInterfaceRecipe(...args: any[]): any;
 export function createReviewGitAdapter(...args: any[]): any;
 export function createTar(...args: any[]): any;

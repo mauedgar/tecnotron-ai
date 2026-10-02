@@ -9,6 +9,8 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const {
   MaterializeFrozenReviewInterfaceInput,
+  PackagePath,
+  RepositoryPath,
   createMaterializeFrozenReviewInterfaceRecipe,
   createReviewGitAdapter,
   createTar,
@@ -37,7 +39,7 @@ function git(cwd, args) {
   return result.stdout.trim();
 }
 
-function fixture(t) {
+function fixture(t, { candidatePath = 'candidate.txt' } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tecnotron-review-interface-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const repo = path.join(root, 'repo');
@@ -55,12 +57,12 @@ function fixture(t) {
   git(repo, ['commit', '-m', 'base']);
   const parent = git(repo, ['rev-parse', 'HEAD']);
   git(repo, ['checkout', '-b', 'candidate']);
-  fs.writeFileSync(path.join(repo, 'candidate.txt'), 'candidate\n');
+  fs.writeFileSync(path.join(repo, candidatePath), 'candidate\n');
   git(repo, ['add', '.']);
   git(repo, ['commit', '-m', 'candidate']);
   const commit = git(repo, ['rev-parse', 'HEAD']);
   const tree = git(repo, ['rev-parse', 'HEAD^{tree}']);
-  const blob = git(repo, ['rev-parse', 'HEAD:candidate.txt']);
+  const blob = git(repo, ['rev-parse', `HEAD:${candidatePath}`]);
 
   const reviewRequest = path.join(evidence, 'review-request.md');
   const validation = path.join(evidence, 'validation.json');
@@ -76,6 +78,7 @@ function fixture(t) {
     commit,
     tree,
     blob,
+    candidatePath,
   };
 }
 
@@ -104,7 +107,7 @@ function request(f, {
         parent: f.parent,
         commit: f.commit,
         tree: f.tree,
-        changed_paths: ['candidate.txt'],
+        changed_paths: [f.candidatePath],
       },
       review_request: {
         id: 'review-request',
@@ -126,7 +129,7 @@ function request(f, {
           id: 'candidate-source',
           kind: 'GIT_BLOB',
           revision: f.commit,
-          repository_path: 'candidate.txt',
+          repository_path: f.candidatePath,
           package_path: 'candidate/candidate.txt',
           git_oid: f.blob,
         },
@@ -192,6 +195,40 @@ test('caller must supply the complete exact semantic review interface', t => {
   }));
 });
 
+test('RepositoryPath accepts safe dot-prefixed Git paths and rejects traversal or non-POSIX paths', () => {
+  const accepted = [
+    '.gitattributes',
+    '.gitignore',
+    '.github/workflows/test.yml',
+    '.opencode/agents/reviewer.md',
+    'src/example.js',
+  ];
+  const rejected = ['.', '..', '../foo', './foo', 'foo/../bar', '/foo', 'foo\\bar'];
+
+  for (const value of accepted) assert.equal(RepositoryPath.safeParse(value).success, true, value);
+  for (const value of rejected) assert.equal(RepositoryPath.safeParse(value).success, false, value);
+});
+
+test('PackagePath preserves the existing review-package member boundary', () => {
+  const accepted = ['candidate/file.txt', 'evidence/validation.json', 'review-instance.json'];
+  const rejected = [
+    '.gitattributes',
+    '.gitignore',
+    '.github/workflows/test.yml',
+    '.opencode/agents/reviewer.md',
+    '.',
+    '..',
+    '../foo',
+    './foo',
+    'foo/../bar',
+    '/foo',
+    'foo\\bar',
+  ];
+
+  for (const value of accepted) assert.equal(PackagePath.safeParse(value).success, true, value);
+  for (const value of rejected) assert.equal(PackagePath.safeParse(value).success, false, value);
+});
+
 test('materializes exact bytes, verifies archive and manifest, and preserves candidate identity', async t => {
   const f = fixture(t);
   const recipe = createMaterializeFrozenReviewInterfaceRecipe();
@@ -220,6 +257,22 @@ test('materializes exact bytes, verifies archive and manifest, and preserves can
   }
   assert.equal(Object.hasOwn(receipt.output, 'verdict'), false);
   assert.equal(Object.hasOwn(receipt.output, 'developer_acceptance'), false);
+});
+
+test('preflights and materializes an exact candidate changing only a dot-prefixed repository path', async t => {
+  const f = fixture(t, { candidatePath: '.gitattributes' });
+  const recipe = createMaterializeFrozenReviewInterfaceRecipe();
+  const req = request(f, { interfaceId: 'REVIEW-DOTFILE-001' });
+
+  assert.deepEqual(req.input.review_instance.exact_subject.changed_paths, ['.gitattributes']);
+  assert.deepEqual(await recipe.preflight(req), { status: 'READY' });
+  const receipt = await recipe.execute(req);
+
+  assert.equal(receipt.status, 'PASS');
+  assert.equal(receipt.effect_state, 'CONFIRMED');
+  assert.deepEqual(receipt.output.candidate_correspondence.changed_paths, ['.gitattributes']);
+  assert.equal(readTar(fs.readFileSync(receipt.output.archive_path)).get('candidate/candidate.txt').toString('utf8'), 'candidate\n');
+  assert.equal(git(f.repo, ['status', '--porcelain=v1', '--untracked-files=all']), '');
 });
 
 test('candidate identity, changed paths, state, and context mismatches fail closed before effect', async t => {
