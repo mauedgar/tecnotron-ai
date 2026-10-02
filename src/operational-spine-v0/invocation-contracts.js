@@ -33,6 +33,7 @@ exports.GitExecutionQualificationRequest = zod_1.z.object({
 const GitQualificationRepositoryEvidence = zod_1.z.object({
     identity: NonEmpty,
     location: CrossPlatformAbsolutePath,
+    observed_worktree: CrossPlatformAbsolutePath.nullable(),
     observed_ref: BranchRef.nullable(),
     observed_commit: GitOid.nullable(),
 }).strict();
@@ -41,6 +42,8 @@ const GitQualificationRemoteEvidence = zod_1.z.object({
     target_ref: BranchRef,
     observation_status: zod_1.z.enum(['NOT_ATTEMPTED', 'READY', 'BLOCKED', 'UNAVAILABLE', 'UNKNOWN']),
     observed_commit: GitOid.nullable(),
+    transport_class: zod_1.z.enum(['LOCAL_PATH', 'HTTP', 'HTTPS', 'SSH', 'GIT', 'UNKNOWN']).nullable(),
+    interaction_policy: zod_1.z.literal('BOUNDED_NONINTERACTIVE_V0'),
 }).strict();
 const GitQualificationSurfaceEvidence = zod_1.z.object({
     id: NonEmpty,

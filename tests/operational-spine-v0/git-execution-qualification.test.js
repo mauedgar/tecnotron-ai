@@ -6,7 +6,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const {
   FilesystemStateStore,
   create,
@@ -14,6 +14,7 @@ const {
   inspect,
 } = require('../../src/state-kernel-v0');
 const {
+  boundedGitEnvironment,
   createGitCliAdapter,
   qualifyGitExecutionSurface,
   qualificationSpecForRecipe,
@@ -80,11 +81,16 @@ function ok(stdout) {
   };
 }
 
-function localFakeGit(commit, remoteResult) {
+function localFakeGit(commit, remoteResult, {
+  worktree = '/fixture/repository',
+  remoteUrl = 'https://example.invalid/repository.git',
+} = {}) {
   return {
     run(repositoryPath, args) {
       if (args.includes('--is-inside-work-tree')) return ok('true\n');
+      if (args.includes('--show-toplevel')) return ok(worktree + '\n');
       if (args.includes('symbolic-ref')) return ok('refs/heads/main\n');
+      if (args[0] === 'remote' && args[1] === 'get-url') return ok(remoteUrl + '\n');
       if (args.includes('rev-parse')) return ok(commit + '\n');
       if (args.includes('ls-remote')) return remoteResult;
       throw new Error('unexpected command: ' + args.join(' '));
@@ -103,6 +109,64 @@ function spawnResult(stdout = '', overrides = {}) {
   };
 }
 
+async function startCredentialServer(t, logFile) {
+  const script = [
+    "const fs=require('node:fs');",
+    "const http=require('node:http');",
+    "const log=process.env.REQUEST_LOG;",
+    "const server=http.createServer((req,res)=>{",
+    "fs.appendFileSync(log,req.method+' '+req.url+'\\n');",
+    "res.statusCode=401;",
+    "res.setHeader('WWW-Authenticate','Basic realm=\\\"qualification\\\"');",
+    "res.end('authentication required');",
+    "});",
+    "server.listen(0,'127.0.0.1',()=>{",
+    "process.stdout.write(String(server.address().port)+'\\n');",
+    "});",
+  ].join('');
+
+  const child = spawn(process.execPath, ['-e', script], {
+    env: { ...process.env, REQUEST_LOG: logFile },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  t.after(() => {
+    if (!child.killed) child.kill();
+  });
+
+  return await new Promise((resolve, reject) => {
+    let stdout = '';
+    let stderr = '';
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error('credential fixture server did not become ready: ' + stderr));
+    }, 3000);
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', chunk => {
+      stdout += chunk;
+      const newline = stdout.indexOf('\n');
+      if (newline === -1) return;
+      clearTimeout(timer);
+      const port = Number(stdout.slice(0, newline).trim());
+      if (!Number.isInteger(port) || port <= 0) {
+        reject(new Error('invalid credential fixture port: ' + stdout));
+        return;
+      }
+      resolve({
+        child,
+        url: `http://user@127.0.0.1:${port}/repository.git`,
+      });
+    });
+    child.once('exit', code => {
+      if (!stdout.includes('\n')) {
+        clearTimeout(timer);
+        reject(new Error('credential fixture server exited early: ' + code + ' ' + stderr));
+      }
+    });
+  });
+}
+
 test('competent exact repository/ref qualifies READY and local Git state remains unchanged', t => {
   const fx = fixture(t);
   const before = {
@@ -114,6 +178,7 @@ test('competent exact repository/ref qualifies READY and local Git state remains
   const result = qualifyGitExecutionSurface(requestFor(fx));
 
   assert.equal(result.status, 'READY');
+  assert.equal(path.resolve(result.evidence.repository.observed_worktree), path.resolve(fx.repository));
   assert.equal(result.evidence.repository.observed_ref, fx.expected_ref);
   assert.equal(result.evidence.repository.observed_commit, fx.expected_commit);
   assert.equal(result.evidence.surface.qualification_method, 'DIRECT');
@@ -129,6 +194,108 @@ test('competent exact repository/ref qualifies READY and local Git state remains
     status: git(fx.repository, ['status', '--porcelain=v1', '--untracked-files=all']),
   };
   assert.deepEqual(after, before);
+});
+
+test('effective Git worktree must exactly correspond to the declared repository location', t => {
+  const fx = fixture(t);
+  const nested = path.join(fx.repository, 'nested');
+  fs.mkdirSync(nested);
+
+  const result = qualifyGitExecutionSurface(requestFor(fx, {
+    repository: {
+      identity: 'fixture/nested',
+      location: nested,
+    },
+  }));
+
+  assert.equal(result.status, 'BLOCKED');
+  assert.equal(result.reason, 'EFFECTIVE_WORKTREE_MISMATCH');
+  assert.equal(path.resolve(result.evidence.repository.observed_worktree), path.resolve(fx.repository));
+});
+
+test('valid linked worktree qualifies by its Git-observed top level without assuming .git is a directory', t => {
+  const fx = fixture(t);
+  const linked = path.join(fx.root, 'linked-worktree');
+  git(fx.repository, ['worktree', 'add', '-b', 'linked', linked]);
+  const expectedCommit = git(linked, ['rev-parse', 'HEAD']);
+
+  assert.equal(fs.statSync(path.join(linked, '.git')).isFile(), true);
+
+  const result = qualifyGitExecutionSurface({
+    schema_version: 'tecnotron-git-execution-qualification-request/v0',
+    surface_id: 'fixture-surface',
+    repository: { identity: 'fixture/linked', location: linked },
+    expected_ref: 'refs/heads/linked',
+    expected_commit: expectedCommit,
+    remote_timeout_ms: 1000,
+  });
+
+  assert.equal(result.status, 'READY');
+  assert.equal(path.resolve(result.evidence.repository.observed_worktree), path.resolve(linked));
+});
+
+test('real Git adapter neutralizes contaminated repository-selection and config environment', t => {
+  const fx = fixture(t);
+  const other = path.join(fx.root, 'other-repository');
+  fs.mkdirSync(other);
+  git(other, ['init']);
+  git(other, ['config', 'user.email', 'other@example.invalid']);
+  git(other, ['config', 'user.name', 'Other Fixture']);
+  fs.writeFileSync(path.join(other, 'other.txt'), 'other\n');
+  git(other, ['add', 'other.txt']);
+  git(other, ['commit', '-m', 'other']);
+  git(other, ['branch', '-M', 'main']);
+
+  const contaminated = {
+    ...process.env,
+    GIT_DIR: path.join(other, '.git'),
+    GIT_WORK_TREE: other,
+    GIT_COMMON_DIR: path.join(other, '.git'),
+    GIT_INDEX_FILE: path.join(other, '.git', 'index'),
+    GIT_OBJECT_DIRECTORY: path.join(other, '.git', 'objects'),
+    GIT_ALTERNATE_OBJECT_DIRECTORIES: path.join(other, '.git', 'objects'),
+    GIT_CONFIG_COUNT: '1',
+    GIT_CONFIG_KEY_0: 'core.bare',
+    GIT_CONFIG_VALUE_0: 'true',
+    GIT_CONFIG_SYSTEM: path.join(fx.root, 'system.gitconfig'),
+    GIT_CONFIG_GLOBAL: path.join(fx.root, 'global.gitconfig'),
+    GIT_CONFIG_NOSYSTEM: '0',
+  };
+
+  const baseline = spawnSync('git', ['rev-parse', '--show-toplevel'], {
+    cwd: fx.repository,
+    encoding: 'utf8',
+    shell: false,
+    windowsHide: true,
+    env: contaminated,
+  });
+  assert.equal(baseline.status, 0, baseline.stderr || baseline.error?.message);
+  assert.equal(path.resolve((baseline.stdout || '').trim()), path.resolve(other));
+
+  const bounded = boundedGitEnvironment(contaminated);
+  for (const key of [
+    'GIT_DIR',
+    'GIT_WORK_TREE',
+    'GIT_COMMON_DIR',
+    'GIT_INDEX_FILE',
+    'GIT_OBJECT_DIRECTORY',
+    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+    'GIT_CONFIG_COUNT',
+    'GIT_CONFIG_KEY_0',
+    'GIT_CONFIG_VALUE_0',
+    'GIT_CONFIG_SYSTEM',
+  ]) {
+    assert.equal(Object.hasOwn(bounded, key), false, key);
+  }
+  assert.equal(bounded.GIT_CONFIG_NOSYSTEM, '1');
+  assert.equal(bounded.GIT_CONFIG_GLOBAL, process.platform === 'win32' ? 'NUL' : '/dev/null');
+
+  const result = qualifyGitExecutionSurface(requestFor(fx), {
+    git: createGitCliAdapter({ env: contaminated }),
+  });
+  assert.equal(result.status, 'READY');
+  assert.equal(path.resolve(result.evidence.repository.observed_worktree), path.resolve(fx.repository));
+  assert.equal(result.evidence.repository.observed_commit, fx.expected_commit);
 });
 
 test('wrong expected ref or commit fails closed', t => {
@@ -177,6 +344,7 @@ test('dubious ownership recovers only with process-local safe.directory adaptati
         };
       }
       if (args.includes('--is-inside-work-tree')) return ok('true\n');
+      if (args.includes('--show-toplevel')) return ok('/fixture/repository\n');
       if (args.includes('symbolic-ref')) return ok('refs/heads/main\n');
       if (args.includes('rev-parse')) return ok(commit + '\n');
       throw new Error('unexpected command');
@@ -226,9 +394,11 @@ test('Git adapter enforces noninteractive bounded remote observation and has no 
   const fakeSpawn = (command, args, options) => {
     calls.push({ command, args, options });
     if (args.includes('--is-inside-work-tree')) return spawnResult('true\n');
+    if (args.includes('--show-toplevel')) return spawnResult('/fixture/repository\n');
     if (args.includes('symbolic-ref')) return spawnResult('refs/heads/main\n');
+    if (args[0] === 'remote' && args[1] === 'get-url') return spawnResult('https://example.invalid/repository.git\n');
     if (args.includes('rev-parse')) return spawnResult(commit + '\n');
-    if (args.includes('ls-remote')) return spawnResult(`${commit}\trefs/heads/main\n`);
+    if (args.includes('ls-remote')) return spawnResult(commit + '\trefs/heads/main\n');
     throw new Error('unexpected command');
   };
   const adapter = createGitCliAdapter({
@@ -254,8 +424,97 @@ test('Git adapter enforces noninteractive bounded remote observation and has no 
   assert.equal(remoteCall.options.timeout, 37);
   assert.equal(remoteCall.options.env.GIT_TERMINAL_PROMPT, '0');
   assert.equal(remoteCall.options.env.GCM_INTERACTIVE, 'Never');
+  assert.equal(remoteCall.options.env.GIT_CONFIG_NOSYSTEM, '1');
+  assert.equal(result.evidence.remote.transport_class, 'HTTPS');
+  assert.equal(result.evidence.remote.interaction_policy, 'BOUNDED_NONINTERACTIVE_V0');
+  assert.equal(remoteCall.args.includes('credential.helper='), true);
+  assert.equal(remoteCall.args.includes('core.askPass='), true);
   assert.equal(calls.some((call) => call.args.includes('push')), false);
   assert.equal(calls.some((call) => call.args.includes('--global')), false);
+});
+
+
+test('unsupported SSH transport fails closed before remote observation', t => {
+  const fx = fixture(t);
+  git(fx.repository, ['remote', 'add', 'ssh-origin', 'git@example.invalid:fixture/repository.git']);
+
+  const result = qualifyGitExecutionSurface(requestFor(fx, {
+    remote: {
+      name: 'ssh-origin',
+      target_ref: 'refs/heads/main',
+      expected_commit: fx.expected_commit,
+    },
+  }));
+
+  assert.equal(result.status, 'BLOCKED');
+  assert.equal(result.reason, 'UNSUPPORTED_REMOTE_TRANSPORT');
+  assert.equal(result.evidence.remote.transport_class, 'SSH');
+  assert.equal(result.evidence.remote.observation_status, 'BLOCKED');
+});
+
+test('real Git adapter disables askpass and injected credential helpers against an HTTP auth challenge', {
+  skip: process.platform === 'win32',
+}, async t => {
+  const fx = fixture(t);
+  const logFile = path.join(fx.root, 'http-requests.log');
+  const marker = path.join(fx.root, 'askpass-invoked.log');
+  const askpass = path.join(fx.root, 'askpass.sh');
+  fs.writeFileSync(askpass, `#!/bin/sh\nprintf 'invoked\\n' >> "${marker}"\nprintf 'dummy\\n'\n`, { mode: 0o755 });
+
+  const server = await startCredentialServer(t, logFile);
+  const credentialProbe = spawnSync('git', ['credential', 'fill'], {
+    cwd: fx.repository,
+    encoding: 'utf8',
+    shell: false,
+    input: `protocol=http\nhost=${new URL(server.url).host}\nusername=user\n\n`,
+    env: {
+      ...process.env,
+      GIT_TERMINAL_PROMPT: '1',
+      GIT_ASKPASS: askpass,
+    },
+    timeout: 1000,
+  });
+  assert.equal(credentialProbe.status, 0, credentialProbe.stderr || credentialProbe.error?.message);
+  assert.equal(
+    fs.existsSync(marker),
+    true,
+    'real Git credential resolution should invoke inherited askpass without the qualification boundary',
+  );
+  fs.rmSync(marker, { force: true });
+
+  git(fx.repository, ['remote', 'add', 'credential-origin', server.url]);
+  const contaminated = {
+    ...process.env,
+    GIT_TERMINAL_PROMPT: '1',
+    GIT_ASKPASS: askpass,
+    SSH_ASKPASS: askpass,
+    SSH_ASKPASS_REQUIRE: 'force',
+    GIT_CONFIG_COUNT: '1',
+    GIT_CONFIG_KEY_0: 'credential.helper',
+    GIT_CONFIG_VALUE_0: `!${askpass}`,
+  };
+  const started = Date.now();
+  const result = qualifyGitExecutionSurface(requestFor(fx, {
+    remote: {
+      name: 'credential-origin',
+      target_ref: 'refs/heads/main',
+      expected_commit: fx.expected_commit,
+    },
+    remote_timeout_ms: 500,
+  }), {
+    git: createGitCliAdapter({ env: contaminated }),
+  });
+  const elapsed = Date.now() - started;
+
+  assert.equal(result.status, 'UNAVAILABLE');
+  assert.equal(result.reason, 'REMOTE_OBSERVATION_UNAVAILABLE');
+  assert.equal(result.evidence.remote.transport_class, 'HTTP');
+  assert.equal(result.evidence.remote.interaction_policy, 'BOUNDED_NONINTERACTIVE_V0');
+  assert.equal(fs.existsSync(marker), false, 'qualification must not invoke inherited askpass or credential helper');
+  assert.ok(elapsed < 2500, `qualification exceeded bounded completion: ${elapsed}ms`);
+  const requests = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
+  assert.match(requests, /git-upload-pack/);
+  assert.doesNotMatch(requests, /git-receive-pack/);
 });
 
 test('interactive credential failure and remote timeout fail closed without write fallback', () => {

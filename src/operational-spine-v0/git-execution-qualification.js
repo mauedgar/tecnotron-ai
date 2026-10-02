@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('node:fs');
+const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const {
   GitExecutionQualificationRequest,
@@ -9,6 +10,79 @@ const {
 const {
   IntegrateAcceptedCandidateInput,
 } = require('./recipes/integrate-accepted-candidate');
+
+const GitEnvironmentKeysToRemove = new Set([
+  'GIT_DIR',
+  'GIT_WORK_TREE',
+  'GIT_COMMON_DIR',
+  'GIT_INDEX_FILE',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_CONFIG_COUNT',
+  'GIT_CONFIG_SYSTEM',
+  'GIT_CONFIG_GLOBAL',
+  'GIT_CONFIG_NOSYSTEM',
+  'GIT_CONFIG_PARAMETERS',
+  'GIT_CEILING_DIRECTORIES',
+  'GIT_DISCOVERY_ACROSS_FILESYSTEM',
+  'GIT_PREFIX',
+  'GIT_NAMESPACE',
+  'GIT_SHALLOW_FILE',
+  'GIT_ASKPASS',
+  'SSH_ASKPASS',
+  'SSH_ASKPASS_REQUIRE',
+  'GIT_SSH',
+  'GIT_SSH_COMMAND',
+]);
+
+function boundedGitEnvironment(source = process.env) {
+  const bounded = { ...source };
+  for (const key of Object.keys(bounded)) {
+    if (
+      GitEnvironmentKeysToRemove.has(key)
+      || /^GIT_CONFIG_(?:KEY|VALUE)_\d+$/.test(key)
+    ) {
+      delete bounded[key];
+    }
+  }
+  bounded.GIT_TERMINAL_PROMPT = '0';
+  bounded.GCM_INTERACTIVE = 'Never';
+  bounded.GIT_CONFIG_NOSYSTEM = '1';
+  bounded.GIT_CONFIG_GLOBAL = process.platform === 'win32' ? 'NUL' : '/dev/null';
+  return bounded;
+}
+
+function canonicalWorktreePath(value) {
+  try {
+    return fs.realpathSync.native
+      ? fs.realpathSync.native(value)
+      : fs.realpathSync(value);
+  } catch {
+    return path.resolve(value);
+  }
+}
+
+function sameWorktreePath(left, right) {
+  const observed = canonicalWorktreePath(left);
+  const declared = canonicalWorktreePath(right);
+  return process.platform === 'win32'
+    ? observed.toLowerCase() === declared.toLowerCase()
+    : observed === declared;
+}
+
+function classifyRemoteTransport(remoteUrl) {
+  const value = String(remoteUrl || '').trim();
+  if (/^https:\/\//i.test(value)) return { transportClass: 'HTTPS', supported: true };
+  if (/^http:\/\//i.test(value)) return { transportClass: 'HTTP', supported: true };
+  if (/^file:\/\//i.test(value) || path.isAbsolute(value)) {
+    return { transportClass: 'LOCAL_PATH', supported: true };
+  }
+  if (/^ssh:\/\//i.test(value) || /^[^\s/:]+@[^\s:]+:.+/.test(value)) {
+    return { transportClass: 'SSH', supported: false };
+  }
+  if (/^git:\/\//i.test(value)) return { transportClass: 'GIT', supported: false };
+  return { transportClass: 'UNKNOWN', supported: false };
+}
 
 function createGitCliAdapter({
   command = 'git',
@@ -30,11 +104,7 @@ function createGitCliAdapter({
         windowsHide: true,
         timeout: timeoutMs,
         maxBuffer: 4 * 1024 * 1024,
-        env: {
-          ...env,
-          GIT_TERMINAL_PROMPT: '0',
-          GCM_INTERACTIVE: 'Never',
-        },
+        env: boundedGitEnvironment(env),
       });
       return {
         exit_code: result.status,
@@ -66,15 +136,18 @@ function gitUnavailable(result) {
 
 function evidenceFor(request, {
   qualificationMethod = 'DIRECT',
+  observedWorktree = null,
   observedRef = null,
   observedCommit = null,
   remoteStatus = 'NOT_ATTEMPTED',
   remoteCommit = null,
+  remoteTransportClass = null,
 } = {}) {
   return {
     repository: {
       identity: request.repository.identity,
       location: request.repository.location,
+      observed_worktree: observedWorktree,
       observed_ref: observedRef,
       observed_commit: observedCommit,
     },
@@ -84,6 +157,8 @@ function evidenceFor(request, {
           target_ref: request.remote.target_ref,
           observation_status: remoteStatus,
           observed_commit: remoteCommit,
+          transport_class: remoteTransportClass,
+          interaction_policy: 'BOUNDED_NONINTERACTIVE_V0',
         }
       : null,
     surface: {
@@ -131,15 +206,40 @@ function observeLocal(git, request, safeDirectory) {
     return { ok: false, command: repository, reason: 'GIT_REPOSITORY_NOT_COMPETENT' };
   }
 
+  const worktree = git.run(request.repository.location, ['rev-parse', '--show-toplevel'], options);
+  if (worktree.exit_code !== 0 || worktree.error_code) {
+    return { ok: false, command: worktree, reason: 'EFFECTIVE_WORKTREE_NOT_OBSERVABLE' };
+  }
+  const observedWorktree = exactOutput(worktree);
+  if (!path.isAbsolute(observedWorktree) || !sameWorktreePath(observedWorktree, request.repository.location)) {
+    return {
+      ok: false,
+      mismatch: true,
+      reason: 'EFFECTIVE_WORKTREE_MISMATCH',
+      observedWorktree: path.isAbsolute(observedWorktree) ? observedWorktree : null,
+    };
+  }
+
   const ref = git.run(request.repository.location, ['symbolic-ref', '--quiet', 'HEAD'], options);
   if (ref.exit_code !== 0 || ref.error_code) {
-    return { ok: false, command: ref, reason: 'EXPECTED_REF_NOT_OBSERVABLE' };
+    return {
+      ok: false,
+      command: ref,
+      reason: 'EXPECTED_REF_NOT_OBSERVABLE',
+      observedWorktree,
+    };
   }
 
   const observedRef = exactOutput(ref);
   const commit = git.run(request.repository.location, ['rev-parse', 'HEAD^{commit}'], options);
   if (commit.exit_code !== 0 || commit.error_code) {
-    return { ok: false, command: commit, reason: 'EXPECTED_COMMIT_NOT_OBSERVABLE', observedRef };
+    return {
+      ok: false,
+      command: commit,
+      reason: 'EXPECTED_COMMIT_NOT_OBSERVABLE',
+      observedWorktree,
+      observedRef,
+    };
   }
 
   const observedCommit = exactOutput(commit);
@@ -153,6 +253,7 @@ function observeLocal(git, request, safeDirectory) {
       ok: false,
       command: declaredRef,
       reason: 'DECLARED_REF_NOT_OBSERVABLE',
+      observedWorktree,
       observedRef,
       observedCommit,
     };
@@ -164,6 +265,7 @@ function observeLocal(git, request, safeDirectory) {
       ok: false,
       mismatch: true,
       reason: 'EXPECTED_REF_MISMATCH',
+      observedWorktree,
       observedRef,
       observedCommit,
     };
@@ -173,12 +275,13 @@ function observeLocal(git, request, safeDirectory) {
       ok: false,
       mismatch: true,
       reason: 'EXPECTED_COMMIT_MISMATCH',
+      observedWorktree,
       observedRef,
       observedCommit,
     };
   }
 
-  return { ok: true, observedRef, observedCommit };
+  return { ok: true, observedWorktree, observedRef, observedCommit };
 }
 
 function parseRemoteOid(result, targetRef) {
@@ -220,6 +323,7 @@ function qualifyGitExecutionSurface(rawRequest, {
     : 'DIRECT';
   const localEvidence = evidenceFor(request, {
     qualificationMethod,
+    observedWorktree: local.observedWorktree || null,
     observedRef: local.observedRef || null,
     observedCommit: local.observedCommit || null,
   });
@@ -243,10 +347,52 @@ function qualifyGitExecutionSurface(rawRequest, {
     return qualificationResult(request, 'READY', null, localEvidence);
   }
 
+  const remoteUrlObservation = git.run(
+    request.repository.location,
+    ['remote', 'get-url', request.remote.name],
+    {
+      safeDirectory,
+      timeoutMs: Math.min(request.remote_timeout_ms, 5000),
+    },
+  );
+  if (remoteUrlObservation.exit_code !== 0 || remoteUrlObservation.error_code) {
+    return commandFailure(
+      request,
+      remoteUrlObservation,
+      'REMOTE_IDENTITY_NOT_OBSERVABLE',
+      evidenceFor(request, {
+        qualificationMethod,
+        observedWorktree: local.observedWorktree,
+        observedRef: local.observedRef,
+        observedCommit: local.observedCommit,
+        remoteStatus: 'UNAVAILABLE',
+      }),
+    );
+  }
+
+  const remoteTransport = classifyRemoteTransport(exactOutput(remoteUrlObservation));
+  if (!remoteTransport.supported) {
+    return qualificationResult(
+      request,
+      'BLOCKED',
+      'UNSUPPORTED_REMOTE_TRANSPORT',
+      evidenceFor(request, {
+        qualificationMethod,
+        observedWorktree: local.observedWorktree,
+        observedRef: local.observedRef,
+        observedCommit: local.observedCommit,
+        remoteStatus: 'BLOCKED',
+        remoteTransportClass: remoteTransport.transportClass,
+      }),
+    );
+  }
+
   const remote = git.run(
     request.repository.location,
     [
       '-c', 'http.followRedirects=false',
+      '-c', 'credential.helper=',
+      '-c', 'core.askPass=',
       'ls-remote',
       '--exit-code',
       '--heads',
@@ -261,8 +407,10 @@ function qualifyGitExecutionSurface(rawRequest, {
 
   const remoteBase = {
     qualificationMethod,
+    observedWorktree: local.observedWorktree,
     observedRef: local.observedRef,
     observedCommit: local.observedCommit,
+    remoteTransportClass: remoteTransport.transportClass,
   };
 
   if (remote.timed_out) {
@@ -367,8 +515,11 @@ function qualificationSpecForRecipe(recipe, rawInput) {
 }
 
 module.exports = {
+  boundedGitEnvironment,
+  classifyRemoteTransport,
   createGitCliAdapter,
   qualifyGitExecutionSurface,
   qualificationSpecForRecipe,
   safeDirectoryFailure,
+  sameWorktreePath,
 };
