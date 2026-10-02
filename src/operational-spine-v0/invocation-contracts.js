@@ -10,6 +10,62 @@ const contracts_1 = require("./contracts");
 const { referenceSchema } = require('../state-kernel-v0/contracts');
 const NonEmpty = zod_1.z.string().min(1);
 const CrossPlatformAbsolutePath = NonEmpty.refine((value) => node_path_1.default.posix.isAbsolute(value) || node_path_1.default.win32.isAbsolute(value), 'path must be absolute');
+const GitOid = zod_1.z.string().regex(/^[a-f0-9]{40,64}$/);
+const BranchRef = zod_1.z.string().regex(/^refs\/heads\/[A-Za-z0-9._\/-]+$/);
+const GitRemoteName = zod_1.z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
+exports.GitExecutionQualificationStatus = zod_1.z.enum(['READY', 'BLOCKED', 'UNAVAILABLE', 'UNKNOWN']);
+exports.GitExecutionQualificationRequest = zod_1.z.object({
+    schema_version: zod_1.z.literal('tecnotron-git-execution-qualification-request/v0'),
+    surface_id: NonEmpty,
+    repository: zod_1.z.object({
+        identity: NonEmpty,
+        location: CrossPlatformAbsolutePath,
+    }).strict(),
+    expected_ref: BranchRef,
+    expected_commit: GitOid,
+    remote: zod_1.z.object({
+        name: GitRemoteName,
+        target_ref: BranchRef,
+        expected_commit: GitOid,
+    }).strict().optional(),
+    remote_timeout_ms: zod_1.z.number().int().positive().max(30000).default(5000),
+}).strict();
+const GitQualificationRepositoryEvidence = zod_1.z.object({
+    identity: NonEmpty,
+    location: CrossPlatformAbsolutePath,
+    observed_ref: BranchRef.nullable(),
+    observed_commit: GitOid.nullable(),
+}).strict();
+const GitQualificationRemoteEvidence = zod_1.z.object({
+    name_or_declared_identity: GitRemoteName,
+    target_ref: BranchRef,
+    observation_status: zod_1.z.enum(['NOT_ATTEMPTED', 'READY', 'BLOCKED', 'UNAVAILABLE', 'UNKNOWN']),
+    observed_commit: GitOid.nullable(),
+}).strict();
+const GitQualificationSurfaceEvidence = zod_1.z.object({
+    id: NonEmpty,
+    qualification_method: zod_1.z.enum(['DIRECT', 'PROCESS_LOCAL_SAFE_DIRECTORY']),
+}).strict();
+const GitQualificationMutationEvidence = zod_1.z.object({
+    repository: zod_1.z.literal('NONE'),
+    remote: zod_1.z.literal('NONE'),
+    persistent_global_git_config: zod_1.z.literal('NONE'),
+}).strict();
+exports.GitExecutionQualificationResult = zod_1.z.object({
+    schema_version: zod_1.z.literal('tecnotron-git-execution-qualification-result/v0'),
+    status: exports.GitExecutionQualificationStatus,
+    reason: NonEmpty.optional(),
+    evidence: zod_1.z.object({
+        repository: GitQualificationRepositoryEvidence,
+        remote: GitQualificationRemoteEvidence.nullable(),
+        surface: GitQualificationSurfaceEvidence,
+        mutations: GitQualificationMutationEvidence,
+    }).strict(),
+}).strict().superRefine((value, ctx) => {
+    if (value.status !== 'READY' && !value.reason) {
+        ctx.addIssue({ code: 'custom', path: ['reason'], message: value.status + ' requires reason' });
+    }
+});
 exports.RecipeIdentity = zod_1.z.object({
     id: NonEmpty,
     version: NonEmpty,
@@ -141,6 +197,7 @@ exports.RecipeInvocationResult = zod_1.z.object({
     reason: NonEmpty.optional(),
     validation_issues: zod_1.z.array(NonEmpty).default([]),
     supplementary_diagnostics: zod_1.z.array(NonEmpty).default([]),
+    git_execution_qualification: exports.GitExecutionQualificationResult.nullable().default(null),
 }).strict().superRefine((value, ctx) => {
     if (!value.started && value.effect_state !== 'NONE') {
         ctx.addIssue({ code: 'custom', path: ['effect_state'], message: 'pre-start result requires effect_state=NONE' });

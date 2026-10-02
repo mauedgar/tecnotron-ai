@@ -7,6 +7,7 @@ const invocation_contracts_1 = require("./invocation-contracts");
 const recipe_registry_1 = require("./recipe-registry");
 const core_1 = require("./core");
 const recipe_execution_surface_1 = require("./recipe-execution-surface");
+const git_execution_qualification_1 = require("./git-execution-qualification");
 const execution_record_store_1 = require("./execution-record-store");
 const execution_coordinator_1 = require("../execution-coordinator");
 const kernel = require('../state-kernel-v0');
@@ -17,7 +18,7 @@ const { createMaterializeFrozenReviewInterfaceRecipe } = require('./recipes/mate
 const { createReconcileAndCloseTaskCycleRecipe } = require('./recipes/reconcile-and-close-taskcycle');
 const { createPrepareFitFlowTestRuntimeRecipe } = require('./recipes/prepare-fitflow-test-runtime');
 const { createValidateFitFlowHttpContractCandidateRecipe } = require('./recipes/validate-fitflow-http-contract-candidate');
-function terminalBase(envelope) {
+function terminalBase(envelope, gitQualification = null) {
     return {
         schema_version: 'tecnotron-recipe-invocation-result/v0',
         operation_ref: envelope.request.operation_ref,
@@ -35,11 +36,12 @@ function terminalBase(envelope) {
         terminal_artifact_ref: null,
         validation_issues: [],
         supplementary_diagnostics: [],
+        git_execution_qualification: gitQualification,
     };
 }
-function blocked(envelope, reason) {
+function blocked(envelope, reason, gitQualification = null) {
     return invocation_contracts_1.RecipeInvocationResult.parse({
-        ...terminalBase(envelope),
+        ...terminalBase(envelope, gitQualification),
         started: false,
         terminal_status: 'BLOCKED',
         effect_state: 'NONE',
@@ -49,9 +51,21 @@ function blocked(envelope, reason) {
         reason,
     });
 }
-function unknown(envelope, reason) {
+function unavailable(envelope, reason, gitQualification = null) {
     return invocation_contracts_1.RecipeInvocationResult.parse({
-        ...terminalBase(envelope),
+        ...terminalBase(envelope, gitQualification),
+        started: false,
+        terminal_status: 'UNAVAILABLE',
+        effect_state: 'NONE',
+        receipt_ref: null,
+        result_ref: null,
+        execution_plan_ref: null,
+        reason,
+    });
+}
+function unknown(envelope, reason, gitQualification = null) {
+    return invocation_contracts_1.RecipeInvocationResult.parse({
+        ...terminalBase(envelope, gitQualification),
         started: true,
         terminal_status: 'UNKNOWN',
         effect_state: 'UNKNOWN',
@@ -132,13 +146,13 @@ function prepareRecipeInput(envelope) {
     }
     return input;
 }
-function mapSpineResult(envelope, result) {
+function mapSpineResult(envelope, result, gitQualification = null) {
     const receipt = result?.receipt;
     const status = receipt?.status;
     if (status) {
         const terminalStatus = status;
         return invocation_contracts_1.RecipeInvocationResult.parse({
-            ...terminalBase(envelope),
+            ...terminalBase(envelope, gitQualification),
             started: Boolean(result?.coordinator_outcome?.started ?? (terminalStatus === 'PASS' || terminalStatus === 'FAIL' || terminalStatus === 'UNKNOWN')),
             terminal_status: terminalStatus,
             effect_state: receipt.effect_state,
@@ -151,7 +165,7 @@ function mapSpineResult(envelope, result) {
     }
     if (result?.status === 'SEMANTIC_ESCALATION_REQUIRED') {
         return invocation_contracts_1.RecipeInvocationResult.parse({
-            ...terminalBase(envelope),
+            ...terminalBase(envelope, gitQualification),
             started: false,
             terminal_status: 'BLOCKED',
             effect_state: 'NONE',
@@ -162,7 +176,7 @@ function mapSpineResult(envelope, result) {
         });
     }
     return invocation_contracts_1.RecipeInvocationResult.parse({
-        ...terminalBase(envelope),
+        ...terminalBase(envelope, gitQualification),
         started: false,
         terminal_status: result?.status === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'BLOCKED',
         effect_state: 'NONE',
@@ -184,7 +198,7 @@ function attemptExists(store, attemptId) {
         return null;
     }
 }
-function workerExceptionResult(envelope, reason, observeAttempt) {
+function workerExceptionResult(envelope, reason, observeAttempt, gitQualification = null) {
     let observation = null;
     try {
         observation = observeAttempt(envelope.attempt_ref);
@@ -193,8 +207,8 @@ function workerExceptionResult(envelope, reason, observeAttempt) {
         observation = null;
     }
     return observation === false
-        ? blocked(envelope, `WORKER_EXCEPTION_BEFORE_ATTEMPT:${reason}`)
-        : unknown(envelope, `WORKER_EXCEPTION_AFTER_POSSIBLE_ATTEMPT:${reason}`);
+        ? blocked(envelope, `WORKER_EXCEPTION_BEFORE_ATTEMPT:${reason}`, gitQualification)
+        : unknown(envelope, `WORKER_EXCEPTION_AFTER_POSSIBLE_ATTEMPT:${reason}`, gitQualification);
 }
 async function runWorkerInvocation(rawEnvelope) {
     const envelope = invocation_contracts_1.WorkerInvocationEnvelope.parse(rawEnvelope);
@@ -218,7 +232,37 @@ async function runWorkerInvocation(rawEnvelope) {
         executionRecordStore: recordStore,
     });
     const operation = kernel.inspect(store, 'Operation', envelope.request.operation_ref).aggregate;
-    const observedGit = gitContext(envelope.environment.repository.location);
+    const qualificationSpec = (0, git_execution_qualification_1.qualificationSpecForRecipe)(envelope.request.recipe, envelope.request.inputs);
+    let gitQualification = null;
+    let observedGit;
+    if (qualificationSpec?.kind === 'INVALID') {
+        return blocked(envelope, qualificationSpec.reason);
+    }
+    if (qualificationSpec?.kind === 'REQUIRED') {
+        gitQualification = (0, git_execution_qualification_1.qualifyGitExecutionSurface)({
+            schema_version: 'tecnotron-git-execution-qualification-request/v0',
+            surface_id: envelope.selected_surface.id,
+            repository: envelope.environment.repository,
+            expected_ref: qualificationSpec.expected_ref,
+            expected_commit: qualificationSpec.expected_commit,
+            ...(qualificationSpec.remote ? { remote: qualificationSpec.remote } : {}),
+            remote_timeout_ms: 5000,
+        });
+        if (gitQualification.status !== 'READY') {
+            const reason = `GIT_EXECUTION_QUALIFICATION_${gitQualification.status}:${gitQualification.reason}`;
+            if (gitQualification.status === 'UNAVAILABLE') {
+                return unavailable(envelope, reason, gitQualification);
+            }
+            return blocked(envelope, reason, gitQualification);
+        }
+        observedGit = {
+            expected_ref: gitQualification.evidence.repository.observed_ref,
+            expected_commit: gitQualification.evidence.repository.observed_commit,
+        };
+    }
+    else {
+        observedGit = gitContext(envelope.environment.repository.location);
+    }
     const authorityRef = { kind: 'AUTHORITY', id: envelope.request.authority_ref };
     const executionContext = {
         schema_version: 'tecnotron-execution-context/v0',
@@ -261,11 +305,11 @@ async function runWorkerInvocation(rawEnvelope) {
             harnessConformance: envelope.selected_surface.conformance,
             input: recipeInput,
         });
-        return mapSpineResult(envelope, result);
+        return mapSpineResult(envelope, result, gitQualification);
     }
     catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
-        return workerExceptionResult(envelope, reason, (attemptId) => attemptExists(store, attemptId));
+        return workerExceptionResult(envelope, reason, (attemptId) => attemptExists(store, attemptId), gitQualification);
     }
 }
 async function main() {
