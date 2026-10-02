@@ -38,9 +38,12 @@ const GitEnvironmentKeysToRemove = new Set([
 function boundedGitEnvironment(source = process.env) {
   const bounded = { ...source };
   for (const key of Object.keys(bounded)) {
+    const normalizedKey = key.toUpperCase();
     if (
-      GitEnvironmentKeysToRemove.has(key)
-      || /^GIT_CONFIG_(?:KEY|VALUE)_\d+$/.test(key)
+      GitEnvironmentKeysToRemove.has(normalizedKey)
+      || /^GIT_CONFIG_(?:KEY|VALUE)_\d+$/.test(normalizedKey)
+      || normalizedKey === 'GIT_TERMINAL_PROMPT'
+      || normalizedKey === 'GCM_INTERACTIVE'
     ) {
       delete bounded[key];
     }

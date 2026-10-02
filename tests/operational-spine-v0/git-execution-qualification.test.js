@@ -260,6 +260,13 @@ test('real Git adapter neutralizes contaminated repository-selection and config 
     GIT_CONFIG_SYSTEM: path.join(fx.root, 'system.gitconfig'),
     GIT_CONFIG_GLOBAL: path.join(fx.root, 'global.gitconfig'),
     GIT_CONFIG_NOSYSTEM: '0',
+    git_dir: path.join(other, '.git'),
+    git_work_tree: other,
+    git_config_count: '1',
+    git_config_key_0: 'core.bare',
+    git_config_value_0: 'true',
+    git_askpass: path.join(fx.root, 'lowercase-askpass'),
+    gcm_interactive: 'Always',
   };
 
   const baseline = spawnSync('git', ['rev-parse', '--show-toplevel'], {
@@ -284,6 +291,13 @@ test('real Git adapter neutralizes contaminated repository-selection and config 
     'GIT_CONFIG_KEY_0',
     'GIT_CONFIG_VALUE_0',
     'GIT_CONFIG_SYSTEM',
+    'git_dir',
+    'git_work_tree',
+    'git_config_count',
+    'git_config_key_0',
+    'git_config_value_0',
+    'git_askpass',
+    'gcm_interactive',
   ]) {
     assert.equal(Object.hasOwn(bounded, key), false, key);
   }
