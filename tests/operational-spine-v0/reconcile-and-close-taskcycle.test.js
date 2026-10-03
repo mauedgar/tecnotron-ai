@@ -3,9 +3,20 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const {
   createReconcileAndCloseTaskCycleRecipe,
 } = require('../../src/operational-spine-v0/recipes/reconcile-and-close-taskcycle');
+const {
+  FilesystemStateStore,
+  create: kernelCreate,
+  transition: kernelTransition,
+  inspect: kernelInspect,
+  obligations: kernelObligations,
+  satisfy: kernelSatisfy,
+} = require('../../src/state-kernel-v0');
 
 const observation = (sourceRef, observed) => ({ source_ref: sourceRef, observed });
 const EVIDENCE_KINDS = Object.freeze({
@@ -244,6 +255,31 @@ function rules() {
   ];
 }
 
+const HISTORICAL_OBLIGATION_IDS = Object.freeze([
+  'independent_review',
+  'Developer_acceptance',
+  'canonical_integration',
+  'remote_publication',
+  'lifecycle_reconciliation',
+]);
+
+function rulesForObligationIds(obligationIds) {
+  assert.equal(obligationIds.length, 5);
+  return rules().map((rule, index) => ({ ...rule, obligation_id: obligationIds[index] }));
+}
+
+function historicalRules() {
+  return rulesForObligationIds(HISTORICAL_OBLIGATION_IDS);
+}
+
+function setPendingObligationIds(kernel, obligationIds) {
+  kernel.taskcycle.obligations = obligationIds.map(id => ({
+    id,
+    status: 'PENDING',
+    authority_ref: null,
+  }));
+}
+
 function request(kernel, overrides = {}) {
   const obs = overrides.observations || observations();
   return {
@@ -281,6 +317,132 @@ test('all competent required evidence closes deterministically with structured C
   assert.equal(result.output.reconciliation.disposition, 'RESOLVED');
   assert.deepEqual(result.output.obligations.remaining, []);
   assert.equal(result.output.state_kernel.final_revision, kernel.revision);
+});
+
+test('supported historical obligation identities reconcile while preserving stored identity', async () => {
+  const kernel = new SyntheticKernel();
+  setPendingObligationIds(kernel, HISTORICAL_OBLIGATION_IDS);
+  const result = await execute(kernel, { rules: historicalRules() });
+  assert.equal(result.status, 'PASS');
+  assert.equal(result.effect_state, 'CONFIRMED');
+  assert.equal(kernel.taskcycle.state, 'CLOSED');
+  assert.deepEqual(kernel.taskcycle.obligations.map(item => item.id), HISTORICAL_OBLIGATION_IDS);
+  assert.ok(kernel.taskcycle.obligations.every(item => item.status === 'SATISFIED'));
+});
+
+test('mixed supported historical and current identities reconcile when semantic kinds remain unique', async () => {
+  const ids = [
+    'independent_review',
+    'DEVELOPER_ACCEPTANCE',
+    'canonical_integration',
+    'REMOTE_PUBLICATION',
+    'lifecycle_reconciliation',
+  ];
+  const kernel = new SyntheticKernel();
+  setPendingObligationIds(kernel, ids);
+  const result = await execute(kernel, { rules: rulesForObligationIds(ids) });
+  assert.equal(result.status, 'PASS');
+  assert.deepEqual(kernel.taskcycle.obligations.map(item => item.id), ids);
+});
+
+test('request order permutation produces the same historical reconciliation result', async () => {
+  const kernel = new SyntheticKernel();
+  setPendingObligationIds(kernel, HISTORICAL_OBLIGATION_IDS);
+  const result = await execute(kernel, { rules: [...historicalRules()].reverse() });
+  assert.equal(result.status, 'PASS');
+  assert.equal(kernel.taskcycle.state, 'CLOSED');
+});
+
+test('missing explicit historical obligation rule fails closed before mutation', async () => {
+  const kernel = new SyntheticKernel();
+  setPendingObligationIds(kernel, HISTORICAL_OBLIGATION_IDS);
+  const result = await execute(kernel, { rules: historicalRules().slice(0, -1) });
+  assert.equal(result.status, 'FAIL');
+  assert.equal(result.effect_state, 'NONE');
+  assert.match(result.reason, /PENDING_OBLIGATIONS_REQUIRE_EXACT_EXPLICIT_RULES/);
+  assert.equal(kernel.revision, 50);
+});
+
+test('extra explicit historical obligation rule fails closed before mutation', async () => {
+  const kernel = new SyntheticKernel();
+  setPendingObligationIds(kernel, HISTORICAL_OBLIGATION_IDS);
+  const result = await execute(kernel, {
+    rules: [...historicalRules(), { obligation_id: 'EXTRA_OBLIGATION', source: 'reconciliation' }],
+  });
+  assert.equal(result.status, 'FAIL');
+  assert.equal(result.effect_state, 'NONE');
+  assert.match(result.reason, /PENDING_OBLIGATIONS_REQUIRE_EXACT_EXPLICIT_RULES/);
+  assert.equal(kernel.revision, 50);
+});
+
+test('unknown stored obligation identity fails closed before mutation', async () => {
+  const ids = [...HISTORICAL_OBLIGATION_IDS];
+  ids[1] = 'developerAcceptance';
+  const kernel = new SyntheticKernel();
+  setPendingObligationIds(kernel, ids);
+  const result = await execute(kernel, { rules: rulesForObligationIds(ids) });
+  assert.equal(result.status, 'FAIL');
+  assert.equal(result.effect_state, 'NONE');
+  assert.match(result.reason, /UNKNOWN_OBLIGATION_IDENTITY:developerAcceptance/);
+  assert.equal(kernel.revision, 50);
+});
+
+test('two stored identities resolving to one semantic kind fail closed as ambiguous', async () => {
+  const ids = [...HISTORICAL_OBLIGATION_IDS, 'DEVELOPER_ACCEPTANCE'];
+  const kernel = new SyntheticKernel();
+  setPendingObligationIds(kernel, ids);
+  const result = await execute(kernel, {
+    rules: [...historicalRules(), rules().find(rule => rule.obligation_id === 'DEVELOPER_ACCEPTANCE')],
+  });
+  assert.equal(result.status, 'FAIL');
+  assert.equal(result.effect_state, 'NONE');
+  assert.match(result.reason, /AMBIGUOUS_OBLIGATION_IDENTITY:DEVELOPER_ACCEPTANCE/);
+  assert.equal(kernel.revision, 50);
+});
+
+test('real filesystem State Kernel fixture preserves historical IDs on Linux durable semantics', {
+  skip: process.platform === 'win32' ? 'directory fsync semantics require Linux/Docker' : false,
+}, async () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'tecnotron-reconcile-historical-'));
+  try {
+    const store = new FilesystemStateStore(home);
+    store.initialize();
+    const created = kernelCreate(
+      store,
+      0,
+      'TaskCycle',
+      'TC-001',
+      { responsibility: 'REAL_HISTORICAL_FIXTURE', obligations: HISTORICAL_OBLIGATION_IDS.map(id => ({ id })) },
+      [],
+    );
+    kernelTransition(store, created.revision, 'TaskCycle', 'TC-001', 'ACTIVE');
+
+    const stateKernel = {
+      verify: () => store.verify(),
+      inspectTaskCycle: id => kernelInspect(store, 'TaskCycle', id),
+      inspectOperation: id => kernelInspect(store, 'Operation', id),
+      inspectAttempt: id => kernelInspect(store, 'ExecutionAttempt', id),
+      obligations: id => kernelObligations(store, id),
+      satisfyObligation: ({ expectedRevision, taskcycleId, obligationId, authorityRef, authorityReference }) =>
+        kernelSatisfy(store, expectedRevision, taskcycleId, obligationId, authorityRef, authorityReference),
+      transitionTaskCycle: ({ expectedRevision, taskcycleId, target, authorityRef, dispositionRef }) =>
+        kernelTransition(store, expectedRevision, 'TaskCycle', taskcycleId, target, {
+          authority_ref: authorityRef,
+          disposition_ref: dispositionRef,
+        }),
+    };
+    const recipeUnderTest = createReconcileAndCloseTaskCycleRecipe({ stateKernel });
+    const result = await recipeUnderTest.execute(request(
+      { revision: store.verify().revision },
+      { rules: historicalRules(), expected_state_revision: store.verify().revision },
+    ));
+    assert.equal(result.status, 'PASS');
+    const after = kernelInspect(store, 'TaskCycle', 'TC-001').aggregate;
+    assert.equal(after.state, 'CLOSED');
+    assert.deepEqual(after.obligations.map(item => item.id), HISTORICAL_OBLIGATION_IDS);
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
 });
 
 test('missing Independent Review remains unresolved and causes no lifecycle mutation', async () => {

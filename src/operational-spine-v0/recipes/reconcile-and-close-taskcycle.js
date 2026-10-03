@@ -40,6 +40,62 @@ const OBLIGATION_COMPETENCE = Object.freeze({
   }),
 });
 
+const OBLIGATION_IDENTITY_COMPATIBILITY = Object.freeze({
+  INDEPENDENT_REVIEW: Object.freeze({
+    semantic_kind: 'INDEPENDENT_REVIEW',
+    compatibility_class: 'CURRENT_CANONICAL',
+  }),
+  independent_review: Object.freeze({
+    semantic_kind: 'INDEPENDENT_REVIEW',
+    compatibility_class: 'HISTORICAL_SUPPORTED',
+  }),
+  DEVELOPER_ACCEPTANCE: Object.freeze({
+    semantic_kind: 'DEVELOPER_ACCEPTANCE',
+    compatibility_class: 'CURRENT_CANONICAL',
+  }),
+  Developer_acceptance: Object.freeze({
+    semantic_kind: 'DEVELOPER_ACCEPTANCE',
+    compatibility_class: 'HISTORICAL_SUPPORTED',
+  }),
+  CANONICAL_INTEGRATION: Object.freeze({
+    semantic_kind: 'CANONICAL_INTEGRATION',
+    compatibility_class: 'CURRENT_CANONICAL',
+  }),
+  canonical_integration: Object.freeze({
+    semantic_kind: 'CANONICAL_INTEGRATION',
+    compatibility_class: 'HISTORICAL_SUPPORTED',
+  }),
+  REMOTE_PUBLICATION: Object.freeze({
+    semantic_kind: 'REMOTE_PUBLICATION',
+    compatibility_class: 'CURRENT_CANONICAL',
+  }),
+  remote_publication: Object.freeze({
+    semantic_kind: 'REMOTE_PUBLICATION',
+    compatibility_class: 'HISTORICAL_SUPPORTED',
+  }),
+  LIFECYCLE_RECONCILIATION: Object.freeze({
+    semantic_kind: 'LIFECYCLE_RECONCILIATION',
+    compatibility_class: 'CURRENT_CANONICAL',
+  }),
+  lifecycle_reconciliation: Object.freeze({
+    semantic_kind: 'LIFECYCLE_RECONCILIATION',
+    compatibility_class: 'HISTORICAL_SUPPORTED',
+  }),
+});
+
+function resolveObligationIdentity(storedIdentity) {
+  if (!Object.hasOwn(OBLIGATION_IDENTITY_COMPATIBILITY, storedIdentity)) return null;
+  const compatibility = OBLIGATION_IDENTITY_COMPATIBILITY[storedIdentity];
+  const competenceRule = OBLIGATION_COMPETENCE[compatibility.semantic_kind];
+  if (!competenceRule) return null;
+  return {
+    stored_identity: storedIdentity,
+    semantic_kind: compatibility.semantic_kind,
+    competence_rule: competenceRule,
+    compatibility_class: compatibility.compatibility_class,
+  };
+}
+
 const CLOSURE_AUTHORITY_SOURCE = 'developer_acceptance';
 
 const ObligationSatisfaction = z.object({
@@ -133,8 +189,7 @@ function hasUnreconciledUnknown(stateKernel, taskcycle) {
   return false;
 }
 
-function sourceSatisfied(reconciliation, rule) {
-  const competence = OBLIGATION_COMPETENCE[rule.obligation_id];
+function sourceSatisfied(reconciliation, rule, competence) {
   if (!competence || competence.source !== rule.source) return false;
   if (rule.source === 'reconciliation') return reconciliation.disposition === 'RESOLVED';
   const classification = reconciliation.classifications?.[rule.source];
@@ -192,9 +247,9 @@ function reconciledAuthority(reconciliation, evidence, source, allowedKinds) {
   return resolvedAuthority;
 }
 
-function resolveCompetentRule({ reconciliation, evidence, taskcycle, rule }) {
-  const competence = OBLIGATION_COMPETENCE[rule.obligation_id];
-  if (!competence || competence.source !== rule.source || !sourceSatisfied(reconciliation, rule)) {
+function resolveCompetentRule({ reconciliation, evidence, taskcycle, rule, identity }) {
+  const competence = identity?.competence_rule;
+  if (!identity || !competence || competence.source !== rule.source || !sourceSatisfied(reconciliation, rule, competence)) {
     return { ok: false, reason: `OBLIGATION_SOURCE_NOT_COMPETENT:${rule.obligation_id}:${rule.source}` };
   }
 
@@ -387,8 +442,14 @@ function invokeMutation({ stateKernel, taskcycleId, expectedRevision, invoke, ex
   };
 }
 
+function compareObligationIdentity(left, right) {
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
+
 function deterministicRules(input) {
-  return [...input.obligation_satisfactions].sort((a, b) => a.obligation_id.localeCompare(b.obligation_id, 'en'));
+  return [...input.obligation_satisfactions].sort((a, b) =>
+    compareObligationIdentity(a.obligation_id, b.obligation_id));
 }
 
 function prepare({ request, input, stateKernel, reconcilePostTaskCycle }) {
@@ -425,19 +486,49 @@ function prepare({ request, input, stateKernel, reconcilePostTaskCycle }) {
     };
   }
 
-  const pending = taskcycle.obligations.filter(item => item.status === 'PENDING').map(item => item.id).sort();
+  const pending = taskcycle.obligations
+    .filter(item => item.status === 'PENDING')
+    .map(item => item.id);
   const rules = deterministicRules(input);
   const ruleIds = rules.map(rule => rule.obligation_id);
   if (new Set(ruleIds).size !== ruleIds.length) {
     return { status: 'BLOCKED', reason: 'DUPLICATE_OBLIGATION_SATISFACTION_RULE' };
   }
-  if (pending.length !== ruleIds.length || pending.some((id, index) => id !== ruleIds[index])) {
+  const pendingSet = new Set(pending);
+  if (
+    pending.length !== ruleIds.length ||
+    ruleIds.some(obligationId => !pendingSet.has(obligationId))
+  ) {
     return {
       status: 'BLOCKED',
       reason: 'PENDING_OBLIGATIONS_REQUIRE_EXACT_EXPLICIT_RULES',
       reconciliation,
     };
   }
+
+  const identityByStored = new Map();
+  const storedBySemantic = new Map();
+  for (const storedIdentity of pending) {
+    const identity = resolveObligationIdentity(storedIdentity);
+    if (!identity) {
+      return {
+        status: 'BLOCKED',
+        reason: `UNKNOWN_OBLIGATION_IDENTITY:${storedIdentity}`,
+        reconciliation,
+      };
+    }
+    const priorStoredIdentity = storedBySemantic.get(identity.semantic_kind);
+    if (priorStoredIdentity !== undefined && priorStoredIdentity !== storedIdentity) {
+      return {
+        status: 'BLOCKED',
+        reason: `AMBIGUOUS_OBLIGATION_IDENTITY:${identity.semantic_kind}:${priorStoredIdentity}:${storedIdentity}`,
+        reconciliation,
+      };
+    }
+    storedBySemantic.set(identity.semantic_kind, storedIdentity);
+    identityByStored.set(storedIdentity, identity);
+  }
+
   const competentRules = [];
   for (const rule of rules) {
     const resolved = resolveCompetentRule({
@@ -445,6 +536,7 @@ function prepare({ request, input, stateKernel, reconcilePostTaskCycle }) {
       evidence: input.evidence,
       taskcycle,
       rule,
+      identity: identityByStored.get(rule.obligation_id),
     });
     if (!resolved.ok) {
       return {
