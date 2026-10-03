@@ -10,6 +10,9 @@ const {
   createReconcileAndCloseTaskCycleRecipe,
 } = require('../../src/operational-spine-v0/recipes/reconcile-and-close-taskcycle');
 const {
+  createRecipeInvocationEntrypoint,
+} = require('../../src/operational-spine-v0/recipe-invocation');
+const {
   FilesystemStateStore,
   create: kernelCreate,
   transition: kernelTransition,
@@ -127,6 +130,9 @@ class SyntheticKernel {
     };
     this.operation = { kind: 'Operation', id: 'OP-001', related_ids: unknown ? ['AT-UNKNOWN'] : [] };
     this.attempt = { kind: 'ExecutionAttempt', id: 'AT-UNKNOWN', state: 'UNKNOWN', reconciliation_required: true };
+    this.invocationOperation = null;
+    this.invocationAttempt = null;
+    this.taskcycleIdentityOverride = null;
   }
   verify() {
     this.verifyCalls += 1;
@@ -138,10 +144,35 @@ class SyntheticKernel {
     assert.equal(id, this.taskcycle.id);
     const pending = this.taskcycle.obligations.some(o => o.status === 'PENDING');
     const legal_next = this.taskcycle.state === 'CLOSED' ? [] : (!pending && this.legalClose ? ['CLOSED'] : ['BLOCKED']);
-    return { aggregate: structuredClone(this.taskcycle), store_revision: this.revision, legal_next };
+    const aggregate = structuredClone(this.taskcycle);
+    if (this.taskcycleIdentityOverride !== null) aggregate.id = this.taskcycleIdentityOverride;
+    return { aggregate, store_revision: this.revision, legal_next };
   }
-  inspectOperation(id) { assert.equal(id, 'OP-001'); return { aggregate: structuredClone(this.operation), store_revision: this.revision, legal_next: [] }; }
-  inspectAttempt(id) { assert.equal(id, 'AT-UNKNOWN'); return { aggregate: structuredClone(this.attempt), store_revision: this.revision, legal_next: [] }; }
+  inspectOperation(id) {
+    if (id === 'OP-CLOSE' && this.invocationOperation !== null) {
+      return { aggregate: structuredClone(this.invocationOperation), store_revision: this.revision, legal_next: [] };
+    }
+    assert.equal(id, 'OP-001');
+    return { aggregate: structuredClone(this.operation), store_revision: this.revision, legal_next: [] };
+  }
+  inspectAttempt(id) {
+    if (id === 'AT-CLOSE' && this.invocationAttempt !== null) {
+      return { aggregate: structuredClone(this.invocationAttempt), store_revision: this.revision, legal_next: [] };
+    }
+    assert.equal(id, 'AT-UNKNOWN');
+    return { aggregate: structuredClone(this.attempt), store_revision: this.revision, legal_next: [] };
+  }
+  recordInvocationBookkeeping() {
+    this.revision += 5;
+    this.eventCount += 5;
+    this.invocationOperation = {
+      kind: 'Operation', id: 'OP-CLOSE', taskcycle_id: 'TC-001', revision: 3, state: 'RUNNING', related_ids: ['AT-CLOSE'],
+    };
+    this.invocationAttempt = {
+      kind: 'ExecutionAttempt', id: 'AT-CLOSE', operation_id: 'OP-CLOSE', revision: 3,
+      state: 'RUNNING', reconciliation_required: false,
+    };
+  }
   obligations(id) {
     assert.equal(id, this.taskcycle.id);
     return {
@@ -306,6 +337,18 @@ function recipe(kernel) { return createReconcileAndCloseTaskCycleRecipe({ stateK
 
 async function execute(kernel, overrides={}) { return recipe(kernel).execute(request(kernel, overrides)); }
 
+async function executeThroughHandoff(kernel, mutate = () => {}) {
+  const underTest = recipe(kernel);
+  const recipeRequest = request(kernel);
+  const preflight = await underTest.preflight(recipeRequest);
+  assert.equal(preflight.status, 'READY');
+  assert.ok(preflight.handoff);
+  kernel.recordInvocationBookkeeping();
+  mutate(kernel);
+  const result = await underTest.execute({ ...recipeRequest, preflight_handoff: preflight.handoff });
+  return { preflight, result };
+}
+
 test('all competent required evidence closes deterministically with structured ClosureReceipt output', async () => {
   const kernel = new SyntheticKernel();
   const before = kernel.revision;
@@ -445,6 +488,76 @@ test('real filesystem State Kernel fixture preserves historical IDs on Linux dur
   }
 });
 
+test('stable invocation self-hosts reconcile-and-close without false global revision drift', {
+  skip: process.platform === 'win32' ? 'directory fsync semantics require Linux/Docker' : false,
+}, async t => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'tecnotron-reconcile-stable-invocation-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const store = new FilesystemStateStore(home);
+  store.initialize();
+  const created = kernelCreate(
+    store,
+    0,
+    'TaskCycle',
+    'TC-001',
+    { responsibility: 'REAL_STABLE_INVOCATION_FIXTURE', obligations: HISTORICAL_OBLIGATION_IDS.map(id => ({ id })) },
+    [],
+  );
+  kernelTransition(store, created.revision, 'TaskCycle', 'TC-001', 'ACTIVE');
+  kernelCreate(
+    store,
+    store.verify().revision,
+    'Operation',
+    'OP-CLOSE',
+    { taskcycle_id: 'TC-001', objective: 'self-host reconcile-and-close through stable invocation' },
+    [{ kind: 'AUTHORITY', id: 'authority:developer-001' }],
+  );
+  const preflightRevision = store.verify().revision;
+  const obs = observations();
+  const surface = {
+    id: 'native-linux-node',
+    adapter: 'NATIVE_NODE',
+    capabilities: ['NODE_RUNTIME', 'FILESYSTEM_WRITE', 'DURABLE_DIRECTORY_FSYNC'],
+    conformance: { disposition: 'CONFORMING', evidence_ref: 'evidence:native-linux-node' },
+  };
+  const entrypoint = createRecipeInvocationEntrypoint({
+    schema_version: 'tecnotron-recipe-invocation-environment/v0',
+    repository: { identity: 'fixture/tecnotron-ai', location: path.resolve(__dirname, '../..') },
+    state_store: { reference: 'state:fixture', location: home },
+    surfaces: [surface],
+  }, {
+    attemptIdFactory: () => 'AT-CLOSE',
+  });
+
+  const result = await entrypoint.invoke({
+    schema_version: 'tecnotron-recipe-invocation-request/v0',
+    recipe: { id: 'reconcile_and_close_taskcycle', version: 'v0' },
+    operation_ref: 'OP-CLOSE',
+    responsibility_ref: 'REAL_STABLE_INVOCATION_FIXTURE',
+    authority_ref: 'authority:developer-001',
+    expected_effects: [{ effect: 'state.taskcycle.write', scope: 'exact taskcycle only' }],
+    evidence_refs: [],
+    inputs: {
+      expected_state_revision: preflightRevision,
+      observations: obs,
+      evidence: evidenceFor(obs),
+      obligation_satisfactions: historicalRules(),
+      closure: { authority_ref: 'authority:developer-001', disposition_ref: 'result:closed' },
+    },
+    execution_constraints: { require: [] },
+  });
+
+  assert.equal(result.terminal_status, 'PASS');
+  assert.equal(result.effect_state, 'CONFIRMED');
+  assert.equal(result.receipt.output.precondition.mode, 'PROTECTED_SUBJECT_HANDOFF');
+  assert.equal(result.receipt.output.precondition.preflight_state_revision, preflightRevision);
+  assert.equal(result.receipt.output.precondition.execution_state_revision, preflightRevision + 5);
+  assert.deepEqual(result.receipt.output.precondition.protected_taskcycle, { id: 'TC-001', revision: 2, state: 'ACTIVE' });
+  assert.deepEqual(result.receipt.output.precondition.operation, { id: 'OP-CLOSE', revision: 3, state: 'RUNNING' });
+  assert.deepEqual(result.receipt.output.precondition.attempt, { id: 'AT-CLOSE', revision: 3, state: 'RUNNING' });
+  assert.equal(kernelInspect(store, 'TaskCycle', 'TC-001').aggregate.state, 'CLOSED');
+});
+
 test('missing Independent Review remains unresolved and causes no lifecycle mutation', async () => {
   const kernel = new SyntheticKernel(); const obs = observations(); obs.independent_review = [];
   const before=kernel.revision; const result=await execute(kernel,{observations:obs,evidence:evidenceFor(obs)});
@@ -492,6 +605,93 @@ test('authority-incompetent evidence remains fail-closed', async () => {
 test('stale expected State Kernel revision fails closed before mutation', async () => {
   const kernel=new SyntheticKernel(); const result=await execute(kernel,{expected_state_revision:49});
   assert.equal(result.status,'FAIL'); assert.equal(result.effect_state,'NONE'); assert.match(result.reason,/STATE_KERNEL_REVISION_DRIFT/); assert.equal(kernel.revision,50);
+});
+
+test('invocation-owned Operation and Attempt revisions do not invalidate a protected TaskCycle preflight', async () => {
+  const kernel = new SyntheticKernel();
+  const before = kernel.revision;
+  const { result } = await executeThroughHandoff(kernel);
+  assert.equal(result.status, 'PASS');
+  assert.equal(result.effect_state, 'CONFIRMED');
+  assert.equal(result.output.precondition.mode, 'PROTECTED_SUBJECT_HANDOFF');
+  assert.equal(result.output.precondition.preflight_state_revision, before);
+  assert.equal(result.output.precondition.execution_state_revision, before + 5);
+  assert.deepEqual(result.output.precondition.protected_taskcycle, { id: 'TC-001', revision: 7, state: 'ACTIVE' });
+  assert.deepEqual(result.output.precondition.operation, { id: 'OP-CLOSE', revision: 3, state: 'RUNNING' });
+  assert.deepEqual(result.output.precondition.attempt, { id: 'AT-CLOSE', revision: 3, state: 'RUNNING' });
+});
+
+test('real TaskCycle state change after preflight fails closed', async () => {
+  const kernel = new SyntheticKernel();
+  const { result } = await executeThroughHandoff(kernel, current => {
+    current.taskcycle.state = 'BLOCKED';
+    current.taskcycle.revision += 1;
+    current.revision += 1;
+    current.eventCount += 1;
+  });
+  assert.equal(result.status, 'FAIL');
+  assert.equal(result.effect_state, 'NONE');
+  assert.match(result.reason, /TASKCYCLE_STATE_DRIFT/);
+  assert.equal(kernel.satisfyCalls, 0);
+});
+
+test('obligation change after preflight fails closed', async () => {
+  const kernel = new SyntheticKernel();
+  const { result } = await executeThroughHandoff(kernel, current => {
+    current.taskcycle.obligations[0].status = 'SATISFIED';
+    current.taskcycle.revision += 1;
+    current.revision += 1;
+    current.eventCount += 1;
+  });
+  assert.equal(result.status, 'FAIL');
+  assert.equal(result.effect_state, 'NONE');
+  assert.match(result.reason, /OBLIGATION_DRIFT/);
+  assert.equal(kernel.satisfyCalls, 0);
+});
+
+test('authority change after preflight fails closed', async () => {
+  const kernel = new SyntheticKernel();
+  const { result } = await executeThroughHandoff(kernel, current => {
+    current.taskcycle.authority_refs.push({ kind: 'AUTHORITY', id: 'authority:unexpected' });
+    current.taskcycle.revision += 1;
+    current.revision += 1;
+    current.eventCount += 1;
+  });
+  assert.equal(result.status, 'FAIL');
+  assert.equal(result.effect_state, 'NONE');
+  assert.match(result.reason, /AUTHORITY_DRIFT/);
+  assert.equal(kernel.satisfyCalls, 0);
+});
+test('protected subject identity change after preflight fails closed', async () => {
+  const kernel = new SyntheticKernel();
+  const { result } = await executeThroughHandoff(kernel, current => {
+    current.taskcycleIdentityOverride = 'TC-DIFFERENT';
+    current.taskcycle.revision += 1;
+    current.revision += 1;
+    current.eventCount += 1;
+  });
+  assert.equal(result.status, 'FAIL');
+  assert.equal(result.effect_state, 'NONE');
+  assert.match(result.reason, /TASKCYCLE_IDENTITY_DRIFT/);
+  assert.equal(kernel.satisfyCalls, 0);
+});
+
+test('preflight handoff cannot be silently rebased to a later global revision', async () => {
+  const kernel = new SyntheticKernel();
+  const underTest = recipe(kernel);
+  const recipeRequest = request(kernel);
+  const preflight = await underTest.preflight(recipeRequest);
+  assert.equal(preflight.status, 'READY');
+  kernel.recordInvocationBookkeeping();
+  const result = await underTest.execute({
+    ...recipeRequest,
+    preflight_handoff: preflight.handoff,
+    input: { ...recipeRequest.input, expected_state_revision: kernel.revision },
+  });
+  assert.equal(result.status, 'FAIL');
+  assert.equal(result.effect_state, 'NONE');
+  assert.match(result.reason, /PREFLIGHT_HANDOFF_EXPECTED_REVISION_MISMATCH/);
+  assert.equal(kernel.satisfyCalls, 0);
 });
 
 test('pending UNKNOWN attempt prevents closure until separately reconciled', async () => {

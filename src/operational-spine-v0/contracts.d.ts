@@ -129,6 +129,7 @@ export declare const RecipeRequest: z.ZodObject<{
         }, z.core.$strict>>;
     }, z.core.$strict>;
     evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
+    preflight_handoff: z.ZodOptional<z.ZodUnknown>;
     input: z.ZodOptional<z.ZodUnknown>;
 }, z.core.$strict>;
 export type RecipeRequest = z.output<typeof RecipeRequest>;

@@ -128,6 +128,58 @@ test('durable Operation resolves deterministic recipe, records attempt, and relo
   assert.equal(freshRecords.loadReceipt('AT-RENDER-001').status, 'PASS');
 });
 
+test('operational spine transports an opaque READY preflight handoff into Recipe execution', async t => {
+  const { home, store } = fixture(t);
+  operation(store, 'OP-HANDOFF', 'transport preflight handoff');
+  const registry = new RecipeRegistry();
+  const handoff = Object.freeze({ schema_version: 'fixture-handoff/v0', marker: 'accepted-preflight' });
+  let observedHandoff = null;
+  registry.register({
+    definition: RecipeDefinition.parse({
+      id: 'handoff_probe',
+      version: 'v0',
+      provides: ['state.render'],
+      required_inputs: [],
+      preconditions: ['fixture preflight succeeds'],
+      effects: [{ effect: 'state.render', scope: 'none' }],
+      postconditions: [],
+    }),
+    async preflight() {
+      return { status: 'READY', handoff };
+    },
+    async execute(request) {
+      observedHandoff = request.preflight_handoff;
+      return RecipeReceipt.parse({
+        schema_version: 'tecnotron-recipe-receipt/v0',
+        receipt_ref: 'receipt:handoff-probe',
+        recipe_id: request.recipe_id,
+        recipe_version: request.recipe_version,
+        operation_id: request.operation_id,
+        execution_attempt_id: request.execution_attempt_id,
+        status: 'PASS',
+        effect_state: 'NONE',
+        result_refs: [],
+        evidence_refs: [],
+      });
+    },
+  });
+  const spine = buildSpine(store, registry, home);
+  const plan = spine.plan({
+    operationId: 'OP-HANDOFF',
+    executionContext: executionContext(home, 'OP-HANDOFF'),
+    requiredCapabilities: ['state.render'],
+    authorityRefs: [authorityRef],
+  });
+  const result = await spine.executePlan(plan, {
+    executionAttemptId: 'AT-HANDOFF-001',
+    authorization: authorization(),
+    harnessConformance: harness(),
+    input: {},
+  });
+  assert.equal(result.status, 'SUCCESS');
+  assert.deepEqual(observedHandoff, handoff);
+});
+
 test('operation with no deterministic recipe yields explicit semantic escalation and no attempt', t => {
   const { home, store } = fixture(t);
     operation(store, 'OP-SEMANTIC', 'requires semantic reasoning');

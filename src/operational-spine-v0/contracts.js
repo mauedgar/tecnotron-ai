@@ -53,6 +53,7 @@ exports.RecipeRequest = zod_1.z.object({
     context: exports.ExecutionContext,
     authorization: execution_coordination_1.AuthorizationContext,
     evidence_refs: zod_1.z.array(referenceSchema).default([]),
+    preflight_handoff: zod_1.z.unknown().optional(),
     input: zod_1.z.unknown().optional(),
 }).strict().superRefine((value, ctx) => {
     if (value.operation_id !== value.context.operation_id) {

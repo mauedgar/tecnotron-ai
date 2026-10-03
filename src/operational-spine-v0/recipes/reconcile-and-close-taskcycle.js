@@ -139,6 +139,11 @@ const ReconcileAndCloseTaskCycleInput = z.object({
   }).strict(),
 }).strict();
 
+const ReconcileAndClosePreflightHandoff = z.object({
+  schema_version: z.literal('tecnotron-reconcile-close-preflight-handoff/v0'),
+  token: NonEmpty,
+}).strict();
+
 function receipt(request, {
   status,
   effectState,
@@ -300,6 +305,29 @@ function stableEqual(left, right) {
   return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
 }
 
+function protectedTaskCycleDrift(expected, current) {
+  if (current.id !== expected.id) return 'TASKCYCLE_IDENTITY_DRIFT';
+  if (current.state !== expected.state) return 'TASKCYCLE_STATE_DRIFT';
+  if (!stableEqual(current.obligations, expected.obligations)) return 'OBLIGATION_DRIFT';
+  if (!stableEqual(current.authority_refs, expected.authority_refs)) return 'AUTHORITY_DRIFT';
+  if (current.responsibility !== expected.responsibility) return 'TASKCYCLE_RESPONSIBILITY_DRIFT';
+  if (current.terminal_disposition_ref !== expected.terminal_disposition_ref) {
+    return 'TASKCYCLE_TERMINAL_DISPOSITION_DRIFT';
+  }
+  if (!stableEqual(current.related_ids, expected.related_ids)) return 'TASKCYCLE_RELATED_IDS_DRIFT';
+  if (current.revision !== expected.revision) return 'TASKCYCLE_REVISION_DRIFT';
+  if (!stableEqual(current, expected)) return 'TASKCYCLE_PROTECTED_SUBJECT_DRIFT';
+  return null;
+}
+
+function handoffObservation(aggregate) {
+  return {
+    id: aggregate.id,
+    revision: aggregate.revision,
+    state: aggregate.state,
+  };
+}
+
 function authoritativeSnapshot(stateKernel, taskcycleId) {
   const verified = stateKernel.verify();
   if (!verified || verified.valid !== true || !Number.isSafeInteger(verified.revision)) {
@@ -459,19 +487,67 @@ function deterministicRules(input) {
   });
 }
 
-function prepare({ request, input, stateKernel, reconcilePostTaskCycle }) {
+function prepare({ request, input, stateKernel, reconcilePostTaskCycle, handoffSnapshot = null }) {
   const verified = stateKernel.verify();
-  if (!verified || verified.valid !== true) {
+  if (!verified || verified.valid !== true || !Number.isSafeInteger(verified.revision)) {
     return { status: 'UNAVAILABLE', reason: 'STATE_KERNEL_VERIFY_UNAVAILABLE' };
   }
-  if (verified.revision !== input.expected_state_revision) {
+  if (handoffSnapshot === null && verified.revision !== input.expected_state_revision) {
     return { status: 'BLOCKED', reason: `STATE_KERNEL_REVISION_DRIFT:${verified.revision}` };
+  }
+  if (handoffSnapshot !== null && verified.revision < handoffSnapshot.preflight_state_revision) {
+    return {
+      status: 'BLOCKED',
+      reason: `STATE_KERNEL_REVISION_REGRESSION:${verified.revision}:${handoffSnapshot.preflight_state_revision}`,
+    };
   }
 
   const inspected = stateKernel.inspectTaskCycle(request.context.taskcycle_id);
+  if (!inspected || !inspected.aggregate || inspected.store_revision !== verified.revision) {
+    return { status: 'UNAVAILABLE', reason: 'STATE_KERNEL_SNAPSHOT_REVISION_MISMATCH' };
+  }
   const taskcycle = inspected.aggregate;
+  if (handoffSnapshot !== null) {
+    const drift = protectedTaskCycleDrift(handoffSnapshot.taskcycle, taskcycle);
+    if (drift !== null) return { status: 'BLOCKED', reason: drift };
+  }
   if (taskcycle.id !== request.context.taskcycle_id) {
     return { status: 'BLOCKED', reason: 'TASKCYCLE_IDENTITY_MISMATCH' };
+  }
+  let invocationOperation = null;
+  let invocationAttempt = null;
+  if (handoffSnapshot !== null) {
+    let operationInspection;
+    let attemptInspection;
+    try {
+      operationInspection = stateKernel.inspectOperation(request.operation_id);
+      attemptInspection = stateKernel.inspectAttempt(request.execution_attempt_id);
+    } catch {
+      return { status: 'BLOCKED', reason: 'INVOCATION_BOOKKEEPING_NOT_ESTABLISHED' };
+    }
+    if (
+      operationInspection.store_revision !== verified.revision ||
+      attemptInspection.store_revision !== verified.revision
+    ) {
+      return { status: 'UNAVAILABLE', reason: 'INVOCATION_BOOKKEEPING_SNAPSHOT_REVISION_MISMATCH' };
+    }
+    invocationOperation = operationInspection.aggregate;
+    invocationAttempt = attemptInspection.aggregate;
+    if (
+      invocationOperation.id !== request.operation_id ||
+      invocationOperation.taskcycle_id !== taskcycle.id ||
+      invocationOperation.state !== 'RUNNING'
+    ) {
+      return { status: 'BLOCKED', reason: 'INVOCATION_OPERATION_NOT_RUNNING_FOR_PROTECTED_SUBJECT' };
+    }
+    if (
+      invocationAttempt.id !== request.execution_attempt_id ||
+      invocationAttempt.operation_id !== request.operation_id ||
+      invocationAttempt.state !== 'RUNNING' ||
+      invocationAttempt.reconciliation_required === true
+    ) {
+      return { status: 'BLOCKED', reason: 'INVOCATION_ATTEMPT_NOT_RUNNING_FOR_OPERATION' };
+    }
   }
   if (['CLOSED', 'CANCELLED'].includes(taskcycle.state)) {
     return { status: 'BLOCKED', reason: `TASKCYCLE_ALREADY_TERMINAL:${taskcycle.state}` };
@@ -607,15 +683,31 @@ function prepare({ request, input, stateKernel, reconcilePostTaskCycle }) {
     reconciliation,
     rules: competentRules,
     closureAuthority,
+    precondition: handoffSnapshot === null ? {
+      mode: 'EXACT_GLOBAL_REVISION',
+      preflight_state_revision: input.expected_state_revision,
+      execution_state_revision: verified.revision,
+      protected_taskcycle: handoffObservation(taskcycle),
+      operation: null,
+      attempt: null,
+    } : {
+      mode: 'PROTECTED_SUBJECT_HANDOFF',
+      preflight_state_revision: handoffSnapshot.preflight_state_revision,
+      execution_state_revision: verified.revision,
+      protected_taskcycle: handoffObservation(taskcycle),
+      operation: handoffObservation(invocationOperation),
+      attempt: handoffObservation(invocationAttempt),
+    },
   };
 }
 
-function closureOutput({ reconciliation, satisfied, remaining, beforeState, afterState, finalVerify }) {
+function closureOutput({ reconciliation, satisfied, remaining, beforeState, afterState, finalVerify, precondition }) {
   return {
     reconciliation: {
       disposition: reconciliation.disposition,
       unresolved: reconciliation.unresolved,
     },
+    precondition,
     obligations: {
       satisfied,
       remaining,
@@ -641,6 +733,50 @@ function createReconcileAndCloseTaskCycleRecipe({
 } = {}) {
   const kernel = stateKernelContract(stateKernel);
   if (typeof reconcilePostTaskCycle !== 'function') throw new TypeError('reconcilePostTaskCycle is required');
+  const handoffSnapshots = new Map();
+  let handoffSequence = 0;
+
+  function issueHandoff(request, input, prepared) {
+    const token = `${request.execution_attempt_id}:${++handoffSequence}`;
+    handoffSnapshots.set(token, {
+      recipe_id: request.recipe_id,
+      recipe_version: request.recipe_version,
+      operation_id: request.operation_id,
+      execution_attempt_id: request.execution_attempt_id,
+      taskcycle_id: request.context.taskcycle_id,
+      input: stableValue(input),
+      preflight_state_revision: prepared.verified.revision,
+      taskcycle: stableValue(prepared.taskcycle),
+    });
+    return Object.freeze({
+      schema_version: 'tecnotron-reconcile-close-preflight-handoff/v0',
+      token,
+    });
+  }
+
+  function consumeHandoff(request, input) {
+    const parsed = ReconcileAndClosePreflightHandoff.safeParse(request.preflight_handoff);
+    if (!parsed.success) return { ok: false, reason: 'PREFLIGHT_HANDOFF_INVALID' };
+    const snapshot = handoffSnapshots.get(parsed.data.token);
+    handoffSnapshots.delete(parsed.data.token);
+    if (!snapshot) return { ok: false, reason: 'PREFLIGHT_HANDOFF_NOT_ESTABLISHED' };
+    if (
+      snapshot.recipe_id !== request.recipe_id ||
+      snapshot.recipe_version !== request.recipe_version ||
+      snapshot.operation_id !== request.operation_id ||
+      snapshot.execution_attempt_id !== request.execution_attempt_id ||
+      snapshot.taskcycle_id !== request.context.taskcycle_id
+    ) {
+      return { ok: false, reason: 'PREFLIGHT_HANDOFF_REQUEST_IDENTITY_MISMATCH' };
+    }
+    if (snapshot.preflight_state_revision !== input.expected_state_revision) {
+      return { ok: false, reason: 'PREFLIGHT_HANDOFF_EXPECTED_REVISION_MISMATCH' };
+    }
+    if (!stableEqual(snapshot.input, input)) {
+      return { ok: false, reason: 'PREFLIGHT_INPUT_CHANGED_AFTER_PREFLIGHT' };
+    }
+    return { ok: true, snapshot };
+  }
 
   const definition = RecipeDefinition.parse({
     id: 'reconcile_and_close_taskcycle',
@@ -675,14 +811,32 @@ function createReconcileAndCloseTaskCycleRecipe({
   async function preflight(request) {
     const input = ReconcileAndCloseTaskCycleInput.parse(request.input);
     const prepared = prepare({ request, input, stateKernel: kernel, reconcilePostTaskCycle });
-    return prepared.status === 'READY'
-      ? { status: 'READY' }
-      : { status: prepared.status, reason: prepared.reason };
+    if (prepared.status !== 'READY') {
+      return { status: prepared.status, reason: prepared.reason };
+    }
+    return {
+      status: 'READY',
+      handoff: issueHandoff(request, input, prepared),
+    };
   }
 
   async function execute(request) {
     const input = ReconcileAndCloseTaskCycleInput.parse(request.input);
-    const prepared = prepare({ request, input, stateKernel: kernel, reconcilePostTaskCycle });
+    let handoffSnapshot = null;
+    if (request.preflight_handoff !== undefined) {
+      const consumed = consumeHandoff(request, input);
+      if (!consumed.ok) {
+        return receipt(request, {
+          status: 'FAIL',
+          effectState: 'NONE',
+          reason: `PRECONDITION_CHANGED_AFTER_PREFLIGHT:${consumed.reason}`,
+        });
+      }
+      handoffSnapshot = consumed.snapshot;
+    }
+    const prepared = prepare({
+      request, input, stateKernel: kernel, reconcilePostTaskCycle, handoffSnapshot,
+    });
     if (prepared.status !== 'READY') {
       return receipt(request, {
         status: 'FAIL',
@@ -760,6 +914,7 @@ function createReconcileAndCloseTaskCycleRecipe({
             beforeState: prepared.taskcycle.state,
             afterState: prepared.taskcycle.state,
             finalVerify: { valid: true, revision: currentRevision, event_count: null },
+            precondition: prepared.precondition,
           }),
         });
       }
@@ -865,6 +1020,7 @@ function createReconcileAndCloseTaskCycleRecipe({
         beforeState: prepared.taskcycle.state,
         afterState: finalTaskCycle.state,
         finalVerify,
+        precondition: prepared.precondition,
       }),
     });
   }

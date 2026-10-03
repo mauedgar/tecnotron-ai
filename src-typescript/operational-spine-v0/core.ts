@@ -389,6 +389,10 @@ export function createOperationalSpine({
     stateKernel.markAttemptDispatched(executionAttemptId);
     stateKernel.markAttemptRunning(executionAttemptId);
 
+    const executionRecipeRequest = preflight.handoff === undefined
+      ? recipeRequest
+      : { ...recipeRequest, preflight_handoff: preflight.handoff };
+
     let coordinatorOutcome: ExecutionOutcome;
     try {
       coordinatorOutcome = await executionCoordinator.runAttempt({
@@ -403,7 +407,7 @@ export function createOperationalSpine({
         harness_conformance: harnessConformance,
         evidence_refs: toCoordinatorEvidence(executionPlan.evidence_refs),
         cancellation_requested: false,
-        input: { recipe_request: recipeRequest },
+        input: { recipe_request: executionRecipeRequest },
       });
     } catch (error) {
       coordinatorOutcome = {

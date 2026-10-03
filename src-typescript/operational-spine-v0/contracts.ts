@@ -84,6 +84,7 @@ export const RecipeRequest = z.object({
   context: ExecutionContext,
   authorization: AuthorizationContext,
   evidence_refs: z.array(referenceSchema).default([]),
+  preflight_handoff: z.unknown().optional(),
   input: z.unknown().optional(),
 }).strict().superRefine((value, ctx) => {
   if (value.operation_id !== value.context.operation_id) {

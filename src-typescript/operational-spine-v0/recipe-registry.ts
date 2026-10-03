@@ -15,7 +15,7 @@ import {
 } from './contracts';
 
 export type RecipePreflight =
-  | { status: 'READY'; reason?: string; evidence_refs?: readonly ReferenceLike[] }
+  | { status: 'READY'; reason?: string; evidence_refs?: readonly ReferenceLike[]; handoff?: unknown }
   | { status: 'BLOCKED' | 'UNAVAILABLE' | 'CANCELLED'; reason?: string; evidence_refs?: readonly ReferenceLike[] };
 
 interface ReferenceLike {
