@@ -2,14 +2,14 @@
 status: canonical
 owner: tecnotron-ai
 type: architecture
-updated: 2026-09-25
-version: 2.0
+updated: 2026-10-04
+version: 3.0
 related:
   - "[[architecture]]"
+  - "[[architecture-knowledge-ownership-baseline]]"
   - "[[task-lifecycle]]"
   - "[[context-strategy]]"
   - "[[current-state]]"
-  - "[[implementation-roadmap]]"
 ---
 
 # Operational Architecture
@@ -18,139 +18,129 @@ related:
 
 Define Tecnotron's operational capability boundaries without coupling Product
 semantics to a workspace provider, LLM harness, Agent Runtime, model/provider,
-planning system, repository host, or persistence implementation.
+planning system, repository host or persistence implementation.
 
-## 2. Post-bootstrap substrate
-
-The current operational substrate is layered as follows:
+## 2. Stable operational boundary
 
 ```text
 Developer / competent Product authority
         ↓
-semantic Product responsibility / Operation
+portable responsibility + subject identity + evidence
         ↓
-State Kernel V0
-  durable TaskCycle / Operation / ExecutionAttempt state and authority/effect facts
+consumer/action semantic projection
         ↓
-Operational Spine V0
-  recipe resolution + deterministic mechanics + evidence-bearing attempts
+authority/effect gates
         ↓
-replaceable execution surfaces / repository mechanisms
+deterministic Recipe / Coordinator when applicable
         ↓
-Self-Hosting Reconciliation V0
-  bounded post-effect reconciliation without manufacturing authority
+replaceable execution/repository mechanics
+        ↓
+evidence + Receipt / observation
+        ↓
+reconciliation
 ```
 
-The thin dedicated Execution Coordinator remains behind a harness-agnostic
-`ExecutionSurfacePort` for execution coordination where applicable. It does not
-absorb routing, authority, lifecycle, context sufficiency, validation, review,
-or acceptance.
+Durable attempt/effect memory is required only where the promised effect and
+recovery semantics need it. The current State Kernel implementation remains
+present, but the adopted evaluation direction is `NARROW` and its final
+architectural disposition is `UNDECIDED`.
 
-## 3. State Kernel boundary
+## 3. Current physical implementation at the 2026-10-04 baseline
 
-State Kernel owns durable operational state needed for bounded continuation.
-TaskCycle, semantic Operation, and ExecutionAttempt identities remain distinct.
-State does not create semantic authority; it records established facts,
-references, effects, obligations, and unresolved/UNKNOWN conditions.
+The repository still contains State Kernel V0, Operational Spine V0,
+Self-Hosting Reconciliation V0, Execution Coordinator/ExecutionSurfacePort and
+the earlier reusable context/routing/runtime capabilities.
 
-No universal scalar status or universal state machine may collapse Product,
-execution, validation, review, acceptance, integration, publication, or closure
-into one implicit transition.
+No physical removal, refactor, storage migration or backend change is authorized
+by the architecture/knowledge reconciliation TaskCycle.
 
-## 4. Operational Spine boundary
+Implementation presence does not imply that every operation must traverse every
+historical layer.
 
-Operational Spine owns deterministic recipe/mechanic resolution and execution
-against explicit inputs and authority/effect constraints. A recipe may combine
-mechanics inside an already-valid authorization but cannot expand scope,
-manufacture authority, reinterpret UNKNOWN as satisfied, or silently replace a
-semantic decision.
+## 4. State Kernel boundary
 
-Current deterministic mechanics include accepted-candidate integration support;
-Stage D may harden/combine Phase 2A/2B happy-path mechanics only when real cycle
-evidence demonstrates the need.
+Where durable effect memory is required, preserve:
 
-## 5. Reconciliation boundary
+- stable TaskCycle/Operation/ExecutionAttempt responsibility identity;
+- explicit authority/evidence linkage;
+- `NONE` / `CONFIRMED` / `UNKNOWN`;
+- retry blocking while an effect remains unreconciled;
+- recovery without inventing a new attempt;
+- auditability.
 
-Self-Hosting Reconciliation consumes verified observations and competent
-authority evidence to classify post-effect state and remaining obligations. It
-cannot treat fixture/convenience authority as Product authority, infer Developer
-acceptance from validation/review, or choose future roadmap work automatically.
+Do not infer from these invariants that the current filesystem implementation,
+four aggregates or full-generation history are the permanent universal
+architecture. Final disposition requires a later equivalence gate.
 
-## 6. Semantic Operation and effect boundaries
+## 5. Operational Spine / Coordinator boundary
 
-A semantic Operation may carry objective, intended effects, scope, constraints,
-known/UNKNOWN facts, authority references, decisions, results, obligations, and
-traceability. Its identity is independent from run/session/worktree/model/harness
-identity.
+Operational Spine and the Coordinator remain implementation capabilities for
+bounded deterministic mechanics. Their adopted direction is `NARROW`, not
+physical removal.
 
-These relationships remain distinct:
+They may compose authorized mechanics, but they cannot expand scope,
+manufacture authority, reinterpret `UNKNOWN`, decide semantic sufficiency,
+perform Independent Review or grant Developer acceptance.
 
-```text
-semantic_operation
-!= execution_attempt
-!= result
-!= evidence
-!= validation
-!= review
-!= developer_acceptance
-!= integration
-!= publication
-!= canonical_adoption
-!= closure
-```
+## 6. Reconciliation boundary
 
-Successful execution or validation does not grant a later effect. Review PASS
-does not grant Developer acceptance. Publication does not retroactively create
-Product authority.
+Reconciliation consumes competent observations and authority evidence to
+classify effects/obligations. It must not infer acceptance from validation,
+review, publication or convenient runtime state.
 
-## 7. Decisioning and execution coordination
+Derived summaries should share the same competent structured execution identity
+or be reconcilable by exact identity.
 
-Routing/model/provider/runtime eligibility is target-independent decisioning.
-Mandatory constraints precede optimization. Unknown mandatory conditions fail
-closed. Requested, resolved, and observed identities remain distinct.
+## 7. Context / continuation boundary
 
-Execution coordination consumes independently resolved decisioning and
-established authorization/effect constraints. It may report no-start, partial,
-success, failure, unavailable capability, or cancellation while preserving the
-correct Operation/ExecutionAttempt relationship. It may not silently reroute or
-weaken constraints.
+Semantic continuation is responsibility/subject/authority/gate/obligation/
+result/evidence/uncertainty projected for a consumer/action.
 
-## 8. Context boundary
+`ContextBundle` and materialization transport bytes. `ContextPackager` assesses
+needed/sufficient/missing context. `SemanticHandoff`/`TaskContextProjection`
+project the same semantic subject. Carrier observations are fresh evidence only
+when an action depends on mutable local/process state.
 
-Context systems provide minimum sufficient verifiable context through explicit
-sources/references. ContextPackager, retrieval, repository packaging, or a
-future Context Package Recipe do not originate Product authority. A reusable
-Phase-1 context-materialization Recipe is deferred and is not required to make
-Stage B valid.
+No new store is created merely to rename these concepts.
 
-## 9. Workspace, isolation, runtime, provider and planning boundaries
+## 8. Execution/workspace/harness boundary
 
-Git worktrees may provide task write isolation. Orca or another workspace/session
-system may host work. OpenCode, ChatGPT, Codex, or another harness/runtime may
-execute bounded work. Model providers supply inference. GitHub or another
-planning provider may host coordination views.
+Git owns Git mechanics. Workspace/session providers own their native mechanics.
+ChatGPT Web/Work, OpenCode, Orca and Commander are replaceable operating profiles.
 
-All are replaceable. Connected capability is not authorization. Tool selection,
-configuration, account state, and provider metadata are not Product source of
-truth.
+Commander is execution/result-only. MAT-XFORM/XForm is a temporary mechanical
+transport utility. Neither owns semantic repository exploration, architecture,
+Product review, acceptance or canonical state.
 
-## 10. Validation, review and Developer authority
+The portable transport-integrity contract is closed-envelope + explicit
+manifest/IDs/boundaries + deterministic extraction + post-transport hash
+verification. The carrier that implements it is replaceable and has no Product
+authority.
 
-Deterministic validation is preferred where equivalent and reports only covered
-behavior. Independent semantic review remains separate from implementation and
-Developer acceptance. The Developer owns terminal acceptance and exceptional
-Product/architecture rulings.
+## 9. Review and Developer authority
 
-## 11. Transitional Task Lifecycle relation
+Independent semantic review remains separate from implementation and
+deterministic validation. Review `PASS` is not Developer acceptance.
 
-`docs/task-lifecycle.md` remains canonical transitionally for repository/process
-policy where still applicable. State Kernel owns durable operational state;
-Operational Spine owns deterministic recipe/mechanic execution. Keeping the
-Task Lifecycle document does not reactivate historical WP004 or establish a new
-`tecnotron-task-lifecycle/v1` contract.
+Developer acceptance, Phase 2, integration and publication remain separate
+future grants.
 
-## 12. Change gate
+## 10. Reuse-before-build gate
 
-A tool or framework does not reopen this architecture merely by existing. A
-Product architecture change requires a demonstrated gap, material requirement,
-measurable failure, or justified simplification under competent authority.
+A new component requires:
+
+1. a precise missing capability;
+2. an identified current/external owner;
+3. evidence that composition/adaptation is insufficient;
+4. a bounded Product-specific invariant that remains unowned;
+5. an explicit Developer responsibility for the change.
+
+Current harness limitations, Windows workarounds or one failed experiment are
+not permanent architecture evidence.
+
+## 11. Change gate
+
+See
+[Architecture, knowledge and capability ownership baseline](architecture-knowledge-ownership-baseline.md)
+for current RETAIN/NARROW/ABSORB_CONDITIONALLY/DEFER dispositions and unresolved
+gates.

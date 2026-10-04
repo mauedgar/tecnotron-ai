@@ -2,57 +2,66 @@
 
 Tecnotron is a progressively harness-agnostic software-engineering control plane.
 It coordinates bounded Product work while keeping Product authority, execution
-surfaces, workspace providers, runtimes, models, planning providers, and
-consumer repositories as separate concerns.
+surfaces, workspace providers, runtimes, models, planning providers and consumer
+repositories as separate concerns.
 
-## Current pre-alpha baseline
+## Current baseline
 
-The current `tools` baseline is post-bootstrap. The implemented operational
-substrate includes State Kernel V0, Operational Spine V0, self-hosting
-reconciliation, the thin Execution Coordinator behind `ExecutionSurfacePort`,
-and the previously accepted reusable AI-core capabilities recorded in
-[Current State](docs/current-state.md).
+The current architecture/knowledge direction is the
+[Architecture, knowledge and capability ownership baseline](docs/architecture-knowledge-ownership-baseline.md).
 
-Stages A, B, and C are terminal `PASS`; WP003 is `COMPLETE`, and deterministic
-Phase-2 recipe maturation is `CLOSED_PASS`. Stage D is entered and nonterminal.
-The Developer-selected Product responsibility is the reusable Independent Review
-protocol, and `WP-PB-001` is the current Product-definition responsibility. Its
-SPEC/PLAN remain candidate-only pending Independent Review and Developer acceptance;
-implementation is not started or authorized. Stage E has not been entered.
-Historical WP004/WP005 are not mechanically resumed.
+The active bounded responsibility is:
+
+```text
+TASKCYCLE-TECNOTRON-ARCHITECTURE-KNOWLEDGE-OWNERSHIP-SOT-RECONCILIATION-001
+MATERIALIZE_RECONCILED_ARCHITECTURE_KNOWLEDGE_AND_CAPABILITY_OWNERSHIP_SOT
+```
+
+This responsibility reconciles documentation, ownership and durable Product
+knowledge only. It does not authorize runtime refactor, State Kernel migration,
+WP-PB continuation, Phase 2, canonical integration or remote publication.
 
 ## Start here
 
-- [Source of Truth](docs/SOURCE_OF_TRUTH.md) — active authority/navigation.
-- [Current State](docs/current-state.md) — confirmed implementation reality.
-- [Implementation Roadmap](docs/implementation-roadmap.md) — current sequence.
-- [Active pre-alpha milestone](docs/milestones/tecnotron-prealpha-normalization-and-integral-cycle-v1/PLAN.md).
-- [WP003 SPEC](docs/work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md) and
-  [WP003 PLAN](docs/work-packages/wp-003-sdd-authority-and-artifacts/PLAN.md).
-- [WP-PB-001 definition SPEC](docs/work-packages/wp-pb-001-reusable-independent-review-protocol/SPEC.md) and
-  [PLAN](docs/work-packages/wp-pb-001-reusable-independent-review-protocol/PLAN.md) — current Stage-D definition candidate.
+1. [Source of Truth](docs/SOURCE_OF_TRUTH.md)
+2. [Architecture, knowledge and capability ownership baseline](docs/architecture-knowledge-ownership-baseline.md)
+3. [Current State](docs/current-state.md)
+4. responsibility-specific contracts/evidence only as referenced by those sources
 
-Historical plans, TASK/PLAN/RESULT/REVIEW trees, and archived material remain in
-place as provenance during pre-alpha, but they are not active navigation unless
-a current authority explicitly points to them.
+Normal future bootstrap should not require historical chat transcripts, Memory,
+session history or giant Library handoffs.
 
-## Authority boundary
+## Current architecture direction
 
-Discussion, runtime output, chat history, LLM memory, harness configuration,
-generated context, derived indexes, caches, workspace state, research material,
-and execution-surface selection do not create Product authority. The Developer
-retains terminal acceptance authority. Canonical repository sources and explicit
-competent rulings control Product state.
+Tecnotron retains portable authority/identity/review/effect semantics, repository
+SOT, useful existing Recipes, Git qualification and the frozen review contract.
 
-## Execution surfaces
+AgentRuntime, Router, ModelResolver/FinOps, ContextPackager, repo-packager,
+Operational Spine, State Kernel usage and named Primitives are under `NARROW`
+evaluation. Physical removals are held pending consumer/equivalence evidence.
 
-Git worktrees, OpenCode, Orca, ChatGPT, other harnesses, model providers, and
-planning providers are replaceable capabilities. Their availability or use does
-not make them Tecnotron architecture or Product authority.
+State Kernel final disposition is `UNDECIDED`.
+
+## WP-PB-001
+
+The previous active navigation selected WP-PB-001. That remains historical
+evidence at its cutoff, but current continuation is `DEFERRED`.
+
+A future resume requires exact competent WU01 ruling and terminal evidence plus a
+new explicit Developer continuation responsibility.
+
+## Knowledge and execution surfaces
+
+Repository SOT is the durable Product knowledge owner.
+
+ChatGPT Web/Work, OpenCode, Orca and Commander are replaceable operating
+profiles. MAT-XFORM/XForm is a temporary mechanical transport utility. Transport
+copies and Library are carriers only. None has Product authority.
+
+The portability unit is semantic handoff, not chat history or harness session.
 
 ## Branches
 
-For the current pre-alpha Product work, `tools` is the canonical integration
-branch. `main` is outside this Stage-D Product-definition responsibility and is not
-promoted by this documentation change. Historical `tooling` references remain
-provenance only.
+For this reconciliation baseline, `tools` is the integration branch whose exact
+remote anchor must be verified before effect. This candidate does not move or
+publish `tools`. `main` is outside this responsibility.

@@ -2,98 +2,102 @@
 document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 4.0
-updated: 2026-09-25
+version: 5.0
+updated: 2026-10-04
 owner: tecnotron-ai
 ---
 
 # Implementation Roadmap — Tecnotron
 
-This roadmap is current planning navigation, not independent implementation or
-acceptance authority. Accepted SPECs/PLANs and explicit Developer rulings remain
-competent for their bounded responsibilities.
+This roadmap is current navigation, not independent authority. Exact Developer
+rulings and accepted Product artifacts govern their bounded subjects.
 
-## Active milestone
+## Current bounded responsibility
 
-[Pre-Alpha Normalization and Integral Development Cycle](milestones/tecnotron-prealpha-normalization-and-integral-cycle-v1/PLAN.md)
+```yaml
+TaskCycle: TASKCYCLE-TECNOTRON-ARCHITECTURE-KNOWLEDGE-OWNERSHIP-SOT-RECONCILIATION-001
+responsibility: MATERIALIZE_RECONCILED_ARCHITECTURE_KNOWLEDGE_AND_CAPABILITY_OWNERSHIP_SOT
+kind: PRODUCT_DOCUMENTATION_ARCHITECTURE_KNOWLEDGE_RECONCILIATION
+current_gate: INDEPENDENT_REVIEW_AFTER_CANDIDATE_FREEZE
+runtime_refactor: NOT_AUTHORIZED
+Phase_2: NOT_AUTHORIZED
+canonical_integration: NOT_AUTHORIZED
+remote_publication: NOT_AUTHORIZED
+```
+
+Goal: make the repository sufficient for normal future reconstruction from SOT
+plus the exact current Developer ruling/responsibility and only action-required
+volatile observations.
+
+## Current sequence
 
 ```text
-Stage A — historical reconciliation                         PASS
-Stage B — canonical repository normalization                PASS
-    ↓
-Stage C — complete canonical WP003 SDD                      PASS
-    WU01 — deterministic parser / relation validator        CLOSED_PASS
-    WU02 — templates + positive/negative fixture corpus     CLOSED_PASS
-    WU03 — fail-closed CLI/lint                             CLOSED_PASS
-    WU04 — adoption/conformance disposition                 NO_IMPLEMENTATION_REQUIRED
-    ↓
-Stage D — post-bootstrap operational maturation decision    ENTERED / CURRENT
-    WP-PB-001 — Reusable Independent Review Protocol        PRODUCT DEFINITION CANDIDATE
-    implementation                                          NOT STARTED / NOT AUTHORIZED
-    ↓
-Stage E — one integral real-cycle proof                     NOT ENTERED
-    ↓
-ready to evaluate parallel development
+verified tools anchor
+  ↓
+reconcile active SOT/navigation/ownership
+  ↓
+freeze one documentation candidate
+  ↓
+materialize frozen review interface
+  ↓
+Independent Review in separate context
+  ↓
+Developer acceptance (future, explicit)
+  ↓
+Phase 2 / integration / publication (future, explicit and dimension-specific)
 ```
 
-## WP003 disposition
+## Adopted architecture direction
 
-WP003 remains canonical. Preserve the accepted
-[SPEC](work-packages/wp-003-sdd-authority-and-artifacts/SPEC.md),
-[PLAN](work-packages/wp-003-sdd-authority-and-artifacts/PLAN.md), SDD contract,
-and ADR without semantic rewrite.
+- RETAIN portable authority/identity/review/effect invariants, repository SOT,
+  useful Recipes, Git qualification and frozen review semantics.
+- NARROW AgentRuntime, Router, ModelResolver/FinOps, ContextPackager,
+  repo-packager, Operational Spine, State Kernel usage and named Primitives.
+- HOLD physical removals until consumer inventory/equivalence.
+- ABSORB CONDITIONALLY duplicate lifecycle/context/snapshot/state concepts only
+  after competence/equivalence is established.
+- DEFER Temporal, devBrain, embeddings, generalized orchestration and unproven
+  new components.
+- State Kernel final disposition remains `UNDECIDED`.
+
+The authoritative detail is in
+[Architecture, knowledge and capability ownership baseline](architecture-knowledge-ownership-baseline.md).
+
+## WP-PB-001
+
+The prior roadmap selected `WP-PB-001` as current Stage-D work. That remains
+historical navigation at its 2026-09-25 cutoff but is superseded as active
+next-work selection.
 
 ```yaml
-WP003:
-  canonical: true
-  WU00: CLOSED_PASS
-  WU01: CLOSED_PASS
-  WU02: CLOSED_PASS
-  WU03: CLOSED_PASS
-  WU04: NO_IMPLEMENTATION_REQUIRED
-  status: COMPLETE
-  RF_201_RF_207: UNCHANGED
+WP_PB_001:
+  continuation: DEFERRED
+  resume_gate:
+    - acquire exact competent WU01 ruling
+    - acquire exact terminal evidence
+    - issue a new explicit Developer continuation responsibility
 ```
 
-Deterministic Phase-2 recipe maturation is `CLOSED_PASS`. Stage D is entered under
-explicit Developer authority; that entry does not reopen or modify the matured Phase-2
-responsibility.
+No WP-PB work unit is resumed or initialized here.
 
-## Historical predecessor disposition
+## Historical milestone/provenance
 
-The accepted `tecnotron-operational-foundation-v1` plan and completed WP000–002
-artifacts remain provenance. They are not deleted or rewritten to pretend they
-always matched the post-bootstrap model.
+Stages/WPs already established by their competent historical evidence are not
+rewritten by this reconciliation. Frozen SPEC/PLAN/TASK/REVIEW frontmatter
+remains historical truth for its original subject/cutoff.
 
-Historical WP004/WP005 are evidence inputs only:
+Broad historical cleanup remains deferred.
 
-```yaml
-historical_WP004:
-  mechanical_resume: false
-historical_WP005:
-  mechanical_resume: false
-```
+## Future decision gates
 
-Stage-D characterization selected exactly one current Product responsibility:
-`TECNOTRON-REUSABLE-INDEPENDENT-REVIEW-PROTOCOL`. `WP-PB-001` is its provisional
-post-bootstrap identity and current Product-definition candidate. Implementation remains
-not started and not authorized; Independent Review and Developer acceptance of the
-definition remain future gates.
+1. **Repo-first bootstrap test** — a fresh consumer reconstructs Product state
+   without transcript/Memory/giant Library handoff.
+2. **Consumer inventory** — required before physical absorption/removal.
+3. **State Kernel equivalence** — required before backend migration/removal.
+4. **Harness conformance** — acquired only when a selected action depends on a
+   concrete installed version/configuration.
+5. **Result-coherence incident trace** — required before changing the generator
+   responsible for the FitFlow summary divergence.
+6. **WP-PB resume** — exact ruling/evidence before any continuation.
 
-## Explicitly deferred
-
-- documentation baseline cleanup until BETA;
-- F03 context/evidence identity until its accepted natural trigger;
-- F07 generic environment preparation until an accepted consumer demonstrates need;
-- F08 execution-record crash durability before unattended/crash-safe claims;
-- F09 test orchestration until nearby tooling change or repeated friction is material;
-- Context Package Recipe and dedicated review-package Recipe;
-- Observer / fitness optimization;
-- MCP;
-- semantic retrieval;
-- Temporal / generalized orchestration;
-- task-management provider selection;
-- permanent harness selection or model/provider optimization;
-- parallelization infrastructure before the integral-cycle proof.
-
-These are not hidden acceptance criteria for WP-PB-001 and do not expand its scope.
+These gates are not automatically scheduled TaskCycles.

@@ -2,8 +2,8 @@
 document_id: TEC-STATE-001
 status: canonical
 machine_context: true
-version: 2.0
-updated: 2026-09-25
+version: 3.0
+updated: 2026-10-04
 owner: tecnotron-ai
 ---
 
@@ -14,118 +14,165 @@ owner: tecnotron-ai
 ```yaml
 repository: mauedgar/tecnotron-ai
 branch: tools
-commit: c35170839f020475e1a483f73cf00f7bd55b5dae
-tree: ba39201263c1899f709c44900c85553020ecd28c
-bootstrap_terminal: TECNOTRON_MVP_SELF_HOSTING_OPERATIONAL_BASELINE
-wave3_terminal: TECNOTRON_SELF_HOSTING_DEVELOPMENT_V0_CLOSED_PASS
-current_position: STAGE_D_PRODUCT_DEFINITION
+commit: 4515c16d65dfaf27b87c282865354070835b7509
+tree: 9129d9a79f164386327a431e8db5d661fa8a2784
+anchor_verified_for_reconciliation: true
 ```
 
-The baseline above is the canonical parent for the current Stage-D Product-definition
-candidate. Stage D entry and responsibility selection are already established by the
-Developer ruling; this candidate does not authorize implementation or Stage-E entry.
+This cutoff is the pre-TaskCycle SOT baseline. The documentation candidate built
+from it has no canonical effect until Independent Review, Developer acceptance
+and separately authorized integration/publication.
 
-## Confirmed post-bootstrap substrate
-
-At the evidence cutoff the repository contains and has accepted/integrated the
-following relevant Product capabilities:
-
-- State Kernel V0: durable operational state with explicit authority/effect
-  separation and fail-closed semantics;
-- Operational Spine V0: Operation/recipe/execution-attempt resolution and
-  deterministic execution mechanics, including accepted-candidate integration
-  support;
-- Self-Hosting Reconciliation V0: bounded post-effect reconciliation without
-  manufacturing authority;
-- thin dedicated Execution Coordinator behind a harness-agnostic
-  `ExecutionSurfacePort`;
-- deterministic TaskCycle substrate prototype evidence without adopting a
-  universal lifecycle/state machine;
-- Project Profile, operational profiles, OpenCode execution-surface boundary,
-  ContextPackager/Explorer, Router/ModelResolver/FinOps, Agent Runtime and Agent
-  MVP capabilities preserved from accepted predecessor work.
-
-These capabilities do not make any harness, provider, workspace, model, or
-planning system Product authority.
-
-## Canonical SDD state
+## Active Product responsibility
 
 ```yaml
-WP003:
-  canonical: true
-  SPEC: ACCEPTED
-  PLAN: ACCEPTED
-  WU00: CLOSED_PASS
-  WU01: CLOSED_PASS
-  WU02: CLOSED_PASS
-  WU03: CLOSED_PASS
-  WU04: NO_IMPLEMENTATION_REQUIRED
-  status: COMPLETE
-  RF_201_RF_207: PRESERVED_UNCHANGED
+TaskCycle: TASKCYCLE-TECNOTRON-ARCHITECTURE-KNOWLEDGE-OWNERSHIP-SOT-RECONCILIATION-001
+responsibility: MATERIALIZE_RECONCILED_ARCHITECTURE_KNOWLEDGE_AND_CAPABILITY_OWNERSHIP_SOT
+Developer_reconciliation_ruling: GRANTED
+current_gate: CANDIDATE_FREEZE_THEN_INDEPENDENT_REVIEW
+Phase_2_authorized: false
+canonical_integration_authorized: false
+remote_publication_authorized: false
 ```
 
-WU00-WU03 are terminal. WU04 requires no implementation TaskCycle under the
-competent Developer disposition.
+The durable outcome target is a repo-first Product reconstruction baseline.
+ChatGPT/Library history is not the knowledge owner.
 
-## Pre-alpha normalization state
+## Current physical implementation reality
+
+At the evidence cutoff the repository still contains the accepted/post-bootstrap
+implementation substrate, including State Kernel V0, Operational Spine V0,
+Self-Hosting Reconciliation, Execution Coordinator/ExecutionSurfacePort, Project
+Profile, context/routing/model capabilities, Agent Runtime/MVP, operational
+profiles and existing deterministic Recipes.
+
+Presence is not a final ownership disposition. This TaskCycle authorizes
+documentation/architecture/knowledge reconciliation only and performs no runtime
+refactor or deletion.
+
+## Current architecture direction
+
+See
+[Architecture, knowledge and capability ownership baseline](architecture-knowledge-ownership-baseline.md).
 
 ```yaml
-milestone: TECNOTRON-PREALPHA-NORMALIZATION-AND-INTEGRAL-CYCLE-MILESTONE-PLAN-001
-stage_A:
-  disposition: PASS
-  terminal: true
-stage_B:
-  disposition: PASS
-  terminal: true
-stage_C:
-  disposition: PASS
-  terminal: true
-stage_D:
-  entered: true
-  terminal: false
-  characterization: ACCEPTED_RETRY1
-  selected_responsibility: TECNOTRON-REUSABLE-INDEPENDENT-REVIEW-PROTOCOL
-  work_package: WP-PB-001
-  product_definition: CANDIDATE
-  implementation_authorized: false
-stage_E:
-  entered: false
+retain:
+  - explicit_Developer_authority_and_grants
+  - authority_execution_review_acceptance_effect_separation
+  - portable_subject_and_effect_identity
+  - independent_review_semantics
+  - NONE_CONFIRMED_UNKNOWN_effect_semantics
+  - Git_as_code_identity_and_ref_owner
+  - repository_SOT_as_durable_Product_knowledge
+  - useful_existing_Recipes
+  - Git_execution_qualification
+  - frozen_review_contract
+  - environment_binding_profiles
+  - historical_provenance
+narrow:
+  - AgentRuntime
+  - Router
+  - ModelResolver_and_FinOps
+  - ContextPackager
+  - repo_packager
+  - Operational_Spine
+  - State_Kernel_usage
+  - Primitives_as_named_subsystem
+conditional_absorption:
+  - Explorer
+  - duplicate_Lifecycle_Controller_concepts
+  - context_expansion_as_separate_subsystem
+  - continuation_snapshot_parallel_concepts
+  - RunStore_or_parallel_state_representations
 ```
 
-Stage C is terminal `PASS`. Stage D is entered and currently owns Product definition
-for the Developer-selected reusable Independent Review protocol. The definition set is
-candidate-only; implementation remains unauthorized.
+Physical removal remains `HOLD_PENDING_CONSUMER_INVENTORY`.
 
-## Historical/deferred disposition
+## State Kernel
 
-- Historical `tecnotron-operational-foundation-v1` remains in place as accepted
-  provenance but is no longer active-next-work navigation.
-- Historical WP004 is not mechanically resumed. Its principal vertical-cycle
-  purpose has been absorbed by the post-bootstrap substrate; only demonstrated
-  residual debt may be reconsidered later under new authority.
-- Historical WP005/Observer direction is not mechanically resumed.
-- Broad documentation baseline cleanup is deferred to BETA.
-- F03 context/evidence identity, F07 generic environment preparation, F08 execution
-  record crash durability, and F09 test orchestration remain deferred until their
-  accepted natural triggers; they are not WP-PB-001 implementation scope.
-- Context Package Recipe, Observer/fitness, MCP, semantic retrieval,
-  Temporal/generalized orchestration, task-management provider selection, and
-  harness/model optimization remain deferred according to the active milestone.
+```yaml
+State_Kernel:
+  evaluation_direction: NARROW
+  final_disposition: UNDECIDED
+  migration_authorized: false
+  SQLite_adoption_authorized: false
+  Temporal_adoption_authorized: false
+  replacement_ledger_authorized: false
+```
 
-## Current Product position
+Required effect/recovery invariants remain active. No final backend or migration
+decision is made here.
 
-Stage C is terminal `PASS`, WP003 is `COMPLETE`, and deterministic Phase-2 recipe
-maturation is `CLOSED_PASS`. Stage D is entered and nonterminal. Its selected current
-responsibility is definition of `WP-PB-001` — Reusable Independent Review Protocol.
-Independent Review of this definition has not run, Developer acceptance is not granted,
-implementation is not started or authorized, and Stage E has not been entered.
+## Knowledge and continuation
 
-## Known limitations
+Repository SOT is the durable Product knowledge owner. Semantic continuation is
+portable through responsibility/subject/authority/gate/obligations/result/evidence/
+uncertainty, projected for the intended consumer/action. Volatile carrier state is
+attached only when that action requires it.
 
-- This document intentionally omits exhaustive historical test counts, old
-  branch mechanics, and execution-surface-era narrative; those remain in
-  historical evidence.
-- `docs/task-lifecycle.md` remains transitional and may be narrowed or replaced
-  only by a later competent responsibility.
-- The repository package metadata still carries historical naming; this
-  Product-definition candidate does not modify `package.json` or source/runtime files.
+Chat/session history, Memory, Library copies and workspace state are not durable
+Product knowledge.
+
+## Operating profiles
+
+```yaml
+ACTIVE_OPERATING_PROFILES:
+  - ChatGPT_Web
+  - ChatGPT_Work
+  - OpenCode
+  - Orca
+  - Commander
+TEMPORARY_EXECUTION_MECHANICS:
+  - MAT_XFORM
+PORTABLE_PRODUCT_CONTRACTS:
+  - explicit_closed_envelope_transport_integrity
+```
+
+All have `Product_authority: NONE` as execution/transport surfaces.
+
+## Superseded active assertions
+
+The 2026-09-25 current-state/roadmap/README/capability navigation selected
+`WP-PB-001` as the current next responsibility. That statement remains historical
+evidence at its cutoff but is superseded **as active navigation** by the current
+Developer reconciliation ruling.
+
+No frozen WP-PB artifact is rewritten.
+
+## WP-PB-001
+
+```yaml
+WP_PB_001:
+  continuation: DEFERRED
+  future_resume_requires:
+    - exact_competent_WU01_ruling
+    - exact_terminal_evidence
+```
+
+No WU02 or later WP-PB continuation is initialized by this TaskCycle.
+
+## FitFlow incident boundary
+
+```yaml
+FitFlow_result_incident:
+  type: RESULT_SUMMARY_VS_EXECUTION_LOG_DIVERGENCE
+  root_cause: UNKNOWN
+```
+
+The incident informs the architectural criterion that derived summaries should
+share a competent structured execution identity. It does not authorize FitFlow
+repair or assign a Tecnotron root cause.
+
+## Unresolved gates
+
+- final State Kernel disposition/equivalence;
+- consumer inventory before physical absorption/removal;
+- installed harness conformance when a future action depends on it;
+- exact WP-PB WU01 ruling/terminal evidence before resume;
+- exact FitFlow summary generator/root cause before corrective evolution.
+
+## Current next action
+
+Freeze exactly one documentation candidate, materialize an exact self-contained
+Independent Review interface, and execute the review in a separate reviewer
+context. No Phase 2, integration or publication is authorized.
