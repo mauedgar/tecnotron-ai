@@ -2,7 +2,7 @@
 document_id: TEC-STATE-001
 status: canonical
 machine_context: true
-version: 3.1
+version: 3.2
 updated: 2026-10-04
 owner: tecnotron-ai
 ---
@@ -14,13 +14,13 @@ owner: tecnotron-ai
 ```yaml
 repository: mauedgar/tecnotron-ai
 branch: tools
-head: db0af47d723ae0be30a75b1052248f1041021f25
-tree: c67646e7869899c2f6cb53ed7d9fbd5ac263d472
-anchor_verified_for_current_navigation_reconciliation: true
+head: c7c68f0b0f20b6bc722d2201f7a3ad7adf995736
+tree: e0218ac280d4bc4cfdd49d42c24939bc80507521
+anchor_verified_for_active_consumer_inventory_reconciliation: true
 ```
 
 This is the current canonical repository identity at the start of
-`TASKCYCLE-TECNOTRON-CURRENT-STATE-NAVIGATION-RECONCILIATION-001`.
+`TASKCYCLE-TECNOTRON-ACTIVE-CONSUMER-INVENTORY-RECONCILIATION-001`.
 It is distinct from the historical evidence cutoff below.
 
 ## Historical evidence cutoff
@@ -40,8 +40,8 @@ provenance and is not rewritten to pretend that it included later integrations.
 ## Active Product responsibility
 
 ```yaml
-TaskCycle: TASKCYCLE-TECNOTRON-CURRENT-STATE-NAVIGATION-RECONCILIATION-001
-responsibility: RECONCILE_CURRENT_STATE_POST_INTEGRATION_NAVIGATION
+TaskCycle: TASKCYCLE-TECNOTRON-ACTIVE-CONSUMER-INVENTORY-RECONCILIATION-001
+responsibility: RECONCILE_ACTIVE_CONSUMERS_BEFORE_COMPONENT_PHYSICAL_DISPOSITION
 lifecycle_persistence:
   owner: EXISTING_STATE_KERNEL_MECHANISM
 current_gate: CANDIDATE_FREEZE_THEN_INDEPENDENT_REVIEW
@@ -50,9 +50,10 @@ canonical_integration_authorized: false
 remote_publication_authorized: false
 ```
 
-This responsibility reconciles current navigation only. It does not reopen
-architecture, runtime ownership, State Kernel disposition or deferred capability
-work.
+This responsibility reconciles active consumers before any future physical
+component disposition. It does not authorize deletion, absorption, narrowing,
+runtime rewiring, dependency removal, State Kernel migration or a final
+architecture disposition.
 
 ## Recently completed Product responsibilities
 
@@ -67,6 +68,12 @@ completed:
     state: CLOSED
     terminal_disposition: CLOSED_PASS
     canonical_commit: db0af47d723ae0be30a75b1052248f1041021f25
+
+  current_state_navigation_reconciliation:
+    TaskCycle: TASKCYCLE-TECNOTRON-CURRENT-STATE-NAVIGATION-RECONCILIATION-001
+    state: CLOSED
+    terminal_disposition: CLOSED_PASS
+    canonical_commit: c7c68f0b0f20b6bc722d2201f7a3ad7adf995736
 ```
 
 The closed ownership reconciliation preserves these current boundaries:
@@ -141,7 +148,61 @@ conditional_absorption:
   - RunStore_or_parallel_state_representations
 ```
 
-Physical removal remains `HOLD_PENDING_CONSUMER_INVENTORY`.
+Consumer inventory is now reconciled at the canonical anchor. Physical component
+disposition remains separately unauthorized.
+
+## Active consumer inventory reconciliation
+
+```yaml
+consumer_inventory:
+  anchor:
+    commit: c7c68f0b0f20b6bc722d2201f7a3ad7adf995736
+    tree: e0218ac280d4bc4cfdd49d42c24939bc80507521
+  active:
+    - Operational_Spine_and_Coordinator
+    - State_Kernel_usage
+  partially_active:
+    - AgentRuntime_via_AgentMVP
+    - Router_via_AgentMVP
+    - ModelResolver_and_FinOps_via_AgentMVP
+    - ContextPackager_via_AgentMVP
+    - repo_packager_via_doctor_and_OpenCode_skill_binding
+    - Explorer_via_AgentMVP
+    - continuation_snapshot_parallel_concepts_via_deterministic_continuation_CLI
+  no_active_consumer_found:
+    - Primitives_as_named_subsystem
+    - duplicate_Lifecycle_Controller_concepts
+    - context_expansion_as_separate_subsystem
+    - RunStore_or_parallel_state_representations
+  unknown:
+    - installed_harness_dynamic_invocation_where_exact_conformance_would_be_required
+```
+
+The AgentMVP library composes Router -> ModelResolver/FinOps -> ContextPackager ->
+Explorer -> AgentRuntime, but no current top-level Product script, Recipe or
+lifecycle entrypoint for AgentMVP was found. Operational Spine is independently
+active through `recipe:invoke`, built-in Recipes and Coordinator composition.
+State Kernel is independently active through lifecycle persistence and stable
+Recipe invocation.
+
+`repo-packager` is consumed by the current doctor probe and is exposed as an
+OpenCode skill. Whether a particular installed harness currently invokes that
+skill is dynamic and is not inferred from repository presence.
+
+Negative conclusions cover source imports/symbols, scripts, package/configuration,
+Recipes, tests, lifecycle evidence and active documentation at the exact anchor.
+Historical planning/provenance mentions are not active consumers. No physical
+change is authorized by this inventory.
+
+Physical-disposition candidates:
+
+- active or partially active code paths: `ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE`;
+- State Kernel: `NEEDS_EQUIVALENCE_BEFORE_CHANGE`;
+- named Primitives, duplicate Lifecycle Controller concepts, separate context
+  expansion subsystem and RunStore: `SAFE_TO_EVALUATE_ABSORPTION` in a future
+  explicitly authorized responsibility;
+- repo-packager/harness replacement additionally requires installed-harness
+  conformance when that future decision depends on actual harness behavior.
 
 ## State Kernel
 
@@ -251,16 +312,16 @@ repair or assign a Tecnotron root cause.
 ## Unresolved gates
 
 - final State Kernel disposition/equivalence;
-- consumer inventory before physical absorption/removal;
-- installed harness conformance when a future action depends on it;
+- component-specific physical-disposition/equivalence decisions for active or partially active consumers;
+- installed harness conformance when a future repo-packager/harness decision depends on it;
 - exact WP-PB WU01 ruling/terminal evidence before resume;
 - exact FitFlow summary generator/root cause before corrective evolution.
 
 ## Current next action
 
-Freeze exactly one documentation candidate for this navigation reconciliation,
-materialize and reopen an exact frozen Independent Review interface, and execute
-the review only in a fresh separate reviewer context.
+Freeze exactly one documentation candidate for this active-consumer inventory
+reconciliation, materialize and reopen an exact frozen Independent Review
+interface, and execute the review only in a fresh separate reviewer context.
 
 No Developer acceptance, Phase 2, canonical integration or remote publication is
 authorized here.

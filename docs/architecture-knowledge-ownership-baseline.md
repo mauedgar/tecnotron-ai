@@ -76,31 +76,42 @@ session provider or execution surface.
 ## 3. Architecture direction and physical-disposition boundary
 
 The adopted direction is responsibility/ownership reconciliation, not a physical
-deletion order.
+deletion order. Consumer inventory was reconciled at exact repository anchor
+`c7c68f0b0f20b6bc722d2201f7a3ad7adf995736` /
+`e0218ac280d4bc4cfdd49d42c24939bc80507521` by
+`TASKCYCLE-TECNOTRON-ACTIVE-CONSUMER-INVENTORY-RECONCILIATION-001`.
 
-| Capability/component | Current direction | Physical disposition |
-| --- | --- | --- |
-| AgentRuntime / AgentMVP | NARROW | HOLD_PENDING_CONSUMER_INVENTORY |
-| Router | NARROW | HOLD_PENDING_CONSUMER_INVENTORY |
-| ModelResolver / FinOps | NARROW | HOLD_PENDING_CONSUMER_INVENTORY |
-| ContextPackager | NARROW | HOLD_PENDING_CONSUMER_INVENTORY |
-| repo-packager | NARROW | HOLD_PENDING_CONSUMER_INVENTORY |
-| Operational Spine / Coordinator | NARROW | HOLD_PENDING_CONSUMER_INVENTORY |
-| State Kernel usage | NARROW | final disposition UNDECIDED |
-| Primitives as a named subsystem | NARROW | do not create a catalog without repeated need |
-| Explorer | ABSORB_CONDITIONALLY | only after consumer/equivalence inventory |
-| duplicate Lifecycle Controller concepts | ABSORB_CONDITIONALLY | no second lifecycle machine |
-| context expansion as a separate subsystem | ABSORB_CONDITIONALLY | converge under context/continuation semantics |
-| continuation snapshot parallel concepts | ABSORB_CONDITIONALLY | project the same semantic subject |
-| RunStore / parallel state representations | ABSORB_CONDITIONALLY | only after ownership/equivalence evidence |
-| Recipes with demonstrated bounded value | RETAIN | no generalization without a second need |
-| Git execution qualification | RETAIN | extend only under exact conformance evidence |
-| frozen review interface contract | RETAIN | transport mechanism remains replaceable |
-| Project/environment bindings | RETAIN | profile/binding, not architecture service |
-| Temporal / generalized orchestration | DEFER | no adoption in this TaskCycle |
-| devBrain | DEFER / INACTIVE | reopen only for a concrete repo-SOT insufficiency |
+| Capability/component | Current direction | Reconciled current consumers | Physical-disposition candidate |
+| --- | --- | --- | --- |
+| AgentRuntime / AgentMVP | NARROW | PARTIALLY_ACTIVE — AgentMVP directly invokes AgentRuntime; AgentMVP has unit/integration consumers but no current top-level Product script/Recipe/lifecycle entrypoint was found | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| Router | NARROW | PARTIALLY_ACTIVE — direct AgentMVP library consumer plus current tests | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| ModelResolver / FinOps | NARROW | PARTIALLY_ACTIVE — AgentMVP invokes ModelResolver; ModelResolver invokes FinOps; current tests exercise both | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| ContextPackager | NARROW | PARTIALLY_ACTIVE — AgentMVP requires its contract and current tests execute it; no concrete production materializer was established | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| repo-packager | NARROW | PARTIALLY_ACTIVE — ffai-doctor probes `pack.py --help`; the OpenCode skill exposes it as a mechanical materializer; exact installed-harness invocation remains dynamic | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| Operational Spine / Coordinator | NARROW | ACTIVE — `recipe:invoke`, stable Recipe invocation, built-in Recipes and Coordinator composition depend on it | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| State Kernel usage | NARROW | ACTIVE — current lifecycle persistence and stable Recipe invocation depend on it | NEEDS_EQUIVALENCE_BEFORE_CHANGE |
+| Primitives as a named subsystem | NARROW | NO_ACTIVE_CONSUMER_FOUND — no concrete named `Primitives` subsystem artifact exists at this anchor; current docs use the term as capability vocabulary | SAFE_TO_EVALUATE_ABSORPTION |
+| Explorer | ABSORB_CONDITIONALLY | PARTIALLY_ACTIVE — AgentMVP directly invokes `src/explorer`; the OpenCode `explorer` profile is a separate harness/profile concept, not a consumer of that module | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| duplicate Lifecycle Controller concepts | ABSORB_CONDITIONALLY | NO_ACTIVE_CONSUMER_FOUND — no duplicate runtime Lifecycle Controller artifact was found; `task-lifecycle.md` is transitional policy and explicitly not a second lifecycle machine | SAFE_TO_EVALUATE_ABSORPTION |
+| context expansion as a separate subsystem | ABSORB_CONDITIONALLY | NO_ACTIVE_CONSUMER_FOUND — no separate subsystem artifact was found; incremental expansion remains context semantics and bounded counters | SAFE_TO_EVALUATE_ABSORPTION |
+| continuation snapshot parallel concepts | ABSORB_CONDITIONALLY | PARTIALLY_ACTIVE — the deterministic continuation module has a current CLI consumer and tests; unrelated State Kernel snapshots and Recipe handoff snapshots are distinct mechanics | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| RunStore / parallel state representations | ABSORB_CONDITIONALLY | NO_ACTIVE_CONSUMER_FOUND — `RunStore` is re-exported and tested, but no current runtime/script/Recipe/lifecycle caller was found | SAFE_TO_EVALUATE_ABSORPTION |
+| Recipes with demonstrated bounded value | RETAIN | ACTIVE — stable Recipe invocation resolves and executes current built-ins | no generalization without a second need |
+| Git execution qualification | RETAIN | ACTIVE through bounded Recipe/integration mechanics | extend only under exact conformance evidence |
+| frozen review interface contract | RETAIN | ACTIVE through current review-freeze mechanics | transport mechanism remains replaceable |
+| Project/environment bindings | RETAIN | ACTIVE as explicit profiles/bindings | profile/binding, not architecture service |
+| Temporal / generalized orchestration | DEFER | no current consumer required for this inventory | no adoption in this TaskCycle |
+| devBrain | DEFER / INACTIVE | no current Product consumer established | reopen only for a concrete repo-SOT insufficiency |
 
-No row authorizes file deletion, runtime refactor, migration or backend change.
+Negative conclusions above cover current source imports/symbol references, scripts,
+package/configuration, built-in Recipes, tests, lifecycle evidence and active
+documentation at the exact anchor. Historical planning/provenance references were
+not counted as active consumers. Direct dynamic invocation outside declared repo
+entrypoints cannot be universally excluded; installed-harness conformance is
+therefore still required before a future repo-packager/harness absorption decision.
+
+No row authorizes file deletion, runtime refactor, migration, dependency removal,
+backend change or final architecture disposition.
 
 ## 4. Capability ownership — reuse before build
 
@@ -377,8 +388,8 @@ The following remain unresolved and must fail closed when a future action depend
 on them:
 
 1. final State Kernel disposition and equivalence evidence;
-2. consumer inventory before physical absorption/removal of historical modules;
-3. current installed harness versions/configuration/conformance;
+2. component-specific equivalence/disposition decisions where the reconciled inventory reports active or partially active consumers;
+3. exact installed-harness versions/configuration/conformance before a future repo-packager or harness-bound absorption decision;
 4. exact competent WP-PB-001 WU01 ruling and terminal evidence before resume;
 5. exact FitFlow summary generator/root cause before any corrective evolution;
 6. any new capability whose current owner has not first been evaluated.

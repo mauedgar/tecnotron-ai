@@ -2,7 +2,7 @@
 document_id: TEC-CAPABILITY-MAP-001
 status: reference
 machine_context: true
-version: 3.0
+version: 3.1
 updated: 2026-10-04
 owner: tecnotron-ai
 type: capability-reconciliation-reference
@@ -35,29 +35,38 @@ separate.
 | frozen review contract | RETAIN; transport implementation replaceable |
 | environment/project bindings | RETAIN as explicit profiles/bindings |
 
-## Narrow / hold pending consumer inventory
+## Narrow — reconciled consumer view
 
-| Component | Direction | Physical status |
+| Component | Direction | Current consumer status | Physical-disposition candidate |
+| --- | --- | --- | --- |
+| AgentRuntime / AgentMVP | NARROW | PARTIALLY_ACTIVE — internal AgentMVP chain; AgentMVP has no current top-level Product entrypoint found | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| Router | NARROW | PARTIALLY_ACTIVE — AgentMVP + tests | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| ModelResolver / FinOps | NARROW | PARTIALLY_ACTIVE — AgentMVP -> ModelResolver -> FinOps + tests | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| ContextPackager | NARROW | PARTIALLY_ACTIVE — AgentMVP contract + tests | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| repo-packager | NARROW | PARTIALLY_ACTIVE — doctor probe + OpenCode skill binding; installed-harness invocation unresolved | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| Operational Spine / Coordinator | NARROW | ACTIVE — `recipe:invoke`, built-in Recipes and Coordinator | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| State Kernel usage | NARROW | ACTIVE — lifecycle persistence + stable Recipe invocation | NEEDS_EQUIVALENCE_BEFORE_CHANGE |
+| named Primitives subsystem | NARROW | NO_ACTIVE_CONSUMER_FOUND — no concrete named subsystem artifact | SAFE_TO_EVALUATE_ABSORPTION |
+
+## Conditional absorption — reconciled consumer view
+
+| Subject | Current consumer status | Physical-disposition candidate |
 | --- | --- | --- |
-| AgentRuntime / AgentMVP | NARROW | present; no removal authorized |
-| Router | NARROW | present; no removal authorized |
-| ModelResolver / FinOps | NARROW | present; no removal authorized |
-| ContextPackager | NARROW | present; no removal authorized |
-| repo-packager | NARROW | present; no removal authorized |
-| Operational Spine / Coordinator | NARROW | present; no rewrite authorized |
-| State Kernel usage | NARROW | present; final disposition UNDECIDED |
-| named Primitives subsystem | NARROW | do not expand without repeated need |
+| Explorer | PARTIALLY_ACTIVE — direct AgentMVP consumer; OpenCode explorer profile is distinct | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| duplicate Lifecycle Controller concepts | NO_ACTIVE_CONSUMER_FOUND — no duplicate runtime controller artifact | SAFE_TO_EVALUATE_ABSORPTION |
+| context expansion as a separate subsystem | NO_ACTIVE_CONSUMER_FOUND — no separate subsystem artifact | SAFE_TO_EVALUATE_ABSORPTION |
+| continuation snapshot parallel concepts | PARTIALLY_ACTIVE — deterministic continuation CLI/module + tests | ACTIVE_CONSUMER_BLOCKS_PHYSICAL_CHANGE |
+| RunStore / parallel state representations | NO_ACTIVE_CONSUMER_FOUND — re-export + tests only; no runtime/script/Recipe/lifecycle caller found | SAFE_TO_EVALUATE_ABSORPTION |
 
-## Conditional absorption
+Consumer inventory is complete for the exact anchor
+`c7c68f0b0f20b6bc722d2201f7a3ad7adf995736` /
+`e0218ac280d4bc4cfdd49d42c24939bc80507521`. Historical references were not
+counted as consumers. Dynamic installed-harness use remains a future conformance
+question only where a later physical decision actually depends on it.
 
-- Explorer;
-- duplicate Lifecycle Controller concepts;
-- context expansion as a separate subsystem;
-- continuation snapshot parallel concepts;
-- RunStore / parallel state representations.
-
-Absorption is not deletion authority. It first requires consumer inventory and
-equivalence evidence.
+Absorption/removal is not authorized by this inventory. Active consumers,
+equivalence gates and future Developer responsibility still govern physical
+change.
 
 ## Replaceable operating profiles
 
@@ -82,7 +91,7 @@ Workspace/session/transport mechanics do not become Product architecture.
 - new Feedback Recipe or universal Observer;
 - WP-PB continuation;
 - FitFlow repair;
-- physical module removal before consumer/equivalence inventory.
+- physical module disposition without a separately authorized responsibility and the component-specific equivalence/conformance required by the reconciled consumer inventory.
 
 ## Context and continuation
 
