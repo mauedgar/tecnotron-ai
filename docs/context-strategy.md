@@ -2,7 +2,7 @@
 status: canonical
 owner: tecnotron-ai
 type: context-policy
-updated: 2026-08-30
+updated: 2026-10-04
 related:
   - "[[operational-architecture]]"
   - "[[task-lifecycle]]"
@@ -59,15 +59,35 @@ referencias y ports explícitos; la fuente no se convierte en autoridad,
 dependencia obligatoria, componente ni conocimiento interno de Tecnotron-ai por
 el solo hecho de aportar evidencia.
 
+### Semantic caller / equivalent reasoning layer
+
+Owns the semantic side of context for the intended consumer/action:
+
+- formation of semantic evidence requirements;
+- interpretation of acquired evidence;
+- semantic action-sufficiency judgment;
+- deciding whether a newly discovered material question requires more context;
+- issuing an explicit incremental context-expansion request when needed.
+
+This is a responsibility boundary, not a requirement to create a new subsystem.
+The owner may be the planner, reviewer, agent, consumer or another competent
+reasoning layer for the action.
+
 ### ContextPackager
 
-Owns:
-- what evidence is required for the task;
-- retrieval orchestration;
+Receives declared paths/evidence requirements from its caller. Owns:
+
+- deterministic coverage assessment against those declared requirements;
+- retrieval/materialization orchestration where configured;
 - context budget policy;
-- sufficiency status;
-- fallback policy;
-- context telemetry.
+- fallback orchestration;
+- missing-coverage reporting;
+- coverage telemetry.
+
+ContextPackager does not derive complete task semantics from nothing and does not
+decide final semantic sufficiency for the intended action. Its `COMPLETE`,
+`PARTIAL` or `EMPTY` status describes mechanical coverage/materialization of the
+declared request, not Product judgment or authorization.
 
 ContextPackager does not become source of truth.
 
@@ -104,17 +124,25 @@ Semantic retrieval must not be added merely because it is available.
 
 ### repo-packager
 
-Owns context materialization.
+Owns mechanical repository materialization for requests it receives.
 
 Responsibilities include:
 - package requested evidence;
 - exclusions and sensitive-path filtering;
 - token budget enforcement;
-- requested/included/omitted reporting;
-- `COMPLETE`, `PARTIAL`, or `EMPTY`;
-- exact-source expansion for selected paths.
+- requested/included/omitted correspondence;
+- `COMPLETE`, `PARTIAL`, or `EMPTY` materialization/coverage reporting;
+- exact-source expansion for selected paths;
+- cache/materialization mechanics where implemented.
 
-repo-packager does not decide whether the task has sufficient evidence.
+repo-packager does not form the semantic evidence requirements and does not
+decide whether the intended action has sufficient evidence.
+
+Repomix may remain an optional external materialization engine behind this
+boundary when explicitly selected and qualified; it has no Product authority and
+is not a Product requirement. Direct Git/repository/Web/file acquisition remains
+a competent materialization binding when it can satisfy the declared request and
+correspondence checks.
 
 Its existing custom graph/PageRank responsibility is a candidate for retirement only after the Code Intelligence evaluation demonstrates a superior replacement.
 
@@ -177,6 +205,19 @@ coverage:
 ```
 
 Exact schemas belong to implementation contracts.
+
+Mechanical coverage and semantic action sufficiency are different dimensions:
+
+```text
+declared requirement coverage COMPLETE
+!=
+semantic action sufficiency SUFFICIENT
+```
+
+A caller may receive complete coverage for every requirement it declared and
+then discover a new material question during semantic work. That does not make
+the earlier coverage result incorrect; it creates a new semantic requirement and
+may trigger incremental acquisition.
 
 ## 7. Immediate deterministic telemetry
 
@@ -470,3 +511,22 @@ recoverable.
 
 Implicit platform context may be used as convenience, but it is never an
 integrity dependency for a portability or clean-recovery claim.
+
+### Incremental exact context expansion
+
+Context acquisition is progressive rather than one-shot:
+
+```text
+initial context
+-> semantic work
+-> material question discovered
+-> explicit ContextExpansionRequest
+-> exact incremental acquisition
+-> continue from the established baseline
+```
+
+An expansion request identifies the newly required evidence and the reason it is
+needed. Exact Git/repository/Web/file materialization is sufficient when its
+capabilities match the request. A full baseline rebuild is not required merely
+because context expanded, and no dedicated `context-delta-xform` subsystem is
+required to own this semantic contract.

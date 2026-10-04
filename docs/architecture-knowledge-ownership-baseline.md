@@ -2,7 +2,7 @@
 document_id: TEC-ARCH-KNOWLEDGE-OWNERSHIP-BASELINE-001
 status: canonical
 machine_context: true
-version: 1.0
+version: 1.1
 updated: 2026-10-04
 owner: tecnotron-ai
 type: architecture
@@ -194,16 +194,52 @@ volatile_carrier_observation:
 Vocabulary:
 
 - `ContextBundle` = transport bytes + manifest.
-- `Context Materializer` = acquisition/materialization.
-- `ContextPackager` = needed/sufficient/missing assessment and orchestration.
+- semantic caller / equivalent reasoning layer = forms semantic evidence
+  requirements, interprets acquired evidence, decides semantic action sufficiency
+  and decides whether more context is required.
+- `Context Materializer` = exact acquisition/materialization of requested evidence.
+- `ContextPackager` = deterministic coverage, budget, fallback, missing-coverage
+  reporting and telemetry against declared requirements; it does not invent the
+  complete semantic requirement set or decide final action sufficiency.
+- `repo-packager` = mechanical repository materializer for declared requests;
+  Repomix is optional and external where selected, not Product authority.
 - `SemanticHandoff` / `TaskContextProjection` = consumer/action projection of
   the same semantic continuation.
 - `TaskCycle envelope` = identity/authority/gate projection of that same subject.
 - `operational snapshot` = a materialized view, not an independent mutable truth.
 - `volatile carrier observation` = action-time evidence only.
 
-Transport completeness and semantic sufficiency remain separate. A carrier can
-be complete while the consumer projection is semantically incomplete.
+Two sufficiency dimensions remain explicit:
+
+```yaml
+coverage_sufficiency:
+  owner: deterministic_packaging/materialization_layer
+  question: were the declared evidence requirements mechanically covered?
+
+action_sufficiency:
+  owner: semantic_caller_or_equivalent_reasoning_layer
+  question: is the resulting context semantically sufficient for the intended action?
+```
+
+`coverage_sufficiency=COMPLETE` does not imply
+`action_sufficiency=SUFFICIENT`. Semantic work may expose a new material
+question after complete declared coverage.
+
+Progressive acquisition therefore follows:
+
+```text
+initial context
+-> semantic work
+-> material question
+-> explicit ContextExpansionRequest
+-> exact incremental acquisition
+-> continue without rebuilding the baseline
+```
+
+The portable Product concept is incremental exact context expansion. A dedicated
+`context-delta-xform` implementation is not required to own it, and direct
+Git/repository/Web/file materialization remains valid when capability and
+correspondence are competent.
 
 ## 7. Knowledge authority model
 

@@ -3,7 +3,7 @@ status: canonical
 owner: tecnotron-ai
 type: architecture
 updated: 2026-10-04
-version: 3.0
+version: 3.1
 related:
   - "[[architecture]]"
   - "[[architecture-knowledge-ownership-baseline]]"
@@ -96,12 +96,26 @@ or be reconcilable by exact identity.
 Semantic continuation is responsibility/subject/authority/gate/obligation/
 result/evidence/uncertainty projected for a consumer/action.
 
-`ContextBundle` and materialization transport bytes. `ContextPackager` assesses
-needed/sufficient/missing context. `SemanticHandoff`/`TaskContextProjection`
+The semantic caller or equivalent reasoning layer forms the evidence
+requirements for the intended action, interprets acquired evidence, decides
+semantic action sufficiency and decides whether a newly discovered material
+question requires more context.
+
+`ContextPackager` consumes declared requirements and owns deterministic
+coverage, budget, fallback, missing-coverage reporting and telemetry.
+`repo-packager`, direct Git/repository/Web/file acquisition or another competent
+binding may mechanically materialize the requested evidence.
+
+`ContextBundle` transports bytes. `SemanticHandoff`/`TaskContextProjection`
 project the same semantic subject. Carrier observations are fresh evidence only
 when an action depends on mutable local/process state.
 
-No new store is created merely to rename these concepts.
+Complete declared coverage is not equivalent to semantic action sufficiency.
+When semantic work discovers a new material question, an explicit incremental
+context-expansion request may acquire only that delta and continue from the
+established baseline.
+
+No new store or subsystem is created merely to express these boundaries.
 
 ## 8. Execution/workspace/harness boundary
 
