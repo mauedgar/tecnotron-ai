@@ -2,14 +2,28 @@
 document_id: TEC-STATE-001
 status: canonical
 machine_context: true
-version: 3.0
+version: 3.1
 updated: 2026-10-04
 owner: tecnotron-ai
 ---
 
 # Current State — Tecnotron
 
-## Evidence cutoff
+## Current canonical repository anchor
+
+```yaml
+repository: mauedgar/tecnotron-ai
+branch: tools
+head: db0af47d723ae0be30a75b1052248f1041021f25
+tree: c67646e7869899c2f6cb53ed7d9fbd5ac263d472
+anchor_verified_for_current_navigation_reconciliation: true
+```
+
+This is the current canonical repository identity at the start of
+`TASKCYCLE-TECNOTRON-CURRENT-STATE-NAVIGATION-RECONCILIATION-001`.
+It is distinct from the historical evidence cutoff below.
+
+## Historical evidence cutoff
 
 ```yaml
 repository: mauedgar/tecnotron-ai
@@ -19,36 +33,77 @@ tree: 9129d9a79f164386327a431e8db5d661fa8a2784
 anchor_verified_for_reconciliation: true
 ```
 
-This cutoff is the pre-TaskCycle SOT baseline. The documentation candidate built
-from it has no canonical effect until Independent Review, Developer acceptance
-and separately authorized integration/publication.
+This cutoff remains the pre-architecture-reconciliation evidence boundary used
+to construct the adopted architecture/knowledge baseline. It is historical
+provenance and is not rewritten to pretend that it included later integrations.
 
 ## Active Product responsibility
 
 ```yaml
-TaskCycle: TASKCYCLE-TECNOTRON-ARCHITECTURE-KNOWLEDGE-OWNERSHIP-SOT-RECONCILIATION-001
-responsibility: MATERIALIZE_RECONCILED_ARCHITECTURE_KNOWLEDGE_AND_CAPABILITY_OWNERSHIP_SOT
-Developer_reconciliation_ruling: GRANTED
+TaskCycle: TASKCYCLE-TECNOTRON-CURRENT-STATE-NAVIGATION-RECONCILIATION-001
+responsibility: RECONCILE_CURRENT_STATE_POST_INTEGRATION_NAVIGATION
+lifecycle_persistence:
+  owner: EXISTING_STATE_KERNEL_MECHANISM
 current_gate: CANDIDATE_FREEZE_THEN_INDEPENDENT_REVIEW
 Phase_2_authorized: false
 canonical_integration_authorized: false
 remote_publication_authorized: false
 ```
 
-The durable outcome target is a repo-first Product reconstruction baseline.
-ChatGPT/Library history is not the knowledge owner.
+This responsibility reconciles current navigation only. It does not reopen
+architecture, runtime ownership, State Kernel disposition or deferred capability
+work.
+
+## Recently completed Product responsibilities
+
+```yaml
+completed:
+  architecture_knowledge_capability_ownership_SOT_reconciliation:
+    result: INTEGRATED
+    durable_projection: docs/architecture-knowledge-ownership-baseline.md
+
+  semantic_context_requirement_and_materialization_ownership:
+    TaskCycle: TASKCYCLE-TECNOTRON-CONTEXT-REQUIREMENT-MATERIALIZATION-OWNERSHIP-RECONCILIATION-001
+    state: CLOSED
+    terminal_disposition: CLOSED_PASS
+    canonical_commit: db0af47d723ae0be30a75b1052248f1041021f25
+```
+
+The closed ownership reconciliation preserves these current boundaries:
+
+```yaml
+semantic_requirement_owner: SEMANTIC_CALLER_OR_EQUIVALENT_REASONING_LAYER
+deterministic_coverage_owner: ContextPackager
+semantic_action_sufficiency_owner: SEMANTIC_CALLER_OR_EQUIVALENT_REASONING_LAYER
+mechanical_materialization_owner: REPO_PACKAGER_OR_OTHER_COMPETENT_EXACT_MATERIALIZER
+```
+
+Those conclusions are already reconciled Product state and are not reopened by
+this navigation TaskCycle.
+
+## Authority and navigation precedence
+
+Repository/SOT remains the durable Product knowledge owner. Exact Git identity,
+competent Developer authority and the adopted architecture records govern the
+Product. This document is a current projection/navigation surface; it does not
+replace Git history, Developer authority, State Kernel lifecycle evidence or the
+architecture baseline.
+
+Historical artifacts, frozen candidate/review statements, chat, Memory, Library
+copies and workspace/session state do not become current Product authority merely
+because they remain available.
 
 ## Current physical implementation reality
 
-At the evidence cutoff the repository still contains the accepted/post-bootstrap
-implementation substrate, including State Kernel V0, Operational Spine V0,
-Self-Hosting Reconciliation, Execution Coordinator/ExecutionSurfacePort, Project
-Profile, context/routing/model capabilities, Agent Runtime/MVP, operational
-profiles and existing deterministic Recipes.
+The repository still contains the accepted/post-bootstrap implementation
+substrate, including State Kernel V0, Operational Spine V0, Self-Hosting
+Reconciliation, Execution Coordinator/ExecutionSurfacePort, Project Profile,
+context/routing/model capabilities, Agent Runtime/MVP, operational profiles and
+existing deterministic Recipes.
 
 Presence is not a final ownership disposition. This TaskCycle authorizes
-documentation/architecture/knowledge reconciliation only and performs no runtime
-refactor or deletion.
+documentation/navigation reconciliation only and performs no runtime refactor or
+deletion.
 
 ## Current architecture direction
 
@@ -100,8 +155,9 @@ State_Kernel:
   replacement_ledger_authorized: false
 ```
 
-Required effect/recovery invariants remain active. No final backend or migration
-decision is made here.
+The existing State Kernel mechanism owns lifecycle persistence for this TaskCycle
+only in that operational sense. Using it does not decide the final architecture
+or authorize a migration.
 
 ## Knowledge and continuation
 
@@ -109,6 +165,11 @@ Repository SOT is the durable Product knowledge owner. Semantic continuation is
 portable through responsibility/subject/authority/gate/obligations/result/evidence/
 uncertainty, projected for the intended consumer/action. Volatile carrier state is
 attached only when that action requires it.
+
+Context responsibilities remain separated: the semantic caller forms semantic
+requirements and decides action sufficiency; ContextPackager covers declared
+requirements deterministically; repo-packager or another competent exact
+materializer performs mechanical acquisition.
 
 Chat/session history, Memory, Library copies and workspace state are not durable
 Product knowledge.
@@ -132,12 +193,36 @@ All have `Product_authority: NONE` as execution/transport surfaces.
 
 ## Superseded active assertions
 
-The 2026-09-25 current-state/roadmap/README/capability navigation selected
-`WP-PB-001` as the current next responsibility. That statement remains historical
-evidence at its cutoff but is superseded **as active navigation** by the current
-Developer reconciliation ruling.
+Two historical navigation projections are explicitly superseded **as active
+navigation only**:
 
-No frozen WP-PB artifact is rewritten.
+1. The 2026-09-25 current-state/roadmap/README/capability navigation that
+   selected `WP-PB-001` as the current next responsibility.
+2. The pre-review projection in this document that selected
+   `TASKCYCLE-TECNOTRON-ARCHITECTURE-KNOWLEDGE-OWNERSHIP-SOT-RECONCILIATION-001`
+   as active and pointed to its candidate-freeze/Independent-Review gate.
+
+Both remain historical evidence at their original cutoffs. No frozen historical
+artifact or frontmatter is retroactively rewritten.
+
+## Explicitly deferred work
+
+```yaml
+deferred:
+  - ContextPackager_runtime_refactor
+  - Repomix_qualification_or_adoption
+  - context_delta_xform_recreation
+  - persistent_workspace
+  - Orca_binding
+  - OpenCode_binding
+  - new_Recipe_or_Primitive_maturation
+  - State_Kernel_migration_or_final_architecture_disposition
+  - Temporal_adoption
+  - WP_PB_continuation
+```
+
+These items remain deferred; this navigation update does not promote or
+initialize them.
 
 ## WP-PB-001
 
@@ -173,6 +258,13 @@ repair or assign a Tecnotron root cause.
 
 ## Current next action
 
-Freeze exactly one documentation candidate, materialize an exact self-contained
-Independent Review interface, and execute the review in a separate reviewer
-context. No Phase 2, integration or publication is authorized.
+Freeze exactly one documentation candidate for this navigation reconciliation,
+materialize and reopen an exact frozen Independent Review interface, and execute
+the review only in a fresh separate reviewer context.
+
+No Developer acceptance, Phase 2, canonical integration or remote publication is
+authorized here.
+
+After this TaskCycle eventually closes, return to Control for the large
+reconciliation-plan checkpoint. Do not initialize a successor Product TaskCycle
+automatically.
