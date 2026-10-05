@@ -84,6 +84,36 @@ function bootstrapTaskCycle(store, expectedRevision, request) {
     return { kind: 'TaskCycle', id: request.id, at: importedAt, action: 'BOOTSTRAP_IMPORT', bootstrap_provenance: clone(provenance) };
   });
 }
+function addObligations(store, expectedRevision, id, additions, authorityRef, authorityReference) {
+  const at = now();
+  return store.mutate(expectedRevision, state => {
+    const item = existing(state, 'TaskCycle', id);
+    demand(['READY', 'ACTIVE', 'BLOCKED'].includes(item.state), 'INVALID_TRANSITION', `TaskCycle ${item.state} does not allow obligation extension`);
+    demand(Array.isArray(additions) && additions.length > 0, 'INVALID_CONTRACT', 'non-empty obligation additions required');
+    demand(string(authorityRef), 'MISSING_REQUIRED_AUTHORITY', 'obligation extension authority identity');
+    const existingAuthority = item.authority_refs.find(ref => ref.kind === 'AUTHORITY' && ref.id === authorityRef);
+    if (authorityReference !== undefined) {
+      refs([authorityReference]);
+      demand(authorityReference.kind === 'AUTHORITY' && authorityReference.id === authorityRef, 'MISSING_REQUIRED_AUTHORITY', 'authority reference mismatch');
+    }
+    demand(existingAuthority || authorityReference !== undefined, 'MISSING_REQUIRED_AUTHORITY', 'obligation extension authority reference required');
+    const existingIds = new Set(item.obligations.map(obligation => obligation.id));
+    const requestedIds = new Set();
+    const normalized = additions.map(obligation => {
+      demand(obligation !== null && typeof obligation === 'object' && !Array.isArray(obligation), 'INVALID_CONTRACT', 'obligation definition');
+      demand(Object.keys(obligation).every(key => ['id', 'authority_ref'].includes(key)), 'INVALID_CONTRACT', 'obligation extension fields');
+      demand(string(obligation.id) && !existingIds.has(obligation.id) && !requestedIds.has(obligation.id), 'INVALID_CONTRACT', 'new obligation identity');
+      demand(obligation.authority_ref === undefined || obligation.authority_ref === null || string(obligation.authority_ref), 'INVALID_CONTRACT', 'obligation authority reference');
+      requestedIds.add(obligation.id);
+      return { id: obligation.id, status: 'PENDING', authority_ref: obligation.authority_ref ?? null };
+    });
+    if (!existingAuthority) item.authority_refs.push(clone(authorityReference));
+    item.obligations.push(...normalized);
+    item.revision++;
+    item.updated_at = at;
+    return { kind: 'TaskCycle', id, at, action: `ADD_OBLIGATIONS:${authorityRef}` };
+  });
+}
 function transition(store, expectedRevision, kind, id, target, options = {}) {
   const at = now();
   return store.mutate(expectedRevision, state => {
@@ -172,4 +202,4 @@ function render(store) {
   }
   return `${rows.join('\n')}\n`;
 }
-module.exports = { FilesystemStateStore, create, bootstrapTaskCycle, transition, satisfy, inspect, obligations, nextTransitions, render, KernelError };
+module.exports = { FilesystemStateStore, create, bootstrapTaskCycle, addObligations, transition, satisfy, inspect, obligations, nextTransitions, render, KernelError };

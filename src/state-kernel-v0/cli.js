@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-const { FilesystemStateStore, create, bootstrapTaskCycle, transition, satisfy, inspect, obligations, render } = require('./index');
+const { FilesystemStateStore, create, bootstrapTaskCycle, addObligations, transition, satisfy, inspect, obligations, render } = require('./index');
 function main(argv) {
   const args = Object.fromEntries(argv.reduce((pairs, value, i) => { if (i % 2 === 0) pairs.push([value, argv[i + 1]]); return pairs; }, []));
   if (!args['--home'] || !args['--command']) throw new Error('--home and --command required');
@@ -14,6 +14,7 @@ function main(argv) {
     case 'StateRender': return render(store);
     case 'TaskCycleCreate': return create(store, revision, 'TaskCycle', r.id, { responsibility: r.responsibility, obligations: r.obligations }, r.authority_refs);
     case 'TaskCycleBootstrapImport': return bootstrapTaskCycle(store, revision, r);
+    case 'TaskCycleAddObligations': return addObligations(store, revision, r.id, r.obligations, r.authority_ref, r.authority_reference);
     case 'TaskCycleInspect': return inspect(store, 'TaskCycle', r.id);
     case 'TaskCycleObligations': return obligations(store, r.id);
     case 'TaskCycleTransition': return transition(store, revision, 'TaskCycle', r.id, r.target, r.options);

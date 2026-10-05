@@ -22,7 +22,7 @@ This design relies on local filesystem rename and durability guarantees. It does
 
 `node src/state-kernel-v0/cli.js --home ABSOLUTE_PATH --command StateInit`
 
-All other commands accept `--request JSON` when arguments are needed. The mutators require `expected_revision` from `StateInspect` or `StateVerify`: `TaskCycleCreate`, `TaskCycleBootstrapImport`, `TaskCycleSatisfy`, `TaskCycleTransition`, `OperationCreate`, `OperationTransition`, `AttemptStart`, `AttemptRecord`, `MilestoneCreate`, `MilestoneTransition`. The read commands are `StateInspect`, `StateVerify`, `StateRender`, `TaskCycleInspect` and `TaskCycleObligations`. Errors print a structured `code` and `detail` to stderr and exit nonzero. Stable primary error codes are `INVALID_TRANSITION`, `STALE_REVISION`, `MALFORMED_STATE`, `MISSING_REQUIRED_AUTHORITY`, `UNSATISFIED_OBLIGATION`, and `UNKNOWN_EFFECT_REQUIRES_RECONCILIATION`; malformed requests also use `INVALID_CONTRACT` or `INVALID_REQUEST`.
+All other commands accept `--request JSON` when arguments are needed. The mutators require `expected_revision` from `StateInspect` or `StateVerify`: `TaskCycleCreate`, `TaskCycleBootstrapImport`, `TaskCycleAddObligations`, `TaskCycleSatisfy`, `TaskCycleTransition`, `OperationCreate`, `OperationTransition`, `AttemptStart`, `AttemptRecord`, `MilestoneCreate`, `MilestoneTransition`. The read commands are `StateInspect`, `StateVerify`, `StateRender`, `TaskCycleInspect` and `TaskCycleObligations`. Errors print a structured `code` and `detail` to stderr and exit nonzero. Stable primary error codes are `INVALID_TRANSITION`, `STALE_REVISION`, `MALFORMED_STATE`, `MISSING_REQUIRED_AUTHORITY`, `UNSATISFIED_OBLIGATION`, and `UNKNOWN_EFFECT_REQUIRES_RECONCILIATION`; malformed requests also use `INVALID_CONTRACT` or `INVALID_REQUEST`.
 
 Example request for `TaskCycleCreate`:
 
@@ -41,6 +41,16 @@ Typed references distinguish an authority, evidence, portable artifact and Git o
 The request must provide `bootstrap_provenance` with `mode=IMPORTED_ESTABLISHED_STATE`, an ISO-8601 `cutover_at`, `historical_events_reconstructed=false`, at least one typed `AUTHORITY` reference and at least one typed `EVIDENCE` reference. These references record the external basis for the imported state; they do not cause the kernel to determine that the referenced real-world authority is competent. A `SATISFIED` imported obligation that names an authority must name one of the imported authority references. Terminal TaskCycle states are rejected by this V0 import operation, so post-cutover satisfaction and closure remain ordinary kernel-observed events.
 
 The bootstrap event retains its provenance in the hash-chained event history and is validated again during replay. The aggregate begins at revision 1; the kernel does not invent aggregate revisions for unobserved pre-cutover transitions.
+
+## Authorized monotonic late obligation extension
+
+`TaskCycleAddObligations` implements the portable semantic requirement `AUTHORIZED_MONOTONIC_LATE_OBLIGATION_EXTENSION`. The requirement is about TaskCycle semantics, authority, concurrency and effect classification; it is not a requirement to preserve the filesystem-backed State Kernel implementation.
+
+The command targets the same existing TaskCycle identity and requires the exact expected global revision plus an explicit authority identity for changing the obligation contract. The authority must already be recorded on the TaskCycle or be supplied as a typed `AUTHORITY` reference in the same mutation. The emitted event names that authority in its `ADD_OBLIGATIONS:<authority-id>` action. This authority is distinct from any authority later required to satisfy a newly-added obligation.
+
+The append batch must be non-empty and contain only genuinely new obligation IDs. Every new obligation is persisted as `PENDING`; callers cannot supply status, remove or rename obligations, rewrite existing obligation state or authority, or alter terminal disposition. Duplicate existing IDs, duplicate IDs within one batch, malformed definitions, status injection, missing or mismatched authority, and stale expected revisions fail with no effect. The whole batch is one State Kernel mutation/event.
+
+Late extension is allowed only while a TaskCycle is `READY`, `ACTIVE` or `BLOCKED`. It is rejected for `PENDING_ACCEPTANCE` because adding a pending obligation would violate that state's all-obligations-satisfied invariant, and it is rejected for `CLOSED` and `CANCELLED`. After a successful append, normal satisfaction and closure rules are unchanged: a TaskCycle cannot enter acceptance/closure while any newly-added obligation remains pending.
 
 ## Validation and deferred debt
 
