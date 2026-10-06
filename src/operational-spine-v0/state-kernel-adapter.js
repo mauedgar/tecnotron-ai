@@ -274,6 +274,77 @@ function createStateKernelTaskCycleLifecycle({ store }) {
   };
 }
 
+function legacyExecutionLifecycleBoundary(value) {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return null;
+  const required = [
+    'inspectOperation',
+    'ensureOperationRunning',
+    'startAttempt',
+    'markAttemptDispatched',
+    'markAttemptRunning',
+    'recordPreflightTerminal',
+    'recordExecutionOutcome',
+  ];
+  if (required.some((name) => typeof value[name] !== 'function')) return null;
+
+  return {
+    observeOperation: (operationId) => value.inspectOperation(operationId),
+    observeAttemptPresence(attemptId) {
+      if (typeof value.inspectAttempt !== 'function') return 'UNKNOWN';
+      try {
+        value.inspectAttempt(attemptId);
+        return 'PRESENT';
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes(`missing ExecutionAttempt/${attemptId}`)) return 'ABSENT';
+        return 'UNKNOWN';
+      }
+    },
+    prepareAttempt(input) {
+      value.ensureOperationRunning(input.operationId);
+      const started = value.startAttempt(input);
+      return {
+        operation: value.inspectOperation(input.operationId),
+        attempt: typeof value.inspectAttempt === 'function'
+          ? value.inspectAttempt(input.attemptId)
+          : started,
+      };
+    },
+    confirmDispatchStart(attemptId) {
+      value.markAttemptDispatched(attemptId);
+      const running = value.markAttemptRunning(attemptId);
+      return typeof value.inspectAttempt === 'function'
+        ? value.inspectAttempt(attemptId)
+        : running;
+    },
+    recordPreflightTerminalOutcome: (input) => value.recordPreflightTerminal(input),
+    recordExecutionOutcome: (input) => value.recordExecutionOutcome(input),
+  };
+}
+
+function bindOperationalSpineCompatibility(dependencies) {
+  if (!dependencies || typeof dependencies !== 'object') return dependencies;
+  if (dependencies.executionLifecycle !== undefined) return dependencies;
+  if (dependencies.stateKernel === undefined) return dependencies;
+
+  let executionLifecycle = dependencies.stateKernel;
+  const portableMethods = [
+    'observeOperation',
+    'observeAttemptPresence',
+    'prepareAttempt',
+    'confirmDispatchStart',
+    'recordPreflightTerminalOutcome',
+    'recordExecutionOutcome',
+  ];
+  if (portableMethods.some((name) => typeof executionLifecycle?.[name] !== 'function')) {
+    executionLifecycle = legacyExecutionLifecycleBoundary(dependencies.stateKernel);
+  }
+  if (!executionLifecycle) return dependencies;
+
+  const { stateKernel: _legacyStateKernel, ...rest } = dependencies;
+  return { ...rest, executionLifecycle };
+}
+
 function createStateKernelCompatibilityBinding({ home, store } = {}) {
   const boundStore = store || new FilesystemStateStore(home);
   requireStore(boundStore);
@@ -293,4 +364,5 @@ module.exports = {
   createStateKernelExecutionLifecycle,
   createStateKernelTaskCycleLifecycle,
   createStateKernelCompatibilityBinding,
+  bindOperationalSpineCompatibility,
 };
