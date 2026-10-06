@@ -109,13 +109,18 @@ jobs:
               if grep -q "^npm_ci=0$" /result/codes.env; then
                 run_and_record typecheck npm run typecheck
                 run_and_record build npm run build
-                run_and_record build_diff git diff --exit-code
                 run_and_record focused_tests node --test                   tests/operational-spine-v0/reconcile-and-close-taskcycle.test.js                   tests/operational-spine-v0/recipe-invocation.test.js                   tests/operational-spine-v0/recipe-invocation-worker.test.js
                 run_and_record full_tests npm test
               else
-                printf "typecheck=125\nbuild=125\nbuild_diff=125\nfocused_tests=125\nfull_tests=125\n" >> /result/codes.env
+                printf "typecheck=125\nbuild=125\nfocused_tests=125\nfull_tests=125\n" >> /result/codes.env
               fi
             '
+
+          set +e
+          git -C subject diff --exit-code > _tc_web_result/build_diff.log 2>&1
+          build_diff_rc=$?
+          set -e
+          printf "build_diff=%s\n" "$build_diff_rc" >> _tc_web_result/codes.env
 
           source _tc_web_result/codes.env
 
@@ -193,32 +198,32 @@ jobs:
           cat > _tc_web_result/RESULT.md <<EOF
           # TC Web Execution Result
 
-          - Request: `$request_id`
-          - Product: `$product`
-          - TASK: `$task`
-          - Gate: `$gate`
-          - Subject branch: `$subject_branch`
-          - Subject commit: `$subject_sha`
-          - Subject tree: `$subject_tree`
+          - Request: $request_id
+          - Product: $product
+          - TASK: $task
+          - Gate: $gate
+          - Subject branch: $subject_branch
+          - Subject commit: $subject_sha
+          - Subject tree: $subject_tree
           - Status: **$status**
           - Product effect: **NONE**
 
           ## Checks
 
-          - npm ci: `$npm_ci`
-          - typecheck: `$typecheck`
-          - build: `$build`
-          - build diff: `$build_diff`
-          - focused tests: `$focused_tests`
-          - full tests: `$full_tests`
+          - npm ci: $npm_ci
+          - typecheck: $typecheck
+          - build: $build
+          - build diff: $build_diff
+          - focused tests: $focused_tests
+          - full tests: $full_tests
           EOF
 
           {
             echo "## TC Web Execution"
             echo
-            echo "- Request: `$request_id`"
-            echo "- Subject: `$subject_sha`"
-            echo "- Tree: `$subject_tree`"
+            echo "- Request: $request_id"
+            echo "- Subject: $subject_sha"
+            echo "- Tree: $subject_tree"
             echo "- Status: **$status**"
           } >> "$GITHUB_STEP_SUMMARY"
 
