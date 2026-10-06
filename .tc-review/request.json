@@ -1,10 +1,84 @@
 {
   "schema_version": "tecnotron-tc-review-freeze-request/v0",
-  "request_id": "PREPARED-NOT-DISPATCHED",
-  "dispatch": "NOT_AUTHORIZED",
+  "request_id": "TC-CORE-AB-002-A-FREEZE-001",
+  "interface_id": "TC-CORE-AB-002-A-FROZEN-REVIEW-001",
+  "dispatch": "AUTHORIZED",
+  "taskcycle": "TS-DEVLAB-TC-CORE-AB-002",
+  "responsibility": "MATURE_SHARED_EXACT_RANGE_QUALIFICATION_AND_FROZEN_REVIEW_RANGE_SUPPORT",
+  "executor": {
+    "branch": "devlab/tc-core-range-review-maturation-002",
+    "commit": "094678931970724dcb497ba50d3a1cb0a9134939",
+    "tree": "2c22006510e08e0fead224ce956aaaf828475766"
+  },
+  "subject": {
+    "branch": "devlab/tc-core-range-review-maturation-002",
+    "exact_subject": {
+      "parent": "34ab96c00ca5f8c9c87d69a31371d275eeb5f6d9",
+      "commit": "094678931970724dcb497ba50d3a1cb0a9134939",
+      "tree": "2c22006510e08e0fead224ce956aaaf828475766",
+      "changed_paths": [
+        "src/operational-spine-v0/git-range-qualification.js",
+        "src/operational-spine-v0/recipes/integrate-accepted-candidate.js",
+        "src/operational-spine-v0/recipes/materialize-frozen-review-interface.js",
+        "tests/operational-spine-v0/git-range-qualification.test.js",
+        "tests/operational-spine-v0/materialize-frozen-review-interface.test.js"
+      ]
+    }
+  },
+  "worker_evidence": {
+    "ref": "refs/heads/devlab/transport/tc-core-group-a-result-002",
+    "commit": "c0a077f8e7ca802810fab0784ec74bb604e5d598",
+    "files": [
+      {
+        "path": ".devlab-worker-result/TC-CORE-GROUP-A-002/worker-result-continuation-001.json",
+        "sha256": "ccefd820b15f8720671363a670cbc92ae5d344400f8212de04935dfacf5e8904",
+        "package_path": "evidence/worker-result.json"
+      }
+    ]
+  },
+  "validation": {
+    "run_id": 37515348718,
+    "artifact_name": "tc-web-result-TC-CORE-AB-002-A-RERUN-003",
+    "files": [
+      {
+        "path": "manifest.json",
+        "sha256": "0a78cc8b8e196a0294a07c7194216aa4d201669d9581f877a7410a8c8a9b2f38",
+        "package_path": "evidence/actions-validation-manifest.json",
+        "ref": {
+          "kind": "EVIDENCE",
+          "id": "ACTIONS-VALIDATION-TC-CORE-AB-002-A",
+          "sha256": "0a78cc8b8e196a0294a07c7194216aa4d201669d9581f877a7410a8c8a9b2f38"
+        }
+      }
+    ]
+  },
+  "authority_refs": [
+    {
+      "kind": "AUTHORITY",
+      "id": "DEVELOPER-AUTH-TC-CORE-AB-002-FREEZE-2026-10-06"
+    }
+  ],
+  "review_scope": {
+    "include": [
+      "exact candidate semantics for shared first-parent linear-range qualification",
+      "reuse of the helper by integration and frozen-review consumers",
+      "direct-child compatibility and exact-range guards",
+      "frozen review archive and deterministic external reviewer prompt semantics",
+      "absence of new State Kernel lifecycle/runtime participation"
+    ],
+    "exclude": [
+      "Developer acceptance",
+      "Phase 2",
+      "Product integration",
+      "publication",
+      "TaskCycle close",
+      "unrelated architecture redesign"
+    ]
+  },
+  "review_request_markdown": "# Independent Review Request — TC Core Group A 002\n\nReview only the frozen exact subject and declared evidence in this archive.\n\nDetermine whether the candidate correctly centralizes exact first-parent linear-range qualification without weakening the distinct guards/effects of integration and frozen-review materialization; preserves direct-child behavior; produces trustworthy base-to-tip frozen evidence and deterministic external review prompt identity; and introduces no new State Kernel lifecycle/runtime dependency.\n\nPay particular attention to hidden-merge/non-linear rejection, changed-path correspondence, candidate immutability, evidence binding, backward compatibility, and whether the remaining referenceSchema import is contract-only rather than active Kernel participation.\n\nReturn PASS, FAIL, or BLOCKED with concrete findings. PASS is not Developer acceptance. Do not mutate anything and do not execute Phase 2.",
   "notes": [
-    "Dedicated Developer Lab binding for deterministic frozen review interface materialization.",
-    "Update the exact executor, subject, evidence, review request, and authority refs before an authorized dispatch.",
-    "Actions freeze PASS is not Independent Review and is not Developer acceptance."
+    "Developer explicitly authorized the next freeze gate.",
+    "Developer Lab experiment only; authority NONE; Product effect NONE.",
+    "Actions validation for this exact subject already reconciled PASS."
   ]
 }
