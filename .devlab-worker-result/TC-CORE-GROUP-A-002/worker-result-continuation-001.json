@@ -1,0 +1,184 @@
+{
+  "schema_version": "tecnotron-opencode-worker-result/v0",
+  "run_id": "TC-CORE-GROUP-A-002",
+  "group_id": "GROUP-A",
+  "continuation_id": "CONTINUATION-001",
+  "responsibility": "MATURE_SHARED_EXACT_RANGE_QUALIFICATION_AND_FROZEN_REVIEW_RANGE_SUPPORT",
+  "worker": {
+    "name": "OpenCode",
+    "role": "Phase 1 implementation worker",
+    "model": "openai/gpt-5.6-sol"
+  },
+  "harness": {
+    "name": "OpenCode",
+    "version": null
+  },
+  "session": {
+    "id": null,
+    "identity_status": "SAME_SESSION_NOT_EXPOSED_BY_HARNESS_ENVIRONMENT"
+  },
+  "workspace": {
+    "repository": "mauedgar/tecnotron-ai",
+    "root": "C:\\Users\\maued\\orca\\workspaces\\Tecnotron-ai\\devlab-tc-core-range-review-maturation-002",
+    "expected_branch": "mauedgar/devlab-tc-core-range-review-maturation-002",
+    "observed_branch": "mauedgar/devlab-tc-core-range-review-maturation-002",
+    "baseline_commit": "34ab96c00ca5f8c9c87d69a31371d275eeb5f6d9",
+    "baseline_tree": "d79640a7fcc614ecfac0fe76f0ca600b41beac6b",
+    "clean_before": false,
+    "ambient_dirty_disposition": "ACCEPTED_AMBIENT_DIRTY",
+    "ambient_dirty_paths": [
+      ".opencode/package-lock.json",
+      ".opencode/package.json"
+    ],
+    "ambient_diff_fingerprint_initial": "ce2c0cbac708c63b4b2d8edb53db24c738db1f2d",
+    "ambient_diff_fingerprint_at_candidate": "ce2c0cbac708c63b4b2d8edb53db24c738db1f2d",
+    "ambient_diff_unchanged": true
+  },
+  "prior_attempt_evidence": {
+    "status": "BLOCKED",
+    "reason": "BLOCKED_WORKSPACE_IDENTITY_UNVERIFIED",
+    "result_path": "C:\\Proyectos-Web\\Checkpoint\\DevLab\\TC-CORE-AB-002\\GROUP-A\\RESULT\\worker-result.json",
+    "sha256": "b933ac0ed49db27375e47f257605abd507725eeddfb025966f9d960088be9292",
+    "preserved_unchanged": true
+  },
+  "context": {
+    "context_expansions": [
+      {
+        "request_id": "CER-001",
+        "question": "What exact previously proven range-subject and reviewer-prompt behavior applies to the authorized consumers?",
+        "reason": "Preserve integrate_accepted_candidate v0 behavior while extending frozen review with minimum exact historical evidence.",
+        "exact_subject": "the six authorized paths at da1a4b74c68dc498984b9cb4783d090c0862ae1f",
+        "requested_evidence": "one exact Git diff against baseline 34ab96c00ca5f8c9c87d69a31371d275eeb5f6d9",
+        "previous_request_id": null
+      },
+      {
+        "request_id": "CER-002",
+        "question": "What exact referenceSchema shape underlies the pre-existing frozen-review import?",
+        "reason": "Characterize encountered legacy State Kernel contract coupling without architecture rediscovery.",
+        "exact_subject": "src/state-kernel-v0/contracts.js referenceSchema",
+        "requested_evidence": "the exact known file and symbol definition",
+        "previous_request_id": "CER-001"
+      }
+    ],
+    "initial_context_misses": [
+      "The initial attempt treated the two harness-managed .opencode changes as an unaccepted dirty worktree before CONTINUATION-001 classified them as accepted ambient noise."
+    ],
+    "targeted_searches": [
+      "exact branch, HEAD, tree, index, status, and ambient diff fingerprints",
+      "exact primary implementation and test paths",
+      "exact historical diff for the six authorized paths at da1a4b74c68dc498984b9cb4783d090c0862ae1f",
+      "exact referenceSchema source definition",
+      "exact candidate and result transport remote refs"
+    ],
+    "broad_searches": [
+      "Prior attempt: glob **/*PROFILE*.md",
+      "Prior attempt: glob **/TASK*.md",
+      "Prior attempt: repository-wide Project Profile grep"
+    ],
+    "duplicate_reads_avoided_during_continuation": true,
+    "scope_gaps": [],
+    "design_conflicts": []
+  },
+  "authorized_write_set": [
+    "src/operational-spine-v0/git-range-qualification.js",
+    "src/operational-spine-v0/recipes/integrate-accepted-candidate.js",
+    "src/operational-spine-v0/recipes/materialize-frozen-review-interface.js",
+    "tests/operational-spine-v0/git-range-qualification.test.js",
+    "tests/operational-spine-v0/integrate-accepted-candidate.test.js",
+    "tests/operational-spine-v0/materialize-frozen-review-interface.test.js"
+  ],
+  "changed_paths": [
+    "src/operational-spine-v0/git-range-qualification.js",
+    "src/operational-spine-v0/recipes/integrate-accepted-candidate.js",
+    "src/operational-spine-v0/recipes/materialize-frozen-review-interface.js",
+    "tests/operational-spine-v0/git-range-qualification.test.js",
+    "tests/operational-spine-v0/materialize-frozen-review-interface.test.js"
+  ],
+  "correspondence": {
+    "authorized_subset_exact": true,
+    "unauthorized_paths_in_candidate": [],
+    "summary": "Extracted exact first-parent linear-range qualification into a kernel-free helper consumed by integration and frozen review; preserved direct-child review and integration v0 behavior; added base-to-tip frozen evidence and an optional deterministic external reviewer prompt bound to archive, manifest, and exact subject identities."
+  },
+  "validation": [
+    {
+      "command": "node --test tests/operational-spine-v0/integrate-accepted-candidate.test.js tests/operational-spine-v0/materialize-frozen-review-interface.test.js",
+      "status": "PASS",
+      "exit_code": 0,
+      "tests": 40,
+      "passed": 40,
+      "failed": 0
+    },
+    {
+      "command": "node --test tests/operational-spine-v0/git-range-qualification.test.js",
+      "status": "PASS",
+      "exit_code": 0,
+      "tests": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "command": "npm run typecheck",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run build",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "status": "PASS",
+      "exit_code": 0
+    }
+  ],
+  "candidate": {
+    "base_commit": "34ab96c00ca5f8c9c87d69a31371d275eeb5f6d9",
+    "base_tree": "d79640a7fcc614ecfac0fe76f0ca600b41beac6b",
+    "commit": "094678931970724dcb497ba50d3a1cb0a9134939",
+    "tree": "2c22006510e08e0fead224ce956aaaf828475766",
+    "ref": "refs/heads/devlab/tc-core-range-review-maturation-002",
+    "remote_oid": "094678931970724dcb497ba50d3a1cb0a9134939",
+    "push_performed": true,
+    "push_mode": "NO_FORCE"
+  },
+  "active_feedback": {
+    "context_expansions": [
+      "CER-001 exact historical authorized-path diff",
+      "CER-002 exact pre-existing referenceSchema definition"
+    ],
+    "initial_context_misses": [
+      "Accepted harness startup noise was not declared until CONTINUATION-001."
+    ],
+    "unnecessary_rediscovery": [
+      "Prior attempt: docs/SOURCE_OF_TRUTH.md read",
+      "Prior attempt: PROFILE glob",
+      "Prior attempt: TASK glob",
+      "Prior attempt: repository-wide Project Profile grep",
+      "Prior attempt: duplicate direct AGENTS.md read"
+    ],
+    "repeated_mechanics": [
+      "Commit-list, first-parent, hidden-merge, and changed-path qualification existed inline in integration and in historical frozen-review evidence."
+    ],
+    "primitive_candidates": [
+      "EXACT_FIRST_PARENT_LINEAR_RANGE_QUALIFICATION implemented as src/operational-spine-v0/git-range-qualification.js"
+    ],
+    "recipe_candidates": [],
+    "kernel_coupling_encountered": [
+      "materialize-frozen-review-interface retains its pre-existing referenceSchema import from state-kernel-v0/contracts; no Kernel behavior, lifecycle transition, or runtime dependency was added or generalized."
+    ],
+    "harness_friction": [
+      "Harness startup changed only .opencode/package.json and .opencode/package-lock.json from SDK 1.18.25 to 1.18.34; CONTINUATION-001 classified the exact diff as accepted ambient noise.",
+      "The initial unquoted PowerShell git rev-parse HEAD^{tree} invocation was shell-mangled and repeated with a quoted revision."
+    ],
+    "validation_friction": [],
+    "unnecessary_roundtrips": [
+      "The prior blocked attempt and context-policy correction required continuation bookkeeping but no implementation restart."
+    ]
+  },
+  "status": "PASS",
+  "authority": "NONE",
+  "execution_authorization": "DEVLAB_EXPERIMENT_ONLY",
+  "Product_effect": "NONE",
+  "generated_at": "2026-10-06T17:54:48.289Z"
+}

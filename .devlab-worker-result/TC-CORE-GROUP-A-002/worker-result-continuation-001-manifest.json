@@ -1,0 +1,8 @@
+{
+  "run_id": "TC-CORE-GROUP-A-002",
+  "result_filename": "worker-result-continuation-001.json",
+  "byte_count": 8185,
+  "sha256": "ccefd820b15f8720671363a670cbc92ae5d344400f8212de04935dfacf5e8904",
+  "candidate_commit": "094678931970724dcb497ba50d3a1cb0a9134939",
+  "candidate_tree": "2c22006510e08e0fead224ce956aaaf828475766"
+}
