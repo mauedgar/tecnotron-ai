@@ -8,7 +8,7 @@ const RelativeReferenceLocation = NonEmpty.refine(
   'reference location must be relative',
 );
 
-export const ReferenceSchema = z.object({
+const ReferenceFields = z.object({
   kind: z.enum(['AUTHORITY', 'EVIDENCE', 'ARTIFACT', 'GIT_OBJECT']),
   id: NonEmpty,
   location: RelativeReferenceLocation.optional(),
@@ -19,6 +19,14 @@ export const ReferenceSchema = z.object({
     ctx.addIssue({ code: 'custom', path: ['git_oid'], message: 'Git object requires OID' });
   }
 });
+
+export const ReferenceSchema = ReferenceFields.transform((value): Reference => ({
+  kind: value.kind,
+  id: value.id,
+  ...(value.location === undefined ? {} : { location: value.location }),
+  ...(value.sha256 === undefined ? {} : { sha256: value.sha256 }),
+  ...(value.git_oid === undefined ? {} : { git_oid: value.git_oid }),
+}));
 const CrossPlatformAbsolutePath = NonEmpty.refine(
   (value) => path.posix.isAbsolute(value) || path.win32.isAbsolute(value),
   'path must be absolute',
