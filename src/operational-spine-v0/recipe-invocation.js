@@ -11,7 +11,7 @@ const node_path_1 = __importDefault(require("node:path"));
 const node_child_process_1 = require("node:child_process");
 const invocation_contracts_1 = require("./invocation-contracts");
 const surface_resolution_1 = require("./surface-resolution");
-const kernel = require('../state-kernel-v0');
+const { createStateKernelCompatibilityBinding } = require('./state-kernel-adapter');
 function sha256(data) {
     return node_crypto_1.default.createHash('sha256').update(data).digest('hex');
 }
@@ -229,25 +229,23 @@ function persistResult(artifactStore, invocationId, result, preserveOnFailure = 
         });
     }
 }
-function attemptWasCreated(environment, attemptId) {
-    try {
-        const store = new kernel.FilesystemStateStore(environment.state_store.location);
-        kernel.inspect(store, 'ExecutionAttempt', attemptId);
-        return true;
-    }
-    catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.includes(`missing ExecutionAttempt/${attemptId}`))
-            return false;
-        return null;
-    }
-}
 function createRecipeInvocationEntrypoint(rawEnvironment, options = {}) {
     const environment = invocation_contracts_1.RecipeInvocationEnvironment.parse(rawEnvironment);
     const launchers = options.launchers ?? defaultLaunchers(environment);
     const artifactStore = options.artifactStore ?? new FilesystemInvocationArtifactStore(environment.state_store.location);
     const attemptIdFactory = options.attemptIdFactory ?? (() => `ATTEMPT-${node_crypto_1.default.randomUUID()}`);
-    const attemptObserver = options.attemptObserver ?? ((attemptId) => attemptWasCreated(environment, attemptId));
+    const attemptLifecycle = options.attemptObserver === undefined
+        ? options.attemptLifecycle
+            ?? createStateKernelCompatibilityBinding({ home: environment.state_store.location }).executionLifecycle
+        : null;
+    const attemptObserver = options.attemptObserver ?? ((attemptId) => {
+        const presence = attemptLifecycle.observeAttemptPresence(attemptId);
+        if (presence === 'PRESENT')
+            return true;
+        if (presence === 'ABSENT')
+            return false;
+        return null;
+    });
     async function invoke(rawRequest) {
         const parsedRequest = invocation_contracts_1.RecipeInvocationRequest.safeParse(rawRequest);
         if (!parsedRequest.success) {

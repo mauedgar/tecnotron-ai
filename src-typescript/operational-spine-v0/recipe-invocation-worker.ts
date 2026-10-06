@@ -2,32 +2,33 @@ import { spawnSync } from 'node:child_process';
 import {
   RecipeInvocationResult,
   WorkerInvocationEnvelope,
+  type GitExecutionQualificationResult as GitExecutionQualificationResultValue,
   type RecipeInvocationResult as RecipeInvocationResultValue,
   type WorkerInvocationEnvelope as WorkerInvocationEnvelopeValue,
 } from './invocation-contracts';
 import { RecipeRegistry, type RecipePort } from './recipe-registry';
-import { createOperationalSpine, type StateKernelPort } from './core';
+import { createOperationalSpine } from './core';
+import type {
+  ExecutionLifecycleCapability,
+  TaskCycleLifecycleCapability,
+} from './taskcycle-lifecycle-capability';
 import { createRecipeExecutionSurface } from './recipe-execution-surface';
+// @ts-ignore Existing runtime JS module has no declaration file; this preserves parent runtime behavior.
+import { qualifyGitExecutionSurface, qualificationSpecForRecipe } from './git-execution-qualification';
 import { FilesystemExecutionRecordStore } from './execution-record-store';
 import { createExecutionCoordinator } from '../execution-coordinator';
 import type { Reference } from './contracts';
 
-interface StateStoreLike {
-  verify(): { valid: boolean; revision: number; event_count: number };
+interface StateKernelCompatibilityBinding {
+  readonly executionLifecycle: ExecutionLifecycleCapability;
+  readonly taskcycleLifecycle: TaskCycleLifecycleCapability;
+  renderState(): string;
 }
 
-const kernel = require('../state-kernel-v0') as {
-  FilesystemStateStore: new (home: string) => StateStoreLike;
-  inspect(store: StateStoreLike, kind: 'TaskCycle' | 'Operation' | 'ExecutionAttempt', id: string): any;
-  obligations(store: StateStoreLike, id: string): any;
-  satisfy(store: StateStoreLike, expectedRevision: number, id: string, obligationId: string, authorityRef?: string, authorityReference?: Reference): any;
-  transition(store: StateStoreLike, expectedRevision: number, kind: 'TaskCycle', id: string, target: string, options?: any): any;
-  render(store: StateStoreLike): string;
+const { createStateKernelCompatibilityBinding } = require('./state-kernel-adapter') as {
+  createStateKernelCompatibilityBinding(args: { home: string }): StateKernelCompatibilityBinding;
 };
 
-const { createStateKernelAdapter } = require('./state-kernel-adapter') as {
-  createStateKernelAdapter(args: { store: StateStoreLike }): StateKernelPort;
-};
 const { createRenderCurrentStateRecipe } = require('./recipes/render-current-state') as {
   createRenderCurrentStateRecipe(args: { renderState: () => string }): RecipePort;
 };
@@ -38,7 +39,7 @@ const { createMaterializeFrozenReviewInterfaceRecipe } = require('./recipes/mate
   createMaterializeFrozenReviewInterfaceRecipe(): RecipePort;
 };
 const { createReconcileAndCloseTaskCycleRecipe } = require('./recipes/reconcile-and-close-taskcycle') as {
-  createReconcileAndCloseTaskCycleRecipe(args: { stateKernel: unknown }): RecipePort;
+  createReconcileAndCloseTaskCycleRecipe(args: { lifecycle: TaskCycleLifecycleCapability }): RecipePort;
 };
 const { createPrepareFitFlowTestRuntimeRecipe } = require('./recipes/prepare-fitflow-test-runtime') as {
   createPrepareFitFlowTestRuntimeRecipe(): RecipePort;
@@ -47,7 +48,10 @@ const { createValidateFitFlowHttpContractCandidateRecipe } = require('./recipes/
   createValidateFitFlowHttpContractCandidateRecipe(): RecipePort;
 };
 
-function terminalBase(envelope: WorkerInvocationEnvelopeValue) {
+function terminalBase(
+  envelope: WorkerInvocationEnvelopeValue,
+  gitQualification: GitExecutionQualificationResultValue | null = null,
+) {
   return {
     schema_version: 'tecnotron-recipe-invocation-result/v0' as const,
     operation_ref: envelope.request.operation_ref,
@@ -65,12 +69,17 @@ function terminalBase(envelope: WorkerInvocationEnvelopeValue) {
     terminal_artifact_ref: null,
     validation_issues: [],
     supplementary_diagnostics: [],
+    git_execution_qualification: gitQualification,
   };
 }
 
-function blocked(envelope: WorkerInvocationEnvelopeValue, reason: string): RecipeInvocationResultValue {
+function blocked(
+  envelope: WorkerInvocationEnvelopeValue,
+  reason: string,
+  gitQualification: GitExecutionQualificationResultValue | null = null,
+): RecipeInvocationResultValue {
   return RecipeInvocationResult.parse({
-    ...terminalBase(envelope),
+    ...terminalBase(envelope, gitQualification),
     started: false,
     terminal_status: 'BLOCKED',
     effect_state: 'NONE',
@@ -81,9 +90,30 @@ function blocked(envelope: WorkerInvocationEnvelopeValue, reason: string): Recip
   });
 }
 
-function unknown(envelope: WorkerInvocationEnvelopeValue, reason: string): RecipeInvocationResultValue {
+function unavailable(
+  envelope: WorkerInvocationEnvelopeValue,
+  reason: string,
+  gitQualification: GitExecutionQualificationResultValue | null = null,
+): RecipeInvocationResultValue {
   return RecipeInvocationResult.parse({
-    ...terminalBase(envelope),
+    ...terminalBase(envelope, gitQualification),
+    started: false,
+    terminal_status: 'UNAVAILABLE',
+    effect_state: 'NONE',
+    receipt_ref: null,
+    result_ref: null,
+    execution_plan_ref: null,
+    reason,
+  });
+}
+
+function unknown(
+  envelope: WorkerInvocationEnvelopeValue,
+  reason: string,
+  gitQualification: GitExecutionQualificationResultValue | null = null,
+): RecipeInvocationResultValue {
+  return RecipeInvocationResult.parse({
+    ...terminalBase(envelope, gitQualification),
     started: true,
     terminal_status: 'UNKNOWN',
     effect_state: 'UNKNOWN',
@@ -94,36 +124,17 @@ function unknown(envelope: WorkerInvocationEnvelopeValue, reason: string): Recip
   });
 }
 
-function closureKernel(store: StateStoreLike) {
-  return {
-    verify: () => store.verify(),
-    inspectTaskCycle: (id: string) => kernel.inspect(store, 'TaskCycle', id),
-    inspectOperation: (id: string) => kernel.inspect(store, 'Operation', id),
-    inspectAttempt: (id: string) => kernel.inspect(store, 'ExecutionAttempt', id),
-    obligations: (id: string) => kernel.obligations(store, id),
-    satisfyObligation: ({ expectedRevision, taskcycleId, obligationId, authorityRef, authorityReference }: any) => (
-      kernel.satisfy(store, expectedRevision, taskcycleId, obligationId, authorityRef, authorityReference)
-    ),
-    transitionTaskCycle: ({ expectedRevision, taskcycleId, target, authorityRef, dispositionRef }: any) => (
-      kernel.transition(store, expectedRevision, 'TaskCycle', taskcycleId, target, {
-        authority_ref: authorityRef,
-        disposition_ref: dispositionRef,
-      })
-    ),
-  };
-}
-
-function createBuiltinRecipe(recipeId: string, recipeVersion: string, store: StateStoreLike): RecipePort | null {
+function createBuiltinRecipe(recipeId: string, recipeVersion: string, binding: StateKernelCompatibilityBinding): RecipePort | null {
   if (recipeVersion !== 'v0') return null;
   switch (recipeId) {
     case 'render_current_state':
-      return createRenderCurrentStateRecipe({ renderState: () => kernel.render(store) });
+      return createRenderCurrentStateRecipe({ renderState: () => binding.renderState() });
     case 'integrate_accepted_candidate':
       return createIntegrateAcceptedCandidateRecipe();
     case 'materialize_frozen_review_interface':
       return createMaterializeFrozenReviewInterfaceRecipe();
     case 'reconcile_and_close_taskcycle':
-      return createReconcileAndCloseTaskCycleRecipe({ stateKernel: closureKernel(store) });
+      return createReconcileAndCloseTaskCycleRecipe({ lifecycle: binding.taskcycleLifecycle });
     case 'prepare_fitflow_test_runtime':
       return createPrepareFitFlowTestRuntimeRecipe();
     case 'validate_fitflow_http_contract_candidate':
@@ -173,13 +184,17 @@ function prepareRecipeInput(envelope: WorkerInvocationEnvelopeValue): unknown {
   return input;
 }
 
-function mapSpineResult(envelope: WorkerInvocationEnvelopeValue, result: any): RecipeInvocationResultValue {
+function mapSpineResult(
+  envelope: WorkerInvocationEnvelopeValue,
+  result: any,
+  gitQualification: GitExecutionQualificationResultValue | null = null,
+): RecipeInvocationResultValue {
   const receipt = result?.receipt;
   const status = receipt?.status;
   if (status) {
     const terminalStatus = status as 'PASS' | 'FAIL' | 'BLOCKED' | 'UNAVAILABLE' | 'CANCELLED' | 'UNKNOWN';
     return RecipeInvocationResult.parse({
-      ...terminalBase(envelope),
+      ...terminalBase(envelope, gitQualification),
       started: Boolean(result?.coordinator_outcome?.started ?? (terminalStatus === 'PASS' || terminalStatus === 'FAIL' || terminalStatus === 'UNKNOWN')),
       terminal_status: terminalStatus,
       effect_state: receipt.effect_state,
@@ -193,7 +208,7 @@ function mapSpineResult(envelope: WorkerInvocationEnvelopeValue, result: any): R
 
   if (result?.status === 'SEMANTIC_ESCALATION_REQUIRED') {
     return RecipeInvocationResult.parse({
-      ...terminalBase(envelope),
+      ...terminalBase(envelope, gitQualification),
       started: false,
       terminal_status: 'BLOCKED',
       effect_state: 'NONE',
@@ -205,7 +220,7 @@ function mapSpineResult(envelope: WorkerInvocationEnvelopeValue, result: any): R
   }
 
   return RecipeInvocationResult.parse({
-    ...terminalBase(envelope),
+    ...terminalBase(envelope, gitQualification),
     started: false,
     terminal_status: result?.status === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'BLOCKED',
     effect_state: 'NONE',
@@ -216,21 +231,18 @@ function mapSpineResult(envelope: WorkerInvocationEnvelopeValue, result: any): R
   });
 }
 
-function attemptExists(store: StateStoreLike, attemptId: string): boolean | null {
-  try {
-    kernel.inspect(store, 'ExecutionAttempt', attemptId);
-    return true;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.includes(`missing ExecutionAttempt/${attemptId}`)) return false;
-    return null;
-  }
+function attemptExists(executionLifecycle: ExecutionLifecycleCapability, attemptId: string): boolean | null {
+  const presence = executionLifecycle.observeAttemptPresence(attemptId);
+  if (presence === 'PRESENT') return true;
+  if (presence === 'ABSENT') return false;
+  return null;
 }
 
 export function workerExceptionResult(
   envelope: WorkerInvocationEnvelopeValue,
   reason: string,
   observeAttempt: (attemptId: string) => boolean | null,
+  gitQualification: GitExecutionQualificationResultValue | null = null,
 ): RecipeInvocationResultValue {
   let observation: boolean | null = null;
   try {
@@ -239,14 +251,14 @@ export function workerExceptionResult(
     observation = null;
   }
   return observation === false
-    ? blocked(envelope, `WORKER_EXCEPTION_BEFORE_ATTEMPT:${reason}`)
-    : unknown(envelope, `WORKER_EXCEPTION_AFTER_POSSIBLE_ATTEMPT:${reason}`);
+    ? blocked(envelope, `WORKER_EXCEPTION_BEFORE_ATTEMPT:${reason}`, gitQualification)
+    : unknown(envelope, `WORKER_EXCEPTION_AFTER_POSSIBLE_ATTEMPT:${reason}`, gitQualification);
 }
 
 export async function runWorkerInvocation(rawEnvelope: unknown): Promise<RecipeInvocationResultValue> {
   const envelope = WorkerInvocationEnvelope.parse(rawEnvelope);
-  const store = new kernel.FilesystemStateStore(envelope.environment.state_store.location);
-  const recipe = createBuiltinRecipe(envelope.request.recipe.id, envelope.request.recipe.version, store);
+  const binding = createStateKernelCompatibilityBinding({ home: envelope.environment.state_store.location });
+  const recipe = createBuiltinRecipe(envelope.request.recipe.id, envelope.request.recipe.version, binding);
   if (!recipe) return blocked(envelope, 'RECIPE_NOT_SHIPPED_BY_STABLE_ENTRYPOINT');
 
   const registry = new RecipeRegistry();
@@ -255,19 +267,49 @@ export async function runWorkerInvocation(rawEnvelope: unknown): Promise<RecipeI
     return blocked(envelope, 'REGISTERED_RECIPE_IDENTITY_MISMATCH');
   }
 
-  const stateKernel = createStateKernelAdapter({ store });
   const recipeSurface = createRecipeExecutionSurface({ recipeRegistry: registry });
   const coordinator = createExecutionCoordinator({ executionSurface: recipeSurface });
   const recordStore = new FilesystemExecutionRecordStore(envelope.environment.state_store.location);
   const spine = createOperationalSpine({
-    stateKernel,
+    executionLifecycle: binding.executionLifecycle,
     recipeRegistry: registry,
     executionCoordinator: coordinator,
     executionRecordStore: recordStore,
   });
 
-  const operation = kernel.inspect(store, 'Operation', envelope.request.operation_ref).aggregate;
-  const observedGit = gitContext(envelope.environment.repository.location);
+  const operation = binding.executionLifecycle.observeOperation(envelope.request.operation_ref).aggregate;
+  const qualificationSpec = qualificationSpecForRecipe(envelope.request.recipe, envelope.request.inputs);
+  let gitQualification: GitExecutionQualificationResultValue | null = null;
+  let observedGit: { expected_ref: string; expected_commit: string } | undefined;
+
+  if (qualificationSpec?.kind === 'INVALID') {
+    return blocked(envelope, qualificationSpec.reason);
+  }
+  if (qualificationSpec?.kind === 'REQUIRED') {
+    gitQualification = qualifyGitExecutionSurface({
+      schema_version: 'tecnotron-git-execution-qualification-request/v0',
+      surface_id: envelope.selected_surface.id,
+      repository: envelope.environment.repository,
+      expected_ref: qualificationSpec.expected_ref,
+      expected_commit: qualificationSpec.expected_commit,
+      ...(qualificationSpec.remote ? { remote: qualificationSpec.remote } : {}),
+      remote_timeout_ms: 5000,
+    }) as GitExecutionQualificationResultValue;
+    if (gitQualification.status !== 'READY') {
+      const reason = `GIT_EXECUTION_QUALIFICATION_${gitQualification.status}:${gitQualification.reason}`;
+      if (gitQualification.status === 'UNAVAILABLE') {
+        return unavailable(envelope, reason, gitQualification);
+      }
+      return blocked(envelope, reason, gitQualification);
+    }
+    observedGit = {
+      expected_ref: gitQualification.evidence.repository.observed_ref!,
+      expected_commit: gitQualification.evidence.repository.observed_commit!,
+    };
+  } else {
+    observedGit = gitContext(envelope.environment.repository.location);
+  }
+
   const authorityRef: Reference = { kind: 'AUTHORITY', id: envelope.request.authority_ref };
   const executionContext = {
     schema_version: 'tecnotron-execution-context/v0' as const,
@@ -312,13 +354,14 @@ export async function runWorkerInvocation(rawEnvelope: unknown): Promise<RecipeI
       harnessConformance: envelope.selected_surface.conformance,
       input: recipeInput,
     });
-    return mapSpineResult(envelope, result);
+    return mapSpineResult(envelope, result, gitQualification);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     return workerExceptionResult(
       envelope,
       reason,
-      (attemptId) => attemptExists(store, attemptId),
+      (attemptId) => attemptExists(binding.executionLifecycle, attemptId),
+      gitQualification,
     );
   }
 }

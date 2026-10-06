@@ -1,5 +1,6 @@
 import { type RecipeInvocationEnvironmentInput, type RecipeInvocationResult as RecipeInvocationResultValue, type WorkerInvocationEnvelope as WorkerInvocationEnvelopeValue } from './invocation-contracts';
 import type { Reference } from './contracts';
+import type { ExecutionLifecycleCapability } from './taskcycle-lifecycle-capability';
 export interface SurfaceLaunchResult {
     readonly started: boolean;
     readonly exit_code: number | null;
@@ -27,6 +28,7 @@ export interface RecipeInvocationEntrypointOptions {
     readonly launchers?: ReadonlyMap<string, SurfaceLauncher>;
     readonly artifactStore?: InvocationArtifactStore;
     readonly attemptIdFactory?: () => string;
+    readonly attemptLifecycle?: Pick<ExecutionLifecycleCapability, 'observeAttemptPresence'>;
     readonly attemptObserver?: (attemptId: string) => boolean | null;
 }
 export declare function createRecipeInvocationEntrypoint(rawEnvironment: RecipeInvocationEnvironmentInput, options?: RecipeInvocationEntrypointOptions): {

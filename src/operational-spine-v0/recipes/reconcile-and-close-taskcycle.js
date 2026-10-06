@@ -5,7 +5,8 @@ const {
   RecipeDefinition,
   RecipeReceipt,
 } = require('../contracts');
-const { referenceSchema } = require('../../state-kernel-v0/contracts');
+const { ReferenceSchema } = require('../invocation-contracts');
+const { requireTaskCycleLifecycleCapability } = require('../taskcycle-lifecycle-capability');
 const { reconcilePostTaskCycle: acceptedReconcilePostTaskCycle } = require('../../self-hosting-reconciliation-v0');
 
 const NonEmpty = z.string().min(1);
@@ -103,7 +104,7 @@ const ObligationSatisfaction = z.object({
   source: ReconciliationSource,
   remote_expected_status: z.enum(['PUBLISHED', 'NOT_PUBLISHED']).optional(),
   authority_ref: NonEmpty.optional(),
-  authority_reference: referenceSchema.optional(),
+  authority_reference: ReferenceSchema.optional(),
 }).strict().superRefine((value, ctx) => {
   if (value.source === 'remote_publication' && !value.remote_expected_status) {
     ctx.addIssue({
@@ -167,31 +168,8 @@ function receipt(request, {
   });
 }
 
-function stateKernelContract(stateKernel) {
-  const required = [
-    'verify',
-    'inspectTaskCycle',
-    'inspectOperation',
-    'inspectAttempt',
-    'obligations',
-    'satisfyObligation',
-    'transitionTaskCycle',
-  ];
-  if (!stateKernel || required.some(name => typeof stateKernel[name] !== 'function')) {
-    throw new TypeError(`stateKernel must provide: ${required.join(', ')}`);
-  }
-  return stateKernel;
-}
-
-function hasUnreconciledUnknown(stateKernel, taskcycle) {
-  for (const operationId of taskcycle.related_ids || []) {
-    const operation = stateKernel.inspectOperation(operationId).aggregate;
-    for (const attemptId of operation.related_ids || []) {
-      const attempt = stateKernel.inspectAttempt(attemptId).aggregate;
-      if (attempt.state === 'UNKNOWN' || attempt.reconciliation_required === true) return true;
-    }
-  }
-  return false;
+function hasUnreconciledUnknown(lifecycle, taskcycle) {
+  return lifecycle.hasUnreconciledExecution(taskcycle.id);
 }
 
 function sourceSatisfied(reconciliation, rule, competence) {
@@ -328,27 +306,8 @@ function handoffObservation(aggregate) {
   };
 }
 
-function authoritativeSnapshot(stateKernel, taskcycleId) {
-  const verified = stateKernel.verify();
-  if (!verified || verified.valid !== true || !Number.isSafeInteger(verified.revision)) {
-    throw new Error('STATE_KERNEL_VERIFY_UNAVAILABLE');
-  }
-  const inspected = stateKernel.inspectTaskCycle(taskcycleId);
-  const obligationState = stateKernel.obligations(taskcycleId);
-  if (
-    !inspected || !inspected.aggregate ||
-    inspected.store_revision !== verified.revision ||
-    obligationState.store_revision !== verified.revision
-  ) {
-    throw new Error('STATE_KERNEL_SNAPSHOT_REVISION_MISMATCH');
-  }
-  return {
-    revision: verified.revision,
-    event_count: verified.event_count,
-    taskcycle: inspected.aggregate,
-    legal_next: inspected.legal_next,
-    obligations: obligationState,
-  };
+function authoritativeSnapshot(lifecycle, taskcycleId) {
+  return lifecycle.snapshot(taskcycleId);
 }
 
 function noEffectProven(before, after) {
@@ -411,15 +370,15 @@ function expectedClosureEffect(before, after, closure) {
   );
 }
 
-function invokeMutation({ stateKernel, taskcycleId, expectedRevision, invoke, expectedEffect }) {
+function invokeMutation({ lifecycle, taskcycleId, expectedRevision, invoke, expectedEffect }) {
   let before;
   try {
-    before = authoritativeSnapshot(stateKernel, taskcycleId);
+    before = authoritativeSnapshot(lifecycle, taskcycleId);
   } catch (error) {
     return { disposition: 'PRE_DISPATCH_FAILURE', reason: error.message };
   }
   if (before.revision !== expectedRevision) {
-    return { disposition: 'PRE_DISPATCH_FAILURE', reason: `STATE_KERNEL_REVISION_DRIFT:${before.revision}` };
+    return { disposition: 'PRE_DISPATCH_FAILURE', reason: `LIFECYCLE_REVISION_DRIFT:${before.revision}` };
   }
 
   let result;
@@ -432,17 +391,17 @@ function invokeMutation({ stateKernel, taskcycleId, expectedRevision, invoke, ex
 
   let after;
   try {
-    after = authoritativeSnapshot(stateKernel, taskcycleId);
+    after = authoritativeSnapshot(lifecycle, taskcycleId);
   } catch (error) {
     return {
       disposition: 'UNKNOWN',
-      reason: `STATE_KERNEL_MUTATION_REASSESSMENT_UNAVAILABLE:${invocationError?.message || 'UNVERIFIABLE_RETURN'}:${error.message}`,
+      reason: `LIFECYCLE_MUTATION_REASSESSMENT_UNAVAILABLE:${invocationError?.message || 'UNVERIFIABLE_RETURN'}:${error.message}`,
     };
   }
   if (noEffectProven(before, after)) {
     return {
       disposition: 'NO_EFFECT',
-      reason: `STATE_KERNEL_MUTATION_REJECTED_NO_EFFECT:${invocationError?.message || 'UNVERIFIABLE_RETURN'}`,
+      reason: `LIFECYCLE_MUTATION_REJECTED_NO_EFFECT:${invocationError?.message || 'UNVERIFIABLE_RETURN'}`,
     };
   }
   if (expectedEffect(before, after)) {
@@ -460,13 +419,13 @@ function invokeMutation({ stateKernel, taskcycleId, expectedRevision, invoke, ex
     }
     return {
       disposition: 'EXACT_EFFECT_UNACKNOWLEDGED',
-      reason: `STATE_KERNEL_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED:${invocationError?.message || 'RECEIPT_CORRESPONDENCE_MISMATCH'}`,
+      reason: `LIFECYCLE_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED:${invocationError?.message || 'RECEIPT_CORRESPONDENCE_MISMATCH'}`,
       after,
     };
   }
   return {
     disposition: 'UNKNOWN',
-    reason: `STATE_KERNEL_MUTATION_EFFECT_UNRESOLVED:${invocationError?.message || 'UNVERIFIABLE_RETURN'}`,
+    reason: `LIFECYCLE_MUTATION_EFFECT_UNRESOLVED:${invocationError?.message || 'UNVERIFIABLE_RETURN'}`,
   };
 }
 
@@ -487,26 +446,32 @@ function deterministicRules(input) {
   });
 }
 
-function prepare({ request, input, stateKernel, reconcilePostTaskCycle, handoffSnapshot = null }) {
-  const verified = stateKernel.verify();
-  if (!verified || verified.valid !== true || !Number.isSafeInteger(verified.revision)) {
-    return { status: 'UNAVAILABLE', reason: 'STATE_KERNEL_VERIFY_UNAVAILABLE' };
+function prepare({ request, input, lifecycle, reconcilePostTaskCycle, handoffSnapshot = null }) {
+  let lifecycleSnapshot;
+  try {
+    lifecycleSnapshot = lifecycle.snapshot(request.context.taskcycle_id);
+  } catch (error) {
+    return {
+      status: 'UNAVAILABLE',
+      reason: `LIFECYCLE_SNAPSHOT_UNAVAILABLE:${error instanceof Error ? error.message : String(error)}`,
+    };
   }
+  const verified = {
+    valid: true,
+    revision: lifecycleSnapshot.revision,
+    event_count: lifecycleSnapshot.event_count,
+  };
   if (handoffSnapshot === null && verified.revision !== input.expected_state_revision) {
-    return { status: 'BLOCKED', reason: `STATE_KERNEL_REVISION_DRIFT:${verified.revision}` };
+    return { status: 'BLOCKED', reason: `LIFECYCLE_REVISION_DRIFT:${verified.revision}` };
   }
   if (handoffSnapshot !== null && verified.revision < handoffSnapshot.preflight_state_revision) {
     return {
       status: 'BLOCKED',
-      reason: `STATE_KERNEL_REVISION_REGRESSION:${verified.revision}:${handoffSnapshot.preflight_state_revision}`,
+      reason: `LIFECYCLE_REVISION_REGRESSION:${verified.revision}:${handoffSnapshot.preflight_state_revision}`,
     };
   }
 
-  const inspected = stateKernel.inspectTaskCycle(request.context.taskcycle_id);
-  if (!inspected || !inspected.aggregate || inspected.store_revision !== verified.revision) {
-    return { status: 'UNAVAILABLE', reason: 'STATE_KERNEL_SNAPSHOT_REVISION_MISMATCH' };
-  }
-  const taskcycle = inspected.aggregate;
+  const taskcycle = lifecycleSnapshot.taskcycle;
   if (handoffSnapshot !== null) {
     const drift = protectedTaskCycleDrift(handoffSnapshot.taskcycle, taskcycle);
     if (drift !== null) return { status: 'BLOCKED', reason: drift };
@@ -514,25 +479,24 @@ function prepare({ request, input, stateKernel, reconcilePostTaskCycle, handoffS
   if (taskcycle.id !== request.context.taskcycle_id) {
     return { status: 'BLOCKED', reason: 'TASKCYCLE_IDENTITY_MISMATCH' };
   }
+
   let invocationOperation = null;
   let invocationAttempt = null;
   if (handoffSnapshot !== null) {
-    let operationInspection;
-    let attemptInspection;
+    let bookkeeping;
     try {
-      operationInspection = stateKernel.inspectOperation(request.operation_id);
-      attemptInspection = stateKernel.inspectAttempt(request.execution_attempt_id);
+      bookkeeping = lifecycle.observeInvocationBookkeeping(
+        request.operation_id,
+        request.execution_attempt_id,
+      );
     } catch {
       return { status: 'BLOCKED', reason: 'INVOCATION_BOOKKEEPING_NOT_ESTABLISHED' };
     }
-    if (
-      operationInspection.store_revision !== verified.revision ||
-      attemptInspection.store_revision !== verified.revision
-    ) {
+    if (bookkeeping.revision !== verified.revision) {
       return { status: 'UNAVAILABLE', reason: 'INVOCATION_BOOKKEEPING_SNAPSHOT_REVISION_MISMATCH' };
     }
-    invocationOperation = operationInspection.aggregate;
-    invocationAttempt = attemptInspection.aggregate;
+    invocationOperation = bookkeeping.operation;
+    invocationAttempt = bookkeeping.attempt;
     if (
       invocationOperation.id !== request.operation_id ||
       invocationOperation.taskcycle_id !== taskcycle.id ||
@@ -549,11 +513,19 @@ function prepare({ request, input, stateKernel, reconcilePostTaskCycle, handoffS
       return { status: 'BLOCKED', reason: 'INVOCATION_ATTEMPT_NOT_RUNNING_FOR_OPERATION' };
     }
   }
+
   if (['CLOSED', 'CANCELLED'].includes(taskcycle.state)) {
     return { status: 'BLOCKED', reason: `TASKCYCLE_ALREADY_TERMINAL:${taskcycle.state}` };
   }
-  if (hasUnreconciledUnknown(stateKernel, taskcycle)) {
-    return { status: 'BLOCKED', reason: 'UNKNOWN_EXECUTION_ATTEMPT_REQUIRES_RECONCILIATION' };
+  try {
+    if (hasUnreconciledUnknown(lifecycle, taskcycle)) {
+      return { status: 'BLOCKED', reason: 'UNKNOWN_EXECUTION_ATTEMPT_REQUIRES_RECONCILIATION' };
+    }
+  } catch (error) {
+    return {
+      status: 'UNAVAILABLE',
+      reason: `LIFECYCLE_EXECUTION_OBSERVATION_UNAVAILABLE:${error instanceof Error ? error.message : String(error)}`,
+    };
   }
 
   const reconciliation = reconcilePostTaskCycle({
@@ -716,7 +688,7 @@ function closureOutput({ reconciliation, satisfied, remaining, beforeState, afte
       before: beforeState,
       after: afterState,
     },
-    state_kernel: {
+    lifecycle: {
       final_revision: finalVerify.revision,
       final_event_count: finalVerify.event_count,
       verification: finalVerify.valid === true ? 'PASS' : 'FAIL',
@@ -728,10 +700,10 @@ function closureOutput({ reconciliation, satisfied, remaining, beforeState, afte
 }
 
 function createReconcileAndCloseTaskCycleRecipe({
-  stateKernel,
+  lifecycle,
   reconcilePostTaskCycle = acceptedReconcilePostTaskCycle,
 } = {}) {
-  const kernel = stateKernelContract(stateKernel);
+  const capability = requireTaskCycleLifecycleCapability(lifecycle);
   if (typeof reconcilePostTaskCycle !== 'function') throw new TypeError('reconcilePostTaskCycle is required');
   const handoffSnapshots = new Map();
   let handoffSequence = 0;
@@ -789,7 +761,7 @@ function createReconcileAndCloseTaskCycleRecipe({
       'closure',
     ],
     preconditions: [
-      'State Kernel revision exactly matches expected revision',
+      'Lifecycle revision exactly matches expected revision',
       'authoritative TaskCycle is nonterminal',
       'no ExecutionAttempt remains UNKNOWN or reconciliation-required',
       'post-TaskCycle reconciliation is fully RESOLVED',
@@ -802,15 +774,15 @@ function createReconcileAndCloseTaskCycleRecipe({
     ],
     postconditions: [
       'all TaskCycle obligations are satisfied',
-      'TaskCycle is CLOSED through a legal State Kernel transition',
-      'fresh State Kernel verification succeeds',
+      'TaskCycle is CLOSED through a legal Lifecycle transition',
+      'fresh Lifecycle verification succeeds',
       'repository, Git and remote effects remain NONE',
     ],
   });
 
   async function preflight(request) {
     const input = ReconcileAndCloseTaskCycleInput.parse(request.input);
-    const prepared = prepare({ request, input, stateKernel: kernel, reconcilePostTaskCycle });
+    const prepared = prepare({ request, input, lifecycle: capability, reconcilePostTaskCycle });
     if (prepared.status !== 'READY') {
       return { status: prepared.status, reason: prepared.reason };
     }
@@ -835,7 +807,7 @@ function createReconcileAndCloseTaskCycleRecipe({
       handoffSnapshot = consumed.snapshot;
     }
     const prepared = prepare({
-      request, input, stateKernel: kernel, reconcilePostTaskCycle, handoffSnapshot,
+      request, input, lifecycle: capability, reconcilePostTaskCycle, handoffSnapshot,
     });
     if (prepared.status !== 'READY') {
       return receipt(request, {
@@ -858,10 +830,10 @@ function createReconcileAndCloseTaskCycleRecipe({
 
     for (const rule of prepared.rules) {
       const mutation = invokeMutation({
-        stateKernel: kernel,
+        lifecycle: capability,
         taskcycleId: prepared.taskcycle.id,
         expectedRevision: currentRevision,
-        invoke: () => kernel.satisfyObligation({
+        invoke: () => capability.satisfyObligation({
           expectedRevision: currentRevision,
           taskcycleId: prepared.taskcycle.id,
           obligationId: rule.obligation_id,
@@ -898,10 +870,11 @@ function createReconcileAndCloseTaskCycleRecipe({
     }
 
     try {
-      const obligationState = kernel.obligations(prepared.taskcycle.id);
-      if (obligationState.store_revision !== currentRevision) {
-        throw new Error('STATE_KERNEL_OBLIGATION_REVISION_MISMATCH');
+      const observed = capability.snapshot(prepared.taskcycle.id);
+      if (observed.revision !== currentRevision) {
+        throw new Error('LIFECYCLE_OBLIGATION_REVISION_MISMATCH');
       }
+      const obligationState = observed.obligations;
       if (obligationState.pending.length !== 0) {
         return receipt(request, {
           status: 'FAIL',
@@ -913,14 +886,12 @@ function createReconcileAndCloseTaskCycleRecipe({
             remaining: obligationState.pending,
             beforeState: prepared.taskcycle.state,
             afterState: prepared.taskcycle.state,
-            finalVerify: { valid: true, revision: currentRevision, event_count: null },
+            finalVerify: { valid: true, revision: currentRevision, event_count: observed.event_count },
             precondition: prepared.precondition,
           }),
         });
       }
-
-      const beforeClose = kernel.inspectTaskCycle(prepared.taskcycle.id);
-      if (!beforeClose.legal_next.includes('CLOSED')) {
+      if (!observed.legal_next.includes('CLOSED')) {
         return receipt(request, {
           status: 'FAIL',
           effectState: confirmedMutations > 0 ? 'CONFIRMED' : 'NONE',
@@ -932,19 +903,18 @@ function createReconcileAndCloseTaskCycleRecipe({
         status: confirmedMutations > 0 ? 'UNKNOWN' : 'FAIL',
         effectState: confirmedMutations > 0 ? 'UNKNOWN' : 'NONE',
         reason: confirmedMutations > 0
-          ? `STATE_KERNEL_POST_MUTATION_READ_UNAVAILABLE:${error.message}`
-          : `STATE_KERNEL_PRE_MUTATION_READ_UNAVAILABLE:${error.message}`,
+          ? `LIFECYCLE_POST_MUTATION_READ_UNAVAILABLE:${error.message}`
+          : `LIFECYCLE_PRE_MUTATION_READ_UNAVAILABLE:${error.message}`,
       });
     }
 
     const closeMutation = invokeMutation({
-      stateKernel: kernel,
+      lifecycle: capability,
       taskcycleId: prepared.taskcycle.id,
       expectedRevision: currentRevision,
-      invoke: () => kernel.transitionTaskCycle({
+      invoke: () => capability.closeTaskCycle({
         expectedRevision: currentRevision,
         taskcycleId: prepared.taskcycle.id,
-        target: 'CLOSED',
         authorityRef: prepared.closureAuthority,
         dispositionRef: input.closure.disposition_ref,
       }),
@@ -975,11 +945,9 @@ function createReconcileAndCloseTaskCycleRecipe({
     currentRevision = closeMutation.result.revision;
     confirmedMutations += 1;
 
-    let finalVerify;
-    let finalTaskCycle;
+    let finalSnapshot;
     try {
-      finalVerify = kernel.verify();
-      finalTaskCycle = kernel.inspectTaskCycle(prepared.taskcycle.id).aggregate;
+      finalSnapshot = capability.snapshot(prepared.taskcycle.id);
     } catch (error) {
       return receipt(request, {
         status: 'UNKNOWN',
@@ -987,9 +955,14 @@ function createReconcileAndCloseTaskCycleRecipe({
         reason: `POST_CLOSURE_STATE_VERIFY_UNAVAILABLE:${error.message}`,
       });
     }
+    const finalVerify = {
+      valid: true,
+      revision: finalSnapshot.revision,
+      event_count: finalSnapshot.event_count,
+    };
+    const finalTaskCycle = finalSnapshot.taskcycle;
 
     if (
-      !finalVerify || finalVerify.valid !== true ||
       finalVerify.revision !== currentRevision ||
       finalTaskCycle.state !== 'CLOSED' ||
       finalTaskCycle.id !== prepared.taskcycle.id
@@ -1001,8 +974,7 @@ function createReconcileAndCloseTaskCycleRecipe({
       });
     }
 
-    const finalObligations = kernel.obligations(prepared.taskcycle.id);
-    if (finalObligations.pending.length !== 0) {
+    if (finalSnapshot.obligations.pending.length !== 0) {
       return receipt(request, {
         status: 'UNKNOWN',
         effectState: 'UNKNOWN',

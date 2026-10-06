@@ -7,11 +7,11 @@ const invocation_contracts_1 = require("./invocation-contracts");
 const recipe_registry_1 = require("./recipe-registry");
 const core_1 = require("./core");
 const recipe_execution_surface_1 = require("./recipe-execution-surface");
+// @ts-ignore Existing runtime JS module has no declaration file; this preserves parent runtime behavior.
 const git_execution_qualification_1 = require("./git-execution-qualification");
 const execution_record_store_1 = require("./execution-record-store");
 const execution_coordinator_1 = require("../execution-coordinator");
-const kernel = require('../state-kernel-v0');
-const { createStateKernelAdapter } = require('./state-kernel-adapter');
+const { createStateKernelCompatibilityBinding } = require('./state-kernel-adapter');
 const { createRenderCurrentStateRecipe } = require('./recipes/render-current-state');
 const { createIntegrateAcceptedCandidateRecipe } = require('./recipes/integrate-accepted-candidate');
 const { createMaterializeFrozenReviewInterfaceRecipe } = require('./recipes/materialize-frozen-review-interface');
@@ -75,32 +75,18 @@ function unknown(envelope, reason, gitQualification = null) {
         reason,
     });
 }
-function closureKernel(store) {
-    return {
-        verify: () => store.verify(),
-        inspectTaskCycle: (id) => kernel.inspect(store, 'TaskCycle', id),
-        inspectOperation: (id) => kernel.inspect(store, 'Operation', id),
-        inspectAttempt: (id) => kernel.inspect(store, 'ExecutionAttempt', id),
-        obligations: (id) => kernel.obligations(store, id),
-        satisfyObligation: ({ expectedRevision, taskcycleId, obligationId, authorityRef, authorityReference }) => (kernel.satisfy(store, expectedRevision, taskcycleId, obligationId, authorityRef, authorityReference)),
-        transitionTaskCycle: ({ expectedRevision, taskcycleId, target, authorityRef, dispositionRef }) => (kernel.transition(store, expectedRevision, 'TaskCycle', taskcycleId, target, {
-            authority_ref: authorityRef,
-            disposition_ref: dispositionRef,
-        })),
-    };
-}
-function createBuiltinRecipe(recipeId, recipeVersion, store) {
+function createBuiltinRecipe(recipeId, recipeVersion, binding) {
     if (recipeVersion !== 'v0')
         return null;
     switch (recipeId) {
         case 'render_current_state':
-            return createRenderCurrentStateRecipe({ renderState: () => kernel.render(store) });
+            return createRenderCurrentStateRecipe({ renderState: () => binding.renderState() });
         case 'integrate_accepted_candidate':
             return createIntegrateAcceptedCandidateRecipe();
         case 'materialize_frozen_review_interface':
             return createMaterializeFrozenReviewInterfaceRecipe();
         case 'reconcile_and_close_taskcycle':
-            return createReconcileAndCloseTaskCycleRecipe({ stateKernel: closureKernel(store) });
+            return createReconcileAndCloseTaskCycleRecipe({ lifecycle: binding.taskcycleLifecycle });
         case 'prepare_fitflow_test_runtime':
             return createPrepareFitFlowTestRuntimeRecipe();
         case 'validate_fitflow_http_contract_candidate':
@@ -186,17 +172,13 @@ function mapSpineResult(envelope, result, gitQualification = null) {
         reason: result?.reason || 'OPERATIONAL_SPINE_PRESTART_BLOCKED',
     });
 }
-function attemptExists(store, attemptId) {
-    try {
-        kernel.inspect(store, 'ExecutionAttempt', attemptId);
+function attemptExists(executionLifecycle, attemptId) {
+    const presence = executionLifecycle.observeAttemptPresence(attemptId);
+    if (presence === 'PRESENT')
         return true;
-    }
-    catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.includes(`missing ExecutionAttempt/${attemptId}`))
-            return false;
-        return null;
-    }
+    if (presence === 'ABSENT')
+        return false;
+    return null;
 }
 function workerExceptionResult(envelope, reason, observeAttempt, gitQualification = null) {
     let observation = null;
@@ -212,8 +194,8 @@ function workerExceptionResult(envelope, reason, observeAttempt, gitQualificatio
 }
 async function runWorkerInvocation(rawEnvelope) {
     const envelope = invocation_contracts_1.WorkerInvocationEnvelope.parse(rawEnvelope);
-    const store = new kernel.FilesystemStateStore(envelope.environment.state_store.location);
-    const recipe = createBuiltinRecipe(envelope.request.recipe.id, envelope.request.recipe.version, store);
+    const binding = createStateKernelCompatibilityBinding({ home: envelope.environment.state_store.location });
+    const recipe = createBuiltinRecipe(envelope.request.recipe.id, envelope.request.recipe.version, binding);
     if (!recipe)
         return blocked(envelope, 'RECIPE_NOT_SHIPPED_BY_STABLE_ENTRYPOINT');
     const registry = new recipe_registry_1.RecipeRegistry();
@@ -221,17 +203,16 @@ async function runWorkerInvocation(rawEnvelope) {
     if (definition.id !== envelope.request.recipe.id || definition.version !== envelope.request.recipe.version) {
         return blocked(envelope, 'REGISTERED_RECIPE_IDENTITY_MISMATCH');
     }
-    const stateKernel = createStateKernelAdapter({ store });
     const recipeSurface = (0, recipe_execution_surface_1.createRecipeExecutionSurface)({ recipeRegistry: registry });
     const coordinator = (0, execution_coordinator_1.createExecutionCoordinator)({ executionSurface: recipeSurface });
     const recordStore = new execution_record_store_1.FilesystemExecutionRecordStore(envelope.environment.state_store.location);
     const spine = (0, core_1.createOperationalSpine)({
-        stateKernel,
+        executionLifecycle: binding.executionLifecycle,
         recipeRegistry: registry,
         executionCoordinator: coordinator,
         executionRecordStore: recordStore,
     });
-    const operation = kernel.inspect(store, 'Operation', envelope.request.operation_ref).aggregate;
+    const operation = binding.executionLifecycle.observeOperation(envelope.request.operation_ref).aggregate;
     const qualificationSpec = (0, git_execution_qualification_1.qualificationSpecForRecipe)(envelope.request.recipe, envelope.request.inputs);
     let gitQualification = null;
     let observedGit;
@@ -309,7 +290,7 @@ async function runWorkerInvocation(rawEnvelope) {
     }
     catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
-        return workerExceptionResult(envelope, reason, (attemptId) => attemptExists(store, attemptId), gitQualification);
+        return workerExceptionResult(envelope, reason, (attemptId) => attemptExists(binding.executionLifecycle, attemptId), gitQualification);
     }
 }
 async function main() {
