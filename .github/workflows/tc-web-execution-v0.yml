@@ -89,7 +89,7 @@ jobs:
           image_id="$(docker image inspect node:22-bookworm --format '{{.Id}}')"
           echo "$image_id" > _tc_web_result/docker-image-id.txt
 
-          docker run --rm             -v "$PWD/subject:/workspace"             -v "$PWD/_tc_web_result:/result"             -v "$PWD/.tc-web-cache/npm:/root/.npm"             -w /workspace             node:22-bookworm             bash -lc '
+          docker run --rm --user "$(id -u):$(id -g)"             -v "$PWD/subject:/workspace"             -v "$PWD/_tc_web_result:/result"             -v "$PWD/.tc-web-cache/npm:/root/.npm"             -w /workspace             node:22-bookworm             bash -lc '
               set +e
 
               run_and_record() {
