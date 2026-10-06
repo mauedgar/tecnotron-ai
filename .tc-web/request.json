@@ -1,6 +1,6 @@
 {
   "schema_version": "tecnotron-tc-web-execution-request/v0",
-  "request_id": "TC-CORE-AB-002-A-RERUN-001",
+  "request_id": "TC-CORE-AB-002-A-RERUN-002",
   "product": "Tecnotron",
   "task": "TC-CORE-GROUP-A-002",
   "responsibility": "MATURE_SHARED_EXACT_RANGE_QUALIFICATION_AND_FROZEN_REVIEW_RANGE_SUPPORT",
@@ -15,6 +15,7 @@
   "notes": [
     "Developer authorized harness repair and exact-subject rerun.",
     "Same Group A candidate commit/tree; no candidate mutation.",
+    "Docker runs as runner UID/GID so result files remain host-writable.",
     "Reconcile Group A before Group B dispatch."
   ]
 }
