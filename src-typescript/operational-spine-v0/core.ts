@@ -36,7 +36,12 @@ export interface ExecutionCoordinatorPort {
 }
 
 export interface OperationalSpineDependencies {
-  readonly executionLifecycle: ExecutionLifecycleCapability;
+  readonly executionLifecycle?: ExecutionLifecycleCapability;
+  /**
+   * @deprecated Boundary-only compatibility for existing callers.
+   * The value is normalized immediately into ExecutionLifecycleCapability.
+   */
+  readonly stateKernel?: unknown;
   readonly recipeRegistry: RecipeRegistryPort;
   readonly executionCoordinator: ExecutionCoordinatorPort;
   readonly executionRecordStore: ExecutionRecordStorePort;
@@ -159,13 +164,108 @@ function effectProfileKey(effects: readonly EffectDescriptor[]): string {
     .join('\u0001');
 }
 
+interface LegacyExecutionLifecycleBoundary {
+  inspectOperation(operationId: OperationId): unknown;
+  ensureOperationRunning(operationId: OperationId): unknown;
+  startAttempt(input: Readonly<{
+    attemptId: ExecutionAttemptId;
+    operationId: OperationId;
+    authorityRefs: readonly Reference[];
+  }>): unknown;
+  markAttemptDispatched(attemptId: ExecutionAttemptId): unknown;
+  markAttemptRunning(attemptId: ExecutionAttemptId): unknown;
+  recordPreflightTerminal(input: Readonly<{
+    attemptId: ExecutionAttemptId;
+    operationId: OperationId;
+    status: Exclude<RecipePreflight['status'], 'READY'>;
+    receipt: RecipeReceiptValue;
+    resultRefs: readonly Reference[];
+  }>): Record<string, unknown>;
+  recordExecutionOutcome(input: Readonly<{
+    attemptId: ExecutionAttemptId;
+    operationId: OperationId;
+    coordinatorOutcome: ExecutionOutcome;
+    receipt: RecipeReceiptValue;
+    resultRefs: readonly Reference[];
+  }>): Record<string, unknown>;
+  inspectAttempt?(attemptId: ExecutionAttemptId): unknown;
+}
+
+function legacyExecutionLifecycleBoundary(value: unknown): ExecutionLifecycleCapability | null {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return null;
+  const legacy = value as Partial<LegacyExecutionLifecycleBoundary>;
+  const required = [
+    'inspectOperation',
+    'ensureOperationRunning',
+    'startAttempt',
+    'markAttemptDispatched',
+    'markAttemptRunning',
+    'recordPreflightTerminal',
+    'recordExecutionOutcome',
+  ] as const;
+  if (required.some((name) => typeof legacy[name] !== 'function')) return null;
+
+  return {
+    observeOperation: (operationId) => legacy.inspectOperation!(operationId as OperationId) as any,
+    observeAttemptPresence(attemptId) {
+      if (typeof legacy.inspectAttempt !== 'function') return 'UNKNOWN';
+      try {
+        legacy.inspectAttempt(attemptId as ExecutionAttemptId);
+        return 'PRESENT';
+      } catch (error) {
+        const message = errorMessage(error);
+        if (message.includes(`missing ExecutionAttempt/${attemptId}`)) return 'ABSENT';
+        return 'UNKNOWN';
+      }
+    },
+    prepareAttempt(input) {
+      legacy.ensureOperationRunning!(input.operationId);
+      const started = legacy.startAttempt!(input);
+      return {
+        operation: legacy.inspectOperation!(input.operationId) as any,
+        attempt: (typeof legacy.inspectAttempt === 'function'
+          ? legacy.inspectAttempt(input.attemptId)
+          : started) as any,
+      };
+    },
+    confirmDispatchStart(attemptId) {
+      legacy.markAttemptDispatched!(attemptId);
+      const running = legacy.markAttemptRunning!(attemptId);
+      return (typeof legacy.inspectAttempt === 'function'
+        ? legacy.inspectAttempt(attemptId)
+        : running) as any;
+    },
+    recordPreflightTerminalOutcome: (input) => legacy.recordPreflightTerminal!(input),
+    recordExecutionOutcome: (input) => legacy.recordExecutionOutcome!(input),
+  };
+}
+
+function resolveExecutionLifecycle(
+  executionLifecycle: ExecutionLifecycleCapability | undefined,
+  legacyBoundary: unknown,
+): ExecutionLifecycleCapability {
+  if (executionLifecycle !== undefined) {
+    return requireExecutionLifecycleCapability(executionLifecycle);
+  }
+  if (legacyBoundary !== undefined) {
+    try {
+      return requireExecutionLifecycleCapability(legacyBoundary);
+    } catch {
+      const adapted = legacyExecutionLifecycleBoundary(legacyBoundary);
+      if (adapted) return adapted;
+    }
+  }
+  throw new TypeError('executionLifecycle is required');
+}
+
 export function createOperationalSpine({
   executionLifecycle,
+  stateKernel,
   recipeRegistry,
   executionCoordinator,
   executionRecordStore,
 }: OperationalSpineDependencies) {
-  const lifecycle = requireExecutionLifecycleCapability(executionLifecycle);
+  const lifecycle = resolveExecutionLifecycle(executionLifecycle, stateKernel);
   if (!recipeRegistry || typeof recipeRegistry.resolve !== 'function') throw new TypeError('recipeRegistry is required');
   if (!executionCoordinator || typeof executionCoordinator.runAttempt !== 'function') {
     throw new TypeError('executionCoordinator.runAttempt is required');
