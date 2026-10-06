@@ -1,0 +1,162 @@
+{
+  "schema_version": "tecnotron-opencode-worker-result/v0",
+  "run_id": "TC-CORE-GROUP-B-002",
+  "continuation_id": "CONTINUATION-001",
+  "responsibility": "PROVE_STABLE_RECIPE_INVOCATION_WITH_NON_STATE_KERNEL_TEST_BINDING",
+  "status": "PASS",
+  "authority": "NONE",
+  "execution_authorization": "DEVLAB_EXPERIMENT_ONLY",
+  "Product_effect": "NONE",
+  "recorded_at_utc": "2026-10-06T17:52:02.742Z",
+  "workspace_identity": {
+    "repository": "mauedgar/tecnotron-ai",
+    "workspace": "C:\\Users\\maued\\orca\\workspaces\\Tecnotron-ai\\devlab-tc-core-portable-invocation-proof-002",
+    "local_branch": "mauedgar/devlab-tc-core-portable-invocation-proof-002",
+    "base_commit": "34ab96c00ca5f8c9c87d69a31371d275eeb5f6d9",
+    "base_tree": "d79640a7fcc614ecfac0fe76f0ca600b41beac6b",
+    "accepted_ambient_dirty": {
+      "paths": [
+        ".opencode/package-lock.json",
+        ".opencode/package.json"
+      ],
+      "observed_change": "OpenCode plugin/SDK 1.18.25 -> 1.18.34",
+      "diff_git_blob_oid": "ce2c0cbac708c63b4b2d8edb53db24c738db1f2d",
+      "preserved_unchanged": true
+    }
+  },
+  "prior_attempt_evidence": {
+    "status": "BLOCKED",
+    "reason": "BLOCKED_WORKSPACE_IDENTITY_UNVERIFIED",
+    "worker_result_path": "C:\\Proyectos-Web\\Checkpoint\\DevLab\\TC-CORE-AB-002\\GROUP-B\\RESULT\\worker-result.json",
+    "worker_result_byte_count": 3505,
+    "worker_result_sha256": "5ad1638cae7942bf3014ba747186bc62d51500f5fd80554d69066bd7f6b5e037",
+    "manifest_path": "C:\\Proyectos-Web\\Checkpoint\\DevLab\\TC-CORE-AB-002\\GROUP-B\\RESULT\\worker-result-manifest.json",
+    "manifest_byte_count": 573,
+    "manifest_sha256": "2b39bcaf25625eab7dfad386db0cfdeaf6f2aeabf3697d9191e84374c9aedd49",
+    "preserved_unchanged": true
+  },
+  "implementation": {
+    "summary": "runWorkerInvocation accepts an optional portable Recipe invocation binding and otherwise constructs the existing State Kernel compatibility binding.",
+    "proof": [
+      "Exact render_current_state@v0 selection through the stable worker function",
+      "Injected in-memory Operation and ExecutionAttempt lifecycle binding",
+      "READY preflight, attempt preparation, dispatch confirmation, execution, and terminal outcome recording in exact order",
+      "Operation, ExecutionAttempt, Recipe, receipt, plan, and persisted receipt reference correspondence",
+      "PASS terminal result with effect_state NONE",
+      "No State Kernel lifecycle calls or state/kernel-v0 store materialization on the injected path",
+      "Existing default compatibility binding remains the nullish fallback",
+      "Existing UNKNOWN versus explicit-absence worker exception behavior remains passing"
+    ]
+  },
+  "context": {
+    "work_package": "C:\\Proyectos-Web\\Checkpoint\\DevLab\\TC-CORE-AB-002\\GROUP-B\\OPENCODE-GROUP-B-002.md",
+    "continuation": "C:\\Proyectos-Web\\Checkpoint\\DevLab\\TC-CORE-AB-002\\GROUP-B\\CONTINUATION-001.md",
+    "primary_reads": [
+      "src-typescript/operational-spine-v0/recipe-invocation-worker.ts",
+      "src/operational-spine-v0/recipe-invocation-worker.js",
+      "src/operational-spine-v0/recipe-invocation-worker.d.ts",
+      "src-typescript/operational-spine-v0/taskcycle-lifecycle-capability.ts",
+      "src/operational-spine-v0/taskcycle-lifecycle-capability.js",
+      "src/operational-spine-v0/state-kernel-adapter.js",
+      "src/operational-spine-v0/recipe-invocation.js",
+      "tests/operational-spine-v0/recipe-invocation-worker.test.js"
+    ],
+    "context_expansions": [
+      {
+        "reason": "Required repository governance bootstrap",
+        "sources": [
+          "docs/SOURCE_OF_TRUTH.md",
+          "C:\\Proyectos-Web\\FitFlow\\.ai\\config\\project-profile.yaml",
+          "docs/tasks/TEC-TC-RECIPE-KERNEL-DECOUPLING-001/TASK.md"
+        ]
+      },
+      {
+        "reason": "Minimum exact call-sequence and fixture evidence for the injected capability proof",
+        "sources": [
+          "src-typescript/operational-spine-v0/core.ts:156-522",
+          "src-typescript/operational-spine-v0/execution-record-store.ts",
+          "src/operational-spine-v0/recipes/render-current-state.js",
+          "tests/operational-spine-v0/taskcycle-lifecycle-capability.test.js:61-147",
+          "tests/operational-spine-v0/git-execution-qualification.test.js:610-674"
+        ]
+      }
+    ],
+    "searches": [
+      "Targeted Project Profile/TASK resolution required by AGENTS.md",
+      "Targeted lifecycle method call-site search in core.ts and focused tests",
+      "Targeted render_current_state receipt and execution symbol search",
+      "Targeted runWorkerInvocation caller search",
+      "Remote candidate and result-ref identity checks"
+    ]
+  },
+  "write_set": {
+    "candidate_paths": [
+      "src-typescript/operational-spine-v0/recipe-invocation-worker.ts",
+      "src/operational-spine-v0/recipe-invocation-worker.js",
+      "src/operational-spine-v0/recipe-invocation-worker.d.ts",
+      "tests/operational-spine-v0/recipe-invocation-worker.test.js"
+    ],
+    "external_result_paths": [
+      "C:\\Proyectos-Web\\Checkpoint\\DevLab\\TC-CORE-AB-002\\GROUP-B\\RESULT\\CONTINUATION-001\\worker-result.json",
+      "C:\\Proyectos-Web\\Checkpoint\\DevLab\\TC-CORE-AB-002\\GROUP-B\\RESULT\\CONTINUATION-001\\worker-result-manifest.json"
+    ],
+    "unauthorized_repository_paths_written": []
+  },
+  "validation": [
+    {
+      "command": "node --test tests/operational-spine-v0/recipe-invocation-worker.test.js",
+      "status": "PASS",
+      "summary": "2 passed, 0 failed, 3 skipped because Windows lacks the declared durable-directory-fsync surface"
+    },
+    {
+      "command": "npm run typecheck",
+      "status": "PASS"
+    },
+    {
+      "command": "npm run build",
+      "status": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "status": "PASS"
+    }
+  ],
+  "candidate": {
+    "commit": "7252487fe6f1111496e495a081b6a52a6a842824",
+    "tree": "815697d8beb6e29a2d49c835e40f6a34f49f6317",
+    "ref": "refs/heads/devlab/tc-core-portable-invocation-proof-002",
+    "commit_message": "exp(devlab): prove portable recipe invocation binding",
+    "commit_count": 1,
+    "pushed": true,
+    "remote_oid_verified": true
+  },
+  "result_transport": {
+    "ref": "refs/heads/devlab/transport/tc-core-group-b-result-002",
+    "preexisting_ref_observed": false,
+    "publication_status_at_materialization": "PENDING"
+  },
+  "active_feedback": {
+    "context_deltas_or_misses": [
+      "The first tree command was mangled by Windows shell transport; the Windows-safe quoted form verified the exact expected tree.",
+      "Continuation accepted the two pre-existing .opencode changes as ambient harness noise."
+    ],
+    "rediscovery": [
+      "The predecessor already extracted the portable ExecutionLifecycleCapability; this experiment only needed a worker composition seam."
+    ],
+    "repeated_mechanics": [
+      "Generated JavaScript and declarations remain checked in and require npm run build after the TypeScript source edit."
+    ],
+    "primitive_or_recipe_candidates": [
+      "render_current_state@v0 remains a useful no-external-effect portability probe."
+    ],
+    "kernel_coupling": [
+      "Worker composition previously constructed the State Kernel compatibility binding unconditionally; it is now only the default fallback."
+    ],
+    "harness_or_validation_friction": [
+      "Real State Kernel compatibility tests requiring directory fsync remain skipped on Windows by their existing competent-surface guard.",
+      "An initial focused test run found test-only receipt reference-equality and Windows fsync assumptions; the final bounded validation passed."
+    ],
+    "unnecessary_roundtrips": []
+  },
+  "excluded_actions_performed": []
+}

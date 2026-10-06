@@ -1,0 +1,19 @@
+{
+  "schema_version": "tecnotron-opencode-worker-result/v0",
+  "run_id": "TC-CORE-GROUP-B-002",
+  "continuation_id": "CONTINUATION-001",
+  "status": "PASS",
+  "authority": "NONE",
+  "execution_authorization": "DEVLAB_EXPERIMENT_ONLY",
+  "Product_effect": "NONE",
+  "artifact": {
+    "name": "worker-result.json",
+    "byte_count": 7719,
+    "sha256": "96ab19d74b0b613b60195dcd2e7f902c300e4956240601fe857641511c3ddbd2"
+  },
+  "candidate": {
+    "commit": "7252487fe6f1111496e495a081b6a52a6a842824",
+    "tree": "815697d8beb6e29a2d49c835e40f6a34f49f6317",
+    "ref": "refs/heads/devlab/tc-core-portable-invocation-proof-002"
+  }
+}
