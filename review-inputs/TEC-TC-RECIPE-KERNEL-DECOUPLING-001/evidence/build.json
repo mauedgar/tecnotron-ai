@@ -1,0 +1,14 @@
+{
+  "schema_version": "tecnotron-validation-evidence/v0",
+  "evidence_id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-BUILD",
+  "subject": {
+    "candidate_commit": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+    "candidate_tree": "960d1ff27eacab4e76c797246d530155fb5a0a94",
+    "validated_wip_commit": "777c776f9cc65b2e46c639d35bf5dbad4d141b44",
+    "tree_correspondence": "EXACT"
+  },
+  "check": "npm run build",
+  "surface": "Docker Desktop desktop-linux / node:22-bookworm",
+  "status": "PASS",
+  "exit_code": 0
+}
