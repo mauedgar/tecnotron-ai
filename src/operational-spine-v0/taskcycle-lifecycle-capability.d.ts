@@ -3,6 +3,13 @@ import type { RecipeReceipt, Reference } from './contracts';
 import type { RecipePreflight } from './recipe-registry';
 import type { OperationAggregate } from './resolution';
 export type AttemptPresence = 'PRESENT' | 'ABSENT' | 'UNKNOWN';
+/**
+ * @deprecated Type-only compatibility for historical compile-time consumers.
+ * OperationalSpine does not accept or adapt this shape at runtime.
+ */
+export interface LegacyStateKernelInspectionPort {
+    inspectOperation(operationId: OperationId): unknown;
+}
 export interface LifecycleInspection<T> {
     readonly aggregate: T;
     readonly store_revision: number;

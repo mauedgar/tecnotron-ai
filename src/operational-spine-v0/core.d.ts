@@ -4,23 +4,12 @@ import type { ExecutionRecordStorePort } from './execution-record-store';
 import type { RecipeRegistryPort } from './recipe-registry';
 import { type ExecutionLifecycleCapability } from './taskcycle-lifecycle-capability';
 import { type OperationAggregate } from './resolution';
-/**
- * @deprecated Type-only compatibility for historical downstream typechecks.
- * OperationalSpine no longer depends on this shape.
- */
-export interface StateKernelPort {
-    inspectOperation(operationId: OperationId): unknown;
-}
+export type { LegacyStateKernelInspectionPort as StateKernelPort } from './taskcycle-lifecycle-capability';
 export interface ExecutionCoordinatorPort {
     runAttempt(request: ExecutionAttemptRequestInput): Promise<ExecutionOutcome>;
 }
 export interface OperationalSpineDependencies {
-    readonly executionLifecycle?: ExecutionLifecycleCapability;
-    /**
-     * @deprecated Boundary-only compatibility for existing callers.
-     * The value is normalized immediately into ExecutionLifecycleCapability.
-     */
-    readonly stateKernel?: unknown;
+    readonly executionLifecycle: ExecutionLifecycleCapability;
     readonly recipeRegistry: RecipeRegistryPort;
     readonly executionCoordinator: ExecutionCoordinatorPort;
     readonly executionRecordStore: ExecutionRecordStorePort;
@@ -40,7 +29,7 @@ export interface ExecutePlanRequest {
     readonly input?: unknown;
     readonly cancellationRequested?: boolean;
 }
-export declare function createOperationalSpine({ executionLifecycle, stateKernel, recipeRegistry, executionCoordinator, executionRecordStore, }: OperationalSpineDependencies): {
+export declare function createOperationalSpine({ executionLifecycle, recipeRegistry, executionCoordinator, executionRecordStore, }: OperationalSpineDependencies): {
     plan: ({ operationId, executionContext, requiredCapabilities, authorityRefs, evidenceRefs, input, }: PlanRequest) => ExecutionPlanValue;
     executePlan: (rawPlan: ExecutionPlanInput, { executionAttemptId, authorization, harnessConformance, input, cancellationRequested, }: ExecutePlanRequest) => Promise<{
         status: 'SEMANTIC_ESCALATION_REQUIRED';

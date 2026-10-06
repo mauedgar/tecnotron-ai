@@ -70,76 +70,8 @@ function effectProfileKey(effects) {
         .sort((left, right) => left.localeCompare(right, 'en'))
         .join('\u0001');
 }
-function legacyExecutionLifecycleBoundary(value) {
-    if (value === null || (typeof value !== 'object' && typeof value !== 'function'))
-        return null;
-    const legacy = value;
-    const required = [
-        'inspectOperation',
-        'ensureOperationRunning',
-        'startAttempt',
-        'markAttemptDispatched',
-        'markAttemptRunning',
-        'recordPreflightTerminal',
-        'recordExecutionOutcome',
-    ];
-    if (required.some((name) => typeof legacy[name] !== 'function'))
-        return null;
-    return {
-        observeOperation: (operationId) => legacy.inspectOperation(operationId),
-        observeAttemptPresence(attemptId) {
-            if (typeof legacy.inspectAttempt !== 'function')
-                return 'UNKNOWN';
-            try {
-                legacy.inspectAttempt(attemptId);
-                return 'PRESENT';
-            }
-            catch (error) {
-                const message = errorMessage(error);
-                if (message.includes(`missing ExecutionAttempt/${attemptId}`))
-                    return 'ABSENT';
-                return 'UNKNOWN';
-            }
-        },
-        prepareAttempt(input) {
-            legacy.ensureOperationRunning(input.operationId);
-            const started = legacy.startAttempt(input);
-            return {
-                operation: legacy.inspectOperation(input.operationId),
-                attempt: (typeof legacy.inspectAttempt === 'function'
-                    ? legacy.inspectAttempt(input.attemptId)
-                    : started),
-            };
-        },
-        confirmDispatchStart(attemptId) {
-            legacy.markAttemptDispatched(attemptId);
-            const running = legacy.markAttemptRunning(attemptId);
-            return (typeof legacy.inspectAttempt === 'function'
-                ? legacy.inspectAttempt(attemptId)
-                : running);
-        },
-        recordPreflightTerminalOutcome: (input) => legacy.recordPreflightTerminal(input),
-        recordExecutionOutcome: (input) => legacy.recordExecutionOutcome(input),
-    };
-}
-function resolveExecutionLifecycle(executionLifecycle, legacyBoundary) {
-    if (executionLifecycle !== undefined) {
-        return (0, taskcycle_lifecycle_capability_1.requireExecutionLifecycleCapability)(executionLifecycle);
-    }
-    if (legacyBoundary !== undefined) {
-        try {
-            return (0, taskcycle_lifecycle_capability_1.requireExecutionLifecycleCapability)(legacyBoundary);
-        }
-        catch {
-            const adapted = legacyExecutionLifecycleBoundary(legacyBoundary);
-            if (adapted)
-                return adapted;
-        }
-    }
-    throw new TypeError('executionLifecycle is required');
-}
-function createOperationalSpine({ executionLifecycle, stateKernel, recipeRegistry, executionCoordinator, executionRecordStore, }) {
-    const lifecycle = resolveExecutionLifecycle(executionLifecycle, stateKernel);
+function createOperationalSpine({ executionLifecycle, recipeRegistry, executionCoordinator, executionRecordStore, }) {
+    const lifecycle = (0, taskcycle_lifecycle_capability_1.requireExecutionLifecycleCapability)(executionLifecycle);
     if (!recipeRegistry || typeof recipeRegistry.resolve !== 'function')
         throw new TypeError('recipeRegistry is required');
     if (!executionCoordinator || typeof executionCoordinator.runAttempt !== 'function') {

@@ -7,9 +7,10 @@ const invocation_contracts_1 = require("./invocation-contracts");
 const recipe_registry_1 = require("./recipe-registry");
 const core_1 = require("./core");
 const recipe_execution_surface_1 = require("./recipe-execution-surface");
+// @ts-ignore Existing runtime JS module has no declaration file; this preserves parent runtime behavior.
+const git_execution_qualification_1 = require("./git-execution-qualification");
 const execution_record_store_1 = require("./execution-record-store");
 const execution_coordinator_1 = require("../execution-coordinator");
-const { qualifyGitExecutionSurface, qualificationSpecForRecipe, } = require('./git-execution-qualification');
 const { createStateKernelCompatibilityBinding } = require('./state-kernel-adapter');
 const { createRenderCurrentStateRecipe } = require('./recipes/render-current-state');
 const { createIntegrateAcceptedCandidateRecipe } = require('./recipes/integrate-accepted-candidate');
@@ -212,14 +213,14 @@ async function runWorkerInvocation(rawEnvelope) {
         executionRecordStore: recordStore,
     });
     const operation = binding.executionLifecycle.observeOperation(envelope.request.operation_ref).aggregate;
-    const qualificationSpec = qualificationSpecForRecipe(envelope.request.recipe, envelope.request.inputs);
+    const qualificationSpec = (0, git_execution_qualification_1.qualificationSpecForRecipe)(envelope.request.recipe, envelope.request.inputs);
     let gitQualification = null;
     let observedGit;
     if (qualificationSpec?.kind === 'INVALID') {
         return blocked(envelope, qualificationSpec.reason);
     }
     if (qualificationSpec?.kind === 'REQUIRED') {
-        gitQualification = qualifyGitExecutionSurface({
+        const observedQualification = (0, git_execution_qualification_1.qualifyGitExecutionSurface)({
             schema_version: 'tecnotron-git-execution-qualification-request/v0',
             surface_id: envelope.selected_surface.id,
             repository: envelope.environment.repository,
@@ -228,16 +229,17 @@ async function runWorkerInvocation(rawEnvelope) {
             ...(qualificationSpec.remote ? { remote: qualificationSpec.remote } : {}),
             remote_timeout_ms: 5000,
         });
-        if (gitQualification.status !== 'READY') {
-            const reason = `GIT_EXECUTION_QUALIFICATION_${gitQualification.status}:${gitQualification.reason}`;
-            if (gitQualification.status === 'UNAVAILABLE') {
-                return unavailable(envelope, reason, gitQualification);
+        gitQualification = observedQualification;
+        if (observedQualification.status !== 'READY') {
+            const reason = `GIT_EXECUTION_QUALIFICATION_${observedQualification.status}:${observedQualification.reason}`;
+            if (observedQualification.status === 'UNAVAILABLE') {
+                return unavailable(envelope, reason, observedQualification);
             }
-            return blocked(envelope, reason, gitQualification);
+            return blocked(envelope, reason, observedQualification);
         }
         observedGit = {
-            expected_ref: gitQualification.evidence.repository.observed_ref,
-            expected_commit: gitQualification.evidence.repository.observed_commit,
+            expected_ref: observedQualification.evidence.repository.observed_ref,
+            expected_commit: observedQualification.evidence.repository.observed_commit,
         };
     }
     else {

@@ -11,6 +11,7 @@ const node_path_1 = __importDefault(require("node:path"));
 const node_child_process_1 = require("node:child_process");
 const invocation_contracts_1 = require("./invocation-contracts");
 const surface_resolution_1 = require("./surface-resolution");
+const { createStateKernelCompatibilityBinding } = require('./state-kernel-adapter');
 function sha256(data) {
     return node_crypto_1.default.createHash('sha256').update(data).digest('hex');
 }
@@ -233,7 +234,18 @@ function createRecipeInvocationEntrypoint(rawEnvironment, options = {}) {
     const launchers = options.launchers ?? defaultLaunchers(environment);
     const artifactStore = options.artifactStore ?? new FilesystemInvocationArtifactStore(environment.state_store.location);
     const attemptIdFactory = options.attemptIdFactory ?? (() => `ATTEMPT-${node_crypto_1.default.randomUUID()}`);
-    const attemptObserver = options.attemptObserver ?? (() => null);
+    const attemptLifecycle = options.attemptObserver === undefined
+        ? options.attemptLifecycle
+            ?? createStateKernelCompatibilityBinding({ home: environment.state_store.location }).executionLifecycle
+        : null;
+    const attemptObserver = options.attemptObserver ?? ((attemptId) => {
+        const presence = attemptLifecycle.observeAttemptPresence(attemptId);
+        if (presence === 'PRESENT')
+            return true;
+        if (presence === 'ABSENT')
+            return false;
+        return null;
+    });
     async function invoke(rawRequest) {
         const parsedRequest = invocation_contracts_1.RecipeInvocationRequest.safeParse(rawRequest);
         if (!parsedRequest.success) {

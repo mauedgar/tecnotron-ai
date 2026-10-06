@@ -28,6 +28,12 @@ exports.ReferenceSchema = ReferenceFields.transform((value) => ({
     ...(value.git_oid === undefined ? {} : { git_oid: value.git_oid }),
 }));
 const CrossPlatformAbsolutePath = NonEmpty.refine((value) => node_path_1.default.posix.isAbsolute(value) || node_path_1.default.win32.isAbsolute(value), 'path must be absolute');
+/**
+ * Source parity only: these Git qualification schemas already exist in the
+ * canonical parent runtime JS and are retained so deterministic TypeScript
+ * builds do not erase pre-existing behavior. This TaskCycle does not extend
+ * their policy or invocation scope.
+ */
 const GitOid = zod_1.z.string().regex(/^[a-f0-9]{40,64}$/);
 const BranchRef = zod_1.z.string().regex(/^refs\/heads\/[A-Za-z0-9._\/-]+$/);
 const GitRemoteName = zod_1.z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
