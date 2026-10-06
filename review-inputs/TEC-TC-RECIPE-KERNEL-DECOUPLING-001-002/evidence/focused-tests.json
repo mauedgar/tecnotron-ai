@@ -1,0 +1,25 @@
+{
+  "schema_version": "tecnotron-validation-evidence/v0",
+  "evidence_id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-CORRECTION-FOCUSED",
+  "subject": {
+    "candidate_commit": "34ab96c00ca5f8c9c87d69a31371d275eeb5f6d9",
+    "candidate_tree": "d79640a7fcc614ecfac0fe76f0ca600b41beac6b",
+    "validated_wip_commit": "52f2b2d5022c3e5b0913d1c25634f31257dd2d75",
+    "tree_correspondence": "EXACT"
+  },
+  "checks": [
+    "tests/operational-spine-v0/reconcile-and-close-taskcycle.test.js",
+    "tests/operational-spine-v0/recipe-invocation.test.js",
+    "tests/operational-spine-v0/recipe-invocation-worker.test.js",
+    "tests/operational-spine-v0/taskcycle-lifecycle-capability.test.js"
+  ],
+  "status": "PASS",
+  "tests": 73,
+  "pass": 73,
+  "fail": 0,
+  "skipped": 0,
+  "semantic_proofs": [
+    "portable attempt presence preserves BLOCKED/NONE on proven absence",
+    "OperationalSpine executes plan+executePlan through deterministic non-State-Kernel lifecycle provider"
+  ]
+}
