@@ -1,0 +1,390 @@
+{
+  "schema_version": "tecnotron-recipe-invocation-request/v0",
+  "recipe": {
+    "id": "materialize_frozen_review_interface",
+    "version": "v0"
+  },
+  "operation_ref": "OP-TEC-TC-RECIPE-KERNEL-DECOUPLING-001-REVIEW-INTERFACE-001",
+  "responsibility_ref": "DECOUPLE_TASKCYCLE_RECIPE_PATH_FROM_STATE_KERNEL",
+  "authority_ref": "DEVELOPER-AUTHORIZE-MATERIALIZE-FROZEN-REVIEW-INTERFACE-FOR-TEC-TC-RECIPE-KERNEL-DECOUPLING-001-20261005",
+  "expected_effects": [
+    {
+      "effect": "review_interface.write",
+      "scope": "/home/artifacts/review-interfaces/IND-REVIEW-TECNOTRON-RECIPE-KERNEL-DECOUPLING-001"
+    }
+  ],
+  "evidence_refs": [
+    {
+      "kind": "EVIDENCE",
+      "id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-BUILD",
+      "location": "review-inputs/TEC-TC-RECIPE-KERNEL-DECOUPLING-001/evidence/build.json",
+      "sha256": "11f188e60aa8616a70e7d79b8c95fa81032561239c28556d3d67b78e1823a1d3"
+    },
+    {
+      "kind": "EVIDENCE",
+      "id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-TYPECHECK",
+      "location": "review-inputs/TEC-TC-RECIPE-KERNEL-DECOUPLING-001/evidence/typecheck.json",
+      "sha256": "e73379c72834b02fd752074f09d8cfa46c27f417f6414550198fd4fcb3e5be51"
+    },
+    {
+      "kind": "EVIDENCE",
+      "id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-FOCUSED-TESTS",
+      "location": "review-inputs/TEC-TC-RECIPE-KERNEL-DECOUPLING-001/evidence/focused-tests.json",
+      "sha256": "b5f65939c798264c2d3a8149476f9d3a4b306b2218c7f498d602dd8f5fded456"
+    },
+    {
+      "kind": "EVIDENCE",
+      "id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-FULL-REGRESSION",
+      "location": "review-inputs/TEC-TC-RECIPE-KERNEL-DECOUPLING-001/evidence/full-regression.json",
+      "sha256": "322b984452212b4609e468de33de9d5337ddbf02d02ec22426772ec2abcb4030"
+    }
+  ],
+  "inputs": {
+    "interface_id": "IND-REVIEW-TECNOTRON-RECIPE-KERNEL-DECOUPLING-001",
+    "output_root": "C:\\Proyectos-Web\\Tecnotron-home\\artifacts\\review-interfaces",
+    "review_instance": {
+      "TaskCycle": "TASKCYCLE-TECNOTRON-RECIPE-KERNEL-DECOUPLING-001",
+      "responsibility": "DECOUPLE_TASKCYCLE_RECIPE_PATH_FROM_STATE_KERNEL",
+      "exact_subject": {
+        "parent": "647d9a677fb87f5b6266221a49675e4b2324df5d",
+        "commit": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+        "tree": "960d1ff27eacab4e76c797246d530155fb5a0a94",
+        "changed_paths": [
+          "src-typescript/operational-spine-v0/core.ts",
+          "src-typescript/operational-spine-v0/invocation-contracts.ts",
+          "src-typescript/operational-spine-v0/recipe-invocation-worker.ts",
+          "src-typescript/operational-spine-v0/recipe-invocation.ts",
+          "src-typescript/operational-spine-v0/taskcycle-lifecycle-capability.ts",
+          "src/operational-spine-v0/core.d.ts",
+          "src/operational-spine-v0/core.js",
+          "src/operational-spine-v0/index.d.ts",
+          "src/operational-spine-v0/index.js",
+          "src/operational-spine-v0/invocation-contracts.d.ts",
+          "src/operational-spine-v0/invocation-contracts.js",
+          "src/operational-spine-v0/recipe-invocation-worker.d.ts",
+          "src/operational-spine-v0/recipe-invocation-worker.js",
+          "src/operational-spine-v0/recipe-invocation.js",
+          "src/operational-spine-v0/recipes/reconcile-and-close-taskcycle.js",
+          "src/operational-spine-v0/state-kernel-adapter.js",
+          "src/operational-spine-v0/taskcycle-lifecycle-capability.d.ts",
+          "src/operational-spine-v0/taskcycle-lifecycle-capability.js",
+          "tests/operational-spine-v0/reconcile-and-close-taskcycle.test.js",
+          "tests/operational-spine-v0/taskcycle-lifecycle-capability.test.js"
+        ]
+      },
+      "review_request": {
+        "id": "review-request",
+        "kind": "FILE",
+        "source_path": "C:\\Proyectos-Web\\Tecnotron-home\\transport\\TEC-TC-RECIPE-KERNEL-DECOUPLING-001-REVIEW-001\\review-inputs\\TEC-TC-RECIPE-KERNEL-DECOUPLING-001\\review-request.md",
+        "package_path": "review/request.md",
+        "sha256": "c3c812cbe98a00f1340d381542701deb805446ef308a6fd1f8a7868fa1f9b1f5"
+      },
+      "required_evidence_specification": [
+        {
+          "id": "validation-build",
+          "kind": "FILE",
+          "source_path": "C:\\Proyectos-Web\\Tecnotron-home\\transport\\TEC-TC-RECIPE-KERNEL-DECOUPLING-001-REVIEW-001\\review-inputs\\TEC-TC-RECIPE-KERNEL-DECOUPLING-001\\evidence\\build.json",
+          "package_path": "evidence/build.json",
+          "sha256": "11f188e60aa8616a70e7d79b8c95fa81032561239c28556d3d67b78e1823a1d3",
+          "reference_id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-BUILD"
+        },
+        {
+          "id": "validation-typecheck",
+          "kind": "FILE",
+          "source_path": "C:\\Proyectos-Web\\Tecnotron-home\\transport\\TEC-TC-RECIPE-KERNEL-DECOUPLING-001-REVIEW-001\\review-inputs\\TEC-TC-RECIPE-KERNEL-DECOUPLING-001\\evidence\\typecheck.json",
+          "package_path": "evidence/typecheck.json",
+          "sha256": "e73379c72834b02fd752074f09d8cfa46c27f417f6414550198fd4fcb3e5be51",
+          "reference_id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-TYPECHECK"
+        },
+        {
+          "id": "validation-focused-tests",
+          "kind": "FILE",
+          "source_path": "C:\\Proyectos-Web\\Tecnotron-home\\transport\\TEC-TC-RECIPE-KERNEL-DECOUPLING-001-REVIEW-001\\review-inputs\\TEC-TC-RECIPE-KERNEL-DECOUPLING-001\\evidence\\focused-tests.json",
+          "package_path": "evidence/focused-tests.json",
+          "sha256": "b5f65939c798264c2d3a8149476f9d3a4b306b2218c7f498d602dd8f5fded456",
+          "reference_id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-FOCUSED-TESTS"
+        },
+        {
+          "id": "validation-full-regression",
+          "kind": "FILE",
+          "source_path": "C:\\Proyectos-Web\\Tecnotron-home\\transport\\TEC-TC-RECIPE-KERNEL-DECOUPLING-001-REVIEW-001\\review-inputs\\TEC-TC-RECIPE-KERNEL-DECOUPLING-001\\evidence\\full-regression.json",
+          "package_path": "evidence/full-regression.json",
+          "sha256": "322b984452212b4609e468de33de9d5337ddbf02d02ec22426772ec2abcb4030",
+          "reference_id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-FULL-REGRESSION"
+        },
+        {
+          "id": "task-authority",
+          "kind": "GIT_BLOB",
+          "revision": "647d9a677fb87f5b6266221a49675e4b2324df5d",
+          "repository_path": "docs/tasks/TEC-TC-RECIPE-KERNEL-DECOUPLING-001/TASK.md",
+          "package_path": "authority/task.md",
+          "git_oid": "96d85ee7918b35d8281c889518bc4d3f2686cd52"
+        },
+        {
+          "id": "independent-review-protocol",
+          "kind": "GIT_BLOB",
+          "revision": "647d9a677fb87f5b6266221a49675e4b2324df5d",
+          "repository_path": "docs/contracts/tecnotron-independent-review-protocol-v1.md",
+          "package_path": "protocol/independent-review-protocol-v1.md",
+          "git_oid": "e92ed09110a3864c61055fae4d577d18951b6828"
+        },
+        {
+          "id": "architecture-baseline",
+          "kind": "GIT_BLOB",
+          "revision": "647d9a677fb87f5b6266221a49675e4b2324df5d",
+          "repository_path": "docs/architecture-knowledge-ownership-baseline.md",
+          "package_path": "context/architecture-knowledge-ownership-baseline.md",
+          "git_oid": "84891fb1bc8fc455bfc27c1b817d728202e72d3c"
+        },
+        {
+          "id": "task-lifecycle",
+          "kind": "GIT_BLOB",
+          "revision": "647d9a677fb87f5b6266221a49675e4b2324df5d",
+          "repository_path": "docs/task-lifecycle.md",
+          "package_path": "context/task-lifecycle.md",
+          "git_oid": "3bc3cf99365d89ec2b6b2ef3a02747fc6fe6d365"
+        },
+        {
+          "id": "state-kernel-contracts",
+          "kind": "GIT_BLOB",
+          "revision": "647d9a677fb87f5b6266221a49675e4b2324df5d",
+          "repository_path": "src/state-kernel-v0/contracts.js",
+          "package_path": "context/state-kernel-contracts.js",
+          "git_oid": "5d2d3a8a24ebc17339675e0c801595956e0cd353"
+        },
+        {
+          "id": "state-kernel-index",
+          "kind": "GIT_BLOB",
+          "revision": "647d9a677fb87f5b6266221a49675e4b2324df5d",
+          "repository_path": "src/state-kernel-v0/index.js",
+          "package_path": "context/state-kernel-index.js",
+          "git_oid": "0219b92e5f546407a6060a6dc449865c14c7f144"
+        },
+        {
+          "id": "candidate-diff",
+          "kind": "GIT_DIFF",
+          "parent": "647d9a677fb87f5b6266221a49675e4b2324df5d",
+          "commit": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "package_path": "candidate/candidate.diff"
+        },
+        {
+          "id": "candidate-file-01",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src-typescript/operational-spine-v0/core.ts",
+          "package_path": "candidate/files/src-typescript/operational-spine-v0/core.ts",
+          "git_oid": "5fa7356c04d019d7f3dfe649116f8ebb1e7cbcbc"
+        },
+        {
+          "id": "candidate-file-02",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src-typescript/operational-spine-v0/invocation-contracts.ts",
+          "package_path": "candidate/files/src-typescript/operational-spine-v0/invocation-contracts.ts",
+          "git_oid": "de022fcf408f7d0a648db5dc11237d6795f56f38"
+        },
+        {
+          "id": "candidate-file-03",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src-typescript/operational-spine-v0/recipe-invocation-worker.ts",
+          "package_path": "candidate/files/src-typescript/operational-spine-v0/recipe-invocation-worker.ts",
+          "git_oid": "66abe302fb3b3dc4c8c93a0a98378fdfa112cd38"
+        },
+        {
+          "id": "candidate-file-04",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src-typescript/operational-spine-v0/recipe-invocation.ts",
+          "package_path": "candidate/files/src-typescript/operational-spine-v0/recipe-invocation.ts",
+          "git_oid": "41ca21f1b546631e6de39d66dc9262529147da5e"
+        },
+        {
+          "id": "candidate-file-05",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src-typescript/operational-spine-v0/taskcycle-lifecycle-capability.ts",
+          "package_path": "candidate/files/src-typescript/operational-spine-v0/taskcycle-lifecycle-capability.ts",
+          "git_oid": "7f0241f0ed3aa4267ca8a0a8cdc7457b08dc1670"
+        },
+        {
+          "id": "candidate-file-06",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/core.d.ts",
+          "package_path": "candidate/files/src/operational-spine-v0/core.d.ts",
+          "git_oid": "4beb7f8b047c54084598d2aabaee91a7ef9d5f7c"
+        },
+        {
+          "id": "candidate-file-07",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/core.js",
+          "package_path": "candidate/files/src/operational-spine-v0/core.js",
+          "git_oid": "904e90a64a99e3d298c8abbcec2516d5ea0894da"
+        },
+        {
+          "id": "candidate-file-08",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/index.d.ts",
+          "package_path": "candidate/files/src/operational-spine-v0/index.d.ts",
+          "git_oid": "842e7a48a375311d71ec884c8ca182e5b0b4154d"
+        },
+        {
+          "id": "candidate-file-09",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/index.js",
+          "package_path": "candidate/files/src/operational-spine-v0/index.js",
+          "git_oid": "a07a3445582bb3131fce51827ad5fba67ac3e2c0"
+        },
+        {
+          "id": "candidate-file-10",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/invocation-contracts.d.ts",
+          "package_path": "candidate/files/src/operational-spine-v0/invocation-contracts.d.ts",
+          "git_oid": "87090528dd6b0ae93bdebeb54576d230c6b27591"
+        },
+        {
+          "id": "candidate-file-11",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/invocation-contracts.js",
+          "package_path": "candidate/files/src/operational-spine-v0/invocation-contracts.js",
+          "git_oid": "a615675a18e4571f55e389e4c9b616cf82e57fb7"
+        },
+        {
+          "id": "candidate-file-12",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/recipe-invocation-worker.d.ts",
+          "package_path": "candidate/files/src/operational-spine-v0/recipe-invocation-worker.d.ts",
+          "git_oid": "b482f129a41510585e87f686709427ec0462b4ac"
+        },
+        {
+          "id": "candidate-file-13",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/recipe-invocation-worker.js",
+          "package_path": "candidate/files/src/operational-spine-v0/recipe-invocation-worker.js",
+          "git_oid": "e520b9533c0cc086d78d6a220edc93b7de95779a"
+        },
+        {
+          "id": "candidate-file-14",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/recipe-invocation.js",
+          "package_path": "candidate/files/src/operational-spine-v0/recipe-invocation.js",
+          "git_oid": "dd2a26cf28c4c28c11f17f13d45257e9ae329d5a"
+        },
+        {
+          "id": "candidate-file-15",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/recipes/reconcile-and-close-taskcycle.js",
+          "package_path": "candidate/files/src/operational-spine-v0/recipes/reconcile-and-close-taskcycle.js",
+          "git_oid": "1e89df1a1885e3d0d24576338f0ffbd9b79890bc"
+        },
+        {
+          "id": "candidate-file-16",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/state-kernel-adapter.js",
+          "package_path": "candidate/files/src/operational-spine-v0/state-kernel-adapter.js",
+          "git_oid": "047d81eaf1b40afd281dc4f89cd53ff4e9db223a"
+        },
+        {
+          "id": "candidate-file-17",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/taskcycle-lifecycle-capability.d.ts",
+          "package_path": "candidate/files/src/operational-spine-v0/taskcycle-lifecycle-capability.d.ts",
+          "git_oid": "aa74ec468d9031df7ee9b789b26a7cbe8292b336"
+        },
+        {
+          "id": "candidate-file-18",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "src/operational-spine-v0/taskcycle-lifecycle-capability.js",
+          "package_path": "candidate/files/src/operational-spine-v0/taskcycle-lifecycle-capability.js",
+          "git_oid": "9458a4baab04046e3e49bc07ecf06aafb15f3719"
+        },
+        {
+          "id": "candidate-file-19",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "tests/operational-spine-v0/reconcile-and-close-taskcycle.test.js",
+          "package_path": "candidate/files/tests/operational-spine-v0/reconcile-and-close-taskcycle.test.js",
+          "git_oid": "b4fe6e032d1f0186964d2964d476a2b978553a24"
+        },
+        {
+          "id": "candidate-file-20",
+          "kind": "GIT_BLOB",
+          "revision": "190d07ef4c9ca38634a839ce083e7448c7a84c12",
+          "repository_path": "tests/operational-spine-v0/taskcycle-lifecycle-capability.test.js",
+          "package_path": "candidate/files/tests/operational-spine-v0/taskcycle-lifecycle-capability.test.js",
+          "git_oid": "0bf663d9ad6278ce631a484f9868516af33fe502"
+        }
+      ],
+      "validation_evidence_refs": [
+        {
+          "kind": "EVIDENCE",
+          "id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-BUILD",
+          "location": "review-inputs/TEC-TC-RECIPE-KERNEL-DECOUPLING-001/evidence/build.json",
+          "sha256": "11f188e60aa8616a70e7d79b8c95fa81032561239c28556d3d67b78e1823a1d3"
+        },
+        {
+          "kind": "EVIDENCE",
+          "id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-TYPECHECK",
+          "location": "review-inputs/TEC-TC-RECIPE-KERNEL-DECOUPLING-001/evidence/typecheck.json",
+          "sha256": "e73379c72834b02fd752074f09d8cfa46c27f417f6414550198fd4fcb3e5be51"
+        },
+        {
+          "kind": "EVIDENCE",
+          "id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-FOCUSED-TESTS",
+          "location": "review-inputs/TEC-TC-RECIPE-KERNEL-DECOUPLING-001/evidence/focused-tests.json",
+          "sha256": "b5f65939c798264c2d3a8149476f9d3a4b306b2218c7f498d602dd8f5fded456"
+        },
+        {
+          "kind": "EVIDENCE",
+          "id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-FULL-REGRESSION",
+          "location": "review-inputs/TEC-TC-RECIPE-KERNEL-DECOUPLING-001/evidence/full-regression.json",
+          "sha256": "322b984452212b4609e468de33de9d5337ddbf02d02ec22426772ec2abcb4030"
+        }
+      ],
+      "authority_and_scope": {
+        "protocol_ref": "tecnotron-independent-review-protocol/v1",
+        "authority_refs": [
+          {
+            "kind": "AUTHORITY",
+            "id": "DEVELOPER-AUTHORIZE-MATERIALIZE-FROZEN-REVIEW-INTERFACE-FOR-TEC-TC-RECIPE-KERNEL-DECOUPLING-001-20261005"
+          }
+        ],
+        "scope": {
+          "review_id": "IND-REVIEW-TECNOTRON-RECIPE-KERNEL-DECOUPLING-001",
+          "include": [
+            "exact frozen candidate",
+            "RF-KD-001..RF-KD-007",
+            "AC-01..AC-10",
+            "semantic equivalence and scope fidelity"
+          ],
+          "exclude": [
+            "candidate mutation",
+            "Developer acceptance",
+            "Phase 2",
+            "canonical integration",
+            "remote publication",
+            "TaskCycle closure"
+          ]
+        }
+      }
+    }
+  },
+  "execution_constraints": {
+    "require": [
+      "LINUX_SEMANTICS"
+    ]
+  }
+}
