@@ -263,6 +263,52 @@ class SyntheticKernel {
   }
 }
 
+function portableLifecycle(kernel) {
+  return {
+    snapshot(taskcycleId) {
+      const verified = kernel.verify();
+      const inspected = kernel.inspectTaskCycle(taskcycleId);
+      const obligationState = kernel.obligations(taskcycleId);
+      if (inspected.store_revision !== verified.revision || obligationState.store_revision !== verified.revision) {
+        throw new Error('LIFECYCLE_SNAPSHOT_REVISION_MISMATCH');
+      }
+      return {
+        revision: verified.revision,
+        event_count: verified.event_count,
+        taskcycle: inspected.aggregate,
+        legal_next: inspected.legal_next,
+        obligations: obligationState,
+      };
+    },
+    observeInvocationBookkeeping(operationId, attemptId) {
+      const verified = kernel.verify();
+      const operation = kernel.inspectOperation(operationId);
+      const attempt = kernel.inspectAttempt(attemptId);
+      if (operation.store_revision !== verified.revision || attempt.store_revision !== verified.revision) {
+        throw new Error('LIFECYCLE_SNAPSHOT_REVISION_MISMATCH');
+      }
+      return {
+        revision: verified.revision,
+        operation: operation.aggregate,
+        attempt: attempt.aggregate,
+      };
+    },
+    hasUnreconciledExecution(taskcycleId) {
+      const state = this.snapshot(taskcycleId);
+      for (const operationId of state.taskcycle.related_ids || []) {
+        const operation = kernel.inspectOperation(operationId).aggregate;
+        for (const attemptId of operation.related_ids || []) {
+          const attempt = kernel.inspectAttempt(attemptId).aggregate;
+          if (attempt.state === 'UNKNOWN' || attempt.reconciliation_required === true) return true;
+        }
+      }
+      return false;
+    },
+    satisfyObligation: input => kernel.satisfyObligation(input),
+    closeTaskCycle: input => kernel.transitionTaskCycle({ ...input, target: 'CLOSED' }),
+  };
+}
+
 function rules() {
   return [
     {
@@ -333,7 +379,7 @@ function request(kernel, overrides = {}) {
   };
 }
 
-function recipe(kernel) { return createReconcileAndCloseTaskCycleRecipe({ stateKernel: kernel }); }
+function recipe(kernel) { return createReconcileAndCloseTaskCycleRecipe({ lifecycle: portableLifecycle(kernel) }); }
 
 async function execute(kernel, overrides={}) { return recipe(kernel).execute(request(kernel, overrides)); }
 
@@ -359,7 +405,7 @@ test('all competent required evidence closes deterministically with structured C
   assert.equal(kernel.revision, before + 6);
   assert.equal(result.output.reconciliation.disposition, 'RESOLVED');
   assert.deepEqual(result.output.obligations.remaining, []);
-  assert.equal(result.output.state_kernel.final_revision, kernel.revision);
+  assert.equal(result.output.lifecycle.final_revision, kernel.revision);
 });
 
 test('supported historical obligation identities reconcile while preserving stored identity', async () => {
@@ -474,7 +520,7 @@ test('real filesystem State Kernel fixture preserves historical IDs on Linux dur
           disposition_ref: dispositionRef,
         }),
     };
-    const recipeUnderTest = createReconcileAndCloseTaskCycleRecipe({ stateKernel });
+    const recipeUnderTest = createReconcileAndCloseTaskCycleRecipe({ lifecycle: portableLifecycle(stateKernel) });
     const result = await recipeUnderTest.execute(request(
       { revision: store.verify().revision },
       { rules: historicalRules(), expected_state_revision: store.verify().revision },
@@ -604,7 +650,7 @@ test('authority-incompetent evidence remains fail-closed', async () => {
 
 test('stale expected State Kernel revision fails closed before mutation', async () => {
   const kernel=new SyntheticKernel(); const result=await execute(kernel,{expected_state_revision:49});
-  assert.equal(result.status,'FAIL'); assert.equal(result.effect_state,'NONE'); assert.match(result.reason,/STATE_KERNEL_REVISION_DRIFT/); assert.equal(kernel.revision,50);
+  assert.equal(result.status,'FAIL'); assert.equal(result.effect_state,'NONE'); assert.match(result.reason,/LIFECYCLE_REVISION_DRIFT/); assert.equal(kernel.revision,50);
 });
 
 test('invocation-owned Operation and Attempt revisions do not invalidate a protected TaskCycle preflight', async () => {
@@ -706,7 +752,7 @@ test('illegal terminal transition remains fail-closed and does not claim closure
 
 test('fresh post-transition verification failure becomes UNKNOWN and never false PASS', async () => {
   const kernel=new SyntheticKernel({failFinalVerify:true}); const result=await execute(kernel);
-  assert.equal(result.status,'UNKNOWN'); assert.equal(result.effect_state,'UNKNOWN'); assert.equal(kernel.taskcycle.state,'CLOSED'); assert.match(result.reason,/STATE_KERNEL_MUTATION_REASSESSMENT_UNAVAILABLE/);
+  assert.equal(result.status,'UNKNOWN'); assert.equal(result.effect_state,'UNKNOWN'); assert.equal(kernel.taskcycle.state,'CLOSED'); assert.match(result.reason,/LIFECYCLE_MUTATION_REASSESSMENT_UNAVAILABLE/);
 });
 
 test('closure result establishes repository/Git/remote effects NONE', async () => {
@@ -774,7 +820,7 @@ test('first satisfyObligation mutation that applies then throws is confirmed, ne
   const result = await execute(kernel);
   assert.equal(result.status, 'FAIL');
   assert.equal(result.effect_state, 'CONFIRMED');
-  assert.match(result.reason, /STATE_KERNEL_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
+  assert.match(result.reason, /LIFECYCLE_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
   assert.equal(kernel.revision, 51);
   assert.equal(kernel.satisfyCalls, 1);
   assert.equal(kernel.transitionCalls, 0);
@@ -785,7 +831,7 @@ test('first satisfyObligation mutation with malformed return is confirmed, never
   const result = await execute(kernel);
   assert.equal(result.status, 'FAIL');
   assert.equal(result.effect_state, 'CONFIRMED');
-  assert.match(result.reason, /STATE_KERNEL_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
+  assert.match(result.reason, /LIFECYCLE_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
   assert.equal(kernel.revision, 51);
   assert.equal(kernel.satisfyCalls, 1);
   assert.equal(kernel.transitionCalls, 0);
@@ -796,7 +842,7 @@ test('authoritative reassessment proving rejected first mutation permits effect_
   const result = await execute(kernel);
   assert.equal(result.status, 'FAIL');
   assert.equal(result.effect_state, 'NONE');
-  assert.match(result.reason, /STATE_KERNEL_MUTATION_REJECTED_NO_EFFECT/);
+  assert.match(result.reason, /LIFECYCLE_MUTATION_REJECTED_NO_EFFECT/);
   assert.equal(kernel.revision, 50);
   assert.equal(kernel.satisfyCalls, 1);
   assert.equal(kernel.transitionCalls, 0);
@@ -810,7 +856,7 @@ test('unavailable reassessment after dispatched mutation is UNKNOWN and forbids 
   const result = await execute(kernel);
   assert.equal(result.status, 'UNKNOWN');
   assert.equal(result.effect_state, 'UNKNOWN');
-  assert.match(result.reason, /STATE_KERNEL_MUTATION_REASSESSMENT_UNAVAILABLE/);
+  assert.match(result.reason, /LIFECYCLE_MUTATION_REASSESSMENT_UNAVAILABLE/);
   assert.equal(kernel.revision, 51);
   assert.equal(kernel.satisfyCalls, 1);
   assert.equal(kernel.transitionCalls, 0);
@@ -833,7 +879,7 @@ test('terminal transition as first mutation that applies then throws is confirme
   const result = await execute(kernel, { rules: [] });
   assert.equal(result.status, 'FAIL');
   assert.equal(result.effect_state, 'CONFIRMED');
-  assert.match(result.reason, /STATE_KERNEL_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
+  assert.match(result.reason, /LIFECYCLE_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
   assert.equal(kernel.taskcycle.state, 'CLOSED');
   assert.equal(kernel.satisfyCalls, 0);
   assert.equal(kernel.transitionCalls, 1);
@@ -844,7 +890,7 @@ test('terminal transition as first mutation with malformed return is confirmed a
   const result = await execute(kernel, { rules: [] });
   assert.equal(result.status, 'FAIL');
   assert.equal(result.effect_state, 'CONFIRMED');
-  assert.match(result.reason, /STATE_KERNEL_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
+  assert.match(result.reason, /LIFECYCLE_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
   assert.equal(kernel.taskcycle.state, 'CLOSED');
   assert.equal(kernel.satisfyCalls, 0);
   assert.equal(kernel.transitionCalls, 1);
@@ -873,7 +919,7 @@ test('review counterexample: wrong event_id with correct numeric revisions is ex
   const result = await execute(kernel);
   assert.equal(result.status, 'FAIL');
   assert.equal(result.effect_state, 'CONFIRMED');
-  assert.match(result.reason, /STATE_KERNEL_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED:RECEIPT_CORRESPONDENCE_MISMATCH/);
+  assert.match(result.reason, /LIFECYCLE_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED:RECEIPT_CORRESPONDENCE_MISMATCH/);
   assert.equal(kernel.revision, 51);
   assert.equal(kernel.taskcycle.revision, 8);
   assert.equal(kernel.taskcycle.last_event_id, 'event-51');
@@ -886,7 +932,7 @@ test('wrong aggregate_id with exact authoritative effect is not acknowledged', a
   const result = await execute(kernel);
   assert.equal(result.status, 'FAIL');
   assert.equal(result.effect_state, 'CONFIRMED');
-  assert.match(result.reason, /STATE_KERNEL_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
+  assert.match(result.reason, /LIFECYCLE_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
   assert.equal(kernel.satisfyCalls, 1);
   assert.equal(kernel.transitionCalls, 0);
 });
@@ -896,7 +942,7 @@ test('wrong kind with exact authoritative effect is not acknowledged', async () 
   const result = await execute(kernel);
   assert.equal(result.status, 'FAIL');
   assert.equal(result.effect_state, 'CONFIRMED');
-  assert.match(result.reason, /STATE_KERNEL_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
+  assert.match(result.reason, /LIFECYCLE_MUTATION_EFFECT_CONFIRMED_BUT_UNACKNOWLEDGED/);
   assert.equal(kernel.satisfyCalls, 1);
   assert.equal(kernel.transitionCalls, 0);
 });
