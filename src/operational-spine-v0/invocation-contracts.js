@@ -3,12 +3,30 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WorkerInvocationEnvelope = exports.RecipeInvocationResult = exports.RecipeInvocationTerminalStatus = exports.InvocationObservedIdentity = exports.SurfaceResolution = exports.SurfaceResolutionStatus = exports.RecipeInvocationRequest = exports.RecipeInvocationEnvironment = exports.InvocationSurface = exports.DockerLinuxNodeSurface = exports.NativeNodeSurface = exports.SurfaceConformance = exports.ExecutionCapability = exports.RecipeIdentity = void 0;
+exports.WorkerInvocationEnvelope = exports.RecipeInvocationResult = exports.RecipeInvocationTerminalStatus = exports.InvocationObservedIdentity = exports.SurfaceResolution = exports.SurfaceResolutionStatus = exports.RecipeInvocationRequest = exports.RecipeInvocationEnvironment = exports.InvocationSurface = exports.DockerLinuxNodeSurface = exports.NativeNodeSurface = exports.SurfaceConformance = exports.ExecutionCapability = exports.RecipeIdentity = exports.GitExecutionQualificationResult = exports.GitExecutionQualificationRequest = exports.GitExecutionQualificationStatus = exports.ReferenceSchema = void 0;
 const node_path_1 = __importDefault(require("node:path"));
 const zod_1 = require("zod");
 const contracts_1 = require("./contracts");
-const { referenceSchema } = require('../state-kernel-v0/contracts');
 const NonEmpty = zod_1.z.string().min(1);
+const RelativeReferenceLocation = NonEmpty.refine((value) => !value.startsWith('/') && !value.includes('..') && !/^[A-Za-z]:/.test(value), 'reference location must be relative');
+const ReferenceFields = zod_1.z.object({
+    kind: zod_1.z.enum(['AUTHORITY', 'EVIDENCE', 'ARTIFACT', 'GIT_OBJECT']),
+    id: NonEmpty,
+    location: RelativeReferenceLocation.optional(),
+    sha256: zod_1.z.string().regex(/^[a-f0-9]{64}$/).optional(),
+    git_oid: zod_1.z.string().regex(/^[a-f0-9]{40,64}$/).optional(),
+}).strict().superRefine((value, ctx) => {
+    if (value.kind === 'GIT_OBJECT' && value.git_oid === undefined) {
+        ctx.addIssue({ code: 'custom', path: ['git_oid'], message: 'Git object requires OID' });
+    }
+});
+exports.ReferenceSchema = ReferenceFields.transform((value) => ({
+    kind: value.kind,
+    id: value.id,
+    ...(value.location === undefined ? {} : { location: value.location }),
+    ...(value.sha256 === undefined ? {} : { sha256: value.sha256 }),
+    ...(value.git_oid === undefined ? {} : { git_oid: value.git_oid }),
+}));
 const CrossPlatformAbsolutePath = NonEmpty.refine((value) => node_path_1.default.posix.isAbsolute(value) || node_path_1.default.win32.isAbsolute(value), 'path must be absolute');
 const GitOid = zod_1.z.string().regex(/^[a-f0-9]{40,64}$/);
 const BranchRef = zod_1.z.string().regex(/^refs\/heads\/[A-Za-z0-9._\/-]+$/);
@@ -131,7 +149,7 @@ exports.RecipeInvocationRequest = zod_1.z.object({
     responsibility_ref: NonEmpty,
     authority_ref: NonEmpty,
     expected_effects: zod_1.z.array(contracts_1.EffectDescriptor).min(1),
-    evidence_refs: zod_1.z.array(referenceSchema).default([]),
+    evidence_refs: zod_1.z.array(exports.ReferenceSchema).default([]),
     inputs: zod_1.z.unknown().optional(),
     execution_constraints: zod_1.z.object({
         require: zod_1.z.array(exports.ExecutionCapability).default([]),
@@ -190,13 +208,13 @@ exports.RecipeInvocationResult = zod_1.z.object({
     effect_state: zod_1.z.enum(['NONE', 'CONFIRMED', 'UNKNOWN']),
     receipt_ref: NonEmpty.nullable(),
     receipt: contracts_1.RecipeReceipt.nullable().default(null),
-    result_ref: referenceSchema.nullable(),
-    execution_plan_ref: referenceSchema.nullable(),
+    result_ref: exports.ReferenceSchema.nullable(),
+    execution_plan_ref: exports.ReferenceSchema.nullable(),
     observed_identity: exports.InvocationObservedIdentity.nullable(),
     exit_code: zod_1.z.number().int().nullable(),
-    stdout_ref: referenceSchema.nullable(),
-    stderr_ref: referenceSchema.nullable(),
-    terminal_artifact_ref: referenceSchema.nullable(),
+    stdout_ref: exports.ReferenceSchema.nullable(),
+    stderr_ref: exports.ReferenceSchema.nullable(),
+    terminal_artifact_ref: exports.ReferenceSchema.nullable(),
     reason: NonEmpty.optional(),
     validation_issues: zod_1.z.array(NonEmpty).default([]),
     supplementary_diagnostics: zod_1.z.array(NonEmpty).default([]),

@@ -1,9 +1,13 @@
 'use strict';
 
 const {
+  FilesystemStateStore,
   create,
   transition,
   inspect,
+  obligations,
+  satisfy,
+  render,
 } = require('../state-kernel-v0');
 
 function receiptRefs(receipt, additionalRefs = []) {
@@ -13,68 +17,86 @@ function receiptRefs(receipt, additionalRefs = []) {
   ];
 }
 
-function createStateKernelAdapter({ store }) {
+function requireStore(store) {
   if (!store || typeof store.verify !== 'function') {
-    throw new TypeError('State Kernel store is required');
+    throw new TypeError('State Kernel compatibility binding requires a verifiable store');
+  }
+  return store;
+}
+
+function verifiedRevision(store) {
+  const verified = store.verify();
+  if (!verified || verified.valid !== true || !Number.isSafeInteger(verified.revision)) {
+    throw new Error('LIFECYCLE_VERIFY_UNAVAILABLE');
+  }
+  return verified.revision;
+}
+
+function inspectAtRevision(store, kind, id, expectedRevision) {
+  const observed = inspect(store, kind, id);
+  if (!observed || !observed.aggregate || observed.store_revision !== expectedRevision) {
+    throw new Error('LIFECYCLE_SNAPSHOT_REVISION_MISMATCH');
+  }
+  return observed;
+}
+
+function createStateKernelExecutionLifecycle({ store }) {
+  const boundStore = requireStore(store);
+
+  function observeOperation(operationId) {
+    return inspect(boundStore, 'Operation', operationId);
   }
 
-  const revision = () => store.verify().revision;
-
-  function inspectTaskCycle(id) {
-    return inspect(store, 'TaskCycle', id);
+  function observeAttemptPresence(attemptId) {
+    try {
+      inspect(boundStore, 'ExecutionAttempt', attemptId);
+      return 'PRESENT';
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes(`missing ExecutionAttempt/${attemptId}`)) return 'ABSENT';
+      return 'UNKNOWN';
+    }
   }
 
-  function inspectOperation(id) {
-    return inspect(store, 'Operation', id);
-  }
-
-  function inspectAttempt(id) {
-    return inspect(store, 'ExecutionAttempt', id);
-  }
-
-  function ensureOperationRunning(operationId) {
-    let observed = inspectOperation(operationId).aggregate;
+  function prepareAttempt({ attemptId, operationId, authorityRefs = [] }) {
+    let observed = observeOperation(operationId).aggregate;
 
     if (observed.state === 'DEFINED') {
-      transition(store, revision(), 'Operation', operationId, 'READY');
-      observed = inspectOperation(operationId).aggregate;
+      transition(boundStore, verifiedRevision(boundStore), 'Operation', operationId, 'READY');
+      observed = observeOperation(operationId).aggregate;
     }
 
     if (observed.state === 'READY') {
-      transition(store, revision(), 'Operation', operationId, 'RUNNING');
-      observed = inspectOperation(operationId).aggregate;
+      transition(boundStore, verifiedRevision(boundStore), 'Operation', operationId, 'RUNNING');
+      observed = observeOperation(operationId).aggregate;
     }
 
     if (observed.state !== 'RUNNING') {
       throw new Error(`Operation ${operationId} is not executable from state ${observed.state}`);
     }
 
-    return inspectOperation(operationId);
-  }
-
-  function startAttempt({ attemptId, operationId, authorityRefs = [] }) {
     create(
-      store,
-      revision(),
+      boundStore,
+      verifiedRevision(boundStore),
       'ExecutionAttempt',
       attemptId,
       { operation_id: operationId },
       authorityRefs,
     );
-    return inspectAttempt(attemptId);
+
+    return {
+      operation: observeOperation(operationId),
+      attempt: inspect(boundStore, 'ExecutionAttempt', attemptId),
+    };
   }
 
-  function markAttemptDispatched(attemptId) {
-    transition(store, revision(), 'ExecutionAttempt', attemptId, 'DISPATCHED');
-    return inspectAttempt(attemptId);
+  function confirmDispatchStart(attemptId) {
+    transition(boundStore, verifiedRevision(boundStore), 'ExecutionAttempt', attemptId, 'DISPATCHED');
+    transition(boundStore, verifiedRevision(boundStore), 'ExecutionAttempt', attemptId, 'RUNNING');
+    return inspect(boundStore, 'ExecutionAttempt', attemptId);
   }
 
-  function markAttemptRunning(attemptId) {
-    transition(store, revision(), 'ExecutionAttempt', attemptId, 'RUNNING');
-    return inspectAttempt(attemptId);
-  }
-
-  function recordPreflightTerminal({
+  function recordPreflightTerminalOutcome({
     attemptId,
     operationId,
     status,
@@ -84,30 +106,30 @@ function createStateKernelAdapter({ store }) {
     const refs = receiptRefs(receipt, resultRefs);
 
     if (status === 'BLOCKED') {
-      transition(store, revision(), 'ExecutionAttempt', attemptId, 'BLOCKED', {
+      transition(boundStore, verifiedRevision(boundStore), 'ExecutionAttempt', attemptId, 'BLOCKED', {
         outcome: 'BLOCKED',
         result_refs: refs,
       });
-      transition(store, revision(), 'Operation', operationId, 'BLOCKED');
+      transition(boundStore, verifiedRevision(boundStore), 'Operation', operationId, 'BLOCKED');
     } else if (status === 'UNAVAILABLE') {
-      transition(store, revision(), 'ExecutionAttempt', attemptId, 'UNAVAILABLE', {
+      transition(boundStore, verifiedRevision(boundStore), 'ExecutionAttempt', attemptId, 'UNAVAILABLE', {
         outcome: 'UNAVAILABLE',
         result_refs: refs,
       });
-      transition(store, revision(), 'Operation', operationId, 'BLOCKED');
+      transition(boundStore, verifiedRevision(boundStore), 'Operation', operationId, 'BLOCKED');
     } else if (status === 'CANCELLED') {
-      transition(store, revision(), 'ExecutionAttempt', attemptId, 'CANCELLED', {
+      transition(boundStore, verifiedRevision(boundStore), 'ExecutionAttempt', attemptId, 'CANCELLED', {
         outcome: 'CANCELLED',
         result_refs: refs,
       });
-      transition(store, revision(), 'Operation', operationId, 'CANCELLED');
+      transition(boundStore, verifiedRevision(boundStore), 'Operation', operationId, 'CANCELLED');
     } else {
       throw new Error(`unsupported preflight terminal status: ${status}`);
     }
 
     return {
-      attempt: inspectAttempt(attemptId),
-      operation: inspectOperation(operationId),
+      attempt: inspect(boundStore, 'ExecutionAttempt', attemptId),
+      operation: observeOperation(operationId),
     };
   }
 
@@ -122,63 +144,153 @@ function createStateKernelAdapter({ store }) {
 
     switch (coordinatorOutcome.status) {
       case 'SUCCESS':
-        transition(store, revision(), 'ExecutionAttempt', attemptId, 'COMPLETED', {
+        transition(boundStore, verifiedRevision(boundStore), 'ExecutionAttempt', attemptId, 'COMPLETED', {
           outcome: 'PASS',
           result_refs: refs,
         });
-        transition(store, revision(), 'Operation', operationId, 'COMPLETED', {
+        transition(boundStore, verifiedRevision(boundStore), 'Operation', operationId, 'COMPLETED', {
           result_ref: receipt.receipt_ref,
         });
         break;
       case 'FAILED':
-        transition(store, revision(), 'ExecutionAttempt', attemptId, 'FAILED', {
+        transition(boundStore, verifiedRevision(boundStore), 'ExecutionAttempt', attemptId, 'FAILED', {
           outcome: 'FAIL',
           result_refs: refs,
         });
-        transition(store, revision(), 'Operation', operationId, 'FAILED');
+        transition(boundStore, verifiedRevision(boundStore), 'Operation', operationId, 'FAILED');
         break;
       case 'CANCELLED':
-        transition(store, revision(), 'ExecutionAttempt', attemptId, 'CANCELLED', {
+        transition(boundStore, verifiedRevision(boundStore), 'ExecutionAttempt', attemptId, 'CANCELLED', {
           outcome: 'CANCELLED',
           result_refs: refs,
         });
-        transition(store, revision(), 'Operation', operationId, 'CANCELLED');
+        transition(boundStore, verifiedRevision(boundStore), 'Operation', operationId, 'CANCELLED');
         break;
       case 'UNKNOWN':
-        transition(store, revision(), 'ExecutionAttempt', attemptId, 'UNKNOWN', {
+        transition(boundStore, verifiedRevision(boundStore), 'ExecutionAttempt', attemptId, 'UNKNOWN', {
           result_refs: refs,
         });
-        // Operation intentionally remains RUNNING. The State Kernel prevents a
-        // new attempt while reconciliation_required=true.
         break;
       case 'PARTIAL_RESULT':
-        // Partial execution remains RUNNING and resumable. It is not rewritten
-        // into PASS/FAIL/UNKNOWN.
         break;
       default:
         throw new Error(`unsupported post-dispatch outcome: ${coordinatorOutcome.status}`);
     }
 
     return {
-      attempt: inspectAttempt(attemptId),
-      operation: inspectOperation(operationId),
+      attempt: inspect(boundStore, 'ExecutionAttempt', attemptId),
+      operation: observeOperation(operationId),
     };
   }
 
   return {
-    currentRevision: revision,
-    inspectTaskCycle,
-    inspectOperation,
-    inspectAttempt,
-    ensureOperationRunning,
-    startAttempt,
-    markAttemptDispatched,
-    markAttemptRunning,
-    recordPreflightTerminal,
+    observeOperation,
+    observeAttemptPresence,
+    prepareAttempt,
+    confirmDispatchStart,
+    recordPreflightTerminalOutcome,
     recordExecutionOutcome,
   };
 }
 
+function createStateKernelTaskCycleLifecycle({ store }) {
+  const boundStore = requireStore(store);
+
+  function snapshot(taskcycleId) {
+    const verified = boundStore.verify();
+    if (!verified || verified.valid !== true || !Number.isSafeInteger(verified.revision)) {
+      throw new Error('LIFECYCLE_VERIFY_UNAVAILABLE');
+    }
+    const taskcycle = inspectAtRevision(boundStore, 'TaskCycle', taskcycleId, verified.revision);
+    const obligationState = obligations(boundStore, taskcycleId);
+    if (obligationState.store_revision !== verified.revision) {
+      throw new Error('LIFECYCLE_SNAPSHOT_REVISION_MISMATCH');
+    }
+    return {
+      revision: verified.revision,
+      event_count: verified.event_count,
+      taskcycle: taskcycle.aggregate,
+      legal_next: taskcycle.legal_next,
+      obligations: obligationState,
+    };
+  }
+
+  function observeInvocationBookkeeping(operationId, attemptId) {
+    const expectedRevision = verifiedRevision(boundStore);
+    return {
+      revision: expectedRevision,
+      operation: inspectAtRevision(boundStore, 'Operation', operationId, expectedRevision).aggregate,
+      attempt: inspectAtRevision(boundStore, 'ExecutionAttempt', attemptId, expectedRevision).aggregate,
+    };
+  }
+
+  function hasUnreconciledExecution(taskcycleId) {
+    const state = snapshot(taskcycleId);
+    for (const operationId of state.taskcycle.related_ids || []) {
+      const operation = inspectAtRevision(boundStore, 'Operation', operationId, state.revision).aggregate;
+      for (const attemptId of operation.related_ids || []) {
+        const attempt = inspectAtRevision(boundStore, 'ExecutionAttempt', attemptId, state.revision).aggregate;
+        if (attempt.state === 'UNKNOWN' || attempt.reconciliation_required === true) return true;
+      }
+    }
+    return false;
+  }
+
+  function satisfyObligation({
+    expectedRevision,
+    taskcycleId,
+    obligationId,
+    authorityRef,
+    authorityReference,
+  }) {
+    return satisfy(
+      boundStore,
+      expectedRevision,
+      taskcycleId,
+      obligationId,
+      authorityRef,
+      authorityReference,
+    );
+  }
+
+  function closeTaskCycle({
+    expectedRevision,
+    taskcycleId,
+    authorityRef,
+    dispositionRef,
+  }) {
+    return transition(boundStore, expectedRevision, 'TaskCycle', taskcycleId, 'CLOSED', {
+      authority_ref: authorityRef,
+      disposition_ref: dispositionRef,
+    });
+  }
+
+  return {
+    snapshot,
+    observeInvocationBookkeeping,
+    hasUnreconciledExecution,
+    satisfyObligation,
+    closeTaskCycle,
+  };
+}
+
+function createStateKernelCompatibilityBinding({ home, store } = {}) {
+  const boundStore = store || new FilesystemStateStore(home);
+  requireStore(boundStore);
+  return {
+    executionLifecycle: createStateKernelExecutionLifecycle({ store: boundStore }),
+    taskcycleLifecycle: createStateKernelTaskCycleLifecycle({ store: boundStore }),
+    renderState: () => render(boundStore),
+  };
+}
+
+function createStateKernelAdapter({ store }) {
+  return createStateKernelExecutionLifecycle({ store });
+}
+
 module.exports = {
   createStateKernelAdapter,
+  createStateKernelExecutionLifecycle,
+  createStateKernelTaskCycleLifecycle,
+  createStateKernelCompatibilityBinding,
 };

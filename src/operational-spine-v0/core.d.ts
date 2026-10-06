@@ -1,42 +1,26 @@
 import { type AuthorizationContext, type ExecutionAttemptId, type ExecutionAttemptRequestInput, type ExecutionOutcome, type HarnessConformance, type OperationId } from '../contracts/execution-coordination';
-import { RecipeReceipt, type Capability, type ExecutionContextInput, type ExecutionPlan as ExecutionPlanValue, type ExecutionPlanInput, type RecipeReceipt as RecipeReceiptValue, type Reference } from './contracts';
+import { RecipeReceipt, type Capability, type ExecutionContextInput, type ExecutionPlan as ExecutionPlanValue, type ExecutionPlanInput, type Reference } from './contracts';
 import type { ExecutionRecordStorePort } from './execution-record-store';
-import type { RecipePreflight, RecipeRegistryPort } from './recipe-registry';
+import type { RecipeRegistryPort } from './recipe-registry';
+import { type ExecutionLifecycleCapability } from './taskcycle-lifecycle-capability';
 import { type OperationAggregate } from './resolution';
-interface StateKernelInspection {
-    readonly aggregate: OperationAggregate;
-    readonly [key: string]: unknown;
-}
+/**
+ * @deprecated Type-only compatibility for historical downstream typechecks.
+ * OperationalSpine no longer depends on this shape.
+ */
 export interface StateKernelPort {
-    inspectOperation(operationId: OperationId): StateKernelInspection;
-    ensureOperationRunning(operationId: OperationId): unknown;
-    startAttempt(input: Readonly<{
-        attemptId: ExecutionAttemptId;
-        operationId: OperationId;
-        authorityRefs: readonly Reference[];
-    }>): unknown;
-    markAttemptDispatched(attemptId: ExecutionAttemptId): unknown;
-    markAttemptRunning(attemptId: ExecutionAttemptId): unknown;
-    recordPreflightTerminal(input: Readonly<{
-        attemptId: ExecutionAttemptId;
-        operationId: OperationId;
-        status: Exclude<RecipePreflight['status'], 'READY'>;
-        receipt: RecipeReceiptValue;
-        resultRefs: readonly Reference[];
-    }>): Record<string, unknown>;
-    recordExecutionOutcome(input: Readonly<{
-        attemptId: ExecutionAttemptId;
-        operationId: OperationId;
-        coordinatorOutcome: ExecutionOutcome;
-        receipt: RecipeReceiptValue;
-        resultRefs: readonly Reference[];
-    }>): Record<string, unknown>;
+    inspectOperation(operationId: OperationId): unknown;
 }
 export interface ExecutionCoordinatorPort {
     runAttempt(request: ExecutionAttemptRequestInput): Promise<ExecutionOutcome>;
 }
 export interface OperationalSpineDependencies {
-    readonly stateKernel: StateKernelPort;
+    readonly executionLifecycle?: ExecutionLifecycleCapability;
+    /**
+     * @deprecated Boundary-only compatibility for existing callers.
+     * The value is normalized immediately into ExecutionLifecycleCapability.
+     */
+    readonly stateKernel?: unknown;
     readonly recipeRegistry: RecipeRegistryPort;
     readonly executionCoordinator: ExecutionCoordinatorPort;
     readonly executionRecordStore: ExecutionRecordStorePort;
@@ -56,13 +40,13 @@ export interface ExecutePlanRequest {
     readonly input?: unknown;
     readonly cancellationRequested?: boolean;
 }
-export declare function createOperationalSpine({ stateKernel, recipeRegistry, executionCoordinator, executionRecordStore, }: OperationalSpineDependencies): {
+export declare function createOperationalSpine({ executionLifecycle, stateKernel, recipeRegistry, executionCoordinator, executionRecordStore, }: OperationalSpineDependencies): {
     plan: ({ operationId, executionContext, requiredCapabilities, authorityRefs, evidenceRefs, input, }: PlanRequest) => ExecutionPlanValue;
     executePlan: (rawPlan: ExecutionPlanInput, { executionAttemptId, authorization, harnessConformance, input, cancellationRequested, }: ExecutePlanRequest) => Promise<{
         status: 'SEMANTIC_ESCALATION_REQUIRED';
         plan: import("./contracts").SemanticEscalationExecutionPlan;
         attempt: null;
-        operation: StateKernelInspection;
+        operation: import("./taskcycle-lifecycle-capability").LifecycleInspection<OperationAggregate>;
         plan_ref: Reference;
         reason?: never;
     } | {
@@ -70,14 +54,14 @@ export declare function createOperationalSpine({ stateKernel, recipeRegistry, ex
         reason: string;
         plan: import("./contracts").DeterministicExecutionPlan;
         attempt: null;
-        operation: StateKernelInspection;
+        operation: import("./taskcycle-lifecycle-capability").LifecycleInspection<OperationAggregate>;
         plan_ref: Reference;
     } | {
         status: 'NO_START';
         reason: string;
         plan: import("./contracts").DeterministicExecutionPlan;
         attempt: null;
-        operation: StateKernelInspection;
+        operation: import("./taskcycle-lifecycle-capability").LifecycleInspection<OperationAggregate>;
         plan_ref: Reference;
     } | {
         reason?: never;
@@ -154,4 +138,3 @@ export declare function createOperationalSpine({ stateKernel, recipeRegistry, ex
         });
     }>;
 };
-export {};

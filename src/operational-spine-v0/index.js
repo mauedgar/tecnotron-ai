@@ -9,6 +9,7 @@ module.exports = {
   ...require('./invocation-contracts'),
   ...require('./surface-resolution'),
   ...require('./recipe-invocation'),
+  ...require('./taskcycle-lifecycle-capability'),
   ...require('./state-kernel-adapter'),
   ...require('./recipes/integrate-accepted-candidate'),
   ...require('./recipes/reconcile-and-close-taskcycle'),

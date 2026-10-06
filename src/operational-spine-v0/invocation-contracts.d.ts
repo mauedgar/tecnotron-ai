@@ -1,5 +1,101 @@
 import { z } from 'zod';
 import { RecipeReceipt, type Reference } from './contracts';
+export declare const ReferenceSchema: z.ZodPipe<z.ZodObject<{
+    kind: z.ZodEnum<{
+        ARTIFACT: "ARTIFACT";
+        AUTHORITY: "AUTHORITY";
+        EVIDENCE: "EVIDENCE";
+        GIT_OBJECT: "GIT_OBJECT";
+    }>;
+    id: z.ZodString;
+    location: z.ZodOptional<z.ZodString>;
+    sha256: z.ZodOptional<z.ZodString>;
+    git_oid: z.ZodOptional<z.ZodString>;
+}, z.core.$strict>, z.ZodTransform<Reference, {
+    kind: "ARTIFACT" | "AUTHORITY" | "EVIDENCE" | "GIT_OBJECT";
+    id: string;
+    location?: string | undefined;
+    sha256?: string | undefined;
+    git_oid?: string | undefined;
+}>>;
+export declare const GitExecutionQualificationStatus: z.ZodEnum<{
+    BLOCKED: "BLOCKED";
+    READY: "READY";
+    UNAVAILABLE: "UNAVAILABLE";
+    UNKNOWN: "UNKNOWN";
+}>;
+export type GitExecutionQualificationStatus = z.output<typeof GitExecutionQualificationStatus>;
+export declare const GitExecutionQualificationRequest: z.ZodObject<{
+    schema_version: z.ZodLiteral<"tecnotron-git-execution-qualification-request/v0">;
+    surface_id: z.ZodString;
+    repository: z.ZodObject<{
+        identity: z.ZodString;
+        location: z.ZodString;
+    }, z.core.$strict>;
+    expected_ref: z.ZodString;
+    expected_commit: z.ZodString;
+    remote: z.ZodOptional<z.ZodObject<{
+        name: z.ZodString;
+        target_ref: z.ZodString;
+        expected_commit: z.ZodString;
+    }, z.core.$strict>>;
+    remote_timeout_ms: z.ZodDefault<z.ZodNumber>;
+}, z.core.$strict>;
+export type GitExecutionQualificationRequest = z.output<typeof GitExecutionQualificationRequest>;
+export type GitExecutionQualificationRequestInput = z.input<typeof GitExecutionQualificationRequest>;
+export declare const GitExecutionQualificationResult: z.ZodObject<{
+    schema_version: z.ZodLiteral<"tecnotron-git-execution-qualification-result/v0">;
+    status: z.ZodEnum<{
+        BLOCKED: "BLOCKED";
+        READY: "READY";
+        UNAVAILABLE: "UNAVAILABLE";
+        UNKNOWN: "UNKNOWN";
+    }>;
+    reason: z.ZodOptional<z.ZodString>;
+    evidence: z.ZodObject<{
+        repository: z.ZodObject<{
+            identity: z.ZodString;
+            location: z.ZodString;
+            observed_worktree: z.ZodNullable<z.ZodString>;
+            observed_ref: z.ZodNullable<z.ZodString>;
+            observed_commit: z.ZodNullable<z.ZodString>;
+        }, z.core.$strict>;
+        remote: z.ZodNullable<z.ZodObject<{
+            name_or_declared_identity: z.ZodString;
+            target_ref: z.ZodString;
+            observation_status: z.ZodEnum<{
+                BLOCKED: "BLOCKED";
+                NOT_ATTEMPTED: "NOT_ATTEMPTED";
+                READY: "READY";
+                UNAVAILABLE: "UNAVAILABLE";
+                UNKNOWN: "UNKNOWN";
+            }>;
+            observed_commit: z.ZodNullable<z.ZodString>;
+            transport_class: z.ZodNullable<z.ZodEnum<{
+                GIT: "GIT";
+                HTTP: "HTTP";
+                HTTPS: "HTTPS";
+                LOCAL_PATH: "LOCAL_PATH";
+                SSH: "SSH";
+                UNKNOWN: "UNKNOWN";
+            }>>;
+            interaction_policy: z.ZodLiteral<"BOUNDED_NONINTERACTIVE_V0">;
+        }, z.core.$strict>>;
+        surface: z.ZodObject<{
+            id: z.ZodString;
+            qualification_method: z.ZodEnum<{
+                DIRECT: "DIRECT";
+                PROCESS_LOCAL_SAFE_DIRECTORY: "PROCESS_LOCAL_SAFE_DIRECTORY";
+            }>;
+        }, z.core.$strict>;
+        mutations: z.ZodObject<{
+            repository: z.ZodLiteral<"NONE">;
+            remote: z.ZodLiteral<"NONE">;
+            persistent_global_git_config: z.ZodLiteral<"NONE">;
+        }, z.core.$strict>;
+    }, z.core.$strict>;
+}, z.core.$strict>;
+export type GitExecutionQualificationResult = z.output<typeof GitExecutionQualificationResult>;
 export declare const RecipeIdentity: z.ZodObject<{
     id: z.ZodString;
     version: z.ZodString;
@@ -180,7 +276,24 @@ export declare const RecipeInvocationRequest: z.ZodObject<{
         effect: z.ZodString;
         scope: z.ZodString;
     }, z.core.$strict>>;
-    evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
+    evidence_refs: z.ZodDefault<z.ZodArray<z.ZodPipe<z.ZodObject<{
+        kind: z.ZodEnum<{
+            ARTIFACT: "ARTIFACT";
+            AUTHORITY: "AUTHORITY";
+            EVIDENCE: "EVIDENCE";
+            GIT_OBJECT: "GIT_OBJECT";
+        }>;
+        id: z.ZodString;
+        location: z.ZodOptional<z.ZodString>;
+        sha256: z.ZodOptional<z.ZodString>;
+        git_oid: z.ZodOptional<z.ZodString>;
+    }, z.core.$strict>, z.ZodTransform<Reference, {
+        kind: "ARTIFACT" | "AUTHORITY" | "EVIDENCE" | "GIT_OBJECT";
+        id: string;
+        location?: string | undefined;
+        sha256?: string | undefined;
+        git_oid?: string | undefined;
+    }>>>>;
     inputs: z.ZodOptional<z.ZodUnknown>;
     execution_constraints: z.ZodDefault<z.ZodObject<{
         require: z.ZodDefault<z.ZodArray<z.ZodEnum<{
@@ -345,20 +458,157 @@ export declare const RecipeInvocationResult: z.ZodObject<{
         result_refs?: unknown[] | undefined;
         evidence_refs?: unknown[] | undefined;
     }>>>>;
-    result_ref: z.ZodNullable<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>;
-    execution_plan_ref: z.ZodNullable<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>;
+    result_ref: z.ZodNullable<z.ZodPipe<z.ZodObject<{
+        kind: z.ZodEnum<{
+            ARTIFACT: "ARTIFACT";
+            AUTHORITY: "AUTHORITY";
+            EVIDENCE: "EVIDENCE";
+            GIT_OBJECT: "GIT_OBJECT";
+        }>;
+        id: z.ZodString;
+        location: z.ZodOptional<z.ZodString>;
+        sha256: z.ZodOptional<z.ZodString>;
+        git_oid: z.ZodOptional<z.ZodString>;
+    }, z.core.$strict>, z.ZodTransform<Reference, {
+        kind: "ARTIFACT" | "AUTHORITY" | "EVIDENCE" | "GIT_OBJECT";
+        id: string;
+        location?: string | undefined;
+        sha256?: string | undefined;
+        git_oid?: string | undefined;
+    }>>>;
+    execution_plan_ref: z.ZodNullable<z.ZodPipe<z.ZodObject<{
+        kind: z.ZodEnum<{
+            ARTIFACT: "ARTIFACT";
+            AUTHORITY: "AUTHORITY";
+            EVIDENCE: "EVIDENCE";
+            GIT_OBJECT: "GIT_OBJECT";
+        }>;
+        id: z.ZodString;
+        location: z.ZodOptional<z.ZodString>;
+        sha256: z.ZodOptional<z.ZodString>;
+        git_oid: z.ZodOptional<z.ZodString>;
+    }, z.core.$strict>, z.ZodTransform<Reference, {
+        kind: "ARTIFACT" | "AUTHORITY" | "EVIDENCE" | "GIT_OBJECT";
+        id: string;
+        location?: string | undefined;
+        sha256?: string | undefined;
+        git_oid?: string | undefined;
+    }>>>;
     observed_identity: z.ZodNullable<z.ZodObject<{
         surface_id: z.ZodString;
         platform: z.ZodString;
         runtime_identity: z.ZodString;
     }, z.core.$strict>>;
     exit_code: z.ZodNullable<z.ZodNumber>;
-    stdout_ref: z.ZodNullable<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>;
-    stderr_ref: z.ZodNullable<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>;
-    terminal_artifact_ref: z.ZodNullable<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>;
+    stdout_ref: z.ZodNullable<z.ZodPipe<z.ZodObject<{
+        kind: z.ZodEnum<{
+            ARTIFACT: "ARTIFACT";
+            AUTHORITY: "AUTHORITY";
+            EVIDENCE: "EVIDENCE";
+            GIT_OBJECT: "GIT_OBJECT";
+        }>;
+        id: z.ZodString;
+        location: z.ZodOptional<z.ZodString>;
+        sha256: z.ZodOptional<z.ZodString>;
+        git_oid: z.ZodOptional<z.ZodString>;
+    }, z.core.$strict>, z.ZodTransform<Reference, {
+        kind: "ARTIFACT" | "AUTHORITY" | "EVIDENCE" | "GIT_OBJECT";
+        id: string;
+        location?: string | undefined;
+        sha256?: string | undefined;
+        git_oid?: string | undefined;
+    }>>>;
+    stderr_ref: z.ZodNullable<z.ZodPipe<z.ZodObject<{
+        kind: z.ZodEnum<{
+            ARTIFACT: "ARTIFACT";
+            AUTHORITY: "AUTHORITY";
+            EVIDENCE: "EVIDENCE";
+            GIT_OBJECT: "GIT_OBJECT";
+        }>;
+        id: z.ZodString;
+        location: z.ZodOptional<z.ZodString>;
+        sha256: z.ZodOptional<z.ZodString>;
+        git_oid: z.ZodOptional<z.ZodString>;
+    }, z.core.$strict>, z.ZodTransform<Reference, {
+        kind: "ARTIFACT" | "AUTHORITY" | "EVIDENCE" | "GIT_OBJECT";
+        id: string;
+        location?: string | undefined;
+        sha256?: string | undefined;
+        git_oid?: string | undefined;
+    }>>>;
+    terminal_artifact_ref: z.ZodNullable<z.ZodPipe<z.ZodObject<{
+        kind: z.ZodEnum<{
+            ARTIFACT: "ARTIFACT";
+            AUTHORITY: "AUTHORITY";
+            EVIDENCE: "EVIDENCE";
+            GIT_OBJECT: "GIT_OBJECT";
+        }>;
+        id: z.ZodString;
+        location: z.ZodOptional<z.ZodString>;
+        sha256: z.ZodOptional<z.ZodString>;
+        git_oid: z.ZodOptional<z.ZodString>;
+    }, z.core.$strict>, z.ZodTransform<Reference, {
+        kind: "ARTIFACT" | "AUTHORITY" | "EVIDENCE" | "GIT_OBJECT";
+        id: string;
+        location?: string | undefined;
+        sha256?: string | undefined;
+        git_oid?: string | undefined;
+    }>>>;
     reason: z.ZodOptional<z.ZodString>;
     validation_issues: z.ZodDefault<z.ZodArray<z.ZodString>>;
     supplementary_diagnostics: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    git_execution_qualification: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        schema_version: z.ZodLiteral<"tecnotron-git-execution-qualification-result/v0">;
+        status: z.ZodEnum<{
+            BLOCKED: "BLOCKED";
+            READY: "READY";
+            UNAVAILABLE: "UNAVAILABLE";
+            UNKNOWN: "UNKNOWN";
+        }>;
+        reason: z.ZodOptional<z.ZodString>;
+        evidence: z.ZodObject<{
+            repository: z.ZodObject<{
+                identity: z.ZodString;
+                location: z.ZodString;
+                observed_worktree: z.ZodNullable<z.ZodString>;
+                observed_ref: z.ZodNullable<z.ZodString>;
+                observed_commit: z.ZodNullable<z.ZodString>;
+            }, z.core.$strict>;
+            remote: z.ZodNullable<z.ZodObject<{
+                name_or_declared_identity: z.ZodString;
+                target_ref: z.ZodString;
+                observation_status: z.ZodEnum<{
+                    BLOCKED: "BLOCKED";
+                    NOT_ATTEMPTED: "NOT_ATTEMPTED";
+                    READY: "READY";
+                    UNAVAILABLE: "UNAVAILABLE";
+                    UNKNOWN: "UNKNOWN";
+                }>;
+                observed_commit: z.ZodNullable<z.ZodString>;
+                transport_class: z.ZodNullable<z.ZodEnum<{
+                    GIT: "GIT";
+                    HTTP: "HTTP";
+                    HTTPS: "HTTPS";
+                    LOCAL_PATH: "LOCAL_PATH";
+                    SSH: "SSH";
+                    UNKNOWN: "UNKNOWN";
+                }>>;
+                interaction_policy: z.ZodLiteral<"BOUNDED_NONINTERACTIVE_V0">;
+            }, z.core.$strict>>;
+            surface: z.ZodObject<{
+                id: z.ZodString;
+                qualification_method: z.ZodEnum<{
+                    DIRECT: "DIRECT";
+                    PROCESS_LOCAL_SAFE_DIRECTORY: "PROCESS_LOCAL_SAFE_DIRECTORY";
+                }>;
+            }, z.core.$strict>;
+            mutations: z.ZodObject<{
+                repository: z.ZodLiteral<"NONE">;
+                remote: z.ZodLiteral<"NONE">;
+                persistent_global_git_config: z.ZodLiteral<"NONE">;
+            }, z.core.$strict>;
+        }, z.core.$strict>;
+    }, z.core.$strict>>>;
 }, z.core.$strict>;
 export type RecipeInvocationResult = z.output<typeof RecipeInvocationResult>;
 export type RecipeInvocationResultInput = z.input<typeof RecipeInvocationResult>;
@@ -377,7 +627,24 @@ export declare const WorkerInvocationEnvelope: z.ZodObject<{
             effect: z.ZodString;
             scope: z.ZodString;
         }, z.core.$strict>>;
-        evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
+        evidence_refs: z.ZodDefault<z.ZodArray<z.ZodPipe<z.ZodObject<{
+            kind: z.ZodEnum<{
+                ARTIFACT: "ARTIFACT";
+                AUTHORITY: "AUTHORITY";
+                EVIDENCE: "EVIDENCE";
+                GIT_OBJECT: "GIT_OBJECT";
+            }>;
+            id: z.ZodString;
+            location: z.ZodOptional<z.ZodString>;
+            sha256: z.ZodOptional<z.ZodString>;
+            git_oid: z.ZodOptional<z.ZodString>;
+        }, z.core.$strict>, z.ZodTransform<Reference, {
+            kind: "ARTIFACT" | "AUTHORITY" | "EVIDENCE" | "GIT_OBJECT";
+            id: string;
+            location?: string | undefined;
+            sha256?: string | undefined;
+            git_oid?: string | undefined;
+        }>>>>;
         inputs: z.ZodOptional<z.ZodUnknown>;
         execution_constraints: z.ZodDefault<z.ZodObject<{
             require: z.ZodDefault<z.ZodArray<z.ZodEnum<{

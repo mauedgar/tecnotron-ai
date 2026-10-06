@@ -6,8 +6,12 @@ export * from './execution-record-store';
 export * from './invocation-contracts';
 export * from './surface-resolution';
 export * from './recipe-invocation';
+export * from './taskcycle-lifecycle-capability';
 
 export function createStateKernelAdapter(...args: any[]): any;
+export function createStateKernelExecutionLifecycle(...args: any[]): any;
+export function createStateKernelTaskCycleLifecycle(...args: any[]): any;
+export function createStateKernelCompatibilityBinding(...args: any[]): any;
 export const IntegrateAcceptedCandidateInput: any;
 export const GitRemoteName: any;
 export function createGitCliAdapter(...args: any[]): any;
