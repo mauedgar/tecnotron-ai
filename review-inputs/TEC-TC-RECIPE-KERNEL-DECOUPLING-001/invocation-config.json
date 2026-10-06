@@ -1,0 +1,30 @@
+{
+  "schema_version": "tecnotron-recipe-invocation-environment/v0",
+  "repository": {
+    "identity": "mauedgar/tecnotron-ai",
+    "location": "C:\\Proyectos-Web\\Checkpoint\\Tecnotron\\TC-RECIPE-KERNEL-DECOUPLING-001\\candidate-review"
+  },
+  "state_store": {
+    "reference": "state:TASKCYCLE-TECNOTRON-RECIPE-KERNEL-DECOUPLING-001",
+    "location": "C:\\Proyectos-Web\\Tecnotron-home"
+  },
+  "surfaces": [
+    {
+      "id": "docker-linux-node22-durable",
+      "adapter": "DOCKER_LINUX_NODE",
+      "capabilities": [
+        "NODE_RUNTIME",
+        "CHILD_PROCESS",
+        "FILESYSTEM_WRITE",
+        "REPOSITORY_ACCESS",
+        "DURABLE_DIRECTORY_FSYNC",
+        "LINUX_SEMANTICS"
+      ],
+      "conformance": {
+        "disposition": "CONFORMING",
+        "evidence_ref": "evidence:docker-desktop-node22-durable-qualified"
+      },
+      "image": "node:22-bookworm"
+    }
+  ]
+}
