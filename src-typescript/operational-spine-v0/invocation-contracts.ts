@@ -8,7 +8,7 @@ const RelativeReferenceLocation = NonEmpty.refine(
   'reference location must be relative',
 );
 
-export const ReferenceSchema: z.ZodType<Reference> = z.object({
+export const ReferenceSchema = z.object({
   kind: z.enum(['AUTHORITY', 'EVIDENCE', 'ARTIFACT', 'GIT_OBJECT']),
   id: NonEmpty,
   location: RelativeReferenceLocation.optional(),
