@@ -7,6 +7,7 @@ const {
   RecipeDefinition,
   RecipeReceipt,
 } = require('../contracts');
+const { qualifyExactFirstParentLinearRange } = require('../git-range-qualification');
 
 const GitOid = z.string().regex(/^[a-f0-9]{40,64}$/);
 const BranchRef = z.string().regex(/^refs\/heads\/[A-Za-z0-9._\/-]+$/);
@@ -191,37 +192,9 @@ function normalizeIntegrationInput(rawInput) {
   };
 }
 
-function sameList(left, right) {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
 function verifyAcceptedRange(git, repositoryPath, input) {
   if (!input.accepted_range) return { status: 'READY' };
-  const declared = input.accepted_range;
-  if (declared.commit_count !== declared.ordered_commit_range.length) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_COMMIT_COUNT_MISMATCH' };
-  if (new Set(declared.ordered_commit_range).size !== declared.ordered_commit_range.length) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_ORDERED_COMMIT_RANGE_MISMATCH' };
-  if (declared.ordered_commit_range.at(-1) !== input.candidate_commit) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_ORDERED_COMMIT_RANGE_MISMATCH' };
-  const canonicalPaths = [...new Set(declared.changed_paths)].sort();
-  if (!sameList(declared.changed_paths, canonicalPaths)) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_CHANGED_PATHS_MISMATCH' };
-  const range = git.commitRange(repositoryPath, input.expected_target_commit, input.candidate_commit);
-  if (range.exit_code !== 0 || range.error) return { status: 'UNAVAILABLE', reason: 'ACCEPTED_RANGE_COMMIT_LIST_UNAVAILABLE' };
-  const observed = (range.stdout || '').trim().split(/\r?\n/).filter(Boolean);
-  if (!sameList(observed, declared.ordered_commit_range)) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_ORDERED_COMMIT_RANGE_MISMATCH' };
-  if (observed.length !== declared.commit_count) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_COMMIT_COUNT_MISMATCH' };
-  let expectedParent = input.expected_target_commit;
-  for (const commit of observed) {
-    const firstParent = git.revParse(repositoryPath, commit + '^1');
-    if (firstParent.exit_code !== 0 || exactLine(firstParent) !== expectedParent) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_NON_LINEAR' };
-    const secondParent = git.revParse(repositoryPath, commit + '^2');
-    if (secondParent.exit_code === 0) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_HIDDEN_MERGE_OR_NON_LINEAR' };
-    if (secondParent.error) return { status: 'UNAVAILABLE', reason: 'ACCEPTED_RANGE_PARENT_AUDIT_UNAVAILABLE' };
-    expectedParent = commit;
-  }
-  const paths = git.changedPaths(repositoryPath, input.expected_target_commit, input.candidate_commit);
-  if (paths.exit_code !== 0 || paths.error) return { status: 'UNAVAILABLE', reason: 'ACCEPTED_RANGE_CHANGED_PATHS_UNAVAILABLE' };
-  const observedPaths = [...new Set((paths.stdout || '').split('\0').filter(Boolean))].sort();
-  if (!sameList(observedPaths, declared.changed_paths)) return { status: 'BLOCKED', reason: 'ACCEPTED_RANGE_CHANGED_PATHS_MISMATCH' };
-  return { status: 'READY' };
+  return qualifyExactFirstParentLinearRange(git, repositoryPath, input.accepted_range);
 }
 function integrationEvidence(rawInput, {
   publicationAuthorized,

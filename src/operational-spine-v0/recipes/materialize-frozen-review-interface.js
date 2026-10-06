@@ -10,6 +10,7 @@ const {
   RecipeDefinition,
   RecipeReceipt,
 } = require('../contracts');
+const { qualifyExactFirstParentLinearRange } = require('../git-range-qualification');
 const { createGitCliAdapter } = require('./integrate-accepted-candidate');
 
 const NonEmpty = z.string().min(1);
@@ -63,12 +64,27 @@ const ArtifactSpecification = z.discriminatedUnion('kind', [
   GitDiffArtifact,
 ]);
 
-const ExactSubject = z.object({
+const DirectChildExactSubject = z.object({
   parent: GitOid,
   commit: GitOid,
   tree: GitOid,
   changed_paths: z.array(RepositoryPath),
 }).strict();
+
+const ExactFirstParentLinearRange = z.object({
+  integration_range_base: GitOid,
+  accepted_tip: GitOid,
+  accepted_tip_parent: GitOid,
+  accepted_tip_tree: GitOid,
+  ordered_commit_range: z.array(GitOid).min(1),
+  commit_count: z.number().int().positive(),
+  changed_paths: z.array(RepositoryPath),
+}).strict();
+
+const ExactSubject = z.union([
+  DirectChildExactSubject,
+  ExactFirstParentLinearRange,
+]);
 
 const AuthorityAndScope = z.object({
   protocol_ref: z.literal('tecnotron-independent-review-protocol/v1'),
@@ -90,6 +106,7 @@ const MaterializeFrozenReviewInterfaceInput = z.object({
   interface_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/),
   output_root: AbsolutePath,
   review_instance: ReviewInstance,
+  render_review_prompt: z.boolean().optional(),
 }).strict().superRefine((value, ctx) => {
   const instance = value.review_instance;
   const artifacts = [instance.review_request, ...instance.required_evidence_specification];
@@ -146,6 +163,14 @@ function exactLine(result) {
   return (result.stdout || '').trim();
 }
 
+function isExactRange(subject) {
+  return Object.hasOwn(subject, 'accepted_tip');
+}
+
+function subjectCommit(subject) {
+  return isExactRange(subject) ? subject.accepted_tip : subject.commit;
+}
+
 function sameReference(left, right) {
   return ['kind', 'id', 'location', 'sha256', 'git_oid']
     .every((field) => left?.[field] === right?.[field]);
@@ -193,7 +218,7 @@ function createReviewGitAdapter({ command = 'git', base = createGitCliAdapter({ 
   return {
     ...base,
     changedPaths(repositoryPath, parent, commit) {
-      return run(repositoryPath, ['diff', '--name-only', '--no-renames', parent, commit, '--']);
+      return run(repositoryPath, ['diff', '--name-only', '--no-renames', '-z', parent, commit, '--']);
     },
     blobOid(repositoryPath, revision, repositoryPathValue) {
       return run(repositoryPath, ['rev-parse', `${revision}:${repositoryPathValue}`]);
@@ -234,27 +259,43 @@ function verifyFileArtifact(artifact, evidenceById) {
 function candidateGuard(request, input, git) {
   const repositoryPath = request.context.worktree?.location || request.context.repository.location;
   const subject = input.review_instance.exact_subject;
+  const expectedCommit = subjectCommit(subject);
   if (input.review_instance.TaskCycle !== request.context.taskcycle_id) return 'TASKCYCLE_CONTEXT_MISMATCH';
-  if (!request.context.git || request.context.git.expected_commit !== subject.commit) return 'EXECUTION_CONTEXT_GIT_MISMATCH';
+  if (!request.context.git || request.context.git.expected_commit !== expectedCommit) return 'EXECUTION_CONTEXT_GIT_MISMATCH';
 
   const status = git.status(repositoryPath);
   if (status.exit_code !== 0) return 'GIT_STATUS_UNAVAILABLE';
   if (exactLine(status) !== '') return 'CANDIDATE_WORKTREE_NOT_FROZEN';
 
   const ref = git.revParse(repositoryPath, `${request.context.git.expected_ref}^{commit}`);
-  if (ref.exit_code !== 0 || exactLine(ref) !== subject.commit) return 'CANDIDATE_REF_MISMATCH';
-  const commit = git.revParse(repositoryPath, `${subject.commit}^{commit}`);
-  if (commit.exit_code !== 0 || exactLine(commit) !== subject.commit) return 'CANDIDATE_IDENTITY_MISMATCH';
-  const parent = git.revParse(repositoryPath, `${subject.commit}^1`);
-  if (parent.exit_code !== 0 || exactLine(parent) !== subject.parent) return 'CANDIDATE_PARENT_MISMATCH';
-  const secondParent = git.revParse(repositoryPath, `${subject.commit}^2`);
-  if (secondParent.exit_code === 0) return 'MERGE_CANDIDATE_NOT_BOUNDED';
-  const tree = git.revParse(repositoryPath, `${subject.commit}^{tree}`);
-  if (tree.exit_code !== 0 || exactLine(tree) !== subject.tree) return 'CANDIDATE_TREE_MISMATCH';
+  if (ref.exit_code !== 0 || exactLine(ref) !== expectedCommit) return 'CANDIDATE_REF_MISMATCH';
+  const commit = git.revParse(repositoryPath, `${expectedCommit}^{commit}`);
+  if (commit.exit_code !== 0 || exactLine(commit) !== expectedCommit) return 'CANDIDATE_IDENTITY_MISMATCH';
+
+  const declaredParent = isExactRange(subject) ? subject.accepted_tip_parent : subject.parent;
+  const parent = git.revParse(repositoryPath, `${expectedCommit}^1`);
+  if (parent.exit_code !== 0 || exactLine(parent) !== declaredParent) return 'CANDIDATE_PARENT_MISMATCH';
+  if (!isExactRange(subject)) {
+    const secondParent = git.revParse(repositoryPath, `${expectedCommit}^2`);
+    if (secondParent.exit_code === 0) return 'MERGE_CANDIDATE_NOT_BOUNDED';
+  }
+
+  const declaredTree = isExactRange(subject) ? subject.accepted_tip_tree : subject.tree;
+  const tree = git.revParse(repositoryPath, `${expectedCommit}^{tree}`);
+  if (tree.exit_code !== 0 || exactLine(tree) !== declaredTree) return 'CANDIDATE_TREE_MISMATCH';
+
+  if (isExactRange(subject)) {
+    const base = git.revParse(repositoryPath, `${subject.integration_range_base}^{commit}`);
+    if (base.exit_code !== 0 || exactLine(base) !== subject.integration_range_base) {
+      return 'ACCEPTED_RANGE_BASE_IDENTITY_MISMATCH';
+    }
+    const qualification = qualifyExactFirstParentLinearRange(git, repositoryPath, subject);
+    return qualification.status === 'READY' ? null : qualification.reason;
+  }
 
   const paths = git.changedPaths(repositoryPath, subject.parent, subject.commit);
   if (paths.exit_code !== 0) return 'CANDIDATE_CHANGED_PATHS_UNAVAILABLE';
-  const observed = exactLine(paths) ? exactLine(paths).split(/\r?\n/).sort() : [];
+  const observed = [...new Set((paths.stdout || '').split('\0').filter(Boolean))].sort();
   if (observed.join('\0') !== subject.changed_paths.join('\0')) return 'CANDIDATE_CHANGED_PATHS_MISMATCH';
   return null;
 }
@@ -348,6 +389,52 @@ function verifyArchive(expectedEntries, archive) {
   return reopened;
 }
 
+function renderReviewPrompt({
+  interfaceId,
+  TaskCycle,
+  responsibility,
+  archiveFilename,
+  archiveSha256,
+  archiveSize,
+  archiveEntryCount,
+  manifestSha256,
+  exactSubject,
+}) {
+  const transportIdentity = {
+    review_interface_id: interfaceId,
+    TaskCycle,
+    responsibility,
+    archive_filename: archiveFilename,
+    archive_sha256: archiveSha256,
+    archive_size: archiveSize,
+    archive_entry_count: archiveEntryCount,
+    manifest_sha256: manifestSha256,
+    exact_frozen_subject: exactSubject,
+  };
+  return Buffer.from([
+    '# Independent Review Launch',
+    '',
+    'Use the attached frozen archive as the complete input boundary for one Independent Review.',
+    'The semantic review questions and acceptance criteria are only those already supplied inside that archive.',
+    '',
+    '## Exact Transport Identity',
+    '',
+    '```json',
+    JSON.stringify(stable(transportIdentity), null, 2),
+    '```',
+    '',
+    '## Review Boundary',
+    '',
+    '- Treat the declared archive contents as the complete input boundary; do not repair it from chat history, memory, live repository state, or undeclared evidence.',
+    '- Keep the review read-only. Do not mutate the candidate or its repository.',
+    '- Return exactly one bounded review result using `PASS`, `FAIL`, or `BLOCKED`.',
+    '- `PASS` is not Developer acceptance.',
+    '- Do not authorize or perform candidate mutation, Phase 2, integration, publication, or lifecycle close.',
+    '- Stop after returning one review result.',
+    '',
+  ].join('\n'), 'utf8');
+}
+
 function materializeArtifact(repositoryPath, artifact, git) {
   if (artifact.kind === 'FILE') return fs.readFileSync(artifact.source_path);
   if (artifact.kind === 'GIT_BLOB') {
@@ -394,10 +481,11 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
       'review_instance.required_evidence_specification',
       'review_instance.validation_evidence_refs',
       'review_instance.authority_and_scope',
+      'render_review_prompt (optional)',
     ],
     preconditions: [
       'caller supplied the exact semantic review interface under tecnotron-independent-review-protocol/v1',
-      'candidate parent, commit, tree, changed paths, ref, and clean worktree are exact',
+      'direct-child or exact first-parent linear-range identity, changed paths, ref, and clean worktree are exact',
       'every declared validation evidence reference is supplied and bound to exact bytes',
       'review interface identity has not been materialized previously',
     ],
@@ -406,6 +494,7 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
       'candidate identity and clean worktree remain unchanged',
       'manifest member hashes, sizes, count, and candidate correspondence verify',
       'archive reopens with exactly the declared member set and bytes',
+      'optional external review prompt is bound to the exact archive, manifest, and subject',
       'prior review interface identities remain unchanged',
       'receipt contains no Independent Review verdict or Developer acceptance',
     ],
@@ -443,7 +532,8 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
 
     const finalDirectory = path.join(input.output_root, input.interface_id);
     const archivePath = `${finalDirectory}.tar`;
-    if (fs.existsSync(finalDirectory) || fs.existsSync(archivePath)) {
+    const promptPath = `${finalDirectory}.review-prompt.md`;
+    if (fs.existsSync(finalDirectory) || fs.existsSync(archivePath) || fs.existsSync(promptPath)) {
       return { status: 'BLOCKED', reason: 'REVIEW_INTERFACE_IDENTITY_ALREADY_EXISTS' };
     }
     return { status: 'READY' };
@@ -454,8 +544,10 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
     const repositoryPath = request.context.worktree?.location || request.context.repository.location;
     const finalDirectory = path.join(input.output_root, input.interface_id);
     const archivePath = `${finalDirectory}.tar`;
+    const promptPath = `${finalDirectory}.review-prompt.md`;
     const stagingDirectory = path.join(input.output_root, `.${input.interface_id}.${request.execution_attempt_id}.staging`);
     const archiveTemporary = `${archivePath}.${request.execution_attempt_id}.tmp`;
+    const promptTemporary = `${promptPath}.${request.execution_attempt_id}.tmp`;
 
     const recheck = await preflight(request);
     if (recheck.status !== 'READY') {
@@ -516,7 +608,25 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
 
       const archive = createTar(entries);
       fs.writeFileSync(archiveTemporary, archive, { flag: 'wx' });
-      verifyArchive(entries, fs.readFileSync(archiveTemporary));
+      const reopenedMembers = verifyArchive(entries, fs.readFileSync(archiveTemporary));
+      const archiveHash = sha256(archive);
+      const manifestHash = sha256(manifestBytes);
+      const subjectHash = sha256(jsonBytes(input.review_instance.exact_subject));
+      let promptBytes = null;
+      if (input.render_review_prompt) {
+        promptBytes = renderReviewPrompt({
+          interfaceId: input.interface_id,
+          TaskCycle: input.review_instance.TaskCycle,
+          responsibility: input.review_instance.responsibility,
+          archiveFilename: path.basename(archivePath),
+          archiveSha256: archiveHash,
+          archiveSize: archive.length,
+          archiveEntryCount: reopenedMembers.size,
+          manifestSha256: manifestHash,
+          exactSubject: input.review_instance.exact_subject,
+        });
+        fs.writeFileSync(promptTemporary, promptBytes, { flag: 'wx' });
+      }
 
       const boundaryReason = validateRequestBoundary(request, input);
       if (boundaryReason) throw new Error(`SOURCE_CHANGED_DURING_MATERIALIZATION:${boundaryReason}`);
@@ -525,12 +635,15 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
 
       fs.renameSync(stagingDirectory, finalDirectory);
       fs.renameSync(archiveTemporary, archivePath);
+      if (promptBytes) fs.renameSync(promptTemporary, promptPath);
 
       const finalArchive = fs.readFileSync(archivePath);
       const finalMembers = verifyArchive(entries, finalArchive);
+      if (sha256(finalArchive) !== archiveHash) throw new Error('FINAL_ARCHIVE_IDENTITY_MISMATCH');
+      if (promptBytes && !fs.readFileSync(promptPath).equals(promptBytes)) throw new Error('REVIEW_PROMPT_BYTES_MISMATCH');
+      const finalCandidateReason = candidateGuard(request, input, git);
+      if (finalCandidateReason) throw new Error(`CANDIDATE_CHANGED_AFTER_MATERIALIZATION:${finalCandidateReason}`);
 
-      const archiveHash = sha256(finalArchive);
-      const manifestHash = sha256(manifestBytes);
       return receipt(request, {
         status: 'PASS',
         effectState: 'CONFIRMED',
@@ -547,18 +660,30 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
             ...input.review_instance.exact_subject,
             unchanged: true,
           },
+          ...(promptBytes ? {
+            review_prompt: {
+              path: promptPath,
+              sha256: sha256(promptBytes),
+              size: promptBytes.length,
+              archive_sha256: archiveHash,
+              manifest_sha256: manifestHash,
+              exact_subject_sha256: subjectHash,
+            },
+          } : {}),
         },
         resultRefs: [
           { kind: 'ARTIFACT', id: `review-interface:${input.interface_id}`, sha256: archiveHash },
           { kind: 'ARTIFACT', id: `review-interface-manifest:${input.interface_id}`, sha256: manifestHash },
-          { kind: 'GIT_OBJECT', id: `review-subject:${input.interface_id}`, git_oid: input.review_instance.exact_subject.commit },
+          { kind: 'GIT_OBJECT', id: `review-subject:${input.interface_id}`, git_oid: subjectCommit(input.review_instance.exact_subject) },
+          ...(promptBytes ? [{ kind: 'ARTIFACT', id: `review-prompt:${input.interface_id}`, sha256: sha256(promptBytes) }] : []),
         ],
       });
     } catch (error) {
-      const finalExists = fs.existsSync(finalDirectory) || fs.existsSync(archivePath);
+      const finalExists = fs.existsSync(finalDirectory) || fs.existsSync(archivePath) || fs.existsSync(promptPath);
       if (!finalExists) {
         fs.rmSync(stagingDirectory, { recursive: true, force: true });
         fs.rmSync(archiveTemporary, { force: true });
+        fs.rmSync(promptTemporary, { force: true });
       }
       return receipt(request, {
         status: finalExists ? 'UNKNOWN' : 'FAIL',
@@ -581,5 +706,6 @@ module.exports = {
   createTar,
   effectsForInput,
   readTar,
+  renderReviewPrompt,
   verifyArchive,
 };
