@@ -1,0 +1,19 @@
+{
+  "schema_version": "tecnotron-tc-web-execution-request/v0",
+  "request_id": "PREPARED-NOT-DISPATCHED",
+  "product": "Tecnotron",
+  "task": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001",
+  "responsibility": "DECOUPLE_TASKCYCLE_RECIPE_PATH_FROM_STATE_KERNEL",
+  "gate": "PREPARED_FOR_NEXT_VALIDATION_GATE",
+  "subject": {
+    "branch": "tc-recipe-kernel-decoupling-001-wip",
+    "commit": "8b4121dce1abdee92e6dfcf22febc33504ee0c08",
+    "tree": "d7c3a5228f56d5cb19d9c4fca96e11bbb53eb5bd"
+  },
+  "profile": "node22-bookworm-validation-v0",
+  "dispatch": "NOT_AUTHORIZED",
+  "notes": [
+    "Workspace preparation only.",
+    "Update request_id, gate and exact subject identity before a future authorized dispatch."
+  ]
+}
