@@ -1,19 +1,19 @@
 {
   "schema_version": "tecnotron-tc-web-execution-request/v0",
-  "request_id": "PREPARED-NOT-DISPATCHED",
+  "request_id": "TC-CORE-AB-002-A-20261006T153516-0300",
   "product": "Tecnotron",
-  "task": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001",
-  "responsibility": "DECOUPLE_TASKCYCLE_RECIPE_PATH_FROM_STATE_KERNEL",
-  "gate": "PREPARED_FOR_NEXT_VALIDATION_GATE",
+  "task": "TC-CORE-GROUP-A-002",
+  "responsibility": "MATURE_SHARED_EXACT_RANGE_QUALIFICATION_AND_FROZEN_REVIEW_RANGE_SUPPORT",
+  "gate": "TC_CORE_AB_002_GROUP_A_EXACT_SUBJECT_VALIDATION",
   "subject": {
-    "branch": "tc-recipe-kernel-decoupling-001-wip",
-    "commit": "8b4121dce1abdee92e6dfcf22febc33504ee0c08",
-    "tree": "d7c3a5228f56d5cb19d9c4fca96e11bbb53eb5bd"
+    "branch": "devlab/tc-core-range-review-maturation-002",
+    "commit": "094678931970724dcb497ba50d3a1cb0a9134939",
+    "tree": "2c22006510e08e0fead224ce956aaaf828475766"
   },
   "profile": "node22-bookworm-validation-v0",
-  "dispatch": "NOT_AUTHORIZED",
+  "dispatch": "AUTHORIZED",
   "notes": [
-    "Workspace preparation only.",
-    "Update request_id, gate and exact subject identity before a future authorized dispatch."
+    "Developer authorization already granted for sequential A then B Actions validation.",
+    "Group A dispatch first. Reconcile before Group B."
   ]
 }
