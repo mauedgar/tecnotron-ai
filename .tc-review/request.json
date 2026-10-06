@@ -1,53 +1,52 @@
 {
   "schema_version": "tecnotron-tc-review-freeze-request/v0",
-  "request_id": "TC-CORE-AB-002-A-FREEZE-001",
-  "interface_id": "TC-CORE-AB-002-A-FROZEN-REVIEW-001",
+  "request_id": "TC-CORE-AB-002-B-FREEZE-001",
+  "interface_id": "TC-CORE-AB-002-B-FROZEN-REVIEW-001",
   "dispatch": "AUTHORIZED",
   "taskcycle": "TS-DEVLAB-TC-CORE-AB-002",
-  "responsibility": "MATURE_SHARED_EXACT_RANGE_QUALIFICATION_AND_FROZEN_REVIEW_RANGE_SUPPORT",
+  "responsibility": "PROVE_STABLE_RECIPE_INVOCATION_WITH_NON_STATE_KERNEL_TEST_BINDING",
   "executor": {
     "branch": "devlab/tc-core-range-review-maturation-002",
     "commit": "094678931970724dcb497ba50d3a1cb0a9134939",
     "tree": "2c22006510e08e0fead224ce956aaaf828475766"
   },
   "subject": {
-    "branch": "devlab/tc-core-range-review-maturation-002",
+    "branch": "devlab/tc-core-portable-invocation-proof-002",
     "exact_subject": {
       "parent": "34ab96c00ca5f8c9c87d69a31371d275eeb5f6d9",
-      "commit": "094678931970724dcb497ba50d3a1cb0a9134939",
-      "tree": "2c22006510e08e0fead224ce956aaaf828475766",
+      "commit": "7252487fe6f1111496e495a081b6a52a6a842824",
+      "tree": "815697d8beb6e29a2d49c835e40f6a34f49f6317",
       "changed_paths": [
-        "src/operational-spine-v0/git-range-qualification.js",
-        "src/operational-spine-v0/recipes/integrate-accepted-candidate.js",
-        "src/operational-spine-v0/recipes/materialize-frozen-review-interface.js",
-        "tests/operational-spine-v0/git-range-qualification.test.js",
-        "tests/operational-spine-v0/materialize-frozen-review-interface.test.js"
+        "src-typescript/operational-spine-v0/recipe-invocation-worker.ts",
+        "src/operational-spine-v0/recipe-invocation-worker.d.ts",
+        "src/operational-spine-v0/recipe-invocation-worker.js",
+        "tests/operational-spine-v0/recipe-invocation-worker.test.js"
       ]
     }
   },
   "worker_evidence": {
-    "ref": "refs/heads/devlab/transport/tc-core-group-a-result-002",
-    "commit": "c0a077f8e7ca802810fab0784ec74bb604e5d598",
+    "ref": "refs/heads/devlab/transport/tc-core-group-b-result-002",
+    "commit": "70a3f4158a0d10631f534c49bc1ab6a6f4a87200",
     "files": [
       {
-        "path": ".devlab-worker-result/TC-CORE-GROUP-A-002/worker-result-continuation-001.json",
-        "sha256": "ccefd820b15f8720671363a670cbc92ae5d344400f8212de04935dfacf5e8904",
+        "path": ".devlab-worker-result/TC-CORE-GROUP-B-002/worker-result.json",
+        "sha256": "96ab19d74b0b613b60195dcd2e7f902c300e4956240601fe857641511c3ddbd2",
         "package_path": "evidence/worker-result.json"
       }
     ]
   },
   "validation": {
-    "run_id": 37515348718,
-    "artifact_name": "tc-web-result-TC-CORE-AB-002-A-RERUN-003",
+    "run_id": 37515590594,
+    "artifact_name": "tc-web-result-TC-CORE-AB-002-B-ACTIONS-001",
     "files": [
       {
         "path": "manifest.json",
-        "sha256": "0a78cc8b8e196a0294a07c7194216aa4d201669d9581f877a7410a8c8a9b2f38",
+        "sha256": "97b5e760539fde24e9c53651ab7acb074db0ac331869ec3f162984c019e7714f",
         "package_path": "evidence/actions-validation-manifest.json",
         "ref": {
           "kind": "EVIDENCE",
-          "id": "ACTIONS-VALIDATION-TC-CORE-AB-002-A",
-          "sha256": "0a78cc8b8e196a0294a07c7194216aa4d201669d9581f877a7410a8c8a9b2f38"
+          "id": "ACTIONS-VALIDATION-TC-CORE-AB-002-B",
+          "sha256": "97b5e760539fde24e9c53651ab7acb074db0ac331869ec3f162984c019e7714f"
         }
       }
     ]
@@ -60,11 +59,12 @@
   ],
   "review_scope": {
     "include": [
-      "exact candidate semantics for shared first-parent linear-range qualification",
-      "reuse of the helper by integration and frozen-review consumers",
-      "direct-child compatibility and exact-range guards",
-      "frozen review archive and deterministic external reviewer prompt semantics",
-      "absence of new State Kernel lifecycle/runtime participation"
+      "optional portable Recipe invocation binding seam",
+      "preservation of default State Kernel compatibility behavior",
+      "zero State Kernel lifecycle/store participation on the injected non-Kernel path",
+      "Recipe selection and Operation/ExecutionAttempt identity correspondence",
+      "preflight dispatch result ordering and receipt correspondence",
+      "UNKNOWN versus explicit-absence behavior"
     ],
     "exclude": [
       "Developer acceptance",
@@ -72,13 +72,14 @@
       "Product integration",
       "publication",
       "TaskCycle close",
-      "unrelated architecture redesign"
+      "broader invocation architecture redesign"
     ]
   },
-  "review_request_markdown": "# Independent Review Request — TC Core Group A 002\n\nReview only the frozen exact subject and declared evidence in this archive.\n\nDetermine whether the candidate correctly centralizes exact first-parent linear-range qualification without weakening the distinct guards/effects of integration and frozen-review materialization; preserves direct-child behavior; produces trustworthy base-to-tip frozen evidence and deterministic external review prompt identity; and introduces no new State Kernel lifecycle/runtime dependency.\n\nPay particular attention to hidden-merge/non-linear rejection, changed-path correspondence, candidate immutability, evidence binding, backward compatibility, and whether the remaining referenceSchema import is contract-only rather than active Kernel participation.\n\nReturn PASS, FAIL, or BLOCKED with concrete findings. PASS is not Developer acceptance. Do not mutate anything and do not execute Phase 2.",
+  "review_request_markdown": "# Independent Review Request — TC Core Group B 002\n\nReview only the frozen exact subject and declared evidence in this archive.\n\nDetermine whether the candidate adds only the minimum portable composition seam required to invoke Recipes without State Kernel lifecycle/store participation on the injected path, while preserving the existing default compatibility path and the established ordering/identity/receipt semantics.\n\nPay particular attention to Recipe selection, Operation and ExecutionAttempt identity, preflight/dispatch/result ordering, receipt correspondence, UNKNOWN versus explicit absence semantics, generated JS/declaration correspondence, and whether the fallback compatibility construction remains behaviorally unchanged.\n\nReturn PASS, FAIL, or BLOCKED with concrete findings. PASS is not Developer acceptance. Do not mutate anything and do not execute Phase 2.",
   "notes": [
     "Developer explicitly authorized the next freeze gate.",
     "Developer Lab experiment only; authority NONE; Product effect NONE.",
-    "Actions validation for this exact subject already reconciled PASS."
+    "Group A freeze reconciled PASS before this dispatch.",
+    "Actions validation for this exact Group B subject already reconciled PASS."
   ]
 }
