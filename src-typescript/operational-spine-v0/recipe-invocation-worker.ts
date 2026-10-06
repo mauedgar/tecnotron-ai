@@ -13,31 +13,11 @@ import type {
   TaskCycleLifecycleCapability,
 } from './taskcycle-lifecycle-capability';
 import { createRecipeExecutionSurface } from './recipe-execution-surface';
+// @ts-ignore Existing runtime JS module has no declaration file; this preserves parent runtime behavior.
+import { qualifyGitExecutionSurface, qualificationSpecForRecipe } from './git-execution-qualification';
 import { FilesystemExecutionRecordStore } from './execution-record-store';
 import { createExecutionCoordinator } from '../execution-coordinator';
 import type { Reference } from './contracts';
-
-type GitQualificationSpec =
-  | Readonly<{ kind: 'INVALID'; reason: string }>
-  | Readonly<{
-      kind: 'REQUIRED';
-      expected_ref: string;
-      expected_commit: string;
-      remote?: Readonly<{ name: string; target_ref: string; expected_commit: string }>;
-    }>
-  | null
-  | undefined;
-
-const {
-  qualifyGitExecutionSurface,
-  qualificationSpecForRecipe,
-} = require('./git-execution-qualification') as {
-  qualifyGitExecutionSurface(request: unknown): GitExecutionQualificationResultValue;
-  qualificationSpecForRecipe(
-    recipe: Readonly<{ id: string; version: string }>,
-    input: unknown,
-  ): GitQualificationSpec;
-};
 
 interface StateKernelCompatibilityBinding {
   readonly executionLifecycle: ExecutionLifecycleCapability;
