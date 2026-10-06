@@ -1,0 +1,10 @@
+{
+  "schema_version": "tecnotron-tc-review-freeze-request/v0",
+  "request_id": "PREPARED-NOT-DISPATCHED",
+  "dispatch": "NOT_AUTHORIZED",
+  "notes": [
+    "Dedicated Developer Lab binding for deterministic frozen review interface materialization.",
+    "Update the exact executor, subject, evidence, review request, and authority refs before an authorized dispatch.",
+    "Actions freeze PASS is not Independent Review and is not Developer acceptance."
+  ]
+}
