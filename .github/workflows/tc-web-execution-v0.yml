@@ -1,0 +1,238 @@
+name: TC Web Execution v0
+
+on:
+  push:
+    branches:
+      - devlab/tc-web-execution-v0
+    paths:
+      - .tc-web/request.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tc-web-execution-v0
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout execution workspace
+        uses: actions/checkout@v4
+
+      - name: Parse exact execution request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .tc-web/request.json
+          jq -e '
+            .schema_version == "tecnotron-tc-web-execution-request/v0" and
+            (.request_id | type == "string" and length > 0) and
+            (.subject.commit | test("^[0-9a-f]{40}$")) and
+            (.subject.tree | test("^[0-9a-f]{40}$")) and
+            (.profile == "node22-bookworm-validation-v0") and
+            (.dispatch == "AUTHORIZED")
+          ' .tc-web/request.json >/dev/null
+
+          echo "request_id=$(jq -r '.request_id' .tc-web/request.json)" >> "$GITHUB_OUTPUT"
+          echo "product=$(jq -r '.product' .tc-web/request.json)" >> "$GITHUB_OUTPUT"
+          echo "task=$(jq -r '.task' .tc-web/request.json)" >> "$GITHUB_OUTPUT"
+          echo "gate=$(jq -r '.gate' .tc-web/request.json)" >> "$GITHUB_OUTPUT"
+          echo "subject_branch=$(jq -r '.subject.branch' .tc-web/request.json)" >> "$GITHUB_OUTPUT"
+          echo "subject_sha=$(jq -r '.subject.commit' .tc-web/request.json)" >> "$GITHUB_OUTPUT"
+          echo "subject_tree=$(jq -r '.subject.tree' .tc-web/request.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact Product subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.request.outputs.subject_sha }}
+          path: subject
+          fetch-depth: 1
+
+      - name: Verify exact commit and tree
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd subject
+          observed_sha="$(git rev-parse HEAD)"
+          observed_tree="$(git rev-parse HEAD^{tree})"
+          test "$observed_sha" = "${{ steps.request.outputs.subject_sha }}"
+          test "$observed_tree" = "${{ steps.request.outputs.subject_tree }}"
+          echo "observed_sha=$observed_sha" >> "$GITHUB_OUTPUT"
+          echo "observed_tree=$observed_tree" >> "$GITHUB_OUTPUT"
+
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: .tc-web-cache/npm
+          key: tc-web-node22-${{ runner.os }}-${{ hashFiles('subject/package-lock.json') }}
+          restore-keys: |
+            tc-web-node22-${{ runner.os }}-
+
+      - name: Prepare result directory
+        shell: bash
+        run: |
+          mkdir -p _tc_web_result .tc-web-cache/npm
+
+      - name: Run deterministic validation in Docker
+        id: validation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker pull node:22-bookworm >/dev/null
+          image_id="$(docker image inspect node:22-bookworm --format '{{.Id}}')"
+          echo "$image_id" > _tc_web_result/docker-image-id.txt
+
+          docker run --rm             -v "$PWD/subject:/workspace"             -v "$PWD/_tc_web_result:/result"             -v "$PWD/.tc-web-cache/npm:/root/.npm"             -w /workspace             node:22-bookworm             bash -lc '
+              set +e
+
+              run_and_record() {
+                name="$1"
+                shift
+                "$@" >"/result/$name.log" 2>&1
+                rc=$?
+                printf "%s=%s\n" "$name" "$rc" >> /result/codes.env
+                return 0
+              }
+
+              node --version > /result/node-version.txt 2>&1
+              npm --version > /result/npm-version.txt 2>&1
+
+              run_and_record npm_ci npm ci
+
+              if grep -q "^npm_ci=0$" /result/codes.env; then
+                run_and_record typecheck npm run typecheck
+                run_and_record build npm run build
+                run_and_record build_diff git diff --exit-code
+                run_and_record focused_tests node --test                   tests/operational-spine-v0/reconcile-and-close-taskcycle.test.js                   tests/operational-spine-v0/recipe-invocation.test.js                   tests/operational-spine-v0/recipe-invocation-worker.test.js
+                run_and_record full_tests npm test
+              else
+                printf "typecheck=125\nbuild=125\nbuild_diff=125\nfocused_tests=125\nfull_tests=125\n" >> /result/codes.env
+              fi
+            '
+
+          source _tc_web_result/codes.env
+
+          status=PASS
+          for rc in "$npm_ci" "$typecheck" "$build" "$build_diff" "$focused_tests" "$full_tests"; do
+            if [ "$rc" -ne 0 ]; then
+              status=FAIL
+            fi
+          done
+
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Materialize structured result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          request_id="${{ steps.request.outputs.request_id }}"
+          product="${{ steps.request.outputs.product }}"
+          task="${{ steps.request.outputs.task }}"
+          gate="${{ steps.request.outputs.gate }}"
+          subject_branch="${{ steps.request.outputs.subject_branch }}"
+          subject_sha="${{ steps.request.outputs.subject_sha }}"
+          subject_tree="${{ steps.request.outputs.subject_tree }}"
+          status="${{ steps.validation.outputs.status || 'UNAVAILABLE' }}"
+
+          if [ -f _tc_web_result/codes.env ]; then
+            # shellcheck disable=SC1091
+            source _tc_web_result/codes.env
+          else
+            npm_ci=125
+            typecheck=125
+            build=125
+            build_diff=125
+            focused_tests=125
+            full_tests=125
+          fi
+
+          node_version="$(cat _tc_web_result/node-version.txt 2>/dev/null || true)"
+          npm_version="$(cat _tc_web_result/npm-version.txt 2>/dev/null || true)"
+          docker_image_id="$(cat _tc_web_result/docker-image-id.txt 2>/dev/null || true)"
+
+          jq -n             --arg request_id "$request_id"             --arg product "$product"             --arg task "$task"             --arg gate "$gate"             --arg subject_branch "$subject_branch"             --arg subject_sha "$subject_sha"             --arg subject_tree "$subject_tree"             --arg status "$status"             --arg node_version "$node_version"             --arg npm_version "$npm_version"             --arg docker_image_id "$docker_image_id"             --argjson npm_ci "$npm_ci"             --argjson typecheck "$typecheck"             --argjson build "$build"             --argjson build_diff "$build_diff"             --argjson focused_tests "$focused_tests"             --argjson full_tests "$full_tests"             '{
+              schema_version: "tecnotron-tc-web-execution-result/v0",
+              request_id: $request_id,
+              product: $product,
+              task: $task,
+              gate: $gate,
+              subject: {
+                branch: $subject_branch,
+                commit: $subject_sha,
+                tree: $subject_tree
+              },
+              runtime: {
+                runner: "ubuntu-24.04",
+                container: "node:22-bookworm",
+                docker_image_id: $docker_image_id,
+                node: $node_version,
+                npm: $npm_version
+              },
+              status: $status,
+              checks: {
+                npm_ci: $npm_ci,
+                typecheck: $typecheck,
+                build: $build,
+                build_diff: $build_diff,
+                focused_tests: $focused_tests,
+                full_tests: $full_tests
+              },
+              Product_effect: "NONE",
+              authority: "NONE"
+            }' > _tc_web_result/manifest.json
+
+          cat > _tc_web_result/RESULT.md <<EOF
+          # TC Web Execution Result
+
+          - Request: `$request_id`
+          - Product: `$product`
+          - TASK: `$task`
+          - Gate: `$gate`
+          - Subject branch: `$subject_branch`
+          - Subject commit: `$subject_sha`
+          - Subject tree: `$subject_tree`
+          - Status: **$status**
+          - Product effect: **NONE**
+
+          ## Checks
+
+          - npm ci: `$npm_ci`
+          - typecheck: `$typecheck`
+          - build: `$build`
+          - build diff: `$build_diff`
+          - focused tests: `$focused_tests`
+          - full tests: `$full_tests`
+          EOF
+
+          {
+            echo "## TC Web Execution"
+            echo
+            echo "- Request: `$request_id`"
+            echo "- Subject: `$subject_sha`"
+            echo "- Tree: `$subject_tree`"
+            echo "- Status: **$status**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload execution result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tc-web-result-${{ steps.request.outputs.request_id }}
+          path: _tc_web_result/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Fail job on validation failure
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.validation.outputs.status }}" = "PASS"
