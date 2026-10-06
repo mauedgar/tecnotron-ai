@@ -16,6 +16,7 @@ const {
   createRecipeInvocationEntrypoint,
 } = require('../../src/operational-spine-v0/recipe-invocation');
 const {
+  runWorkerInvocation,
   workerExceptionResult,
 } = require('../../src/operational-spine-v0/recipe-invocation-worker');
 
@@ -61,6 +62,138 @@ test('worker exception distinguishes explicit missing attempt from inspection fa
   assert.equal(failedObservation.terminal_status, 'UNKNOWN');
   assert.equal(failedObservation.effect_state, 'UNKNOWN');
   assert.equal(failedObservation.started, true);
+});
+
+test('worker invokes an exact Recipe through an injected non-State-Kernel lifecycle binding', async t => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'tecnotron-portable-worker-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const envelope = workerEnvelope();
+  envelope.request.operation_ref = 'OP-PORTABLE-WORKER';
+  envelope.request.responsibility_ref = 'TEST_PORTABLE_WORKER';
+  envelope.request.authority_ref = 'DEV-PORTABLE-WORKER';
+  envelope.attempt_ref = 'ATTEMPT-PORTABLE-WORKER';
+  envelope.environment.state_store = { reference: 'state:portable-test', location: home };
+
+  const operation = {
+    kind: 'Operation',
+    id: envelope.request.operation_ref,
+    taskcycle_id: 'TC-PORTABLE-WORKER',
+    state: 'DEFINED',
+  };
+  const calls = [];
+  let recordedOutcome = null;
+  const binding = {
+    executionLifecycle: {
+      observeOperation(operationId) {
+        assert.equal(operationId, operation.id);
+        calls.push(['observeOperation', operationId]);
+        return { aggregate: operation, store_revision: 1, legal_next: [] };
+      },
+      observeAttemptPresence(attemptId) {
+        calls.push(['observeAttemptPresence', attemptId]);
+        return 'ABSENT';
+      },
+      prepareAttempt(input) {
+        calls.push(['prepareAttempt', input]);
+        assert.equal(input.attemptId, envelope.attempt_ref);
+        assert.equal(input.operationId, operation.id);
+        assert.deepEqual(input.authorityRefs, [{ kind: 'AUTHORITY', id: envelope.request.authority_ref }]);
+        return {
+          operation: { aggregate: { ...operation, state: 'RUNNING' }, store_revision: 2, legal_next: [] },
+          attempt: {
+            aggregate: {
+              id: input.attemptId,
+              revision: 1,
+              state: 'STARTED',
+              operation_id: input.operationId,
+              reconciliation_required: false,
+            },
+            store_revision: 2,
+            legal_next: [],
+          },
+        };
+      },
+      confirmDispatchStart(attemptId) {
+        calls.push(['confirmDispatchStart', attemptId]);
+        assert.equal(attemptId, envelope.attempt_ref);
+        return {
+          aggregate: {
+            id: attemptId,
+            revision: 2,
+            state: 'RUNNING',
+            operation_id: operation.id,
+            reconciliation_required: false,
+          },
+          store_revision: 3,
+          legal_next: [],
+        };
+      },
+      recordPreflightTerminalOutcome() {
+        assert.fail('READY preflight must dispatch instead of recording a preflight terminal outcome');
+      },
+      recordExecutionOutcome(input) {
+        calls.push(['recordExecutionOutcome', input]);
+        recordedOutcome = input;
+        return {
+          operation: { aggregate: { ...operation, state: 'COMPLETED' }, store_revision: 4, legal_next: [] },
+          attempt: {
+            aggregate: {
+              id: input.attemptId,
+              revision: 3,
+              state: 'COMPLETED',
+              operation_id: input.operationId,
+              reconciliation_required: false,
+              outcome: 'PASS',
+            },
+            store_revision: 4,
+            legal_next: [],
+          },
+        };
+      },
+    },
+    taskcycleLifecycle: new Proxy({}, {
+      get() {
+        assert.fail('render_current_state must not use TaskCycle lifecycle capability');
+      },
+    }),
+    renderState() {
+      calls.push(['renderState']);
+      return 'portable in-memory projection';
+    },
+  };
+
+  const result = await runWorkerInvocation(envelope, { binding });
+
+  assert.equal(result.terminal_status, 'PASS');
+  assert.equal(result.effect_state, 'NONE');
+  assert.equal(result.started, true);
+  assert.deepEqual(result.recipe, { id: 'render_current_state', version: 'v0' });
+  assert.equal(result.operation_ref, operation.id);
+  assert.equal(result.attempt_ref, envelope.attempt_ref);
+  assert.equal(result.receipt_ref, `recipe-receipt:${envelope.attempt_ref}:render-current-state`);
+  assert.equal(result.receipt.operation_id, operation.id);
+  assert.equal(result.receipt.execution_attempt_id, envelope.attempt_ref);
+  assert.equal(result.receipt.recipe_id, envelope.request.recipe.id);
+  assert.equal(result.receipt.recipe_version, envelope.request.recipe.version);
+  assert.equal(result.receipt.status, result.terminal_status);
+  assert.equal(result.receipt.output.projection, 'portable in-memory projection');
+  assert.equal(recordedOutcome.attemptId, envelope.attempt_ref);
+  assert.equal(recordedOutcome.operationId, operation.id);
+  assert.equal(recordedOutcome.coordinatorOutcome.status, 'SUCCESS');
+  assert.deepEqual(recordedOutcome.receipt, result.receipt);
+  assert.deepEqual(recordedOutcome.resultRefs.map(ref => ref.id), [
+    `plan:${operation.id}`,
+    `receipt:${envelope.attempt_ref}`,
+  ]);
+  assert.deepEqual(calls.map(([name]) => name), [
+    'observeOperation',
+    'observeOperation',
+    'prepareAttempt',
+    'confirmDispatchStart',
+    'renderState',
+    'recordExecutionOutcome',
+  ]);
+  assert.equal(fs.existsSync(path.join(home, 'state', 'kernel-v0')), false);
 });
 
 test('stable native entrypoint invokes a real shipped Recipe through the current Spine', { skip: process.platform === 'win32' }, async t => {

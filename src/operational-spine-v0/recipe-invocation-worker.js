@@ -192,9 +192,10 @@ function workerExceptionResult(envelope, reason, observeAttempt, gitQualificatio
         ? blocked(envelope, `WORKER_EXCEPTION_BEFORE_ATTEMPT:${reason}`, gitQualification)
         : unknown(envelope, `WORKER_EXCEPTION_AFTER_POSSIBLE_ATTEMPT:${reason}`, gitQualification);
 }
-async function runWorkerInvocation(rawEnvelope) {
+async function runWorkerInvocation(rawEnvelope, options = {}) {
     const envelope = invocation_contracts_1.WorkerInvocationEnvelope.parse(rawEnvelope);
-    const binding = createStateKernelCompatibilityBinding({ home: envelope.environment.state_store.location });
+    const binding = options.binding
+        ?? createStateKernelCompatibilityBinding({ home: envelope.environment.state_store.location });
     const recipe = createBuiltinRecipe(envelope.request.recipe.id, envelope.request.recipe.version, binding);
     if (!recipe)
         return blocked(envelope, 'RECIPE_NOT_SHIPPED_BY_STABLE_ENTRYPOINT');

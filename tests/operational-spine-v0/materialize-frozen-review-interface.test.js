@@ -15,6 +15,7 @@ const {
   createReviewGitAdapter,
   createTar,
   readTar,
+  renderReviewPrompt,
   verifyArchive,
 } = require('../../src/operational-spine-v0/recipes/materialize-frozen-review-interface');
 const { RecipeRegistry } = require('../../src/operational-spine-v0/recipe-registry');
@@ -37,6 +38,17 @@ function git(cwd, args) {
   });
   assert.equal(result.status, 0, `${args.join(' ')}\n${result.stderr}`);
   return result.stdout.trim();
+}
+
+function gitBytes(cwd, args) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: null,
+    shell: false,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  });
+  assert.equal(result.status, 0, `${args.join(' ')}\n${result.stderr?.toString('utf8') || ''}`);
+  return result.stdout;
 }
 
 function fixture(t, { candidatePath = 'candidate.txt' } = {}) {
@@ -82,9 +94,58 @@ function fixture(t, { candidatePath = 'candidate.txt' } = {}) {
   };
 }
 
+function rangeFixture(t) {
+  const f = fixture(t);
+  fs.writeFileSync(path.join(f.repo, 'range-second.txt'), 'second range commit\n');
+  git(f.repo, ['add', '.']);
+  git(f.repo, ['commit', '-m', 'second range commit']);
+  const acceptedTip = git(f.repo, ['rev-parse', 'HEAD']);
+  return {
+    ...f,
+    acceptedTip,
+    acceptedTipParent: git(f.repo, ['rev-parse', 'HEAD^1']),
+    acceptedTipTree: git(f.repo, ['rev-parse', 'HEAD^{tree}']),
+    orderedCommitRange: git(f.repo, ['rev-list', '--reverse', '--topo-order', `${f.parent}..${acceptedTip}`]).split(/\r?\n/),
+    changedPaths: ['candidate.txt', 'range-second.txt'],
+  };
+}
+
+function rangeSubject(f) {
+  return {
+    integration_range_base: f.parent,
+    accepted_tip: f.acceptedTip,
+    accepted_tip_parent: f.acceptedTipParent,
+    accepted_tip_tree: f.acceptedTipTree,
+    ordered_commit_range: f.orderedCommitRange,
+    commit_count: f.orderedCommitRange.length,
+    changed_paths: f.changedPaths,
+  };
+}
+
+function mergedRangeFixture(t) {
+  const f = rangeFixture(t);
+  git(f.repo, ['checkout', '-b', 'range-feature', f.commit]);
+  fs.writeFileSync(path.join(f.repo, 'range-feature.txt'), 'feature range commit\n');
+  git(f.repo, ['add', '.']);
+  git(f.repo, ['commit', '-m', 'feature range commit']);
+  git(f.repo, ['checkout', 'candidate']);
+  git(f.repo, ['merge', '--no-ff', '--no-edit', 'range-feature']);
+  const acceptedTip = git(f.repo, ['rev-parse', 'HEAD']);
+  return {
+    ...f,
+    acceptedTip,
+    acceptedTipParent: git(f.repo, ['rev-parse', 'HEAD^1']),
+    acceptedTipTree: git(f.repo, ['rev-parse', 'HEAD^{tree}']),
+    orderedCommitRange: git(f.repo, ['rev-list', '--reverse', '--topo-order', `${f.parent}..${acceptedTip}`]).split(/\r?\n/),
+    changedPaths: ['candidate.txt', 'range-feature.txt', 'range-second.txt'],
+  };
+}
+
 function request(f, {
   interfaceId = 'REVIEW-INTERFACE-001',
   attemptId = 'ATTEMPT-001',
+  exactSubject = null,
+  renderPrompt = false,
   input = {},
   authorization = null,
   evidenceRefs = null,
@@ -97,18 +158,22 @@ function request(f, {
     location: 'validation.json',
     sha256: validationHash,
   };
+  const subject = exactSubject || {
+    parent: f.parent,
+    commit: f.commit,
+    tree: f.tree,
+    changed_paths: [f.candidatePath],
+  };
+  const exactSubjectCommit = subject.accepted_tip || subject.commit;
+  const exactSubjectBase = subject.integration_range_base || subject.parent;
   const resolvedInput = {
     interface_id: interfaceId,
     output_root: f.output,
+    ...(renderPrompt ? { render_review_prompt: true } : {}),
     review_instance: {
       TaskCycle: 'TASKCYCLE-REVIEW-001',
       responsibility: 'MATURE_EXISTING_FREEZE_REVIEW_INTERFACE_RESPONSIBILITY',
-      exact_subject: {
-        parent: f.parent,
-        commit: f.commit,
-        tree: f.tree,
-        changed_paths: [f.candidatePath],
-      },
+      exact_subject: subject,
       review_request: {
         id: 'review-request',
         kind: 'FILE',
@@ -128,7 +193,7 @@ function request(f, {
         {
           id: 'candidate-source',
           kind: 'GIT_BLOB',
-          revision: f.commit,
+          revision: exactSubjectCommit,
           repository_path: f.candidatePath,
           package_path: 'candidate/candidate.txt',
           git_oid: f.blob,
@@ -136,8 +201,8 @@ function request(f, {
         {
           id: 'candidate-diff',
           kind: 'GIT_DIFF',
-          parent: f.parent,
-          commit: f.commit,
+          parent: exactSubjectBase,
+          commit: exactSubjectCommit,
           package_path: 'candidate/candidate.diff',
         },
       ],
@@ -165,7 +230,7 @@ function request(f, {
       taskcycle_id: 'TASKCYCLE-REVIEW-001',
       repository: { identity: 'fixture', location: f.repo },
       worktree: { identity: 'candidate', location: f.repo },
-      git: { expected_ref: 'refs/heads/candidate', expected_commit: f.commit },
+      git: { expected_ref: 'refs/heads/candidate', expected_commit: exactSubjectCommit },
       runtime: { executor: 'test', platform: process.platform, runtime_identity: process.version },
       state_store: { reference: 'fixture-state' },
       authority_refs: [authorityRef],
@@ -257,6 +322,109 @@ test('materializes exact bytes, verifies archive and manifest, and preserves can
   }
   assert.equal(Object.hasOwn(receipt.output, 'verdict'), false);
   assert.equal(Object.hasOwn(receipt.output, 'developer_acceptance'), false);
+});
+
+test('materializes an exact first-parent linear range with base-to-tip evidence', async t => {
+  const f = rangeFixture(t);
+  const subject = rangeSubject(f);
+  const recipe = createMaterializeFrozenReviewInterfaceRecipe();
+  const req = request(f, { exactSubject: subject, interfaceId: 'REVIEW-RANGE-001' });
+
+  assert.deepEqual(await recipe.preflight(req), { status: 'READY' });
+  const before = git(f.repo, ['rev-parse', 'HEAD']);
+  const receipt = await recipe.execute(req);
+
+  assert.equal(receipt.status, 'PASS');
+  assert.deepEqual(receipt.output.candidate_correspondence, { ...subject, unchanged: true });
+  assert.equal(git(f.repo, ['rev-parse', 'HEAD']), before);
+  assert.equal(git(f.repo, ['status', '--porcelain=v1', '--untracked-files=all']), '');
+
+  const members = readTar(fs.readFileSync(receipt.output.archive_path));
+  const manifest = JSON.parse(members.get('manifest.json').toString('utf8'));
+  assert.deepEqual(manifest.exact_subject, subject);
+  assert.equal(
+    members.get('candidate/candidate.diff').equals(gitBytes(f.repo, [
+      'diff', '--binary', '--full-index', '--no-ext-diff', '--no-renames',
+      subject.integration_range_base, subject.accepted_tip, '--',
+    ])),
+    true,
+  );
+});
+
+test('exact range identity mismatches and hidden merges fail before materialization', async t => {
+  await t.test('tip parent mismatch', async st => {
+    const f = rangeFixture(st);
+    const subject = { ...rangeSubject(f), accepted_tip_parent: f.parent };
+    assert.deepEqual(await createMaterializeFrozenReviewInterfaceRecipe().preflight(request(f, { exactSubject: subject })), {
+      status: 'BLOCKED', reason: 'CANDIDATE_PARENT_MISMATCH',
+    });
+    assert.deepEqual(fs.readdirSync(f.output), []);
+  });
+
+  await t.test('changed paths mismatch', async st => {
+    const f = rangeFixture(st);
+    const subject = { ...rangeSubject(f), changed_paths: ['base.txt'] };
+    assert.deepEqual(await createMaterializeFrozenReviewInterfaceRecipe().preflight(request(f, { exactSubject: subject })), {
+      status: 'BLOCKED', reason: 'ACCEPTED_RANGE_CHANGED_PATHS_MISMATCH',
+    });
+    assert.deepEqual(fs.readdirSync(f.output), []);
+  });
+
+  await t.test('hidden merge', async st => {
+    const f = mergedRangeFixture(st);
+    const preflight = await createMaterializeFrozenReviewInterfaceRecipe().preflight(request(f, {
+      exactSubject: rangeSubject(f),
+      interfaceId: 'REVIEW-MERGE-001',
+    }));
+    assert.equal(preflight.status, 'BLOCKED');
+    assert.ok([
+      'ACCEPTED_RANGE_NON_LINEAR',
+      'ACCEPTED_RANGE_HIDDEN_MERGE_OR_NON_LINEAR',
+    ].includes(preflight.reason));
+    assert.deepEqual(fs.readdirSync(f.output), []);
+  });
+});
+
+test('renders a deterministic external prompt bound to archive, manifest, and exact subject', async t => {
+  const f = rangeFixture(t);
+  const subject = rangeSubject(f);
+  const req = request(f, {
+    exactSubject: subject,
+    interfaceId: 'REVIEW-RANGE-PROMPT-001',
+    renderPrompt: true,
+  });
+  const receipt = await createMaterializeFrozenReviewInterfaceRecipe().execute(req);
+
+  assert.equal(receipt.status, 'PASS');
+  const prompt = fs.readFileSync(receipt.output.review_prompt.path);
+  const promptText = prompt.toString('utf8');
+  const archive = fs.readFileSync(receipt.output.archive_path);
+  const members = readTar(archive);
+  const renderArguments = {
+    interfaceId: req.input.interface_id,
+    TaskCycle: req.input.review_instance.TaskCycle,
+    responsibility: req.input.review_instance.responsibility,
+    archiveFilename: path.basename(receipt.output.archive_path),
+    archiveSha256: receipt.output.archive_sha256,
+    archiveSize: receipt.output.archive_size,
+    archiveEntryCount: receipt.output.archive_entry_count,
+    manifestSha256: receipt.output.manifest_sha256,
+    exactSubject: subject,
+  };
+
+  assert.equal(sha256(prompt), receipt.output.review_prompt.sha256);
+  assert.equal(prompt.equals(renderReviewPrompt(renderArguments)), true);
+  assert.equal(renderReviewPrompt(renderArguments).equals(renderReviewPrompt(renderArguments)), true);
+  assert.equal(receipt.output.review_prompt.archive_sha256, sha256(archive));
+  assert.equal(receipt.output.review_prompt.manifest_sha256, sha256(members.get('manifest.json')));
+  assert.match(promptText, new RegExp(subject.integration_range_base));
+  assert.match(promptText, new RegExp(subject.accepted_tip));
+  assert.match(promptText, /complete input boundary/);
+  assert.match(promptText, /review read-only/);
+  assert.match(promptText, /`PASS`, `FAIL`, or `BLOCKED`/);
+  assert.match(promptText, /`PASS` is not Developer acceptance/);
+  assert.equal([...members.keys()].some(name => name.includes('review-prompt')), false);
+  assert.equal(receipt.result_refs.some(ref => ref.id === 'review-prompt:REVIEW-RANGE-PROMPT-001'), true);
 });
 
 test('preflights and materializes an exact candidate changing only a dot-prefixed repository path', async t => {
