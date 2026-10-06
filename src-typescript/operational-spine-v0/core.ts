@@ -20,45 +20,15 @@ import {
 } from './contracts';
 import type { ExecutionRecordStorePort } from './execution-record-store';
 import type { RecipePreflight, RecipeRegistryPort } from './recipe-registry';
+import { requireExecutionLifecycleCapability, type ExecutionLifecycleCapability } from './taskcycle-lifecycle-capability';
 import { materializeExecutionPlan, type OperationAggregate } from './resolution';
-
-interface StateKernelInspection {
-  readonly aggregate: OperationAggregate;
-  readonly [key: string]: unknown;
-}
-
-export interface StateKernelPort {
-  inspectOperation(operationId: OperationId): StateKernelInspection;
-  ensureOperationRunning(operationId: OperationId): unknown;
-  startAttempt(input: Readonly<{
-    attemptId: ExecutionAttemptId;
-    operationId: OperationId;
-    authorityRefs: readonly Reference[];
-  }>): unknown;
-  markAttemptDispatched(attemptId: ExecutionAttemptId): unknown;
-  markAttemptRunning(attemptId: ExecutionAttemptId): unknown;
-  recordPreflightTerminal(input: Readonly<{
-    attemptId: ExecutionAttemptId;
-    operationId: OperationId;
-    status: Exclude<RecipePreflight['status'], 'READY'>;
-    receipt: RecipeReceiptValue;
-    resultRefs: readonly Reference[];
-  }>): Record<string, unknown>;
-  recordExecutionOutcome(input: Readonly<{
-    attemptId: ExecutionAttemptId;
-    operationId: OperationId;
-    coordinatorOutcome: ExecutionOutcome;
-    receipt: RecipeReceiptValue;
-    resultRefs: readonly Reference[];
-  }>): Record<string, unknown>;
-}
 
 export interface ExecutionCoordinatorPort {
   runAttempt(request: ExecutionAttemptRequestInput): Promise<ExecutionOutcome>;
 }
 
 export interface OperationalSpineDependencies {
-  readonly stateKernel: StateKernelPort;
+  readonly executionLifecycle: ExecutionLifecycleCapability;
   readonly recipeRegistry: RecipeRegistryPort;
   readonly executionCoordinator: ExecutionCoordinatorPort;
   readonly executionRecordStore: ExecutionRecordStorePort;
@@ -182,12 +152,12 @@ function effectProfileKey(effects: readonly EffectDescriptor[]): string {
 }
 
 export function createOperationalSpine({
-  stateKernel,
+  executionLifecycle,
   recipeRegistry,
   executionCoordinator,
   executionRecordStore,
 }: OperationalSpineDependencies) {
-  if (!stateKernel || typeof stateKernel.inspectOperation !== 'function') throw new TypeError('stateKernel adapter is required');
+  const lifecycle = requireExecutionLifecycleCapability(executionLifecycle);
   if (!recipeRegistry || typeof recipeRegistry.resolve !== 'function') throw new TypeError('recipeRegistry is required');
   if (!executionCoordinator || typeof executionCoordinator.runAttempt !== 'function') {
     throw new TypeError('executionCoordinator.runAttempt is required');
@@ -204,7 +174,7 @@ export function createOperationalSpine({
     evidenceRefs,
     input,
   }: PlanRequest): ExecutionPlanValue {
-    const observed = stateKernel.inspectOperation(operationId).aggregate;
+    const observed = lifecycle.observeOperation(operationId).aggregate;
     let executionPlan = materializeExecutionPlan({
       operation: observed,
       executionContext,
@@ -239,7 +209,7 @@ export function createOperationalSpine({
         status: 'SEMANTIC_ESCALATION_REQUIRED' as const,
         plan: executionPlan,
         attempt: null,
-        operation: stateKernel.inspectOperation(executionPlan.operation_id),
+        operation: lifecycle.observeOperation(executionPlan.operation_id),
         plan_ref: planRef,
       };
     }
@@ -255,7 +225,7 @@ export function createOperationalSpine({
         reason: `EFFECT_PROFILE_RESOLUTION_FAILED:${errorMessage(error)}`,
         plan: executionPlan,
         attempt: null,
-        operation: stateKernel.inspectOperation(executionPlan.operation_id),
+        operation: lifecycle.observeOperation(executionPlan.operation_id),
         plan_ref: planRef,
       };
     }
@@ -266,7 +236,7 @@ export function createOperationalSpine({
         reason: 'EXECUTION_INPUT_EFFECT_PROFILE_MISMATCH',
         plan: executionPlan,
         attempt: null,
-        operation: stateKernel.inspectOperation(executionPlan.operation_id),
+        operation: lifecycle.observeOperation(executionPlan.operation_id),
         plan_ref: planRef,
       };
     }
@@ -277,7 +247,7 @@ export function createOperationalSpine({
         reason: 'CANCELLED_BEFORE_ATTEMPT',
         plan: executionPlan,
         attempt: null,
-        operation: stateKernel.inspectOperation(executionPlan.operation_id),
+        operation: lifecycle.observeOperation(executionPlan.operation_id),
         plan_ref: planRef,
       };
     }
@@ -288,7 +258,7 @@ export function createOperationalSpine({
         reason: `AUTHORIZATION_${authorization?.disposition || 'MISSING'}`,
         plan: executionPlan,
         attempt: null,
-        operation: stateKernel.inspectOperation(executionPlan.operation_id),
+        operation: lifecycle.observeOperation(executionPlan.operation_id),
         plan_ref: planRef,
       };
     }
@@ -298,7 +268,7 @@ export function createOperationalSpine({
         reason: 'AUTHORITY_REFERENCE_NOT_IN_PLAN',
         plan: executionPlan,
         attempt: null,
-        operation: stateKernel.inspectOperation(executionPlan.operation_id),
+        operation: lifecycle.observeOperation(executionPlan.operation_id),
         plan_ref: planRef,
       };
     }
@@ -308,7 +278,7 @@ export function createOperationalSpine({
         reason: 'EFFECT_AUTHORIZATION_INCOMPLETE',
         plan: executionPlan,
         attempt: null,
-        operation: stateKernel.inspectOperation(executionPlan.operation_id),
+        operation: lifecycle.observeOperation(executionPlan.operation_id),
         plan_ref: planRef,
       };
     }
@@ -318,7 +288,7 @@ export function createOperationalSpine({
         reason: `HARNESS_${harnessConformance?.disposition || 'MISSING'}`,
         plan: executionPlan,
         attempt: null,
-        operation: stateKernel.inspectOperation(executionPlan.operation_id),
+        operation: lifecycle.observeOperation(executionPlan.operation_id),
         plan_ref: planRef,
       };
     }
@@ -340,8 +310,7 @@ export function createOperationalSpine({
       throw new Error(`unsupported recipe preflight status: ${(preflight as { status: string }).status}`);
     }
 
-    stateKernel.ensureOperationRunning(executionPlan.operation_id);
-    stateKernel.startAttempt({
+    lifecycle.prepareAttempt({
       attemptId: executionAttemptId,
       operationId: executionPlan.operation_id,
       authorityRefs: executionPlan.authority_refs,
@@ -369,7 +338,7 @@ export function createOperationalSpine({
           evidenceRefs: preflight.evidence_refs ?? [],
         });
       }
-      const lifecycle = stateKernel.recordPreflightTerminal({
+      const lifecycle = lifecycle.recordPreflightTerminalOutcome({
         attemptId: executionAttemptId,
         operationId: executionPlan.operation_id,
         status: terminalStatus,
@@ -386,8 +355,7 @@ export function createOperationalSpine({
       };
     }
 
-    stateKernel.markAttemptDispatched(executionAttemptId);
-    stateKernel.markAttemptRunning(executionAttemptId);
+    lifecycle.confirmDispatchStart(executionAttemptId);
 
     const executionRecipeRequest = preflight.handoff === undefined
       ? recipeRequest
@@ -530,7 +498,7 @@ export function createOperationalSpine({
       };
     }
 
-    const lifecycle = stateKernel.recordExecutionOutcome({
+    const lifecycle = lifecycle.recordExecutionOutcome({
       attemptId: executionAttemptId,
       operationId: executionPlan.operation_id,
       coordinatorOutcome,
