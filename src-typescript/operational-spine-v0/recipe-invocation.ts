@@ -17,11 +17,6 @@ import {
 import { executionRequirementsForRecipe, resolveExecutionSurface } from './surface-resolution';
 import type { Reference } from './contracts';
 
-const kernel = require('../state-kernel-v0') as {
-  FilesystemStateStore: new (home: string) => unknown;
-  inspect(store: unknown, kind: 'ExecutionAttempt', id: string): unknown;
-};
-
 export interface SurfaceLaunchResult {
   readonly started: boolean;
   readonly exit_code: number | null;
@@ -276,18 +271,6 @@ function persistResult(
   }
 }
 
-function attemptWasCreated(environment: RecipeInvocationEnvironmentValue, attemptId: string): boolean | null {
-  try {
-    const store = new kernel.FilesystemStateStore(environment.state_store.location);
-    kernel.inspect(store, 'ExecutionAttempt', attemptId);
-    return true;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.includes(`missing ExecutionAttempt/${attemptId}`)) return false;
-    return null;
-  }
-}
-
 export interface RecipeInvocationEntrypointOptions {
   readonly launchers?: ReadonlyMap<string, SurfaceLauncher>;
   readonly artifactStore?: InvocationArtifactStore;
@@ -303,7 +286,7 @@ export function createRecipeInvocationEntrypoint(
   const launchers = options.launchers ?? defaultLaunchers(environment);
   const artifactStore = options.artifactStore ?? new FilesystemInvocationArtifactStore(environment.state_store.location);
   const attemptIdFactory = options.attemptIdFactory ?? (() => `ATTEMPT-${crypto.randomUUID()}`);
-  const attemptObserver = options.attemptObserver ?? ((attemptId: string) => attemptWasCreated(environment, attemptId));
+  const attemptObserver = options.attemptObserver ?? (() => null);
 
   async function invoke(rawRequest: unknown): Promise<RecipeInvocationResultValue> {
     const parsedRequest = RecipeInvocationRequest.safeParse(rawRequest);
