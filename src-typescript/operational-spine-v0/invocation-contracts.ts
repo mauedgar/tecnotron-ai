@@ -266,6 +266,7 @@ export const RecipeInvocationResult = z.object({
   reason: NonEmpty.optional(),
   validation_issues: z.array(NonEmpty).default([]),
   supplementary_diagnostics: z.array(NonEmpty).default([]),
+  git_execution_qualification: GitExecutionQualificationResult.nullable().default(null),
 }).strict().superRefine((value, ctx) => {
   if (!value.started && value.effect_state !== 'NONE') {
     ctx.addIssue({ code: 'custom', path: ['effect_state'], message: 'pre-start result requires effect_state=NONE' });
