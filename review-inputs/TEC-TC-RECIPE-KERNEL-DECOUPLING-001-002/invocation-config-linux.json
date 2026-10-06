@@ -1,0 +1,29 @@
+{
+  "schema_version": "tecnotron-recipe-invocation-environment/v0",
+  "repository": {
+    "identity": "mauedgar/tecnotron-ai",
+    "location": "/candidate"
+  },
+  "state_store": {
+    "reference": "state:TASKCYCLE-TECNOTRON-RECIPE-KERNEL-DECOUPLING-001",
+    "location": "/home"
+  },
+  "surfaces": [
+    {
+      "id": "canonical-linux-native-node22",
+      "adapter": "NATIVE_NODE",
+      "capabilities": [
+        "NODE_RUNTIME",
+        "CHILD_PROCESS",
+        "FILESYSTEM_WRITE",
+        "REPOSITORY_ACCESS",
+        "DURABLE_DIRECTORY_FSYNC",
+        "LINUX_SEMANTICS"
+      ],
+      "conformance": {
+        "disposition": "CONFORMING",
+        "evidence_ref": "evidence:canonical-node22-linux-durable-runtime"
+      }
+    }
+  ]
+}
