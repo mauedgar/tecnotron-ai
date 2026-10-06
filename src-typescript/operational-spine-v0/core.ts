@@ -23,6 +23,14 @@ import type { RecipePreflight, RecipeRegistryPort } from './recipe-registry';
 import { requireExecutionLifecycleCapability, type ExecutionLifecycleCapability } from './taskcycle-lifecycle-capability';
 import { materializeExecutionPlan, type OperationAggregate } from './resolution';
 
+/**
+ * @deprecated Type-only compatibility for historical downstream typechecks.
+ * OperationalSpine no longer depends on this shape.
+ */
+export interface StateKernelPort {
+  inspectOperation(operationId: OperationId): unknown;
+}
+
 export interface ExecutionCoordinatorPort {
   runAttempt(request: ExecutionAttemptRequestInput): Promise<ExecutionOutcome>;
 }
@@ -338,7 +346,7 @@ export function createOperationalSpine({
           evidenceRefs: preflight.evidence_refs ?? [],
         });
       }
-      const lifecycle = lifecycle.recordPreflightTerminalOutcome({
+      const lifecycleResult = lifecycle.recordPreflightTerminalOutcome({
         attemptId: executionAttemptId,
         operationId: executionPlan.operation_id,
         status: terminalStatus,
@@ -351,7 +359,7 @@ export function createOperationalSpine({
         receipt,
         plan_ref: planRef,
         receipt_artifact_ref: receiptArtifactRef,
-        ...lifecycle,
+        ...lifecycleResult,
       };
     }
 
@@ -498,7 +506,7 @@ export function createOperationalSpine({
       };
     }
 
-    const lifecycle = lifecycle.recordExecutionOutcome({
+    const lifecycleResult = lifecycle.recordExecutionOutcome({
       attemptId: executionAttemptId,
       operationId: executionPlan.operation_id,
       coordinatorOutcome,
@@ -512,7 +520,7 @@ export function createOperationalSpine({
       plan_ref: planRef,
       receipt_artifact_ref: receiptArtifactRef,
       coordinator_outcome: coordinatorOutcome,
-      ...lifecycle,
+      ...lifecycleResult,
     };
   }
 
