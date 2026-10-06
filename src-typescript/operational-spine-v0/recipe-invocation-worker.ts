@@ -6,28 +6,26 @@ import {
   type WorkerInvocationEnvelope as WorkerInvocationEnvelopeValue,
 } from './invocation-contracts';
 import { RecipeRegistry, type RecipePort } from './recipe-registry';
-import { createOperationalSpine, type StateKernelPort } from './core';
+import { createOperationalSpine } from './core';
+import type {
+  ExecutionLifecycleCapability,
+  TaskCycleLifecycleCapability,
+} from './taskcycle-lifecycle-capability';
 import { createRecipeExecutionSurface } from './recipe-execution-surface';
 import { FilesystemExecutionRecordStore } from './execution-record-store';
 import { createExecutionCoordinator } from '../execution-coordinator';
 import type { Reference } from './contracts';
 
-interface StateStoreLike {
-  verify(): { valid: boolean; revision: number; event_count: number };
+interface StateKernelCompatibilityBinding {
+  readonly executionLifecycle: ExecutionLifecycleCapability;
+  readonly taskcycleLifecycle: TaskCycleLifecycleCapability;
+  renderState(): string;
 }
 
-const kernel = require('../state-kernel-v0') as {
-  FilesystemStateStore: new (home: string) => StateStoreLike;
-  inspect(store: StateStoreLike, kind: 'TaskCycle' | 'Operation' | 'ExecutionAttempt', id: string): any;
-  obligations(store: StateStoreLike, id: string): any;
-  satisfy(store: StateStoreLike, expectedRevision: number, id: string, obligationId: string, authorityRef?: string, authorityReference?: Reference): any;
-  transition(store: StateStoreLike, expectedRevision: number, kind: 'TaskCycle', id: string, target: string, options?: any): any;
-  render(store: StateStoreLike): string;
+const { createStateKernelCompatibilityBinding } = require('./state-kernel-adapter') as {
+  createStateKernelCompatibilityBinding(args: { home: string }): StateKernelCompatibilityBinding;
 };
 
-const { createStateKernelAdapter } = require('./state-kernel-adapter') as {
-  createStateKernelAdapter(args: { store: StateStoreLike }): StateKernelPort;
-};
 const { createRenderCurrentStateRecipe } = require('./recipes/render-current-state') as {
   createRenderCurrentStateRecipe(args: { renderState: () => string }): RecipePort;
 };
@@ -38,7 +36,7 @@ const { createMaterializeFrozenReviewInterfaceRecipe } = require('./recipes/mate
   createMaterializeFrozenReviewInterfaceRecipe(): RecipePort;
 };
 const { createReconcileAndCloseTaskCycleRecipe } = require('./recipes/reconcile-and-close-taskcycle') as {
-  createReconcileAndCloseTaskCycleRecipe(args: { stateKernel: unknown }): RecipePort;
+  createReconcileAndCloseTaskCycleRecipe(args: { lifecycle: TaskCycleLifecycleCapability }): RecipePort;
 };
 const { createPrepareFitFlowTestRuntimeRecipe } = require('./recipes/prepare-fitflow-test-runtime') as {
   createPrepareFitFlowTestRuntimeRecipe(): RecipePort;
@@ -94,36 +92,17 @@ function unknown(envelope: WorkerInvocationEnvelopeValue, reason: string): Recip
   });
 }
 
-function closureKernel(store: StateStoreLike) {
-  return {
-    verify: () => store.verify(),
-    inspectTaskCycle: (id: string) => kernel.inspect(store, 'TaskCycle', id),
-    inspectOperation: (id: string) => kernel.inspect(store, 'Operation', id),
-    inspectAttempt: (id: string) => kernel.inspect(store, 'ExecutionAttempt', id),
-    obligations: (id: string) => kernel.obligations(store, id),
-    satisfyObligation: ({ expectedRevision, taskcycleId, obligationId, authorityRef, authorityReference }: any) => (
-      kernel.satisfy(store, expectedRevision, taskcycleId, obligationId, authorityRef, authorityReference)
-    ),
-    transitionTaskCycle: ({ expectedRevision, taskcycleId, target, authorityRef, dispositionRef }: any) => (
-      kernel.transition(store, expectedRevision, 'TaskCycle', taskcycleId, target, {
-        authority_ref: authorityRef,
-        disposition_ref: dispositionRef,
-      })
-    ),
-  };
-}
-
-function createBuiltinRecipe(recipeId: string, recipeVersion: string, store: StateStoreLike): RecipePort | null {
+function createBuiltinRecipe(recipeId: string, recipeVersion: string, binding: StateKernelCompatibilityBinding): RecipePort | null {
   if (recipeVersion !== 'v0') return null;
   switch (recipeId) {
     case 'render_current_state':
-      return createRenderCurrentStateRecipe({ renderState: () => kernel.render(store) });
+      return createRenderCurrentStateRecipe({ renderState: () => binding.renderState() });
     case 'integrate_accepted_candidate':
       return createIntegrateAcceptedCandidateRecipe();
     case 'materialize_frozen_review_interface':
       return createMaterializeFrozenReviewInterfaceRecipe();
     case 'reconcile_and_close_taskcycle':
-      return createReconcileAndCloseTaskCycleRecipe({ stateKernel: closureKernel(store) });
+      return createReconcileAndCloseTaskCycleRecipe({ lifecycle: binding.taskcycleLifecycle });
     case 'prepare_fitflow_test_runtime':
       return createPrepareFitFlowTestRuntimeRecipe();
     case 'validate_fitflow_http_contract_candidate':
@@ -216,15 +195,11 @@ function mapSpineResult(envelope: WorkerInvocationEnvelopeValue, result: any): R
   });
 }
 
-function attemptExists(store: StateStoreLike, attemptId: string): boolean | null {
-  try {
-    kernel.inspect(store, 'ExecutionAttempt', attemptId);
-    return true;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.includes(`missing ExecutionAttempt/${attemptId}`)) return false;
-    return null;
-  }
+function attemptExists(executionLifecycle: ExecutionLifecycleCapability, attemptId: string): boolean | null {
+  const presence = executionLifecycle.observeAttemptPresence(attemptId);
+  if (presence === 'PRESENT') return true;
+  if (presence === 'ABSENT') return false;
+  return null;
 }
 
 export function workerExceptionResult(
@@ -245,8 +220,8 @@ export function workerExceptionResult(
 
 export async function runWorkerInvocation(rawEnvelope: unknown): Promise<RecipeInvocationResultValue> {
   const envelope = WorkerInvocationEnvelope.parse(rawEnvelope);
-  const store = new kernel.FilesystemStateStore(envelope.environment.state_store.location);
-  const recipe = createBuiltinRecipe(envelope.request.recipe.id, envelope.request.recipe.version, store);
+  const binding = createStateKernelCompatibilityBinding({ home: envelope.environment.state_store.location });
+  const recipe = createBuiltinRecipe(envelope.request.recipe.id, envelope.request.recipe.version, binding);
   if (!recipe) return blocked(envelope, 'RECIPE_NOT_SHIPPED_BY_STABLE_ENTRYPOINT');
 
   const registry = new RecipeRegistry();
@@ -255,18 +230,17 @@ export async function runWorkerInvocation(rawEnvelope: unknown): Promise<RecipeI
     return blocked(envelope, 'REGISTERED_RECIPE_IDENTITY_MISMATCH');
   }
 
-  const stateKernel = createStateKernelAdapter({ store });
   const recipeSurface = createRecipeExecutionSurface({ recipeRegistry: registry });
   const coordinator = createExecutionCoordinator({ executionSurface: recipeSurface });
   const recordStore = new FilesystemExecutionRecordStore(envelope.environment.state_store.location);
   const spine = createOperationalSpine({
-    stateKernel,
+    executionLifecycle: binding.executionLifecycle,
     recipeRegistry: registry,
     executionCoordinator: coordinator,
     executionRecordStore: recordStore,
   });
 
-  const operation = kernel.inspect(store, 'Operation', envelope.request.operation_ref).aggregate;
+  const operation = binding.executionLifecycle.observeOperation(envelope.request.operation_ref).aggregate;
   const observedGit = gitContext(envelope.environment.repository.location);
   const authorityRef: Reference = { kind: 'AUTHORITY', id: envelope.request.authority_ref };
   const executionContext = {
@@ -318,7 +292,7 @@ export async function runWorkerInvocation(rawEnvelope: unknown): Promise<RecipeI
     return workerExceptionResult(
       envelope,
       reason,
-      (attemptId) => attemptExists(store, attemptId),
+      (attemptId) => attemptExists(binding.executionLifecycle, attemptId),
     );
   }
 }
