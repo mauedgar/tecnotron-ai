@@ -2,11 +2,23 @@ import path from 'node:path';
 import { z } from 'zod';
 import { EffectDescriptor, RecipeReceipt, type Reference } from './contracts';
 
-const { referenceSchema } = require('../state-kernel-v0/contracts') as {
-  referenceSchema: z.ZodType<Reference>;
-};
-
 const NonEmpty = z.string().min(1);
+const RelativeReferenceLocation = NonEmpty.refine(
+  (value) => !value.startsWith('/') && !value.includes('..') && !/^[A-Za-z]:/.test(value),
+  'reference location must be relative',
+);
+
+export const ReferenceSchema: z.ZodType<Reference> = z.object({
+  kind: z.enum(['AUTHORITY', 'EVIDENCE', 'ARTIFACT', 'GIT_OBJECT']),
+  id: NonEmpty,
+  location: RelativeReferenceLocation.optional(),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  git_oid: z.string().regex(/^[a-f0-9]{40,64}$/).optional(),
+}).strict().superRefine((value, ctx) => {
+  if (value.kind === 'GIT_OBJECT' && value.git_oid === undefined) {
+    ctx.addIssue({ code: 'custom', path: ['git_oid'], message: 'Git object requires OID' });
+  }
+});
 const CrossPlatformAbsolutePath = NonEmpty.refine(
   (value) => path.posix.isAbsolute(value) || path.win32.isAbsolute(value),
   'path must be absolute',
@@ -90,7 +102,7 @@ export const RecipeInvocationRequest = z.object({
   responsibility_ref: NonEmpty,
   authority_ref: NonEmpty,
   expected_effects: z.array(EffectDescriptor).min(1),
-  evidence_refs: z.array(referenceSchema).default([]),
+  evidence_refs: z.array(ReferenceSchema).default([]),
   inputs: z.unknown().optional(),
   execution_constraints: z.object({
     require: z.array(ExecutionCapability).default([]),
@@ -165,13 +177,13 @@ export const RecipeInvocationResult = z.object({
   effect_state: z.enum(['NONE', 'CONFIRMED', 'UNKNOWN']),
   receipt_ref: NonEmpty.nullable(),
   receipt: RecipeReceipt.nullable().default(null),
-  result_ref: referenceSchema.nullable(),
-  execution_plan_ref: referenceSchema.nullable(),
+  result_ref: ReferenceSchema.nullable(),
+  execution_plan_ref: ReferenceSchema.nullable(),
   observed_identity: InvocationObservedIdentity.nullable(),
   exit_code: z.number().int().nullable(),
-  stdout_ref: referenceSchema.nullable(),
-  stderr_ref: referenceSchema.nullable(),
-  terminal_artifact_ref: referenceSchema.nullable(),
+  stdout_ref: ReferenceSchema.nullable(),
+  stderr_ref: ReferenceSchema.nullable(),
+  terminal_artifact_ref: ReferenceSchema.nullable(),
   reason: NonEmpty.optional(),
   validation_issues: z.array(NonEmpty).default([]),
   supplementary_diagnostics: z.array(NonEmpty).default([]),
