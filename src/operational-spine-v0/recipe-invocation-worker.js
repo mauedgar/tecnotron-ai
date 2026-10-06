@@ -220,7 +220,7 @@ async function runWorkerInvocation(rawEnvelope) {
         return blocked(envelope, qualificationSpec.reason);
     }
     if (qualificationSpec?.kind === 'REQUIRED') {
-        const observedQualification = (0, git_execution_qualification_1.qualifyGitExecutionSurface)({
+        gitQualification = (0, git_execution_qualification_1.qualifyGitExecutionSurface)({
             schema_version: 'tecnotron-git-execution-qualification-request/v0',
             surface_id: envelope.selected_surface.id,
             repository: envelope.environment.repository,
@@ -229,17 +229,16 @@ async function runWorkerInvocation(rawEnvelope) {
             ...(qualificationSpec.remote ? { remote: qualificationSpec.remote } : {}),
             remote_timeout_ms: 5000,
         });
-        gitQualification = observedQualification;
-        if (observedQualification.status !== 'READY') {
-            const reason = `GIT_EXECUTION_QUALIFICATION_${observedQualification.status}:${observedQualification.reason}`;
-            if (observedQualification.status === 'UNAVAILABLE') {
-                return unavailable(envelope, reason, observedQualification);
+        if (gitQualification.status !== 'READY') {
+            const reason = `GIT_EXECUTION_QUALIFICATION_${gitQualification.status}:${gitQualification.reason}`;
+            if (gitQualification.status === 'UNAVAILABLE') {
+                return unavailable(envelope, reason, gitQualification);
             }
-            return blocked(envelope, reason, observedQualification);
+            return blocked(envelope, reason, gitQualification);
         }
         observedGit = {
-            expected_ref: observedQualification.evidence.repository.observed_ref,
-            expected_commit: observedQualification.evidence.repository.observed_commit,
+            expected_ref: gitQualification.evidence.repository.observed_ref,
+            expected_commit: gitQualification.evidence.repository.observed_commit,
         };
     }
     else {
