@@ -19,14 +19,18 @@ import { FilesystemExecutionRecordStore } from './execution-record-store';
 import { createExecutionCoordinator } from '../execution-coordinator';
 import type { Reference } from './contracts';
 
-interface StateKernelCompatibilityBinding {
+export interface RecipeInvocationBinding {
   readonly executionLifecycle: ExecutionLifecycleCapability;
   readonly taskcycleLifecycle: TaskCycleLifecycleCapability;
   renderState(): string;
 }
 
+export interface RunWorkerInvocationOptions {
+  readonly binding?: RecipeInvocationBinding;
+}
+
 const { createStateKernelCompatibilityBinding } = require('./state-kernel-adapter') as {
-  createStateKernelCompatibilityBinding(args: { home: string }): StateKernelCompatibilityBinding;
+  createStateKernelCompatibilityBinding(args: { home: string }): RecipeInvocationBinding;
 };
 
 const { createRenderCurrentStateRecipe } = require('./recipes/render-current-state') as {
@@ -124,7 +128,7 @@ function unknown(
   });
 }
 
-function createBuiltinRecipe(recipeId: string, recipeVersion: string, binding: StateKernelCompatibilityBinding): RecipePort | null {
+function createBuiltinRecipe(recipeId: string, recipeVersion: string, binding: RecipeInvocationBinding): RecipePort | null {
   if (recipeVersion !== 'v0') return null;
   switch (recipeId) {
     case 'render_current_state':
@@ -255,9 +259,13 @@ export function workerExceptionResult(
     : unknown(envelope, `WORKER_EXCEPTION_AFTER_POSSIBLE_ATTEMPT:${reason}`, gitQualification);
 }
 
-export async function runWorkerInvocation(rawEnvelope: unknown): Promise<RecipeInvocationResultValue> {
+export async function runWorkerInvocation(
+  rawEnvelope: unknown,
+  options: RunWorkerInvocationOptions = {},
+): Promise<RecipeInvocationResultValue> {
   const envelope = WorkerInvocationEnvelope.parse(rawEnvelope);
-  const binding = createStateKernelCompatibilityBinding({ home: envelope.environment.state_store.location });
+  const binding = options.binding
+    ?? createStateKernelCompatibilityBinding({ home: envelope.environment.state_store.location });
   const recipe = createBuiltinRecipe(envelope.request.recipe.id, envelope.request.recipe.version, binding);
   if (!recipe) return blocked(envelope, 'RECIPE_NOT_SHIPPED_BY_STABLE_ENTRYPOINT');
 
