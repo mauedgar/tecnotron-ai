@@ -32,6 +32,12 @@ const CrossPlatformAbsolutePath = NonEmpty.refine(
   'path must be absolute',
 );
 
+/**
+ * Source parity only: these Git qualification schemas already exist in the
+ * canonical parent runtime JS and are retained so deterministic TypeScript
+ * builds do not erase pre-existing behavior. This TaskCycle does not extend
+ * their policy or invocation scope.
+ */
 const GitOid = z.string().regex(/^[a-f0-9]{40,64}$/);
 const BranchRef = z.string().regex(/^refs\/heads\/[A-Za-z0-9._\/-]+$/);
 const GitRemoteName = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
