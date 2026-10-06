@@ -277,6 +277,34 @@ test('explicitly missing attempt permits pre-attempt BLOCKED for nonconformant w
   assert.equal(result.started, false);
 });
 
+test('default stable invocation uses portable attempt presence to prove pre-attempt NONE', async () => {
+  const selected = surface('selected', 'NATIVE_NODE', ['NODE_RUNTIME', 'FILESYSTEM_WRITE', 'DURABLE_DIRECTORY_FSYNC']);
+  let observations = 0;
+  const entrypoint = createRecipeInvocationEntrypoint(environment([selected]), {
+    launchers: new Map([['selected', {
+      surface_id: 'selected',
+      invoke() {
+        return { started: true, exit_code: 0, stdout: '{not-json', stderr: '' };
+      },
+    }]]),
+    artifactStore: artifactStore(),
+    attemptIdFactory: () => 'ATTEMPT-PORTABLE-ABSENT',
+    attemptLifecycle: {
+      observeAttemptPresence(attemptId) {
+        observations += 1;
+        assert.equal(attemptId, 'ATTEMPT-PORTABLE-ABSENT');
+        return 'ABSENT';
+      },
+    },
+  });
+
+  const result = await entrypoint.invoke(request());
+  assert.equal(observations, 1);
+  assert.equal(result.started, false);
+  assert.equal(result.terminal_status, 'BLOCKED');
+  assert.equal(result.effect_state, 'NONE');
+});
+
 test('attempt inspection failure after dispatch preserves UNKNOWN instead of no-effect', async () => {
   const result = await invokeWorkerOutput('{not-a-result}', {
     attemptId: 'ATTEMPT-INSPECTION-FAILURE',
