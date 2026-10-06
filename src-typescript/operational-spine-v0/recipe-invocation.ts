@@ -16,6 +16,13 @@ import {
 } from './invocation-contracts';
 import { executionRequirementsForRecipe, resolveExecutionSurface } from './surface-resolution';
 import type { Reference } from './contracts';
+import type { ExecutionLifecycleCapability } from './taskcycle-lifecycle-capability';
+
+const { createStateKernelCompatibilityBinding } = require('./state-kernel-adapter') as {
+  createStateKernelCompatibilityBinding(args: { home: string }): {
+    executionLifecycle: ExecutionLifecycleCapability;
+  };
+};
 
 export interface SurfaceLaunchResult {
   readonly started: boolean;
@@ -275,6 +282,7 @@ export interface RecipeInvocationEntrypointOptions {
   readonly launchers?: ReadonlyMap<string, SurfaceLauncher>;
   readonly artifactStore?: InvocationArtifactStore;
   readonly attemptIdFactory?: () => string;
+  readonly attemptLifecycle?: Pick<ExecutionLifecycleCapability, 'observeAttemptPresence'>;
   readonly attemptObserver?: (attemptId: string) => boolean | null;
 }
 
@@ -286,7 +294,16 @@ export function createRecipeInvocationEntrypoint(
   const launchers = options.launchers ?? defaultLaunchers(environment);
   const artifactStore = options.artifactStore ?? new FilesystemInvocationArtifactStore(environment.state_store.location);
   const attemptIdFactory = options.attemptIdFactory ?? (() => `ATTEMPT-${crypto.randomUUID()}`);
-  const attemptObserver = options.attemptObserver ?? (() => null);
+  const attemptLifecycle = options.attemptObserver === undefined
+    ? options.attemptLifecycle
+      ?? createStateKernelCompatibilityBinding({ home: environment.state_store.location }).executionLifecycle
+    : null;
+  const attemptObserver = options.attemptObserver ?? ((attemptId: string) => {
+    const presence = attemptLifecycle!.observeAttemptPresence(attemptId);
+    if (presence === 'PRESENT') return true;
+    if (presence === 'ABSENT') return false;
+    return null;
+  });
 
   async function invoke(rawRequest: unknown): Promise<RecipeInvocationResultValue> {
     const parsedRequest = RecipeInvocationRequest.safeParse(rawRequest);
