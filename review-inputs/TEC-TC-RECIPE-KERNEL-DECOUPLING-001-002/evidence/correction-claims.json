@@ -1,0 +1,14 @@
+{
+  "schema_version": "tecnotron-correction-evidence/v0",
+  "evidence_id": "TEC-TC-RECIPE-KERNEL-DECOUPLING-001-CORRECTION-CLAIMS",
+  "subject": {
+    "candidate_commit": "34ab96c00ca5f8c9c87d69a31371d275eeb5f6d9",
+    "candidate_tree": "d79640a7fcc614ecfac0fe76f0ca600b41beac6b"
+  },
+  "claims": {
+    "F001": "OperationalSpine core contains zero stateKernel references; legacy adaptation is confined to state-kernel-adapter/public boundary.",
+    "F002": "Default stable invocation obtains attempt presence through portable lifecycle capability and preserves NONE on ABSENT.",
+    "F003": "Focused test executes real OperationalSpine through deterministic non-State-Kernel lifecycle provider.",
+    "F004": "Git qualification runtime decision segment is equivalent to canonical parent behavior; no new policy or decision path is introduced."
+  }
+}
