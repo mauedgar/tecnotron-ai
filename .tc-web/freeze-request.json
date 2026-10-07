@@ -30,5 +30,6 @@
   "authority_ref": {
     "kind": "AUTHORITY",
     "id": "DEVELOPER-AUTONOMY-ACCEPTED-RANGE-PHASE2-LIFECYCLE-2026-10-07"
-  }
+  },
+  "dispatch_nonce": "freeze-002-run-001"
 }
