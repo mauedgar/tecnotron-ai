@@ -1,0 +1,71 @@
+name: Validate kernel-free post-Phase1 lifecycle continuation
+
+on:
+  push:
+    branches:
+      - validation/kernel-free-post-phase1-lifecycle-continuation-001
+
+permissions:
+  contents: read
+
+env:
+  SUBJECT_SHA: 5431972da42da4bf6b38d3464b2279e0f19e39c3
+  EXPECTED_TREE: 12efa2841d3fed77e7121b44a6fdfb6bc0c2ca8f
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Guard exact subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Rebuild dependencies
+        run: npm rebuild
+
+      - name: Workspace verify
+        run: npm run workspace:verify
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Focused lifecycle tests
+        run: node --test tests/deterministic-taskcycle-substrate-v0/taskcycle-initialization.test.js tests/deterministic-taskcycle-substrate-v0/taskcycle-effect-reconciliation.test.js tests/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle.test.js
+
+      - name: Full test suite
+        run: npm test
+
+      - name: Contracts check
+        run: npm run contracts:check
+
+      - name: Guard no mutation after validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
