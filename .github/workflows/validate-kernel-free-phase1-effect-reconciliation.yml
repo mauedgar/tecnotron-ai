@@ -1,19 +1,16 @@
 name: Validate kernel-free Phase1 effect reconciliation candidate
 
 on:
-  workflow_dispatch:
-    inputs:
-      subject_sha:
-        description: Exact candidate commit
-        required: true
-        type: string
-      expected_tree:
-        description: Exact candidate tree
-        required: true
-        type: string
+  push:
+    branches:
+      - validation/kernel-free-phase1-effect-reconciliation-001
 
 permissions:
   contents: read
+
+env:
+  SUBJECT_SHA: d82ceff7e3a020c49a804fad04393f072e0d95d0
+  EXPECTED_TREE: dd2dc6db75c84712dd1ef78c1451130a4cdb9d5b
 
 jobs:
   validate:
@@ -23,15 +20,12 @@ jobs:
       - name: Checkout exact candidate
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.subject_sha }}
+          ref: ${{ env.SUBJECT_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Guard exact subject
         shell: bash
-        env:
-          SUBJECT_SHA: ${{ inputs.subject_sha }}
-          EXPECTED_TREE: ${{ inputs.expected_tree }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
@@ -70,9 +64,6 @@ jobs:
 
       - name: Guard no mutation after validation
         shell: bash
-        env:
-          SUBJECT_SHA: ${{ inputs.subject_sha }}
-          EXPECTED_TREE: ${{ inputs.expected_tree }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
