@@ -1,0 +1,68 @@
+name: Validate repo-first current-state composition candidate
+
+on:
+  push:
+    branches:
+      - validation/repo-first-current-state-reconciliation-001
+
+permissions:
+  contents: read
+
+env:
+  SUBJECT_SHA: faf592b130d3cd93cd6d1029b3f70ba1f79ca55f
+  EXPECTED_TREE: 19c7ed0df4d20b36d2c2010d65992a9cad8720da
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Guard exact subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Rebuild dependencies
+        run: npm rebuild
+
+      - name: Workspace verify
+        run: npm run workspace:verify
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Full test suite
+        run: npm test
+
+      - name: Contracts check
+        run: npm run contracts:check
+
+      - name: Guard no mutation after validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
