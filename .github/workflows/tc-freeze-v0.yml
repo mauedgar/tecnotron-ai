@@ -1,0 +1,253 @@
+name: TC Frozen Review Materialization v0
+
+on:
+  push:
+    branches:
+      - devlab/tc-web-execution-v0
+    paths:
+      - .tc-web/freeze-request.json
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: tc-freeze-v0
+  cancel-in-progress: false
+
+jobs:
+  freeze:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout execution workspace
+        uses: actions/checkout@v4
+
+      - name: Parse freeze request
+        id: req
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '
+            .schema_version == "tecnotron-freeze-request/v0" and
+            (.interface_id | type == "string" and length > 0) and
+            (.exact_subject.accepted_tip | test("^[0-9a-f]{40}$")) and
+            (.exact_subject.accepted_tip_tree | test("^[0-9a-f]{40}$")) and
+            (.validation.run_id | type == "number") and
+            (.validation.artifact_name | type == "string" and length > 0)
+          ' .tc-web/freeze-request.json >/dev/null
+          echo "interface_id=$(jq -r '.interface_id' .tc-web/freeze-request.json)" >> "$GITHUB_OUTPUT"
+          echo "tip=$(jq -r '.exact_subject.accepted_tip' .tc-web/freeze-request.json)" >> "$GITHUB_OUTPUT"
+          echo "tree=$(jq -r '.exact_subject.accepted_tip_tree' .tc-web/freeze-request.json)" >> "$GITHUB_OUTPUT"
+          echo "validation_run=$(jq -r '.validation.run_id' .tc-web/freeze-request.json)" >> "$GITHUB_OUTPUT"
+          echo "validation_artifact=$(jq -r '.validation.artifact_name' .tc-web/freeze-request.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact Product subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.req.outputs.tip }}
+          path: subject
+          fetch-depth: 0
+
+      - name: Verify exact subject range
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd subject
+          test "$(git rev-parse HEAD)" = "${{ steps.req.outputs.tip }}"
+          test "$(git rev-parse HEAD^{tree})" = "${{ steps.req.outputs.tree }}"
+          base="$(jq -r '.exact_subject.integration_range_base' ../.tc-web/freeze-request.json)"
+          observed="$(git rev-list --first-parent --reverse "$base..HEAD")"
+          expected="$(jq -r '.exact_subject.ordered_commit_range[]' ../.tc-web/freeze-request.json)"
+          test "$observed" = "$expected"
+          test "$(git rev-list --count "$base..HEAD")" = "$(jq -r '.exact_subject.commit_count' ../.tc-web/freeze-request.json)"
+          observed_paths="$(git diff --name-only --no-renames "$base" HEAD -- | LC_ALL=C sort)"
+          expected_paths="$(jq -r '.exact_subject.changed_paths[]' ../.tc-web/freeze-request.json | LC_ALL=C sort)"
+          test "$observed_paths" = "$expected_paths"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+      - name: Download exact validation evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.req.outputs.validation_artifact }}
+          path: validation-evidence
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.req.outputs.validation_run }}
+
+      - name: Install subject dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd subject
+          npm ci --ignore-scripts=false >/dev/null
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+      - name: Materialize frozen review interface
+        id: freeze
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _freeze_output
+          export EXECUTION_ROOT="$PWD"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const crypto = require('node:crypto');
+          const { createMaterializeFrozenReviewInterfaceRecipe } =
+            require(path.join(process.env.EXECUTION_ROOT, 'subject/src/operational-spine-v0/recipes/materialize-frozen-review-interface.js'));
+
+          const root = process.env.EXECUTION_ROOT;
+          const spec = JSON.parse(fs.readFileSync(path.join(root, '.tc-web/freeze-request.json'), 'utf8'));
+          const subjectDir = path.join(root, 'subject');
+          const outputRoot = path.join(root, '_freeze_output');
+          const reviewRequest = path.join(root, spec.review_request_path);
+          const validationManifest = path.join(root, 'validation-evidence/manifest.json');
+          const validationResult = path.join(root, 'validation-evidence/RESULT.md');
+          const sha256 = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+
+          const exec = require('node:child_process').spawnSync;
+          const git = (...args) => {
+            const r = exec('git', ['-C', subjectDir, ...args], { encoding: 'utf8' });
+            if (r.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${r.stderr}`);
+            return r.stdout.trim();
+          };
+
+          const validationRef = {
+            kind: 'ARTIFACT',
+            id: `ACTIONS-${spec.validation.run_id}`,
+            location: `github-actions-artifact:${spec.validation.artifact_id}`,
+            sha256: sha256(validationManifest),
+          };
+          const authorityRef = spec.authority_ref;
+          const exact = spec.exact_subject;
+          const artifacts = [
+            {
+              id: 'validation-manifest',
+              kind: 'FILE',
+              source_path: validationManifest,
+              package_path: 'evidence/validation-manifest.json',
+              sha256: sha256(validationManifest),
+              reference_id: validationRef.id,
+            },
+            {
+              id: 'validation-result',
+              kind: 'FILE',
+              source_path: validationResult,
+              package_path: 'evidence/validation-result.md',
+              sha256: sha256(validationResult),
+            },
+            {
+              id: 'task-source',
+              kind: 'GIT_BLOB',
+              revision: exact.accepted_tip,
+              repository_path: 'docs/tasks/TEC-TC-ACCEPTED-RANGE-PHASE2-LIFECYCLE-001/TASK.md',
+              package_path: 'candidate/TASK.md',
+              git_oid: git('rev-parse', `${exact.accepted_tip}:docs/tasks/TEC-TC-ACCEPTED-RANGE-PHASE2-LIFECYCLE-001/TASK.md`),
+            },
+            {
+              id: 'lifecycle-source',
+              kind: 'GIT_BLOB',
+              revision: exact.accepted_tip,
+              repository_path: 'src/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle.js',
+              package_path: 'candidate/taskcycle-post-phase1-lifecycle.js',
+              git_oid: git('rev-parse', `${exact.accepted_tip}:src/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle.js`),
+            },
+            {
+              id: 'lifecycle-tests',
+              kind: 'GIT_BLOB',
+              revision: exact.accepted_tip,
+              repository_path: 'tests/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle.test.js',
+              package_path: 'candidate/taskcycle-post-phase1-lifecycle.test.js',
+              git_oid: git('rev-parse', `${exact.accepted_tip}:tests/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle.test.js`),
+            },
+            {
+              id: 'accepted-range-diff',
+              kind: 'GIT_DIFF',
+              parent: exact.integration_range_base,
+              commit: exact.accepted_tip,
+              package_path: 'candidate/accepted-range.diff',
+            },
+          ];
+
+          const scope = path.join(outputRoot, spec.interface_id).replaceAll('\\', '/');
+          const request = {
+            recipe_id: 'materialize_frozen_review_interface',
+            recipe_version: 'v0',
+            operation_id: 'OP-FREEZE-ACCEPTED-RANGE-PHASE2-LIFECYCLE-002',
+            execution_attempt_id: 'FREEZE-002',
+            context: {
+              schema_version: 'tecnotron-execution-context/v0',
+              operation_id: 'OP-FREEZE-ACCEPTED-RANGE-PHASE2-LIFECYCLE-002',
+              taskcycle_id: spec.taskcycle,
+              repository: { identity: 'mauedgar/tecnotron-ai', location: subjectDir },
+              worktree: { identity: 'exact-subject', location: subjectDir },
+              git: { expected_ref: 'HEAD', expected_commit: exact.accepted_tip },
+              runtime: { executor: 'github-actions', platform: process.platform, runtime_identity: process.version },
+              state_store: { reference: 'freeze-artifact-only' },
+              authority_refs: [authorityRef],
+              evidence_refs: [validationRef],
+            },
+            authorization: {
+              disposition: 'AUTHORIZED',
+              authority_reference: authorityRef.id,
+              effect_constraints: [{ effect: 'review_interface.write', scope }],
+            },
+            evidence_refs: [validationRef],
+            input: {
+              interface_id: spec.interface_id,
+              output_root: outputRoot,
+              render_review_prompt: true,
+              review_instance: {
+                TaskCycle: spec.taskcycle,
+                responsibility: spec.responsibility,
+                exact_subject: exact,
+                review_request: {
+                  id: 'review-request',
+                  kind: 'FILE',
+                  source_path: reviewRequest,
+                  package_path: 'review/request.md',
+                  sha256: sha256(reviewRequest),
+                },
+                required_evidence_specification: artifacts,
+                validation_evidence_refs: [validationRef],
+                authority_and_scope: {
+                  protocol_ref: 'tecnotron-independent-review-protocol/v1',
+                  authority_refs: [authorityRef],
+                  scope: {
+                    include: ['accepted-range Phase 2 lifecycle representation and fail-closed regressions'],
+                    exclude: ['candidate mutation', 'Developer acceptance', 'Phase 2 execution', 'blocked original TaskCycle retry'],
+                  },
+                },
+              },
+            },
+          };
+
+          (async () => {
+            const recipe = createMaterializeFrozenReviewInterfaceRecipe();
+            const preflight = await recipe.preflight(request);
+            fs.writeFileSync(path.join(root, '_freeze_preflight.json'), JSON.stringify(preflight, null, 2) + '\n');
+            if (preflight.status !== 'READY') {
+              process.stderr.write(JSON.stringify(preflight, null, 2) + '\n');
+              process.exit(2);
+            }
+            const receipt = await recipe.execute(request);
+            fs.writeFileSync(path.join(root, '_freeze_receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
+            process.stdout.write(JSON.stringify(receipt, null, 2) + '\n');
+            if (receipt.status !== 'PASS' || receipt.effect_state !== 'CONFIRMED') process.exit(3);
+          })().catch((e) => {
+            process.stderr.write(String(e?.stack || e) + '\n');
+            process.exit(4);
+          });
+          NODE
+
+      - name: Upload frozen interface
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tc-frozen-review-accepted-range-phase2-lifecycle-002
+          path: |
+            _freeze_output/
+            _freeze_preflight.json
+            _freeze_receipt.json
+          if-no-files-found: error
+          retention-days: 14
