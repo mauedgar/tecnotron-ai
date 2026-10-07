@@ -1,0 +1,155 @@
+{
+  "schema_version": "tecnotron-original-logical-close-resumption/v0",
+  "taskcycle": {
+    "id": "TASKCYCLE-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-001",
+    "responsibility": "DECOUPLE_REMAINING_OPERATIONAL_SPINE_RECIPES_FROM_STATE_KERNEL"
+  },
+  "lifecycle_runtime": {
+    "commit": "c60804e167d67a08a025b77328aefff26dd3b27d",
+    "tree": "d24e2d0bc5c3bcbbb3d1b86076fc196e3a3fe79d",
+    "contains_repair_TaskCycle": "TASKCYCLE-TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-001"
+  },
+  "Product_baseline": {
+    "repository": "mauedgar/tecnotron-ai",
+    "integration_branch": "tools",
+    "commit": "9e975fd7c9c504fb7fd24d91231d0aa3c04c71be",
+    "tree": "319cf7a8e17ff657448cbaa07aba9a800f206176"
+  },
+  "TASK_carrier": {
+    "branch": "task/tecnotron-remaining-recipe-kernel-decoupling-001",
+    "commit": "dcdd64a7aa42173f7cd81216ebaf476206132122",
+    "tree": "2b89aa8b83c015045a9d8fee533b7ae9ce25f297",
+    "path": "docs/tasks/TEC-TC-REMAINING-RECIPE-KERNEL-DECOUPLING-001/TASK.md"
+  },
+  "write_scope": [
+    "src-typescript/operational-spine-v0/contracts.ts",
+    "src/operational-spine-v0/contracts.d.ts",
+    "src/operational-spine-v0/contracts.js",
+    "src/operational-spine-v0/recipes/materialize-frozen-review-interface.js",
+    "src/operational-spine-v0/recipes/validate-fitflow-http-contract-candidate.js",
+    "src/operational-spine-v0/recipes/render-current-state.js",
+    "src-typescript/operational-spine-v0/resolution.ts",
+    "src/operational-spine-v0/resolution.js",
+    "tests/operational-spine-v0/contracts-and-resolution.test.js",
+    "tests/operational-spine-v0/recipe-kernel-decoupling.test.js"
+  ],
+  "phase1_subject": {
+    "repository": "mauedgar/tecnotron-ai",
+    "branch": "task/tecnotron-remaining-recipe-kernel-decoupling-001",
+    "commit": "85800816db1feeea95f00949f71431a4fdfb895f",
+    "tree": "1160f931c505d94feb65730a938485dfedc9fef0",
+    "parent": "dcdd64a7aa42173f7cd81216ebaf476206132122",
+    "changed_paths": [
+      "src-typescript/operational-spine-v0/contracts.ts",
+      "src-typescript/operational-spine-v0/resolution.ts",
+      "src/operational-spine-v0/contracts.d.ts",
+      "src/operational-spine-v0/contracts.js",
+      "src/operational-spine-v0/recipes/materialize-frozen-review-interface.js",
+      "src/operational-spine-v0/recipes/render-current-state.js",
+      "src/operational-spine-v0/recipes/validate-fitflow-http-contract-candidate.js",
+      "src/operational-spine-v0/resolution.js",
+      "tests/operational-spine-v0/contracts-and-resolution.test.js",
+      "tests/operational-spine-v0/recipe-kernel-decoupling.test.js"
+    ]
+  },
+  "candidate": {
+    "repository": "mauedgar/tecnotron-ai",
+    "branch": "task/tecnotron-remaining-recipe-kernel-decoupling-001",
+    "commit": "ff668b3878f2cd89030306dbfd979da23acf33cb",
+    "tree": "572f7445337f97fb77a7d0ce3fbe3af91eb11083",
+    "parent": "dcdd64a7aa42173f7cd81216ebaf476206132122",
+    "changed_paths": [
+      "src-typescript/operational-spine-v0/contracts.ts",
+      "src-typescript/operational-spine-v0/resolution.ts",
+      "src/operational-spine-v0/contracts.d.ts",
+      "src/operational-spine-v0/contracts.js",
+      "src/operational-spine-v0/invocation-contracts.d.ts",
+      "src/operational-spine-v0/recipes/materialize-frozen-review-interface.js",
+      "src/operational-spine-v0/recipes/render-current-state.js",
+      "src/operational-spine-v0/recipes/validate-fitflow-http-contract-candidate.js",
+      "src/operational-spine-v0/resolution.js",
+      "tests/operational-spine-v0/contracts-and-resolution.test.js",
+      "tests/operational-spine-v0/recipe-kernel-decoupling.test.js"
+    ]
+  },
+  "promotion_grade_validation": {
+    "provider": "reconciled-preserved-exact-subject-validation",
+    "run_id": "PRESERVED-FF668B-PROMOTION-GRADE-VALIDATION-20261007",
+    "job_id": "PRESERVED-EXACT-SUBJECT-VALIDATION",
+    "status": "PASS",
+    "full_tests": {
+      "total": 499,
+      "passed": 495,
+      "failed": 0,
+      "skipped": 4
+    },
+    "contracts_check": "PASS",
+    "post_validation_git_guard": "PASS"
+  },
+  "frozen_review_interface": {
+    "id": "IND-REVIEW-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-001",
+    "prompt_sha256": "d8fc1909766b3f018f57ddfd936c22743d0c73f1f641762f7bf6c9361059509e",
+    "archive_sha256": "769bd74d386a3d79e0f797b199cafdb310a97fc5a9f5bb4b21188ce3d80f1d68",
+    "manifest_sha256": "70b8b256a5db023c8b4f725555de86a952b3d57caa56a14ba7ec5e992d0424f3"
+  },
+  "independent_review": {
+    "id": "IND-REVIEW-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-001",
+    "verdict": "PASS",
+    "result_path": ".tc-web/original-preserved-ir-reconciliation.json",
+    "blocking_findings": []
+  },
+  "Developer_acceptance": {
+    "status": "GRANTED",
+    "authority_ref": "DEVELOPER-AUTONOMY-RESUME-ORIGINAL-LOGICAL-CLOSE-20261007",
+    "reconciliation_record": ".tc-web/original-preserved-acceptance-reconciliation.json"
+  },
+  "Phase_2": {
+    "status": "PASS",
+    "pre_tools": "9e975fd7c9c504fb7fd24d91231d0aa3c04c71be",
+    "accepted_first_parent_range": {
+      "integration_range_base": "9e975fd7c9c504fb7fd24d91231d0aa3c04c71be",
+      "accepted_tip": "ff668b3878f2cd89030306dbfd979da23acf33cb",
+      "accepted_tip_parent": "dcdd64a7aa42173f7cd81216ebaf476206132122",
+      "accepted_tip_tree": "572f7445337f97fb77a7d0ce3fbe3af91eb11083",
+      "ordered_commit_range": [
+        "dcdd64a7aa42173f7cd81216ebaf476206132122",
+        "ff668b3878f2cd89030306dbfd979da23acf33cb"
+      ],
+      "commit_count": 2,
+      "changed_paths": [
+        "docs/tasks/TEC-TC-REMAINING-RECIPE-KERNEL-DECOUPLING-001/TASK.md",
+        "src-typescript/operational-spine-v0/contracts.ts",
+        "src-typescript/operational-spine-v0/resolution.ts",
+        "src/operational-spine-v0/contracts.d.ts",
+        "src/operational-spine-v0/contracts.js",
+        "src/operational-spine-v0/invocation-contracts.d.ts",
+        "src/operational-spine-v0/recipes/materialize-frozen-review-interface.js",
+        "src/operational-spine-v0/recipes/render-current-state.js",
+        "src/operational-spine-v0/recipes/validate-fitflow-http-contract-candidate.js",
+        "src/operational-spine-v0/resolution.js",
+        "tests/operational-spine-v0/contracts-and-resolution.test.js",
+        "tests/operational-spine-v0/recipe-kernel-decoupling.test.js"
+      ]
+    },
+    "post_tools": "ff668b3878f2cd89030306dbfd979da23acf33cb",
+    "post_tree": "572f7445337f97fb77a7d0ce3fbe3af91eb11083",
+    "force": false,
+    "remote_correspondence": "EXACT"
+  },
+  "effect_reconciliation": {
+    "status": "PASS",
+    "canonical_commit": "ff668b3878f2cd89030306dbfd979da23acf33cb",
+    "canonical_tree": "572f7445337f97fb77a7d0ce3fbe3af91eb11083",
+    "unresolved_UNKNOWN_effects": []
+  },
+  "logical_close": {
+    "terminal_disposition_ref": "CLOSED_PASS",
+    "authority_ref": "DEVELOPER-AUTONOMY-RESUME-ORIGINAL-LOGICAL-CLOSE-20261007"
+  },
+  "constraints": {
+    "candidate_replay": false,
+    "independent_review_replay": false,
+    "Developer_acceptance_replay": false,
+    "Phase_2_replay": false
+  }
+}
