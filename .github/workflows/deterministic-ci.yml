@@ -1,0 +1,95 @@
+name: Tecnotron deterministic validation v0
+
+on:
+  workflow_dispatch:
+    inputs:
+      subject_sha:
+        description: Exact commit SHA to validate
+        required: true
+        type: string
+      expected_tree:
+        description: Optional exact Git tree OID
+        required: false
+        default: ''
+        type: string
+      operation_id:
+        description: Optional Product operation correlation id
+        required: false
+        default: ''
+        type: string
+      execution_attempt_id:
+        description: Optional execution attempt correlation id
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Guard exact checkout
+        shell: bash
+        env:
+          SUBJECT_SHA: ${{ inputs.subject_sha }}
+        run: |
+          set -euo pipefail
+          observed="$(git rev-parse HEAD)"
+          if [ "$observed" != "$SUBJECT_SHA" ]; then
+            echo "SUBJECT_MISMATCH expected=$SUBJECT_SHA observed=$observed" >&2
+            exit 1
+          fi
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Run typed deterministic validation
+        env:
+          SUBJECT_SHA: ${{ inputs.subject_sha }}
+          EXPECTED_TREE: ${{ inputs.expected_tree }}
+          OPERATION_ID: ${{ inputs.operation_id }}
+          EXECUTION_ATTEMPT_ID: ${{ inputs.execution_attempt_id }}
+          RECEIPT_DIR: ${{ runner.temp }}/tecnotron-deterministic-validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RECEIPT_DIR"
+          args=(
+            --repository "$GITHUB_REPOSITORY"
+            --subject-sha "$SUBJECT_SHA"
+            --request-output "$RECEIPT_DIR/request.json"
+            --receipt-output "$RECEIPT_DIR/receipt.json"
+          )
+          if [ -n "$EXPECTED_TREE" ]; then
+            args+=(--expected-tree "$EXPECTED_TREE")
+          fi
+          if [ -n "$OPERATION_ID" ] || [ -n "$EXECUTION_ATTEMPT_ID" ]; then
+            args+=(--operation-id "$OPERATION_ID" --execution-attempt-id "$EXECUTION_ATTEMPT_ID")
+          fi
+          node src/actions/tecnotron-deterministic-validation.js "${args[@]}"
+
+      - name: Upload deterministic validation receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tecnotron-deterministic-validation-${{ inputs.subject_sha }}
+          path: ${{ runner.temp }}/tecnotron-deterministic-validation
+          if-no-files-found: warn
+          retention-days: 30
