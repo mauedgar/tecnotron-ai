@@ -1,0 +1,34 @@
+{
+  "schema_version": "tecnotron-freeze-request/v0",
+  "interface_id": "TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-FROZEN-REVIEW-002",
+  "taskcycle": "TASKCYCLE-TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-001",
+  "responsibility": "EVOLVE_POST_PHASE1_LIFECYCLE_TO_REPRESENT_ACCEPTED_RANGE_PHASE2",
+  "exact_subject": {
+    "integration_range_base": "ff668b3878f2cd89030306dbfd979da23acf33cb",
+    "accepted_tip": "c60804e167d67a08a025b77328aefff26dd3b27d",
+    "accepted_tip_parent": "41dc4513325ceeb8c559bbfa7dd3eeb28368be0a",
+    "accepted_tip_tree": "d24e2d0bc5c3bcbbb3d1b86076fc196e3a3fe79d",
+    "ordered_commit_range": [
+      "62a7807be78f0f57f928010238f46c8f5e583e36",
+      "41dc4513325ceeb8c559bbfa7dd3eeb28368be0a",
+      "c60804e167d67a08a025b77328aefff26dd3b27d"
+    ],
+    "commit_count": 3,
+    "changed_paths": [
+      "docs/tasks/TEC-TC-ACCEPTED-RANGE-PHASE2-LIFECYCLE-001/TASK.md",
+      "src/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle.js",
+      "tests/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle.test.js"
+    ]
+  },
+  "validation": {
+    "run_id": 37607241774,
+    "artifact_name": "tc-web-result-TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-ACTIONS-003",
+    "artifact_id": 11474659344,
+    "artifact_digest": "sha256:469d8b3320567589a72d837fd86e467fa45d54707eeefe1f47dc93e00cb5ca9f"
+  },
+  "review_request_path": ".tc-web/review-request-accepted-range-phase2-lifecycle-002.md",
+  "authority_ref": {
+    "kind": "AUTHORITY",
+    "id": "DEVELOPER-AUTONOMY-ACCEPTED-RANGE-PHASE2-LIFECYCLE-2026-10-07"
+  }
+}
