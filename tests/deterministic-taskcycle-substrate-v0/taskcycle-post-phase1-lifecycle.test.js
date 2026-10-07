@@ -108,6 +108,7 @@ function fixture() {
     tree: S.tree,
     parent: S.baseline,
     changed_paths: ['docs/current-state.md', 'docs/implementation-roadmap.md', 'docs/tasks/TC-1/TASK.md'],
+    provenance: { phase1_subject: subject },
   };
   const request = {
     taskcycle: initReq.taskcycle,
@@ -221,6 +222,20 @@ test('review, acceptance, Phase2 and effect reconciliation cannot be inferred or
       assert.deepEqual(fs.readdirSync(f.closeRoot), []);
     } finally { f.cleanup(); }
   }
+});
+
+test('candidate must preserve exact Phase1 subject provenance from source reconciliation', () => {
+  const f = fixture();
+  try {
+    f.request.candidate.provenance.phase1_subject.commit = 'b'.repeat(40);
+    f.observed.candidate = f.request.candidate;
+    const result = createTaskCyclePostPhase1LifecycleCapability({ root: f.closeRoot })
+      .closeFromResolvedLifecycle({ request: f.request, observed: f.observed });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.effect_state, 'NONE');
+    assert.equal(result.reason, 'CANDIDATE_PHASE1_PROVENANCE_MISMATCH');
+    assert.deepEqual(fs.readdirSync(f.closeRoot), []);
+  } finally { f.cleanup(); }
 });
 
 test('cross-evidence candidate mismatches fail closed', () => {

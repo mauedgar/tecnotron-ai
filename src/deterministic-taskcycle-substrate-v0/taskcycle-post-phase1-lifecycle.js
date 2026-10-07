@@ -46,6 +46,12 @@ function uniqueStrings(value, required = false) {
     && value.every(nonEmpty)
     && new Set(value).size === value.length;
 }
+function unique(left, right) {
+  return [...new Set([...(left || []), ...(right || [])])];
+}
+function executionId(value) {
+  return (typeof value === 'string' && value.trim() !== '') || Number.isInteger(value);
+}
 function exactIds(entries, expected, status) {
   return Array.isArray(entries)
     && entries.length === expected.length
@@ -74,10 +80,11 @@ function validateRequest(r) {
   const c = r.candidate;
   if (!c || !nonEmpty(c.repository) || !nonEmpty(c.branch)
       || !isSha(c.commit) || !isSha(c.tree) || !isSha(c.parent)
-      || !uniqueStrings(c.changed_paths, true)) return 'EXACT_CANDIDATE_INVALID';
+      || !uniqueStrings(c.changed_paths, true)
+      || !c.provenance || !c.provenance.phase1_subject) return 'EXACT_CANDIDATE_INVALID';
 
   const v = r.promotion_grade_validation;
-  if (!v || !nonEmpty(v.provider) || !nonEmpty(String(v.run_id)) || !nonEmpty(String(v.job_id))
+  if (!v || !nonEmpty(v.provider) || !executionId(v.run_id) || !executionId(v.job_id)
       || v.status !== 'PASS' || v.exact_candidate_commit !== c.commit
       || v.exact_candidate_tree !== c.tree || v.contracts_check !== 'PASS'
       || v.post_validation_git_guard !== 'PASS' || !v.full_tests
@@ -123,7 +130,9 @@ function validateRequest(r) {
     return 'LOGICAL_CLOSE_AUTHORITY_INVALID';
   }
 
-  if (!uniqueStrings(r.authority_refs, true) || !uniqueStrings(r.evidence_refs, true)) {
+  if (!uniqueStrings(r.authority_refs, true) || !uniqueStrings(r.evidence_refs, true)
+      || !r.authority_refs.includes(da.authority_ref)
+      || !r.authority_refs.includes(lc.authority_ref)) {
     return 'POST_PHASE1_CLOSE_REFS_INVALID';
   }
   return null;
@@ -146,6 +155,9 @@ function validateSource(request, source) {
   }
   if (!exactIds(p.obligations.slice(1), REQUIRED_PENDING_IDS, 'PENDING')) {
     return 'SOURCE_PENDING_OBLIGATIONS_INVALID';
+  }
+  if (!exact(request.candidate.provenance.phase1_subject, p.reconciled_effect?.subject)) {
+    return 'CANDIDATE_PHASE1_PROVENANCE_MISMATCH';
   }
   if (p.reconciled_effect?.obligation_id !== 'implementation'
       || p.reconciled_effect?.replayed !== false
@@ -174,7 +186,7 @@ function projectionFor(request, source) {
       identity_sha256: request.source_reconciliation.identity_sha256,
     },
     exact_inputs: source.projection.exact_inputs,
-    obligations: ALL_OBLIGATION_IDS.map((id) => ({ id, status: 'SATISFIED' })),
+    obligations: source.projection.obligations.map((entry) => ({ ...entry, status: 'SATISFIED' })),
     pending_obligations: [],
     current_gate: null,
     terminal_disposition_ref: TERMINAL_DISPOSITION,
@@ -188,8 +200,8 @@ function projectionFor(request, source) {
       effect_reconciliation: request.effect_reconciliation,
       logical_close: request.logical_close,
     },
-    authority_refs: [...request.authority_refs],
-    evidence_refs: [...request.evidence_refs],
+    authority_refs: unique(source.projection.authority_refs, request.authority_refs),
+    evidence_refs: unique(source.projection.evidence_refs, request.evidence_refs),
     preserved_Phase1_effect: source.projection.reconciled_effect,
     semantics: {
       creates_authority: false,
