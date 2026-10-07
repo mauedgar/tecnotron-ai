@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 env:
-  SUBJECT_SHA: d82ceff7e3a020c49a804fad04393f072e0d95d0
-  EXPECTED_TREE: dd2dc6db75c84712dd1ef78c1451130a4cdb9d5b
+  SUBJECT_SHA: 6b35bf813ad99603148a65ff13619080f04412f8
+  EXPECTED_TREE: 1c39906e2e347161c3a7bb37e90fc50c8943a4aa
 
 jobs:
   validate:
