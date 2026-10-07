@@ -11,9 +11,9 @@ function createRenderCurrentStateRecipe({ renderState }) {
     version: 'v0',
     provides: ['state.render'],
     required_inputs: [],
-    preconditions: ['State Kernel render capability is available'],
+    preconditions: ['state render capability is available'],
     effects: [],
-    postconditions: ['current State Kernel projection is returned without mutation'],
+    postconditions: ['current state projection is returned without mutation'],
   });
 
   async function preflight() {

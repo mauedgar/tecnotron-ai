@@ -3,18 +3,22 @@ import {
   AuthorizationContext,
 } from '../contracts/execution-coordination';
 
-export interface Reference {
-  readonly kind: 'AUTHORITY' | 'EVIDENCE' | 'ARTIFACT' | 'GIT_OBJECT';
-  readonly id: string;
-  readonly location?: string;
-  readonly sha256?: string;
-  readonly git_oid?: string;
-}
-
-const { referenceSchema } = require('../state-kernel-v0/contracts') as {
-  referenceSchema: z.ZodType<Reference>;
-};
 const NonEmpty = z.string().min(1);
+
+export type Reference = {
+  kind: 'AUTHORITY' | 'EVIDENCE' | 'ARTIFACT' | 'GIT_OBJECT';
+  id: string;
+  location?: string | undefined;
+  sha256?: string | undefined;
+  git_oid?: string | undefined;
+};
+export const ReferenceSchema: z.ZodType<Reference, Reference> = z.object({
+  kind: z.enum(['AUTHORITY', 'EVIDENCE', 'ARTIFACT', 'GIT_OBJECT']),
+  id: NonEmpty,
+  location: NonEmpty.optional(),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  git_oid: z.string().regex(/^[a-f0-9]{40,64}$/).optional(),
+}).strict();
 const OperationIdSchema = z.string().min(1).brand<'OperationId'>();
 const ExecutionAttemptIdSchema = z.string().min(1).brand<'ExecutionAttemptId'>();
 
@@ -55,8 +59,8 @@ export const ExecutionContext = z.object({
   git: GitContext.optional(),
   runtime: RuntimeContext,
   state_store: StateStoreContext,
-  authority_refs: z.array(referenceSchema).default([]),
-  evidence_refs: z.array(referenceSchema).default([]),
+  authority_refs: z.array(ReferenceSchema).default([]),
+  evidence_refs: z.array(ReferenceSchema).default([]),
 }).strict();
 export type ExecutionContext = z.output<typeof ExecutionContext>;
 export type ExecutionContextInput = z.input<typeof ExecutionContext>;
@@ -83,7 +87,7 @@ export const RecipeRequest = z.object({
   execution_attempt_id: ExecutionAttemptIdSchema,
   context: ExecutionContext,
   authorization: AuthorizationContext,
-  evidence_refs: z.array(referenceSchema).default([]),
+  evidence_refs: z.array(ReferenceSchema).default([]),
   preflight_handoff: z.unknown().optional(),
   input: z.unknown().optional(),
 }).strict().superRefine((value, ctx) => {
@@ -112,8 +116,8 @@ const RecipeReceiptSchema = z.object({
   effect_state: z.enum(['NONE', 'CONFIRMED', 'UNKNOWN']),
   reason: NonEmpty.optional(),
   output: z.unknown().optional(),
-  result_refs: z.array(referenceSchema).default([]),
-  evidence_refs: z.array(referenceSchema).default([]),
+  result_refs: z.array(ReferenceSchema).default([]),
+  evidence_refs: z.array(ReferenceSchema).default([]),
 }).strict().superRefine((value, ctx) => {
   if (value.status !== 'PASS' && !value.reason) {
     ctx.addIssue({ code: 'custom', path: ['reason'], message: `${value.status} requires an explicit reason` });
@@ -153,8 +157,8 @@ const ExecutionPlanSchema = z.object({
   execution_context: ExecutionContext,
   recipe: SelectedRecipe.nullable(),
   expected_effects: z.array(EffectDescriptor),
-  authority_refs: z.array(referenceSchema).default([]),
-  evidence_refs: z.array(referenceSchema).default([]),
+  authority_refs: z.array(ReferenceSchema).default([]),
+  evidence_refs: z.array(ReferenceSchema).default([]),
   semantic_escalation: SemanticEscalation.nullable(),
 }).strict().superRefine((value, ctx) => {
   if (value.operation_id !== value.execution_context.operation_id) {

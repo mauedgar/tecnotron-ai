@@ -1,10 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ExecutionPlan = exports.SemanticEscalation = exports.SelectedRecipe = exports.RecipeReceipt = exports.RecipeReceiptStatus = exports.RecipeRequest = exports.RecipeDefinition = exports.EffectDescriptor = exports.ExecutionContext = exports.StateStoreContext = exports.RuntimeContext = exports.GitContext = exports.WorktreeContext = exports.RepositoryContext = exports.Capability = void 0;
+exports.ExecutionPlan = exports.SemanticEscalation = exports.SelectedRecipe = exports.RecipeReceipt = exports.RecipeReceiptStatus = exports.RecipeRequest = exports.RecipeDefinition = exports.EffectDescriptor = exports.ExecutionContext = exports.StateStoreContext = exports.RuntimeContext = exports.GitContext = exports.WorktreeContext = exports.RepositoryContext = exports.Capability = exports.ReferenceSchema = void 0;
 const zod_1 = require("zod");
 const execution_coordination_1 = require("../contracts/execution-coordination");
-const { referenceSchema } = require('../state-kernel-v0/contracts');
 const NonEmpty = zod_1.z.string().min(1);
+exports.ReferenceSchema = zod_1.z.object({
+    kind: zod_1.z.enum(['AUTHORITY', 'EVIDENCE', 'ARTIFACT', 'GIT_OBJECT']),
+    id: NonEmpty,
+    location: NonEmpty.optional(),
+    sha256: zod_1.z.string().regex(/^[a-f0-9]{64}$/).optional(),
+    git_oid: zod_1.z.string().regex(/^[a-f0-9]{40,64}$/).optional(),
+}).strict();
 const OperationIdSchema = zod_1.z.string().min(1).brand();
 const ExecutionAttemptIdSchema = zod_1.z.string().min(1).brand();
 exports.Capability = NonEmpty;
@@ -32,8 +38,8 @@ exports.ExecutionContext = zod_1.z.object({
     git: exports.GitContext.optional(),
     runtime: exports.RuntimeContext,
     state_store: exports.StateStoreContext,
-    authority_refs: zod_1.z.array(referenceSchema).default([]),
-    evidence_refs: zod_1.z.array(referenceSchema).default([]),
+    authority_refs: zod_1.z.array(exports.ReferenceSchema).default([]),
+    evidence_refs: zod_1.z.array(exports.ReferenceSchema).default([]),
 }).strict();
 exports.EffectDescriptor = zod_1.z.object({ effect: NonEmpty, scope: NonEmpty }).strict();
 exports.RecipeDefinition = zod_1.z.object({
@@ -52,7 +58,7 @@ exports.RecipeRequest = zod_1.z.object({
     execution_attempt_id: ExecutionAttemptIdSchema,
     context: exports.ExecutionContext,
     authorization: execution_coordination_1.AuthorizationContext,
-    evidence_refs: zod_1.z.array(referenceSchema).default([]),
+    evidence_refs: zod_1.z.array(exports.ReferenceSchema).default([]),
     preflight_handoff: zod_1.z.unknown().optional(),
     input: zod_1.z.unknown().optional(),
 }).strict().superRefine((value, ctx) => {
@@ -76,8 +82,8 @@ const RecipeReceiptSchema = zod_1.z.object({
     effect_state: zod_1.z.enum(['NONE', 'CONFIRMED', 'UNKNOWN']),
     reason: NonEmpty.optional(),
     output: zod_1.z.unknown().optional(),
-    result_refs: zod_1.z.array(referenceSchema).default([]),
-    evidence_refs: zod_1.z.array(referenceSchema).default([]),
+    result_refs: zod_1.z.array(exports.ReferenceSchema).default([]),
+    evidence_refs: zod_1.z.array(exports.ReferenceSchema).default([]),
 }).strict().superRefine((value, ctx) => {
     if (value.status !== 'PASS' && !value.reason) {
         ctx.addIssue({ code: 'custom', path: ['reason'], message: `${value.status} requires an explicit reason` });
@@ -104,8 +110,8 @@ const ExecutionPlanSchema = zod_1.z.object({
     execution_context: exports.ExecutionContext,
     recipe: exports.SelectedRecipe.nullable(),
     expected_effects: zod_1.z.array(exports.EffectDescriptor),
-    authority_refs: zod_1.z.array(referenceSchema).default([]),
-    evidence_refs: zod_1.z.array(referenceSchema).default([]),
+    authority_refs: zod_1.z.array(exports.ReferenceSchema).default([]),
+    evidence_refs: zod_1.z.array(exports.ReferenceSchema).default([]),
     semantic_escalation: exports.SemanticEscalation.nullable(),
 }).strict().superRefine((value, ctx) => {
     if (value.operation_id !== value.execution_context.operation_id) {

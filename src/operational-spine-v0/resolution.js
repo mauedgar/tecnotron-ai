@@ -22,7 +22,7 @@ function resolvePlanReferences(contextRefs, requestedRefs, label) {
 function materializeExecutionPlan({ operation, executionContext, requiredCapabilities, recipeRegistry, authorityRefs, evidenceRefs, }) {
     const context = contracts_1.ExecutionContext.parse(executionContext);
     if (!operation || operation.kind !== 'Operation')
-        throw new TypeError('a State Kernel Operation aggregate is required');
+        throw new TypeError('an Operation aggregate is required');
     if (operation.id !== context.operation_id)
         throw new Error('ExecutionContext operation_id does not match durable Operation');
     if (operation.taskcycle_id !== context.taskcycle_id)

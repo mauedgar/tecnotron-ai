@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 
 const {
   ExecutionContext,
+  ReferenceSchema,
   RecipeDefinition,
   RecipeReceipt,
 } = require('../../src/operational-spine-v0/contracts');
@@ -171,4 +172,39 @@ test('RecipeReceipt requires UNKNOWN status and effect_state to agree', () => {
     status: 'UNKNOWN',
     effect_state: 'UNKNOWN',
   }).status, 'UNKNOWN');
+});
+
+
+test('portable ReferenceSchema preserves current rich reference shapes and fails closed', () => {
+  const minimal = { kind: 'AUTHORITY', id: 'DEV-PORTABLE-REF' };
+  assert.deepEqual(ReferenceSchema.parse(minimal), minimal);
+
+  const rich = {
+    kind: 'GIT_OBJECT',
+    id: 'tree:portable',
+    location: 'evidence/tree.json',
+    sha256: 'a'.repeat(64),
+    git_oid: 'b'.repeat(40),
+  };
+  assert.deepEqual(ReferenceSchema.parse(rich), rich);
+
+  const malformed = [
+    { ...minimal, id: '' },
+    { ...minimal, kind: 'OTHER' },
+    { ...minimal, location: '' },
+    { ...minimal, sha256: 'A'.repeat(64) },
+    { ...minimal, git_oid: 'g'.repeat(40) },
+    { ...minimal, unexpected: true },
+  ];
+  for (const value of malformed) assert.throws(() => ReferenceSchema.parse(value));
+});
+
+test('materializeExecutionPlan names only the portable Operation shape', () => {
+  const registry = new RecipeRegistry();
+  assert.throws(() => materializeExecutionPlan({
+    operation: null,
+    executionContext: context(),
+    requiredCapabilities: ['state.render'],
+    recipeRegistry: registry,
+  }), /an Operation aggregate is required/);
 });

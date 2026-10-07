@@ -442,8 +442,8 @@ export declare const RecipeInvocationResult: z.ZodObject<{
         effect_state: "CONFIRMED" | "NONE" | "UNKNOWN";
         reason?: string | undefined;
         output?: unknown;
-        result_refs?: unknown[] | undefined;
-        evidence_refs?: unknown[] | undefined;
+        result_refs?: Reference[] | undefined;
+        evidence_refs?: Reference[] | undefined;
     }, z.core.$ZodTypeInternals<RecipeReceipt, {
         schema_version: "tecnotron-recipe-receipt/v0";
         receipt_ref: string;
@@ -455,8 +455,8 @@ export declare const RecipeInvocationResult: z.ZodObject<{
         effect_state: "CONFIRMED" | "NONE" | "UNKNOWN";
         reason?: string | undefined;
         output?: unknown;
-        result_refs?: unknown[] | undefined;
-        evidence_refs?: unknown[] | undefined;
+        result_refs?: Reference[] | undefined;
+        evidence_refs?: Reference[] | undefined;
     }>>>>;
     result_ref: z.ZodNullable<z.ZodPipe<z.ZodObject<{
         kind: z.ZodEnum<{

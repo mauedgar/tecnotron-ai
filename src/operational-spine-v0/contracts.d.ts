@@ -1,11 +1,12 @@
 import { z } from 'zod';
-export interface Reference {
-    readonly kind: 'AUTHORITY' | 'EVIDENCE' | 'ARTIFACT' | 'GIT_OBJECT';
-    readonly id: string;
-    readonly location?: string;
-    readonly sha256?: string;
-    readonly git_oid?: string;
-}
+export type Reference = {
+    kind: 'AUTHORITY' | 'EVIDENCE' | 'ARTIFACT' | 'GIT_OBJECT';
+    id: string;
+    location?: string | undefined;
+    sha256?: string | undefined;
+    git_oid?: string | undefined;
+};
+export declare const ReferenceSchema: z.ZodType<Reference, Reference>;
 export declare const Capability: z.ZodString;
 export type Capability = z.output<typeof Capability>;
 export declare const RepositoryContext: z.ZodObject<{
@@ -59,8 +60,8 @@ export declare const ExecutionContext: z.ZodObject<{
         reference: z.ZodString;
         location: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>;
-    authority_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
-    evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
+    authority_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
+    evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
 }, z.core.$strict>;
 export type ExecutionContext = z.output<typeof ExecutionContext>;
 export type ExecutionContextInput = z.input<typeof ExecutionContext>;
@@ -113,8 +114,8 @@ export declare const RecipeRequest: z.ZodObject<{
             reference: z.ZodString;
             location: z.ZodOptional<z.ZodString>;
         }, z.core.$strict>;
-        authority_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
-        evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
+        authority_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
+        evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
     }, z.core.$strict>;
     authorization: z.ZodObject<{
         disposition: z.ZodEnum<{
@@ -128,7 +129,7 @@ export declare const RecipeRequest: z.ZodObject<{
             scope: z.ZodString;
         }, z.core.$strict>>;
     }, z.core.$strict>;
-    evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
+    evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
     preflight_handoff: z.ZodOptional<z.ZodUnknown>;
     input: z.ZodOptional<z.ZodUnknown>;
 }, z.core.$strict>;
@@ -165,8 +166,8 @@ declare const RecipeReceiptSchema: z.ZodObject<{
     }>;
     reason: z.ZodOptional<z.ZodString>;
     output: z.ZodOptional<z.ZodUnknown>;
-    result_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
-    evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
+    result_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
+    evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
 }, z.core.$strict>;
 type ReceiptShape = z.output<typeof RecipeReceiptSchema>;
 type ReceiptCommon = Omit<ReceiptShape, 'status' | 'effect_state' | 'reason'>;
@@ -232,8 +233,8 @@ declare const ExecutionPlanSchema: z.ZodObject<{
             reference: z.ZodString;
             location: z.ZodOptional<z.ZodString>;
         }, z.core.$strict>;
-        authority_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
-        evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
+        authority_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
+        evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
     }, z.core.$strict>;
     recipe: z.ZodNullable<z.ZodObject<{
         id: z.ZodString;
@@ -243,8 +244,8 @@ declare const ExecutionPlanSchema: z.ZodObject<{
         effect: z.ZodString;
         scope: z.ZodString;
     }, z.core.$strict>>;
-    authority_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
-    evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, unknown, z.core.$ZodTypeInternals<Reference, unknown>>>>;
+    authority_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
+    evidence_refs: z.ZodDefault<z.ZodArray<z.ZodType<Reference, Reference, z.core.$ZodTypeInternals<Reference, Reference>>>>;
     semantic_escalation: z.ZodNullable<z.ZodObject<{
         reason: z.ZodEnum<{
             AMBIGUOUS_DETERMINISTIC_RECIPE: "AMBIGUOUS_DETERMINISTIC_RECIPE";
