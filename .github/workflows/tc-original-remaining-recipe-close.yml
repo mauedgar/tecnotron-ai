@@ -1,0 +1,351 @@
+name: Resume Original Remaining Recipe Logical Close
+
+on:
+  push:
+    branches:
+      - devlab/tc-web-execution-v0
+    paths:
+      - .tc-web/original-logical-close-request.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tc-original-remaining-recipe-logical-close
+  cancel-in-progress: false
+
+jobs:
+  close:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout execution workspace
+        uses: actions/checkout@v4
+
+      - name: Parse exact close request
+        id: req
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '
+            .schema_version == "tecnotron-original-logical-close-resumption/v0" and
+            (.taskcycle.id == "TASKCYCLE-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-001") and
+            (.candidate.commit | test("^[0-9a-f]{40}$")) and
+            (.lifecycle_runtime.commit | test("^[0-9a-f]{40}$")) and
+            (.Phase_2.post_tools == .candidate.commit) and
+            (.constraints.candidate_replay == false) and
+            (.constraints.independent_review_replay == false) and
+            (.constraints.Developer_acceptance_replay == false) and
+            (.constraints.Phase_2_replay == false)
+          ' .tc-web/original-logical-close-request.json >/dev/null
+          echo "candidate=$(jq -r '.candidate.commit' .tc-web/original-logical-close-request.json)" >> "$GITHUB_OUTPUT"
+          echo "candidate_tree=$(jq -r '.candidate.tree' .tc-web/original-logical-close-request.json)" >> "$GITHUB_OUTPUT"
+          echo "lifecycle=$(jq -r '.lifecycle_runtime.commit' .tc-web/original-logical-close-request.json)" >> "$GITHUB_OUTPUT"
+          echo "lifecycle_tree=$(jq -r '.lifecycle_runtime.tree' .tc-web/original-logical-close-request.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repaired lifecycle runtime
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.req.outputs.lifecycle }}
+          path: lifecycle
+          fetch-depth: 0
+
+      - name: Checkout exact historical candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.req.outputs.candidate }}
+          path: subject
+          fetch-depth: 0
+
+      - name: Verify Product history and no replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          spec=".tc-web/original-logical-close-request.json"
+
+          test "$(git -C lifecycle rev-parse HEAD)" = "${{ steps.req.outputs.lifecycle }}"
+          test "$(git -C lifecycle rev-parse HEAD^{tree})" = "${{ steps.req.outputs.lifecycle_tree }}"
+          current_tools="$(git -C lifecycle ls-remote origin refs/heads/tools | awk '{print $1}')"
+          test "$current_tools" = "${{ steps.req.outputs.lifecycle }}"
+
+          candidate="$(jq -r '.candidate.commit' "$spec")"
+          candidate_tree="$(jq -r '.candidate.tree' "$spec")"
+          candidate_parent="$(jq -r '.candidate.parent' "$spec")"
+          baseline="$(jq -r '.Product_baseline.commit' "$spec")"
+          task_commit="$(jq -r '.TASK_carrier.commit' "$spec")"
+          phase1="$(jq -r '.phase1_subject.commit' "$spec")"
+
+          test "$(git -C subject rev-parse HEAD)" = "$candidate"
+          test "$(git -C subject rev-parse HEAD^{tree})" = "$candidate_tree"
+          test "$(git -C subject rev-parse HEAD^1)" = "$candidate_parent"
+
+          git -C subject fetch --no-tags origin "$baseline" "$task_commit" "$phase1" >/dev/null 2>&1
+          test "$(git -C subject rev-parse "$task_commit^1")" = "$baseline"
+          test "$(git -C subject rev-parse "$phase1^1")" = "$task_commit"
+          test "$(git -C subject rev-parse "$phase1^{tree}")" = "$(jq -r '.phase1_subject.tree' "$spec")"
+          test "$(git -C subject rev-parse "$task_commit^{tree}")" = "$(jq -r '.TASK_carrier.tree' "$spec")"
+
+          # Historical Phase 2 topology: exact accepted first-parent range.
+          observed_range="$(git -C subject rev-list --first-parent --reverse "$baseline..$candidate")"
+          expected_range="$(jq -r '.Phase_2.accepted_first_parent_range.ordered_commit_range[]' "$spec")"
+          test "$observed_range" = "$expected_range"
+          test "$(git -C subject rev-list --count "$baseline..$candidate")" = "$(jq -r '.Phase_2.accepted_first_parent_range.commit_count' "$spec")"
+
+          observed_range_paths="$(git -C subject diff --name-only --no-renames "$baseline" "$candidate" -- | LC_ALL=C sort)"
+          expected_range_paths="$(jq -r '.Phase_2.accepted_first_parent_range.changed_paths[]' "$spec" | LC_ALL=C sort)"
+          test "$observed_range_paths" = "$expected_range_paths"
+
+          observed_phase1_paths="$(git -C subject diff --name-only --no-renames "$task_commit" "$phase1" -- | LC_ALL=C sort)"
+          expected_phase1_paths="$(jq -r '.phase1_subject.changed_paths[]' "$spec" | LC_ALL=C sort)"
+          test "$observed_phase1_paths" = "$expected_phase1_paths"
+
+          observed_candidate_paths="$(git -C subject diff --name-only --no-renames "$candidate_parent" "$candidate" -- | LC_ALL=C sort)"
+          expected_candidate_paths="$(jq -r '.candidate.changed_paths[]' "$spec" | LC_ALL=C sort)"
+          test "$observed_candidate_paths" = "$expected_candidate_paths"
+
+          # Current tools advanced only because the independent lifecycle repair was later integrated.
+          git -C lifecycle fetch --no-tags origin "$candidate" >/dev/null 2>&1
+          git -C lifecycle merge-base --is-ancestor "$candidate" HEAD
+
+          # Reconciliation records must explicitly preserve, not repeat, earlier gates.
+          jq -e '
+            .reconciliation_only == true and
+            .review_reexecuted == false and
+            .verdict == "PASS" and
+            .exact_subject.commit == "ff668b3878f2cd89030306dbfd979da23acf33cb"
+          ' .tc-web/original-preserved-ir-reconciliation.json >/dev/null
+          jq -e '
+            .reconciliation_only == true and
+            .acceptance_reexecuted == false and
+            .preserved_status == "GRANTED" and
+            .subject_commit == "ff668b3878f2cd89030306dbfd979da23acf33cb"
+          ' .tc-web/original-preserved-acceptance-reconciliation.json >/dev/null
+          jq -e '
+            .reconciliation_only == true and
+            .validation_reexecuted == false and
+            .status == "PASS" and
+            .subject.commit == "ff668b3878f2cd89030306dbfd979da23acf33cb" and
+            .checks.contracts_check == "PASS" and
+            .checks.full_tests.failed == 0
+          ' .tc-web/original-preserved-validation-reconciliation.json >/dev/null
+
+          test -z "$(git -C lifecycle status --porcelain=v1 --untracked-files=all)"
+          test -z "$(git -C subject status --porcelain=v1 --untracked-files=all)"
+
+      - name: Install repaired lifecycle dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd lifecycle
+          npm ci --ignore-scripts=false >/dev/null
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+      - name: Resume LOGICAL_CLOSE only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _original_close/init-root _original_close/phase1-root _original_close/close-root
+          export EXECUTION_ROOT="$PWD"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const crypto = require('node:crypto');
+
+          const root = process.env.EXECUTION_ROOT;
+          const spec = JSON.parse(fs.readFileSync(path.join(root, '.tc-web/original-logical-close-request.json'), 'utf8'));
+          const lifecycleRoot = path.join(root, 'lifecycle');
+
+          const {
+            createTaskCycleInitializationCapability,
+            consumeTaskCycleInitialization,
+          } = require(path.join(lifecycleRoot, 'src/deterministic-taskcycle-substrate-v0/taskcycle-initialization.js'));
+          const {
+            createTaskCycleEffectReconciliationCapability,
+            consumeTaskCycleEffectReconciliation,
+          } = require(path.join(lifecycleRoot, 'src/deterministic-taskcycle-substrate-v0/taskcycle-effect-reconciliation.js'));
+          const {
+            createTaskCyclePostPhase1LifecycleCapability,
+            consumeTaskCyclePostPhase1Lifecycle,
+          } = require(path.join(lifecycleRoot, 'src/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle.js'));
+
+          const sha256File = (p) => 'sha256:' + crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+          const authority = spec.Developer_acceptance.authority_ref;
+
+          const obligations = [
+            'implementation',
+            'promotion_grade_validation',
+            'exact_candidate',
+            'frozen_review_interface',
+            'independent_review',
+            'Developer_acceptance',
+            'Phase_2',
+            'effect_reconciliation',
+            'logical_close',
+          ].map((id) => ({ id, authority_ref: null }));
+
+          // Re-materialize portable lifecycle evidence only; this does not replay Product implementation.
+          const initializationRequest = {
+            taskcycle: spec.taskcycle,
+            Product_baseline: spec.Product_baseline,
+            TASK_carrier: spec.TASK_carrier,
+            write_scope: spec.write_scope,
+            obligations,
+            current_gate: 'PHASE1_IMPLEMENT_BOUNDED_CANDIDATE',
+            authority_refs: [authority],
+            evidence_refs: [
+              'GIT:' + spec.Product_baseline.commit,
+              'TASK:' + spec.TASK_carrier.commit,
+              'RECONCILIATION:ORIGINAL-LOGICAL-CLOSE-RESUMPTION',
+            ],
+          };
+          const init = createTaskCycleInitializationCapability({ root: path.join(root, '_original_close/init-root') })
+            .initializeTaskCycle({
+              request: initializationRequest,
+              observed: {
+                Product_baseline: spec.Product_baseline,
+                TASK_carrier: spec.TASK_carrier,
+              },
+            });
+          fs.writeFileSync(path.join(root, '_original_close/initialization-result.json'), JSON.stringify(init, null, 2) + '\n');
+          if (init.status !== 'PASS' || init.effect_state !== 'CONFIRMED') {
+            throw new Error('INITIALIZATION_RECONCILIATION_NOT_PASS:' + JSON.stringify(init));
+          }
+          consumeTaskCycleInitialization({
+            location: init.portable_projection.location_or_ref,
+            expected_identity_sha256: init.portable_projection.identity_sha256,
+          });
+
+          const phase1Request = {
+            taskcycle: spec.taskcycle,
+            initialization: {
+              location_or_ref: init.portable_projection.location_or_ref,
+              identity_sha256: init.portable_projection.identity_sha256,
+            },
+            obligation: {
+              id: 'implementation',
+              semantic_status: 'COMPLETED_BEFORE_LIFECYCLE_INITIALIZATION',
+            },
+            subject: spec.phase1_subject,
+            authority_refs: [authority],
+            evidence_refs: ['GIT:' + spec.phase1_subject.commit, 'PRESERVED:PHASE1'],
+            next_gate: 'PROMOTION_GRADE_VALIDATION',
+          };
+          const phase1 = createTaskCycleEffectReconciliationCapability({ root: path.join(root, '_original_close/phase1-root') })
+            .reconcileCompletedObligation({ request: phase1Request, observed: { subject: spec.phase1_subject } });
+          fs.writeFileSync(path.join(root, '_original_close/phase1-reconciliation-result.json'), JSON.stringify(phase1, null, 2) + '\n');
+          if (phase1.status !== 'PASS' || phase1.effect_state !== 'CONFIRMED' || phase1.replayed !== false) {
+            throw new Error('PHASE1_RECONCILIATION_NOT_PASS:' + JSON.stringify(phase1));
+          }
+          consumeTaskCycleEffectReconciliation({
+            location: phase1.portable_projection.location_or_ref,
+            expected_identity_sha256: phase1.portable_projection.identity_sha256,
+          });
+
+          const irPath = path.join(root, spec.independent_review.result_path);
+          const candidate = {
+            ...spec.candidate,
+            provenance: { phase1_subject: spec.phase1_subject },
+          };
+          const validation = {
+            ...spec.promotion_grade_validation,
+            exact_candidate_commit: candidate.commit,
+            exact_candidate_tree: candidate.tree,
+          };
+          const frozen = {
+            id: spec.frozen_review_interface.id,
+            prompt_sha256: 'sha256:' + spec.frozen_review_interface.prompt_sha256,
+            subject_commit: candidate.commit,
+            subject_tree: candidate.tree,
+          };
+          const ir = {
+            id: spec.independent_review.id,
+            verdict: spec.independent_review.verdict,
+            subject_commit: candidate.commit,
+            subject_tree: candidate.tree,
+            result_sha256: sha256File(irPath),
+            blocking_findings: spec.independent_review.blocking_findings,
+          };
+          const acceptance = {
+            status: spec.Developer_acceptance.status,
+            authority_ref: authority,
+            subject_commit: candidate.commit,
+            subject_tree: candidate.tree,
+          };
+
+          const closeRequest = {
+            taskcycle: spec.taskcycle,
+            source_reconciliation: {
+              location_or_ref: phase1.portable_projection.location_or_ref,
+              identity_sha256: phase1.portable_projection.identity_sha256,
+            },
+            candidate,
+            promotion_grade_validation: validation,
+            frozen_review_interface: frozen,
+            independent_review: ir,
+            Developer_acceptance: acceptance,
+            Phase_2: spec.Phase_2,
+            effect_reconciliation: spec.effect_reconciliation,
+            logical_close: spec.logical_close,
+            authority_refs: [authority],
+            evidence_refs: [
+              'PRESERVED_VALIDATION:' + candidate.commit,
+              'FREEZE_ARCHIVE:' + spec.frozen_review_interface.archive_sha256,
+              'IR_RECONCILIATION:' + spec.independent_review.id,
+              'PRESERVED_ACCEPTANCE:' + authority,
+              'PHASE2_RANGE:' + spec.Phase_2.pre_tools + '..' + spec.Phase_2.post_tools,
+              'REPAIR_TC:CLOSED_PASS',
+            ],
+          };
+          const observed = {
+            candidate: closeRequest.candidate,
+            promotion_grade_validation: closeRequest.promotion_grade_validation,
+            frozen_review_interface: closeRequest.frozen_review_interface,
+            independent_review: closeRequest.independent_review,
+            Developer_acceptance: closeRequest.Developer_acceptance,
+            Phase_2: closeRequest.Phase_2,
+            effect_reconciliation: closeRequest.effect_reconciliation,
+            logical_close: closeRequest.logical_close,
+          };
+
+          const closed = createTaskCyclePostPhase1LifecycleCapability({ root: path.join(root, '_original_close/close-root') })
+            .closeFromResolvedLifecycle({ request: closeRequest, observed });
+          fs.writeFileSync(path.join(root, '_original_close/logical-close-result.json'), JSON.stringify(closed, null, 2) + '\n');
+          if (closed.status !== 'PASS' || closed.effect_state !== 'CONFIRMED'
+              || closed.TaskCycle?.state !== 'CLOSED'
+              || closed.terminal_disposition_ref !== 'CLOSED_PASS') {
+            throw new Error('LOGICAL_CLOSE_NOT_PASS:' + JSON.stringify(closed));
+          }
+
+          const consumed = consumeTaskCyclePostPhase1Lifecycle({
+            location: closed.portable_projection.location_or_ref,
+            expected_identity_sha256: closed.portable_projection.identity_sha256,
+          });
+          const summary = {
+            status: 'CLOSED_PASS',
+            TaskCycle: consumed.projection.TaskCycle,
+            terminal_disposition_ref: consumed.projection.terminal_disposition_ref,
+            terminal_identity_sha256: consumed.identity_sha256,
+            pending_obligations: consumed.projection.pending_obligations,
+            obligations: consumed.projection.obligations,
+            preserved_Phase1_effect: consumed.projection.preserved_Phase1_effect,
+            Phase_2: consumed.projection.lifecycle_evidence.Phase_2,
+            State_Kernel_direct_calls: consumed.projection.semantics.State_Kernel_direct_calls,
+            replay: {
+              candidate: false,
+              Independent_Review: false,
+              Developer_acceptance: false,
+              Phase_2: false,
+            },
+          };
+          fs.writeFileSync(path.join(root, '_original_close/terminal-consume.json'), JSON.stringify(summary, null, 2) + '\n');
+          process.stdout.write(JSON.stringify(summary, null, 2) + '\n');
+          NODE
+
+      - name: Upload original logical close evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tc-original-remaining-recipe-logical-close
+          path: _original_close/
+          if-no-files-found: error
+          retention-days: 30
