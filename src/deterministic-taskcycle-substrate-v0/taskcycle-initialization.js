@@ -117,7 +117,7 @@ function pass(r, root, pkg, already_initialized = false, reason = null) {
 function inspect(root, pkg) {
   try {
     const entries = fs.readdirSync(root).sort();
-    if (entries.length !== FILEL.length || entries.some((x, i) => x !== FILES[i])) return 'UNKNOWN';
+    if (entries.length !== FILES.length || entries.some((x, i) => x !== FILES[i])) return 'UNKNOWN';
     const manifest = path.join(root, 'manifest.json');
     const projection = path.join(root, 'projection.json');
     for (const file of [manifest, projection]) {
