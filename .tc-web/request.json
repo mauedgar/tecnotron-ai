@@ -1,21 +1,21 @@
 {
   "schema_version": "tecnotron-tc-web-execution-request/v0",
-  "request_id": "TECNOTRON-KERNEL-FREE-TC-INIT-ACTIONS-001",
+  "request_id": "TECNOTRON-KERNEL-FREE-TC-INIT-ACTIONS-002",
   "product": "Tecnotron",
   "task": "BOOTSTRAP-KERNEL-FREE-TASKCYCLE-INITIALIZATION-001",
   "responsibility": "ESTABLISH_MINIMAL_KERNEL_FREE_TASKCYCLE_INITIALIZATION_BINDING",
-  "gate": "QUALIFY_OR_ESTABLISH_KERNEL_FREE_TASKCYCLE_INITIALIZATION_BINDING",
+  "gate": "REPAIR_KERNEL_FREE_TASKCYCLE_INITIALIZATION_CANDIDATE",
   "subject": {
     "branch": "bootstrap/kernel-free-taskcycle-initialization-001",
-    "commit": "4ed3f2cec4e766916ef7b729693c997a06825471",
-    "tree": "2b7669a66a0dd9a57cc0bbc064abbefdb732d77c"
+    "commit": "37c091afcb6cf7cf53bacd7c7279132aa8238856",
+    "tree": "bd80756e49b763a3326b3d81370a1d76cc9674e4"
   },
   "profile": "node22-bookworm-validation-v0",
   "dispatch": "AUTHORIZED",
   "notes": [
-    "Developer authorized qualification/establishment of the missing kernel-free TaskCycle initialization binding.",
-    "This validates only the isolated bootstrap candidate; the blocked Product TaskCycle remains NOT_INITIALIZED.",
-    "Do not mutate or replay 8cac265a378c86e1b32523c45dae531b024cb82f.",
+    "Developer authorized repair of the unfrozen bootstrap candidate and exact-subject validation.",
+    "The repair is exactly FILEL.length -> FILES.length in taskcycle-initialization.js.",
+    "The original Product TaskCycle remains NOT_INITIALIZED and 8cac265a378c86e1b32523c45dae531b024cb82f must not be replayed.",
     "No freeze, Independent Review, Developer acceptance, Phase 2, canonical integration, or original TaskCycle initialization is authorized by this dispatch."
   ]
 }
