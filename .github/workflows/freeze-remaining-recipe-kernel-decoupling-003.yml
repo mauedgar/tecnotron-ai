@@ -1,0 +1,385 @@
+name: Freeze remaining Recipe kernel decoupling 003
+
+on:
+  push:
+    branches:
+      - exec/review-freeze-remaining-recipe-kernel-decoupling-003
+
+permissions:
+  contents: read
+
+jobs:
+  freeze-review-interface:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CANDIDATE: c60f1c448a99a94629bbe90ef410226cf635fafb
+      PARENT: dcdd64a7aa42173f7cd81216ebaf476206132122
+      TREE: 3046533b8a0b070de7c36a899b4f7e830a53df13
+      INTERFACE_ID: IND-REVIEW-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-003
+      TASKCYCLE_ID: TASKCYCLE-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-001
+      RESPONSIBILITY: DECOUPLE_REMAINING_OPERATIONAL_SPINE_RECIPES_FROM_STATE_KERNEL
+
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: c60f1c448a99a94629bbe90ef410226cf635fafb
+          fetch-depth: 0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Validate exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE"
+          test "$(git rev-parse "HEAD^{tree}")" = "$TREE"
+
+          git diff --name-only --no-renames "$PARENT" "$CANDIDATE" -- | LC_ALL=C sort > "$RUNNER_TEMP/actual-paths.txt"
+          cat > "$RUNNER_TEMP/expected-paths.txt" <<'EOF'
+          src-typescript/operational-spine-v0/contracts.ts
+          src-typescript/operational-spine-v0/resolution.ts
+          src/operational-spine-v0/contracts.d.ts
+          src/operational-spine-v0/contracts.js
+          src/operational-spine-v0/recipes/materialize-frozen-review-interface.js
+          src/operational-spine-v0/recipes/render-current-state.js
+          src/operational-spine-v0/recipes/validate-fitflow-http-contract-candidate.js
+          src/operational-spine-v0/resolution.js
+          tests/operational-spine-v0/contracts-and-resolution.test.js
+          tests/operational-spine-v0/recipe-kernel-decoupling.test.js
+          EOF
+          LC_ALL=C sort -o "$RUNNER_TEMP/expected-paths.txt" "$RUNNER_TEMP/expected-paths.txt"
+          diff -u "$RUNNER_TEMP/expected-paths.txt" "$RUNNER_TEMP/actual-paths.txt"
+
+          npm ci 2>&1 | tee "$RUNNER_TEMP/npm-ci.log"
+          npm run typecheck 2>&1 | tee "$RUNNER_TEMP/typecheck.log"
+          npm run contracts:check 2>&1 | tee "$RUNNER_TEMP/contracts-check.log"
+          npm test 2>&1 | tee "$RUNNER_TEMP/full-test.log"
+
+          test -z "$(git status --porcelain=v1)"
+          test "$(git rev-parse HEAD)" = "$CANDIDATE"
+          test "$(git rev-parse "HEAD^{tree}")" = "$TREE"
+
+      - name: Materialize frozen review interface
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/review-interfaces"
+
+          cat > "$RUNNER_TEMP/freeze.js" <<'NODE'
+          'use strict';
+
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { execFileSync } = require('node:child_process');
+
+          const root = process.env.GITHUB_WORKSPACE;
+          const temp = process.env.RUNNER_TEMP;
+          const candidate = process.env.CANDIDATE;
+          const parent = process.env.PARENT;
+          const tree = process.env.TREE;
+          const interfaceId = process.env.INTERFACE_ID;
+          const taskcycleId = process.env.TASKCYCLE_ID;
+          const responsibility = process.env.RESPONSIBILITY;
+
+          function git(...args) {
+            return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+          }
+          function sha256File(file) {
+            return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+          }
+          function write(file, content) {
+            fs.writeFileSync(file, content.endsWith('\n') ? content : content + '\n', 'utf8');
+          }
+
+          const expectedPaths = [
+            'src-typescript/operational-spine-v0/contracts.ts',
+            'src-typescript/operational-spine-v0/resolution.ts',
+            'src/operational-spine-v0/contracts.d.ts',
+            'src/operational-spine-v0/contracts.js',
+            'src/operational-spine-v0/recipes/materialize-frozen-review-interface.js',
+            'src/operational-spine-v0/recipes/render-current-state.js',
+            'src/operational-spine-v0/recipes/validate-fitflow-http-contract-candidate.js',
+            'src/operational-spine-v0/resolution.js',
+            'tests/operational-spine-v0/contracts-and-resolution.test.js',
+            'tests/operational-spine-v0/recipe-kernel-decoupling.test.js',
+          ].sort();
+
+          const observedPaths = git('diff', '--name-only', '--no-renames', parent, candidate, '--')
+            .split(/\r?\n/).filter(Boolean).sort();
+          if (JSON.stringify(observedPaths) !== JSON.stringify(expectedPaths)) throw new Error('WRITE_SCOPE_MISMATCH');
+          if (git('rev-parse', 'HEAD') !== candidate) throw new Error('HEAD_MISMATCH');
+          if (git('rev-parse', 'HEAD^{tree}') !== tree) throw new Error('TREE_MISMATCH');
+          if (git('status', '--porcelain=v1') !== '') throw new Error('WORKTREE_NOT_CLEAN');
+
+          const testLog = fs.readFileSync(path.join(temp, 'full-test.log'), 'utf8');
+          const pass = Number((testLog.match(/# pass\s+(\d+)/) || [])[1]);
+          const fail = Number((testLog.match(/# fail\s+(\d+)/) || [])[1]);
+          const skipped = Number((testLog.match(/# skipped\s+(\d+)/) || [])[1]);
+          if (pass !== 495 || fail !== 0 || skipped !== 4) {
+            throw new Error('FULL_REGRESSION_SUMMARY_MISMATCH:' + JSON.stringify({ pass, fail, skipped }));
+          }
+
+          const validationPath = path.join(temp, 'PROMOTION-GRADE-VALIDATION.json');
+          const validation = {
+            schema_version: 'tecnotron-promotion-grade-validation-evidence/v0',
+            gate: 'PROMOTION_GRADE_VALIDATE_REMAINING_RECIPE_KERNEL_DECOUPLING',
+            provider: 'github-actions',
+            run_id: process.env.GITHUB_RUN_ID,
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT,
+            exact_candidate: { parent, commit: candidate, tree, changed_paths: expectedPaths, commit_count: 1 },
+            checks: {
+              checkout_guard: 'PASS',
+              npm_ci: 'PASS',
+              typecheck: 'PASS',
+              contracts_check: 'PASS',
+              full_regression: { status: 'PASS', pass, fail, skipped },
+              post_validation_git_guard: 'PASS',
+              write_scope_exact: 'PASS',
+              unresolved_UNKNOWN_effects: [],
+            },
+            canonical_effect: { tools_moved: false, Product_integration: 'NONE' },
+          };
+          write(validationPath, JSON.stringify(validation, null, 2));
+
+          const reviewRequestPath = path.join(temp, 'REVIEW-REQUEST.md');
+          const reviewRequest = [
+            '# Independent Review Request',
+            '',
+            'Review exactly one immutable candidate for the Tecnotron Product TaskCycle below.',
+            '',
+            'TaskCycle: ' + taskcycleId,
+            'Responsibility: ' + responsibility,
+            '',
+            'Exact subject:',
+            '- parent: ' + parent,
+            '- commit: ' + candidate,
+            '- tree: ' + tree,
+            '- commit_count: 1',
+            '- changed_paths: exactly the ten paths declared in manifest/review-instance.json',
+            '',
+            'Required semantic judgment:',
+            '1. Operational Spine owns the portable Reference schema and no shipped Recipe, contracts, or resolution path directly imports state-kernel-v0; the compatibility adapter remains the only direct boundary.',
+            '2. The portable Reference contract preserves existing valid shapes and fails closed on malformed shapes without widening or narrowing behavior.',
+            '3. materialize_frozen_review_interface and validate_fitflow_http_contract_candidate consume the portable Operational Spine Reference boundary rather than State Kernel contracts.',
+            '4. render_current_state remains provider-neutral and injection-based without changing Recipe identity or receipt behavior.',
+            '5. resolution requires only the portable Operation shape and preserves authority/evidence laundering guards.',
+            '6. reconcile_and_close_taskcycle remains provider-neutral and is not regressed.',
+            '7. The candidate changes only the authorized ten paths, is exactly one commit over the TASK assignment, and contains no State Kernel implementation or adapter redesign.',
+            '8. Promotion-grade validation is competent, exact-subject-bound, zero-failure, and leaves the candidate byte-clean.',
+            '9. No system-wide State Kernel removal, persistence/backend change, TC Core redesign, Product integration, Developer acceptance, or lifecycle close is implied by this candidate.',
+            '',
+            'Return exactly one verdict: PASS, FAIL, or BLOCKED.',
+            'PASS means semantically competent for Developer acceptance; it does not grant acceptance or Phase 2 authority.',
+            'FAIL requires at least one material candidate defect.',
+            'BLOCKED requires a material insufficiency in this frozen interface and does not reject the candidate.',
+            '',
+            'Do not mutate the candidate. Do not perform Product effects.',
+          ].join('\n');
+          write(reviewRequestPath, reviewRequest);
+
+          const authorityRef = {
+            kind: 'AUTHORITY',
+            id: 'DEVELOPER-AUTHORIZE-PROMOTION-GRADE-AND-FREEZE-REMAINING-RECIPE-KERNEL-DECOUPLING-20261007',
+          };
+          const validationRef = {
+            kind: 'EVIDENCE',
+            id: 'PROMOTION-GRADE-VALIDATION-REMAINING-RECIPE-KERNEL-DECOUPLING-003',
+            location: 'PROMOTION-GRADE-VALIDATION.json',
+            sha256: sha256File(validationPath),
+          };
+
+          const packageNames = new Map([
+            ['src-typescript/operational-spine-v0/contracts.ts', 'candidate/01-contracts.ts'],
+            ['src-typescript/operational-spine-v0/resolution.ts', 'candidate/02-resolution.ts'],
+            ['src/operational-spine-v0/contracts.d.ts', 'candidate/03-contracts.d.ts'],
+            ['src/operational-spine-v0/contracts.js', 'candidate/04-contracts.js'],
+            ['src/operational-spine-v0/recipes/materialize-frozen-review-interface.js', 'candidate/05-materialize-frozen-review-interface.js'],
+            ['src/operational-spine-v0/recipes/render-current-state.js', 'candidate/06-render-current-state.js'],
+            ['src/operational-spine-v0/recipes/validate-fitflow-http-contract-candidate.js', 'candidate/07-validate-fitflow-http-contract-candidate.js'],
+            ['src/operational-spine-v0/resolution.js', 'candidate/08-resolution.js'],
+            ['tests/operational-spine-v0/contracts-and-resolution.test.js', 'candidate/09-contracts-and-resolution.test.js'],
+            ['tests/operational-spine-v0/recipe-kernel-decoupling.test.js', 'candidate/10-recipe-kernel-decoupling.test.js'],
+          ]);
+
+          const required = [
+            {
+              id: 'promotion-grade-validation',
+              kind: 'FILE',
+              source_path: validationPath,
+              package_path: 'evidence/PROMOTION-GRADE-VALIDATION.json',
+              sha256: validationRef.sha256,
+              reference_id: validationRef.id,
+            },
+            {
+              id: 'typecheck-log',
+              kind: 'FILE',
+              source_path: path.join(temp, 'typecheck.log'),
+              package_path: 'evidence/typecheck.log',
+              sha256: sha256File(path.join(temp, 'typecheck.log')),
+            },
+            {
+              id: 'contracts-check-log',
+              kind: 'FILE',
+              source_path: path.join(temp, 'contracts-check.log'),
+              package_path: 'evidence/contracts-check.log',
+              sha256: sha256File(path.join(temp, 'contracts-check.log')),
+            },
+            {
+              id: 'full-test-log',
+              kind: 'FILE',
+              source_path: path.join(temp, 'full-test.log'),
+              package_path: 'evidence/full-test.log',
+              sha256: sha256File(path.join(temp, 'full-test.log')),
+            },
+            { id: 'candidate-diff', kind: 'GIT_DIFF', parent, commit: candidate, package_path: 'candidate/candidate.diff' },
+          ];
+
+          let index = 0;
+          for (const repoPath of expectedPaths) {
+            index += 1;
+            required.push({
+              id: 'candidate-source-' + String(index).padStart(2, '0'),
+              kind: 'GIT_BLOB',
+              revision: candidate,
+              repository_path: repoPath,
+              package_path: packageNames.get(repoPath),
+              git_oid: git('rev-parse', candidate + ':' + repoPath),
+            });
+          }
+
+          for (const item of [
+            ['compatibility-adapter', 'src/operational-spine-v0/state-kernel-adapter.js', 'context/state-kernel-adapter.js'],
+            ['portable-close-recipe', 'src/operational-spine-v0/recipes/reconcile-and-close-taskcycle.js', 'context/reconcile-and-close-taskcycle.js'],
+          ]) {
+            required.push({
+              id: item[0],
+              kind: 'GIT_BLOB',
+              revision: candidate,
+              repository_path: item[1],
+              package_path: item[2],
+              git_oid: git('rev-parse', candidate + ':' + item[1]),
+            });
+          }
+
+          const reviewHash = sha256File(reviewRequestPath);
+          const outputRoot = path.join(temp, 'review-interfaces');
+          const effectScope = path.join(outputRoot, interfaceId).replaceAll('\\', '/');
+          const request = {
+            recipe_id: 'materialize_frozen_review_interface',
+            recipe_version: 'v0',
+            operation_id: 'OP-REMAINING-RECIPE-KERNEL-DECOUPLING-FREEZE-003',
+            execution_attempt_id: 'AT-REMAINING-RECIPE-KERNEL-DECOUPLING-FREEZE-003-' + process.env.GITHUB_RUN_ID,
+            context: {
+              schema_version: 'tecnotron-execution-context/v0',
+              operation_id: 'OP-REMAINING-RECIPE-KERNEL-DECOUPLING-FREEZE-003',
+              taskcycle_id: taskcycleId,
+              repository: { identity: 'mauedgar/tecnotron-ai', location: root },
+              worktree: { identity: 'github-actions-exact-candidate', location: root },
+              git: { expected_ref: candidate, expected_commit: candidate },
+              runtime: { executor: 'github-actions', platform: process.platform, runtime_identity: process.version },
+              state_store: { reference: 'kernel-free-portable-lifecycle' },
+              authority_refs: [authorityRef],
+              evidence_refs: [validationRef],
+            },
+            authorization: {
+              disposition: 'AUTHORIZED',
+              authority_reference: authorityRef.id,
+              effect_constraints: [{ effect: 'review_interface.write', scope: effectScope }],
+            },
+            evidence_refs: [validationRef],
+            input: {
+              interface_id: interfaceId,
+              output_root: outputRoot,
+              render_review_prompt: true,
+              review_instance: {
+                TaskCycle: taskcycleId,
+                responsibility,
+                exact_subject: { parent, commit: candidate, tree, changed_paths: expectedPaths },
+                review_request: {
+                  id: 'review-request',
+                  kind: 'FILE',
+                  source_path: reviewRequestPath,
+                  package_path: 'review/request.md',
+                  sha256: reviewHash,
+                },
+                required_evidence_specification: required,
+                validation_evidence_refs: [validationRef],
+                authority_and_scope: {
+                  protocol_ref: 'tecnotron-independent-review-protocol/v1',
+                  authority_refs: [authorityRef],
+                  scope: {
+                    include: [
+                      'exact remaining Recipe kernel-decoupling candidate',
+                      'portable Reference ownership',
+                      'State Kernel direct-import confinement',
+                      'provider-neutral render/resolution semantics',
+                      'promotion-grade validation correspondence',
+                    ],
+                    exclude: [
+                      'candidate repair',
+                      'Developer acceptance',
+                      'Phase 2',
+                      'tools integration',
+                      'system-wide State Kernel removal',
+                      'persistence/backend changes',
+                      'TC Core redesign',
+                    ],
+                  },
+                },
+              },
+            },
+          };
+
+          const modulePath = path.join(root, 'src/operational-spine-v0/recipes/materialize-frozen-review-interface.js');
+          const recipe = require(modulePath).createMaterializeFrozenReviewInterfaceRecipe();
+
+          (async () => {
+            const preflight = await recipe.preflight(request);
+            if (preflight.status !== 'READY') throw new Error('FREEZE_PREFLIGHT_' + preflight.status + ':' + preflight.reason);
+            const receipt = await recipe.execute(request);
+            const resultPath = path.join(temp, 'freeze-result.json');
+            write(resultPath, JSON.stringify({ preflight, receipt }, null, 2));
+            if (receipt.status !== 'PASS' || receipt.effect_state !== 'CONFIRMED') {
+              throw new Error('FREEZE_NONPASS:' + JSON.stringify(receipt));
+            }
+            if (git('status', '--porcelain=v1') !== '') throw new Error('CANDIDATE_MUTATED_BY_FREEZE');
+            if (git('rev-parse', 'HEAD') !== candidate) throw new Error('CANDIDATE_HEAD_CHANGED');
+            process.stdout.write(JSON.stringify({
+              status: 'PASS',
+              effect_state: 'CONFIRMED',
+              interface_id: interfaceId,
+              archive_sha256: receipt.output.archive_sha256,
+              manifest_sha256: receipt.output.manifest_sha256,
+              review_prompt_sha256: receipt.output.review_prompt.sha256,
+              candidate: receipt.output.candidate_correspondence,
+            }, null, 2) + '\n');
+          })().catch((error) => {
+            console.error(error && error.stack ? error.stack : String(error));
+            process.exit(1);
+          });
+          NODE
+
+          node "$RUNNER_TEMP/freeze.js"
+
+      - name: Upload frozen review interface
+        uses: actions/upload-artifact@v4
+        with:
+          name: IND-REVIEW-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-003
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            ${{ runner.temp }}/review-interfaces/IND-REVIEW-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-003.tar
+            ${{ runner.temp }}/review-interfaces/IND-REVIEW-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-003.review-prompt.md
+            ${{ runner.temp }}/review-interfaces/IND-REVIEW-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-003/**
+            ${{ runner.temp }}/PROMOTION-GRADE-VALIDATION.json
+            ${{ runner.temp }}/freeze-result.json
+            ${{ runner.temp }}/typecheck.log
+            ${{ runner.temp }}/contracts-check.log
+            ${{ runner.temp }}/full-test.log
