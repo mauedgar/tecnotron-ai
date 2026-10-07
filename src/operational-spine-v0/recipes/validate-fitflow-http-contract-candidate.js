@@ -4,10 +4,10 @@ const fs = require('node:fs');
 const { spawnSync } = require('node:child_process');
 const { z } = require('zod');
 const {
+  ReferenceSchema,
   RecipeDefinition,
   RecipeReceipt,
 } = require('../contracts');
-const { referenceSchema } = require('../../state-kernel-v0/contracts');
 
 const NonEmpty = z.string().min(1);
 const GitOid = z.string().regex(/^[a-f0-9]{40,64}$/);
@@ -43,7 +43,7 @@ const Candidate = z.object({
   }
 });
 
-const RuntimeEvidenceReference = referenceSchema.refine(
+const RuntimeEvidenceReference = ReferenceSchema.refine(
   (value) => ['EVIDENCE', 'ARTIFACT'].includes(value.kind),
   'runtime receipt evidence must be an EVIDENCE or ARTIFACT reference',
 );
@@ -87,7 +87,7 @@ const ExtraProbeRequest = z.object({
 }).strict();
 const ValidationProfile = z.object({
   targeted_pytest_selectors: z.array(NonEmpty).min(1).max(128),
-  expected_behavior_ref: referenceSchema.optional(),
+  expected_behavior_ref: ReferenceSchema.optional(),
   full_backend_regression: FullRegressionStep,
   ruff: ScopedStep,
   pyright: ScopedStep,

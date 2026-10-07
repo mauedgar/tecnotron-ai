@@ -5,8 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { z } = require('zod');
-const { referenceSchema } = require('../../state-kernel-v0/contracts');
 const {
+  ReferenceSchema,
   RecipeDefinition,
   RecipeReceipt,
 } = require('../contracts');
@@ -88,7 +88,7 @@ const ExactSubject = z.union([
 
 const AuthorityAndScope = z.object({
   protocol_ref: z.literal('tecnotron-independent-review-protocol/v1'),
-  authority_refs: z.array(referenceSchema).min(1),
+  authority_refs: z.array(ReferenceSchema).min(1),
   scope: z.record(z.string(), z.unknown()),
 }).strict();
 
@@ -98,7 +98,7 @@ const ReviewInstance = z.object({
   exact_subject: ExactSubject,
   review_request: FileArtifact,
   required_evidence_specification: z.array(ArtifactSpecification).min(1),
-  validation_evidence_refs: z.array(referenceSchema).min(1),
+  validation_evidence_refs: z.array(ReferenceSchema).min(1),
   authority_and_scope: AuthorityAndScope,
 }).strict();
 

@@ -1,11 +1,12 @@
 import { z } from 'zod';
-export interface Reference {
-    readonly kind: 'AUTHORITY' | 'EVIDENCE' | 'ARTIFACT' | 'GIT_OBJECT';
-    readonly id: string;
-    readonly location?: string;
-    readonly sha256?: string;
-    readonly git_oid?: string;
-}
+export type Reference = {
+    kind: 'AUTHORITY' | 'EVIDENCE' | 'ARTIFACT' | 'GIT_OBJECT';
+    id: string;
+    location?: string | undefined;
+    sha256?: string | undefined;
+    git_oid?: string | undefined;
+};
+export declare const ReferenceSchema: z.ZodType<Reference>;
 export declare const Capability: z.ZodString;
 export type Capability = z.output<typeof Capability>;
 export declare const RepositoryContext: z.ZodObject<{

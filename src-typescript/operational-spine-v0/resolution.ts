@@ -54,7 +54,7 @@ export function materializeExecutionPlan({
   evidenceRefs,
 }: MaterializeExecutionPlanInput): ExecutionPlanValue {
   const context = ExecutionContext.parse(executionContext);
-  if (!operation || operation.kind !== 'Operation') throw new TypeError('a State Kernel Operation aggregate is required');
+  if (!operation || operation.kind !== 'Operation') throw new TypeError('an Operation aggregate is required');
   if (operation.id !== context.operation_id) throw new Error('ExecutionContext operation_id does not match durable Operation');
   if (operation.taskcycle_id !== context.taskcycle_id) throw new Error('ExecutionContext taskcycle_id does not match durable Operation');
   if (!Array.isArray(requiredCapabilities) || requiredCapabilities.length === 0) {
