@@ -1,6 +1,6 @@
 {
   "schema_version": "tecnotron-tc-web-execution-request/v0",
-  "request_id": "TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-ACTIONS-002",
+  "request_id": "TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-ACTIONS-003",
   "product": "Tecnotron",
   "task": "TASKCYCLE-TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-001",
   "responsibility": "EVOLVE_POST_PHASE1_LIFECYCLE_TO_REPRESENT_ACCEPTED_RANGE_PHASE2",
@@ -13,8 +13,8 @@
   "profile": "node22-bookworm-validation-v0",
   "dispatch": "AUTHORIZED",
   "notes": [
-    "Fresh validation after reconciling the prior FAIL as a defective negative regression fixture.",
-    "Source semantics are unchanged from the prior subject; repair deletes accepted_first_parent_range in the missing-range negative case.",
-    "No Product ref mutation; validation authority only."
+    "Fresh complete promotion-grade validation of the exact immutable Product subject.",
+    "Execution binding now includes npm run contracts:check.",
+    "Do not mutate Product refs; Product effect NONE."
   ]
 }
