@@ -2,102 +2,153 @@
 document_id: TEC-ROADMAP-001
 status: canonical
 machine_context: true
-version: 5.0
-updated: 2026-10-04
+version: 5.1
+updated: 2026-10-06
 owner: tecnotron-ai
 ---
 
 # Implementation Roadmap — Tecnotron
 
-This roadmap is current navigation, not independent authority. Exact Developer
-rulings and accepted Product artifacts govern their bounded subjects.
+This roadmap is current Product navigation, not independent authority. Exact
+Developer rulings, canonical repository identity and accepted Product artifacts
+govern their bounded subjects.
 
-## Current bounded responsibility
+## Current navigation boundary
+
+This projection is reconciled against:
 
 ```yaml
-TaskCycle: TASKCYCLE-TECNOTRON-ARCHITECTURE-KNOWLEDGE-OWNERSHIP-SOT-RECONCILIATION-001
-responsibility: MATERIALIZE_RECONCILED_ARCHITECTURE_KNOWLEDGE_AND_CAPABILITY_OWNERSHIP_SOT
-kind: PRODUCT_DOCUMENTATION_ARCHITECTURE_KNOWLEDGE_RECONCILIATION
-current_gate: INDEPENDENT_REVIEW_AFTER_CANDIDATE_FREEZE
-runtime_refactor: NOT_AUTHORIZED
-Phase_2: NOT_AUTHORIZED
-canonical_integration: NOT_AUTHORIZED
-remote_publication: NOT_AUTHORIZED
+repository: mauedgar/tecnotron-ai
+integration_branch: tools
+reconciliation_baseline:
+  commit: 03fe6fc2d8d80f415f32d0ba937308d138a48f64
+  tree: 5ce890e9d0cf0294466af79c2a987460a200065e
+current_tools_identity:
+  rule: REOBSERVE_LIVE_REF
 ```
 
-Goal: make the repository sufficient for normal future reconstruction from SOT
-plus the exact current Developer ruling/responsibility and only action-required
-volatile observations.
+The baseline is the exact Product position used to produce this reconciliation;
+it is not a permanent assertion about a moving branch.
 
-## Current sequence
+After
+`TASKCYCLE-TECNOTRON-REPO-FIRST-CURRENT-STATE-RECONCILIATION-001`
+successfully integrates, reconciles its effect and closes:
 
-```text
-verified tools anchor
-  ↓
-reconcile active SOT/navigation/ownership
-  ↓
-freeze one documentation candidate
-  ↓
-materialize frozen review interface
-  ↓
-Independent Review in separate context
-  ↓
-Developer acceptance (future, explicit)
-  ↓
-Phase 2 / integration / publication (future, explicit and dimension-specific)
+```yaml
+active_Product_responsibility: NONE_SELECTED
+next_Product_responsibility:
+  requires: EXPLICIT_COMPETENT_DEVELOPER_SELECTION
+automatic_successor: false
+DevLab_backlog_auto_adoption: false
 ```
 
-## Adopted architecture direction
+The candidate version of this document has no canonical Product effect before
+the separately authorized Phase 2 integration/publication boundary.
 
-- RETAIN portable authority/identity/review/effect invariants, repository SOT,
-  useful Recipes, Git qualification and frozen review semantics.
-- NARROW AgentRuntime, Router, ModelResolver/FinOps, ContextPackager,
-  repo-packager, Operational Spine, State Kernel usage and named Primitives.
-- HOLD physical removals until consumer inventory/equivalence.
-- ABSORB CONDITIONALLY duplicate lifecycle/context/snapshot/state concepts only
-  after competence/equivalence is established.
-- DEFER Temporal, devBrain, embeddings, generalized orchestration and unproven
-  new components.
-- State Kernel final disposition remains `UNDECIDED`.
+## Product work already consumed by this navigation
 
-The authoritative detail is in
+The current position incorporates the accepted effects of the Product
+responsibilities that established:
+
+- architecture/knowledge/capability ownership SOT;
+- semantic context requirement vs deterministic coverage/materialization
+  ownership;
+- post-integration current-state navigation;
+- active consumer inventory;
+- authorized State Kernel late-obligation extension;
+- Recipe/TaskCycle path decoupling from direct semantic State Kernel ownership.
+
+Those responsibilities are completed evidence, not current roadmap selections.
+
+The repository also contains the integrated
+`TS-DEVLAB-TC-CORE-AB-002` composition experiment at the reconciliation
+baseline. That presence is evidence only: it does not adopt Developer Lab
+architecture, backlog, composition policy or Product authority.
+
+## Adopted Product architecture direction
+
+The authoritative architecture detail remains in
 [Architecture, knowledge and capability ownership baseline](architecture-knowledge-ownership-baseline.md).
 
-## WP-PB-001
+Current direction remains:
 
-The prior roadmap selected `WP-PB-001` as current Stage-D work. That remains
-historical navigation at its 2026-09-25 cutoff but is superseded as active
-next-work selection.
+- retain explicit Developer authority, exact identity/review/effect semantics,
+  repository SOT, useful deterministic Recipes and Git qualification;
+- keep TC Core architecture frozen unless empirical Product evidence proves its
+  DoD cannot be satisfied;
+- narrow generic Tecnotron-owned runtime/orchestration where competent harnesses
+  already own the mechanics;
+- keep State Kernel final disposition `UNDECIDED`;
+- require consumer/equivalence evidence before physical component changes;
+- keep execution surfaces replaceable and authority-free.
+
+This roadmap does not adopt a new persistence backend, GitHub Projects authority,
+a telemetry platform, lifecycle identity/receipt contract, post-close LC
+contract or a composition Recipe.
+
+## Repo-first continuation rule
+
+Normal Product continuation is:
+
+```text
+exact live tools identity
+-> SOURCE_OF_TRUTH
+-> architecture/ownership baseline
+-> current-state
+-> this roadmap
+-> exact newly selected responsibility/TASK
+-> only action-required volatile evidence
+```
+
+The target is to avoid transcript/Memory/large-handoff dependence while still
+allowing bounded incremental context expansion when a material question appears.
+
+## Unselected future decision domains
+
+The following are valid future decision domains, not scheduled TaskCycles:
+
+1. State Kernel equivalence/final disposition when a concrete Product need
+   requires that decision.
+2. Component-specific physical disposition after required consumer/equivalence
+   evidence.
+3. Installed-harness conformance only for decisions that depend on exact
+   installed behavior.
+4. Exact WP-PB WU01 ruling/evidence before any WP-PB continuation.
+5. FitFlow result-coherence incident tracing before corrective evolution.
+6. Any Developer Lab lifecycle identity/receipt, post-close, Projects,
+   wait/telemetry or feedback finding only after an explicit Product handoff and
+   competent adoption decision.
+
+No item above is selected merely because it exists.
+
+## Historical planning
+
+Historical milestones, WP plans, TASK artifacts, frozen review interfaces and
+their original frontmatter remain provenance at their original cutoffs.
+
+`WP-PB-001` remains deferred:
 
 ```yaml
 WP_PB_001:
   continuation: DEFERRED
-  resume_gate:
-    - acquire exact competent WU01 ruling
-    - acquire exact terminal evidence
-    - issue a new explicit Developer continuation responsibility
+  resume_requires:
+    - exact_competent_WU01_ruling
+    - exact_terminal_evidence
+    - new_explicit_Developer_responsibility
 ```
 
-No WP-PB work unit is resumed or initialized here.
+Broad historical cleanup remains deferred unless a real Product action proves it
+necessary.
 
-## Historical milestone/provenance
+## Next Product action
 
-Stages/WPs already established by their competent historical evidence are not
-rewritten by this reconciliation. Frozen SPEC/PLAN/TASK/REVIEW frontmatter
-remains historical truth for its original subject/cutoff.
+```yaml
+next_action:
+  RETURN_TO_PRODUCT_CONTROL_FOR_EXPLICIT_RESPONSIBILITY_SELECTION
+next_TaskCycle:
+  selected: false
+automatic_roadmap_resume: false
+```
 
-Broad historical cleanup remains deferred.
-
-## Future decision gates
-
-1. **Repo-first bootstrap test** — a fresh consumer reconstructs Product state
-   without transcript/Memory/giant Library handoff.
-2. **Consumer inventory** — required before physical absorption/removal.
-3. **State Kernel equivalence** — required before backend migration/removal.
-4. **Harness conformance** — acquired only when a selected action depends on a
-   concrete installed version/configuration.
-5. **Result-coherence incident trace** — required before changing the generator
-   responsible for the FitFlow summary divergence.
-6. **WP-PB resume** — exact ruling/evidence before any continuation.
-
-These gates are not automatically scheduled TaskCycles.
+The roadmap therefore ends at a deliberate Product Control boundary rather than
+manufacturing a successor responsibility.
