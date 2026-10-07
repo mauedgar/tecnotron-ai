@@ -115,7 +115,7 @@ jobs:
           const validationRef = {
             kind: 'ARTIFACT',
             id: `ACTIONS-${spec.validation.run_id}`,
-            location: `github-actions-artifact:${spec.validation.artifact_id}`,
+            location: 'validation-evidence/manifest.json',
             sha256: sha256(validationManifest),
           };
           const authorityRef = spec.authority_ref;
