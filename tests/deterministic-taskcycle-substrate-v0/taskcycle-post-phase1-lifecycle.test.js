@@ -318,7 +318,10 @@ test('accepted first-parent range coherence failures remain fail-closed', () => 
   const cases = [
     {
       name: 'missing accepted range when pre-tools differs from candidate parent',
-      mutate: (r) => { r.Phase_2.pre_tools = 'a'.repeat(40); },
+      mutate: (r) => {
+        r.Phase_2.pre_tools = 'a'.repeat(40);
+        delete r.Phase_2.accepted_first_parent_range;
+      },
     },
     {
       name: 'integration range base differs from pre-tools',
