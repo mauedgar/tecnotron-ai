@@ -109,10 +109,11 @@ jobs:
               if grep -q "^npm_ci=0$" /result/codes.env; then
                 run_and_record typecheck npm run typecheck
                 run_and_record build npm run build
+                run_and_record contracts_check npm run contracts:check
                 run_and_record focused_tests node --test                   tests/operational-spine-v0/reconcile-and-close-taskcycle.test.js                   tests/operational-spine-v0/recipe-invocation.test.js                   tests/operational-spine-v0/recipe-invocation-worker.test.js
                 run_and_record full_tests npm test
               else
-                printf "typecheck=125\nbuild=125\nfocused_tests=125\nfull_tests=125\n" >> /result/codes.env
+                printf "typecheck=125\nbuild=125\ncontracts_check=125\nfocused_tests=125\nfull_tests=125\n" >> /result/codes.env
               fi
             '
 
@@ -125,7 +126,7 @@ jobs:
           source _tc_web_result/codes.env
 
           status=PASS
-          for rc in "$npm_ci" "$typecheck" "$build" "$build_diff" "$focused_tests" "$full_tests"; do
+          for rc in "$npm_ci" "$typecheck" "$build" "$build_diff" "$contracts_check" "$focused_tests" "$full_tests"; do
             if [ "$rc" -ne 0 ]; then
               status=FAIL
             fi
@@ -156,6 +157,7 @@ jobs:
             typecheck=125
             build=125
             build_diff=125
+            contracts_check=125
             focused_tests=125
             full_tests=125
           fi
@@ -164,7 +166,7 @@ jobs:
           npm_version="$(cat _tc_web_result/npm-version.txt 2>/dev/null || true)"
           docker_image_id="$(cat _tc_web_result/docker-image-id.txt 2>/dev/null || true)"
 
-          jq -n             --arg request_id "$request_id"             --arg product "$product"             --arg task "$task"             --arg gate "$gate"             --arg subject_branch "$subject_branch"             --arg subject_sha "$subject_sha"             --arg subject_tree "$subject_tree"             --arg status "$status"             --arg node_version "$node_version"             --arg npm_version "$npm_version"             --arg docker_image_id "$docker_image_id"             --argjson npm_ci "$npm_ci"             --argjson typecheck "$typecheck"             --argjson build "$build"             --argjson build_diff "$build_diff"             --argjson focused_tests "$focused_tests"             --argjson full_tests "$full_tests"             '{
+          jq -n             --arg request_id "$request_id"             --arg product "$product"             --arg task "$task"             --arg gate "$gate"             --arg subject_branch "$subject_branch"             --arg subject_sha "$subject_sha"             --arg subject_tree "$subject_tree"             --arg status "$status"             --arg node_version "$node_version"             --arg npm_version "$npm_version"             --arg docker_image_id "$docker_image_id"             --argjson npm_ci "$npm_ci"             --argjson typecheck "$typecheck"             --argjson build "$build"             --argjson build_diff "$build_diff"             --argjson contracts_check "$contracts_check"             --argjson focused_tests "$focused_tests"             --argjson full_tests "$full_tests"             '{
               schema_version: "tecnotron-tc-web-execution-result/v0",
               request_id: $request_id,
               product: $product,
@@ -188,6 +190,7 @@ jobs:
                 typecheck: $typecheck,
                 build: $build,
                 build_diff: $build_diff,
+                contracts_check: $contracts_check,
                 focused_tests: $focused_tests,
                 full_tests: $full_tests
               },
@@ -214,6 +217,7 @@ jobs:
           - typecheck: $typecheck
           - build: $build
           - build diff: $build_diff
+          - contracts check: $contracts_check
           - focused tests: $focused_tests
           - full tests: $full_tests
           EOF
