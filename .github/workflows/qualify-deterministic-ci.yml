@@ -1,0 +1,62 @@
+name: Qualify Tecnotron deterministic validation v0
+
+on:
+  push:
+    branches:
+      - devlab/tecnotron-actions-validation-binding-v0-qualification-001
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout exact qualification subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Guard exact checkout
+        shell: bash
+        env:
+          SUBJECT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          observed="$(git rev-parse HEAD)"
+          if [ "$observed" != "$SUBJECT_SHA" ]; then
+            echo "SUBJECT_MISMATCH expected=$SUBJECT_SHA observed=$observed" >&2
+            exit 1
+          fi
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Run candidate typed deterministic validation
+        env:
+          SUBJECT_SHA: ${{ github.sha }}
+          RECEIPT_DIR: ${{ runner.temp }}/tecnotron-deterministic-validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RECEIPT_DIR"
+          node src/actions/tecnotron-deterministic-validation.js             --repository "$GITHUB_REPOSITORY"             --subject-sha "$SUBJECT_SHA"             --request-output "$RECEIPT_DIR/request.json"             --receipt-output "$RECEIPT_DIR/receipt.json"
+
+      - name: Upload deterministic validation receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tecnotron-deterministic-validation-${{ github.sha }}
+          path: ${{ runner.temp }}/tecnotron-deterministic-validation
+          if-no-files-found: warn
+          retention-days: 30
