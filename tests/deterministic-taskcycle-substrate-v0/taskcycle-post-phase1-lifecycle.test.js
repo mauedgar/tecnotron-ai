@@ -215,6 +215,184 @@ test('closes exact resolved post-Phase1 lifecycle with all nine obligations sati
   } finally { f.cleanup(); }
 });
 
+
+test('accepted first-parent range closes with actual pre-tools distinct from reviewed tip parent', () => {
+  const f = fixture();
+  try {
+    const actualPreTools = 'a'.repeat(40);
+    f.request.Phase_2 = {
+      ...f.request.Phase_2,
+      pre_tools: actualPreTools,
+      accepted_first_parent_range: {
+        integration_range_base: actualPreTools,
+        accepted_tip: f.request.candidate.commit,
+        accepted_tip_parent: f.request.candidate.parent,
+        accepted_tip_tree: f.request.candidate.tree,
+        ordered_commit_range: [f.request.candidate.parent, f.request.candidate.commit],
+        commit_count: 2,
+        changed_paths: [...f.request.candidate.changed_paths],
+      },
+    };
+    f.observed.Phase_2 = structuredClone(f.request.Phase_2);
+
+    const result = createTaskCyclePostPhase1LifecycleCapability({ root: f.closeRoot })
+      .closeFromResolvedLifecycle({ request: f.request, observed: f.observed });
+    assert.equal(result.status, 'PASS');
+    assert.equal(result.effect_state, 'CONFIRMED');
+
+    const consumed = consumeTaskCyclePostPhase1Lifecycle({
+      location: result.portable_projection.location_or_ref,
+      expected_identity_sha256: result.portable_projection.identity_sha256,
+    });
+    assert.deepEqual(
+      consumed.projection.lifecycle_evidence.Phase_2.accepted_first_parent_range,
+      f.request.Phase_2.accepted_first_parent_range,
+    );
+    assert.equal(consumed.projection.lifecycle_evidence.Phase_2.pre_tools, actualPreTools);
+  } finally { f.cleanup(); }
+});
+
+test('demonstrated 9e975 -> dcdd64 -> ff668 accepted range is representable without normalization', () => {
+  const f = fixture();
+  try {
+    const actualPreTools = '9e975fd7c9c504fb7fd24d91231d0aa3c04c71be';
+    const reviewedParent = 'dcdd64a7aa42173f7cd81216ebaf476206132122';
+    const reviewedTip = 'ff668b3878f2cd89030306dbfd979da23acf33cb';
+    const reviewedTree = '572f7445337f97fb77a7d0ce3fbe3af91eb11083';
+
+    f.request.candidate.parent = reviewedParent;
+    f.request.candidate.commit = reviewedTip;
+    f.request.candidate.tree = reviewedTree;
+    f.request.promotion_grade_validation.exact_candidate_commit = reviewedTip;
+    f.request.promotion_grade_validation.exact_candidate_tree = reviewedTree;
+    f.request.frozen_review_interface.subject_commit = reviewedTip;
+    f.request.frozen_review_interface.subject_tree = reviewedTree;
+    f.request.independent_review.subject_commit = reviewedTip;
+    f.request.independent_review.subject_tree = reviewedTree;
+    f.request.Developer_acceptance.subject_commit = reviewedTip;
+    f.request.Developer_acceptance.subject_tree = reviewedTree;
+    f.request.effect_reconciliation.canonical_commit = reviewedTip;
+    f.request.effect_reconciliation.canonical_tree = reviewedTree;
+    f.request.Phase_2 = {
+      status: 'PASS',
+      pre_tools: actualPreTools,
+      accepted_first_parent_range: {
+        integration_range_base: actualPreTools,
+        accepted_tip: reviewedTip,
+        accepted_tip_parent: reviewedParent,
+        accepted_tip_tree: reviewedTree,
+        ordered_commit_range: [reviewedParent, reviewedTip],
+        commit_count: 2,
+        changed_paths: [...f.request.candidate.changed_paths],
+      },
+      post_tools: reviewedTip,
+      post_tree: reviewedTree,
+      force: false,
+      remote_correspondence: 'EXACT',
+    };
+
+    f.observed.candidate = structuredClone(f.request.candidate);
+    f.observed.promotion_grade_validation = structuredClone(f.request.promotion_grade_validation);
+    f.observed.frozen_review_interface = structuredClone(f.request.frozen_review_interface);
+    f.observed.independent_review = structuredClone(f.request.independent_review);
+    f.observed.Developer_acceptance = structuredClone(f.request.Developer_acceptance);
+    f.observed.Phase_2 = structuredClone(f.request.Phase_2);
+    f.observed.effect_reconciliation = structuredClone(f.request.effect_reconciliation);
+
+    const result = createTaskCyclePostPhase1LifecycleCapability({ root: f.closeRoot })
+      .closeFromResolvedLifecycle({ request: f.request, observed: f.observed });
+    assert.equal(result.status, 'PASS');
+    const consumed = consumeTaskCyclePostPhase1Lifecycle({
+      location: result.portable_projection.location_or_ref,
+      expected_identity_sha256: result.portable_projection.identity_sha256,
+    });
+    assert.equal(consumed.projection.lifecycle_evidence.Phase_2.pre_tools, actualPreTools);
+    assert.deepEqual(
+      consumed.projection.lifecycle_evidence.Phase_2.accepted_first_parent_range.ordered_commit_range,
+      [reviewedParent, reviewedTip],
+    );
+  } finally { f.cleanup(); }
+});
+
+test('accepted first-parent range coherence failures remain fail-closed', () => {
+  const cases = [
+    {
+      name: 'missing accepted range when pre-tools differs from candidate parent',
+      mutate: (r) => { r.Phase_2.pre_tools = 'a'.repeat(40); },
+    },
+    {
+      name: 'integration range base differs from pre-tools',
+      mutate: (r) => { r.Phase_2.accepted_first_parent_range.integration_range_base = 'b'.repeat(40); },
+    },
+    {
+      name: 'accepted tip differs from candidate',
+      mutate: (r) => { r.Phase_2.accepted_first_parent_range.accepted_tip = 'b'.repeat(40); },
+    },
+    {
+      name: 'accepted tip parent differs from candidate parent',
+      mutate: (r) => { r.Phase_2.accepted_first_parent_range.accepted_tip_parent = 'b'.repeat(40); },
+    },
+    {
+      name: 'accepted tip tree differs from candidate tree',
+      mutate: (r) => { r.Phase_2.accepted_first_parent_range.accepted_tip_tree = 'b'.repeat(40); },
+    },
+    {
+      name: 'ordered range does not end at reviewed candidate',
+      mutate: (r) => {
+        r.Phase_2.accepted_first_parent_range.ordered_commit_range = [
+          r.candidate.parent,
+          'b'.repeat(40),
+        ];
+      },
+    },
+    {
+      name: 'commit count disagrees with ordered range',
+      mutate: (r) => { r.Phase_2.accepted_first_parent_range.commit_count = 3; },
+    },
+    {
+      name: 'post tools differs from reviewed candidate',
+      mutate: (r) => { r.Phase_2.post_tools = 'b'.repeat(40); },
+    },
+    {
+      name: 'post tree differs from reviewed candidate',
+      mutate: (r) => { r.Phase_2.post_tree = 'b'.repeat(40); },
+    },
+    {
+      name: 'changed path is not normalized repository-relative',
+      mutate: (r) => { r.Phase_2.accepted_first_parent_range.changed_paths = ['../escape']; },
+    },
+  ];
+
+  for (const entry of cases) {
+    const f = fixture();
+    try {
+      const actualPreTools = 'a'.repeat(40);
+      f.request.Phase_2 = {
+        ...f.request.Phase_2,
+        pre_tools: actualPreTools,
+        accepted_first_parent_range: {
+          integration_range_base: actualPreTools,
+          accepted_tip: f.request.candidate.commit,
+          accepted_tip_parent: f.request.candidate.parent,
+          accepted_tip_tree: f.request.candidate.tree,
+          ordered_commit_range: [f.request.candidate.parent, f.request.candidate.commit],
+          commit_count: 2,
+          changed_paths: [...f.request.candidate.changed_paths],
+        },
+      };
+      entry.mutate(f.request);
+      f.observed.Phase_2 = structuredClone(f.request.Phase_2);
+
+      const result = createTaskCyclePostPhase1LifecycleCapability({ root: f.closeRoot })
+        .closeFromResolvedLifecycle({ request: f.request, observed: f.observed });
+      assert.equal(result.status, 'BLOCKED', entry.name);
+      assert.equal(result.effect_state, 'NONE', entry.name);
+      assert.equal(result.reason, 'PHASE2_EVIDENCE_INVALID', entry.name);
+      assert.deepEqual(fs.readdirSync(f.closeRoot), [], entry.name);
+    } finally { f.cleanup(); }
+  }
+});
+
 test('review, acceptance, Phase2 and effect reconciliation cannot be inferred or weakened', () => {
   const mutations = [
     (r) => { r.independent_review.verdict = 'FAIL'; },

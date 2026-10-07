@@ -46,6 +46,50 @@ function uniqueStrings(value, required = false) {
     && value.every(nonEmpty)
     && new Set(value).size === value.length;
 }
+
+function repositoryRelativePaths(value) {
+  return uniqueStrings(value)
+    && value.every((entry) => {
+      const segments = entry.split('/');
+      return !entry.startsWith('/')
+        && !entry.includes('\\')
+        && !/[\r\n\0]/.test(entry)
+        && segments.every((segment) => segment !== '' && segment !== '.' && segment !== '..');
+    });
+}
+function acceptedFirstParentRangeValid(value) {
+  return value && typeof value === 'object'
+    && isSha(value.integration_range_base)
+    && isSha(value.accepted_tip)
+    && isSha(value.accepted_tip_parent)
+    && isSha(value.accepted_tip_tree)
+    && uniqueStrings(value.ordered_commit_range, true)
+    && value.ordered_commit_range.every(isSha)
+    && Number.isInteger(value.commit_count)
+    && value.commit_count > 0
+    && value.commit_count === value.ordered_commit_range.length
+    && repositoryRelativePaths(value.changed_paths);
+}
+function phase2EvidenceValid(p2, candidate) {
+  if (!p2 || p2.status !== 'PASS'
+      || !isSha(p2.pre_tools)
+      || p2.post_tools !== candidate.commit
+      || p2.post_tree !== candidate.tree
+      || p2.force !== false
+      || p2.remote_correspondence !== 'EXACT') {
+    return false;
+  }
+
+  const acceptedRange = p2.accepted_first_parent_range;
+  if (acceptedRange == null) return p2.pre_tools === candidate.parent;
+
+  return acceptedFirstParentRangeValid(acceptedRange)
+    && acceptedRange.integration_range_base === p2.pre_tools
+    && acceptedRange.accepted_tip === candidate.commit
+    && acceptedRange.accepted_tip_parent === candidate.parent
+    && acceptedRange.accepted_tip_tree === candidate.tree
+    && acceptedRange.ordered_commit_range[acceptedRange.ordered_commit_range.length - 1] === candidate.commit;
+}
 function unique(left, right) {
   return [...new Set([...(left || []), ...(right || [])])];
 }
@@ -114,11 +158,7 @@ function validateRequest(r) {
   }
 
   const p2 = r.Phase_2;
-  if (!p2 || p2.status !== 'PASS' || p2.pre_tools !== c.parent
-      || p2.post_tools !== c.commit || p2.post_tree !== c.tree
-      || p2.force !== false || p2.remote_correspondence !== 'EXACT') {
-    return 'PHASE2_EVIDENCE_INVALID';
-  }
+  if (!phase2EvidenceValid(p2, c)) return 'PHASE2_EVIDENCE_INVALID';
 
   const er = r.effect_reconciliation;
   if (!er || er.status !== 'PASS' || er.canonical_commit !== c.commit
