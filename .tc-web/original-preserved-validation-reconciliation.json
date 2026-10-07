@@ -1,0 +1,26 @@
+{
+  "schema_version": "tecnotron-preserved-promotion-validation-reconciliation/v0",
+  "TaskCycle": "TASKCYCLE-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-001",
+  "reconciliation_only": true,
+  "validation_reexecuted": false,
+  "subject": {
+    "commit": "ff668b3878f2cd89030306dbfd979da23acf33cb",
+    "tree": "572f7445337f97fb77a7d0ce3fbe3af91eb11083",
+    "parent": "dcdd64a7aa42173f7cd81216ebaf476206132122"
+  },
+  "status": "PASS",
+  "checks": {
+    "npm_ci": "PASS",
+    "typecheck": "PASS",
+    "contracts_check": "PASS",
+    "full_tests": {
+      "total": 499,
+      "passed": 495,
+      "failed": 0,
+      "skipped": 4
+    },
+    "post_validation_git_guard": "PASS",
+    "unresolved_UNKNOWN_effects": []
+  },
+  "note": "This reconciles the previously completed exact-subject promotion-grade validation. No validation is reexecuted by this record."
+}
