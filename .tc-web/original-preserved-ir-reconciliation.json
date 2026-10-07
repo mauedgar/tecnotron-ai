@@ -1,0 +1,27 @@
+{
+  "schema_version": "tecnotron-preserved-independent-review-reconciliation/v0",
+  "TaskCycle": "TASKCYCLE-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-001",
+  "responsibility": "DECOUPLE_REMAINING_OPERATIONAL_SPINE_RECIPES_FROM_STATE_KERNEL",
+  "reconciliation_only": true,
+  "review_reexecuted": false,
+  "review_id": "IND-REVIEW-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-001",
+  "verdict": "PASS",
+  "exact_subject": {
+    "commit": "ff668b3878f2cd89030306dbfd979da23acf33cb",
+    "tree": "572f7445337f97fb77a7d0ce3fbe3af91eb11083",
+    "parent": "dcdd64a7aa42173f7cd81216ebaf476206132122"
+  },
+  "frozen_interface": {
+    "id": "IND-REVIEW-TECNOTRON-REMAINING-RECIPE-KERNEL-DECOUPLING-001",
+    "archive_sha256": "769bd74d386a3d79e0f797b199cafdb310a97fc5a9f5bb4b21188ce3d80f1d68",
+    "manifest_sha256": "70b8b256a5db023c8b4f725555de86a952b3d57caa56a14ba7ec5e992d0424f3",
+    "prompt_sha256": "d8fc1909766b3f018f57ddfd936c22743d0c73f1f641762f7bf6c9361059509e"
+  },
+  "blocking_findings": [],
+  "preserved_control_facts": [
+    "Independent Review was previously adjudicated PASS on the exact immutable ff668b subject.",
+    "Developer acceptance was subsequently granted on that exact subject.",
+    "Phase 2 was subsequently executed and confirmed exactly.",
+    "This record does not perform or repeat semantic review."
+  ]
+}
