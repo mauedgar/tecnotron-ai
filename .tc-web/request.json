@@ -1,21 +1,21 @@
 {
   "schema_version": "tecnotron-tc-web-execution-request/v0",
-  "request_id": "TC-CORE-AB-002-B-ACTIONS-001",
+  "request_id": "TECNOTRON-KERNEL-FREE-TC-INIT-ACTIONS-001",
   "product": "Tecnotron",
-  "task": "TC-CORE-GROUP-B-002",
-  "responsibility": "PROVE_STABLE_RECIPE_INVOCATION_WITH_NON_STATE_KERNEL_TEST_BINDING",
-  "gate": "TC_CORE_AB_002_GROUP_B_EXACT_SUBJECT_VALIDATION",
+  "task": "BOOTSTRAP-KERNEL-FREE-TASKCYCLE-INITIALIZATION-001",
+  "responsibility": "ESTABLISH_MINIMAL_KERNEL_FREE_TASKCYCLE_INITIALIZATION_BINDING",
+  "gate": "QUALIFY_OR_ESTABLISH_KERNEL_FREE_TASKCYCLE_INITIALIZATION_BINDING",
   "subject": {
-    "branch": "devlab/tc-core-portable-invocation-proof-002",
-    "commit": "7252487fe6f1111496e495a081b6a52a6a842824",
-    "tree": "815697d8beb6e29a2d49c835e40f6a34f49f6317"
+    "branch": "bootstrap/kernel-free-taskcycle-initialization-001",
+    "commit": "4ed3f2cec4e766916ef7b729693c997a06825471",
+    "tree": "2b7669a66a0dd9a57cc0bbc064abbefdb732d77c"
   },
   "profile": "node22-bookworm-validation-v0",
   "dispatch": "AUTHORIZED",
   "notes": [
-    "Developer authorization already covers sequential A then B Actions validation.",
-    "Group A exact-subject validation reconciled PASS.",
-    "Group B dispatch uses the repaired TC Web execution binding.",
-    "No freeze, Independent Review, Developer acceptance, Phase 2, integration, or close."
+    "Developer authorized qualification/establishment of the missing kernel-free TaskCycle initialization binding.",
+    "This validates only the isolated bootstrap candidate; the blocked Product TaskCycle remains NOT_INITIALIZED.",
+    "Do not mutate or replay 8cac265a378c86e1b32523c45dae531b024cb82f.",
+    "No freeze, Independent Review, Developer acceptance, Phase 2, canonical integration, or original TaskCycle initialization is authorized by this dispatch."
   ]
 }
