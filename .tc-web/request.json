@@ -1,21 +1,20 @@
 {
   "schema_version": "tecnotron-tc-web-execution-request/v0",
-  "request_id": "TECNOTRON-KERNEL-FREE-TC-INIT-ACTIONS-002",
+  "request_id": "TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-ACTIONS-001",
   "product": "Tecnotron",
-  "task": "BOOTSTRAP-KERNEL-FREE-TASKCYCLE-INITIALIZATION-001",
-  "responsibility": "ESTABLISH_MINIMAL_KERNEL_FREE_TASKCYCLE_INITIALIZATION_BINDING",
-  "gate": "REPAIR_KERNEL_FREE_TASKCYCLE_INITIALIZATION_CANDIDATE",
+  "task": "TASKCYCLE-TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-001",
+  "responsibility": "EVOLVE_POST_PHASE1_LIFECYCLE_TO_REPRESENT_ACCEPTED_RANGE_PHASE2",
+  "gate": "PROMOTION_GRADE_VALIDATE_EXACT_CANDIDATE",
   "subject": {
-    "branch": "bootstrap/kernel-free-taskcycle-initialization-001",
-    "commit": "37c091afcb6cf7cf53bacd7c7279132aa8238856",
-    "tree": "bd80756e49b763a3326b3d81370a1d76cc9674e4"
+    "branch": "task/tecnotron-accepted-range-phase2-lifecycle-001",
+    "commit": "41dc4513325ceeb8c559bbfa7dd3eeb28368be0a",
+    "tree": "ea8eafd04742359827f0e8a502037d37738565bf"
   },
   "profile": "node22-bookworm-validation-v0",
   "dispatch": "AUTHORIZED",
   "notes": [
-    "Developer authorized repair of the unfrozen bootstrap candidate and exact-subject validation.",
-    "The repair is exactly FILEL.length -> FILES.length in taskcycle-initialization.js.",
-    "The original Product TaskCycle remains NOT_INITIALIZED and 8cac265a378c86e1b32523c45dae531b024cb82f must not be replayed.",
-    "No freeze, Independent Review, Developer acceptance, Phase 2, canonical integration, or original TaskCycle initialization is authorized by this dispatch."
+    "Exact implementation subject is one child of the TASK carrier and changes only the two authorized Product implementation paths.",
+    "Do not mutate Product refs; validation authority only.",
+    "The blocked original TaskCycle must not be retried or replayed by this run."
   ]
 }
