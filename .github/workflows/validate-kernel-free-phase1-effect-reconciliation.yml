@@ -1,0 +1,80 @@
+name: Validate kernel-free Phase1 effect reconciliation candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      subject_sha:
+        description: Exact candidate commit
+        required: true
+        type: string
+      expected_tree:
+        description: Exact candidate tree
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Guard exact subject
+        shell: bash
+        env:
+          SUBJECT_SHA: ${{ inputs.subject_sha }}
+          EXPECTED_TREE: ${{ inputs.expected_tree }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Rebuild dependencies
+        run: npm rebuild
+
+      - name: Workspace verify
+        run: npm run workspace:verify
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Focused reconciliation tests
+        run: node --test tests/deterministic-taskcycle-substrate-v0/taskcycle-initialization.test.js tests/deterministic-taskcycle-substrate-v0/taskcycle-effect-reconciliation.test.js
+
+      - name: Full test suite
+        run: npm test
+
+      - name: Contracts check
+        run: npm run contracts:check
+
+      - name: Guard no mutation after validation
+        shell: bash
+        env:
+          SUBJECT_SHA: ${{ inputs.subject_sha }}
+          EXPECTED_TREE: ${{ inputs.expected_tree }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
