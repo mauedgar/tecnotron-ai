@@ -182,6 +182,18 @@ function fixture() {
   return { root, closeRoot, request, observed, cleanup: () => fs.rmSync(root, { recursive: true, force: true }) };
 }
 
+test('substrate index exports the post-Phase1 lifecycle capability', () => {
+  const substrate = require('../../src/deterministic-taskcycle-substrate-v0');
+  assert.equal(
+    typeof substrate.taskcyclePostPhase1Lifecycle.createTaskCyclePostPhase1LifecycleCapability,
+    'function',
+  );
+  assert.equal(
+    typeof substrate.taskcyclePostPhase1Lifecycle.consumeTaskCyclePostPhase1Lifecycle,
+    'function',
+  );
+});
+
 test('closes exact resolved post-Phase1 lifecycle with all nine obligations satisfied', () => {
   const f = fixture();
   try {

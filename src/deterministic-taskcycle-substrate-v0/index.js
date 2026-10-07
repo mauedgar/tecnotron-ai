@@ -5,5 +5,6 @@ module.exports = {
   observation: require('./observation'),
   continuation: require('./continuation'),
   taskcycleInitialization: require('./taskcycle-initialization'),
-  taskcycleEffectReconciliation: require('./taskcycle-effect-reconciliation'),\n  taskcyclePostPhase1Lifecycle: require('./taskcycle-post-phase1-lifecycle'),
+  taskcycleEffectReconciliation: require('./taskcycle-effect-reconciliation'),
+  taskcyclePostPhase1Lifecycle: require('./taskcycle-post-phase1-lifecycle'),
 };
