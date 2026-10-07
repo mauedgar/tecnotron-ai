@@ -1,20 +1,20 @@
 {
   "schema_version": "tecnotron-tc-web-execution-request/v0",
-  "request_id": "TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-ACTIONS-001",
+  "request_id": "TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-ACTIONS-002",
   "product": "Tecnotron",
   "task": "TASKCYCLE-TECNOTRON-ACCEPTED-RANGE-PHASE2-LIFECYCLE-001",
   "responsibility": "EVOLVE_POST_PHASE1_LIFECYCLE_TO_REPRESENT_ACCEPTED_RANGE_PHASE2",
   "gate": "PROMOTION_GRADE_VALIDATE_EXACT_CANDIDATE",
   "subject": {
     "branch": "task/tecnotron-accepted-range-phase2-lifecycle-001",
-    "commit": "41dc4513325ceeb8c559bbfa7dd3eeb28368be0a",
-    "tree": "ea8eafd04742359827f0e8a502037d37738565bf"
+    "commit": "c60804e167d67a08a025b77328aefff26dd3b27d",
+    "tree": "d24e2d0bc5c3bcbbb3d1b86076fc196e3a3fe79d"
   },
   "profile": "node22-bookworm-validation-v0",
   "dispatch": "AUTHORIZED",
   "notes": [
-    "Exact implementation subject is one child of the TASK carrier and changes only the two authorized Product implementation paths.",
-    "Do not mutate Product refs; validation authority only.",
-    "The blocked original TaskCycle must not be retried or replayed by this run."
+    "Fresh validation after reconciling the prior FAIL as a defective negative regression fixture.",
+    "Source semantics are unchanged from the prior subject; repair deletes accepted_first_parent_range in the missing-range negative case.",
+    "No Product ref mutation; validation authority only."
   ]
 }
