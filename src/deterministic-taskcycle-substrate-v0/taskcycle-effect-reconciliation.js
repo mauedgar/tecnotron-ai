@@ -8,6 +8,7 @@ const { consumeTaskCycleInitialization } = require('./taskcycle-initialization')
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-effect-reconciliation/v0';
 const MANIFEST_SCHEMA = 'deterministic-taskcycle-effect-reconciliation-manifest/v0';
 const SEMANTIC_STATUS = 'COMPLETED_BEFORE_LIFECYCLE_INITIALIZATION';
+const AUTHORIZED_OBLIGATION_ID = 'implementation';
 const FILES = ['manifest.json', 'projection.json'];
 
 function stable(value) {
@@ -49,6 +50,7 @@ function validateRequest(r) {
       || !isSha256(r.initialization.identity_sha256)) return 'INITIALIZATION_REFERENCE_INVALID';
   if (!r.obligation || !strings([r.obligation.id, r.obligation.semantic_status], true)
       || r.obligation.semantic_status !== SEMANTIC_STATUS) return 'OBLIGATION_RECONCILIATION_INVALID';
+  if (r.obligation.id !== AUTHORIZED_OBLIGATION_ID) return 'OBLIGATION_NOT_AUTHORIZED_FOR_PHASE1_EFFECT_RECONCILIATION';
   if (!r.subject || !strings([r.subject.repository, r.subject.branch], true)
       || !isSha(r.subject.commit) || !isSha(r.subject.tree) || !isSha(r.subject.parent)
       || !strings(r.subject.changed_paths, true)) return 'SUBJECT_IDENTITY_INVALID';
@@ -294,6 +296,7 @@ function consumeTaskCycleEffectReconciliation({ location, expected_identity_sha2
 module.exports = {
   PROJECTION_SCHEMA,
   SEMANTIC_STATUS,
+  AUTHORIZED_OBLIGATION_ID,
   validateTaskCycleEffectReconciliationRequest: validateRequest,
   createTaskCycleEffectReconciliationCapability,
   consumeTaskCycleEffectReconciliation,

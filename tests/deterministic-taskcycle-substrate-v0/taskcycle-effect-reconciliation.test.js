@@ -150,6 +150,42 @@ test('exact duplicate is idempotent and conflicting same identity fails closed',
   } finally { f.cleanup(); }
 });
 
+test('only implementation is authorized for prior Phase 1 effect reconciliation', () => {
+  const f = fixture();
+  try {
+    const cap = createTaskCycleEffectReconciliationCapability({ root: f.reconciliationRoot });
+    const forbidden = [
+      'promotion_grade_validation',
+      'exact_candidate',
+      'frozen_review_interface',
+      'independent_review',
+      'Developer_acceptance',
+      'Phase_2',
+      'effect_reconciliation',
+      'logical_close',
+      'arbitrary_obligation',
+    ];
+
+    for (const obligationId of forbidden) {
+      const request = structuredClone(f.request);
+      request.obligation.id = obligationId;
+      const result = cap.reconcileCompletedObligation({
+        request,
+        observed: { subject: subject() },
+      });
+      assert.equal(result.status, 'BLOCKED', obligationId);
+      assert.equal(result.effect_state, 'NONE', obligationId);
+      assert.equal(
+        result.reason,
+        'OBLIGATION_NOT_AUTHORIZED_FOR_PHASE1_EFFECT_RECONCILIATION',
+        obligationId,
+      );
+    }
+
+    assert.deepEqual(fs.readdirSync(f.reconciliationRoot), []);
+  } finally { f.cleanup(); }
+});
+
 test('subject observation mismatch blocks before materialization', () => {
   const f = fixture();
   try {
