@@ -105,5 +105,6 @@
   "logical_close": {
     "terminal_disposition_ref": "CLOSED_PASS",
     "authority_ref": "DEVELOPER-AUTONOMY-ACCEPTED-RANGE-PHASE2-LIFECYCLE-2026-10-07"
-  }
+  },
+  "dispatch_nonce": "close-run-001"
 }
