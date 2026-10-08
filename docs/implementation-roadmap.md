@@ -152,3 +152,43 @@ automatic_roadmap_resume: false
 
 The roadmap therefore ends at a deliberate Product Control boundary rather than
 manufacturing a successor responsibility.
+
+
+## Upper LC v1 Product adoption — navigation delta
+
+The preceding `NONE_SELECTED` / no automatic successor projection remains
+the provenance for its original 2026-10-06 cutoff. It does not negate the
+Developer's **later explicit** selection of
+`TASKCYCLE-TECNOTRON-UPPER-LC-V1-PRODUCT-ADOPTION-001` for
+`RECONCILE_AND_ADOPT_UPPER_LC_V1_IN_TECNOTRON_PRODUCT_SOT`.
+
+The proposed decision is recorded, by contract and disposition, in §16 of
+[the Product architecture/ownership baseline](architecture-knowledge-ownership-baseline.md).
+It becomes current canonical guidance only after distinct Developer acceptance
+and confirmed Phase 2 integration. It is a **semantic layer adoption**, not a
+new TC Core, State Kernel backend, general orchestration framework, runtime
+upgrade, task-board automation, or historical rewrite.
+
+For later Product navigation, use this order without automatically promoting
+research or follow-ups:
+
+```text
+research / framing / optional planning
+→ Product Control: explicit promotion and responsibility selection
+→ bounded Actor, context, portable handoff and capability resolution
+→ existing TC Core: review / distinct Developer acceptance / authorized effects
+→ Post-Close: CONTROL_DELTA evidence and Product Control disposition
+→ selected next Milestone / Spec / Task only with competent authority
+```
+
+Execution Runner v0.2 remains a **REUSE**-classified optional qualified
+external capability at `mauedgar/ts-execution-lab@083d3b96f533e246c6f6fb58a0e1a7efdc431c31`.
+Installed Tecnotron binding conformance and effectful profiles are unqualified;
+there is no automatic runner migration.
+
+This section supersedes only the older active-navigation claim that Upper LC
+lifecycle identity/receipt and Post-Close semantics were not yet adopted
+**once** this candidate is accepted and integrated. There is still no new
+identity ledger, telemetry platform, GitHub Projects Product authority or
+automatic TaskCycle selection. Review findings, autonomy observations and
+experimental DoD remain evidence for future competent Control disposition.

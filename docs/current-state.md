@@ -241,3 +241,46 @@ next_action:
 
 No roadmap item, DevLab backlog entry or execution-surface capability becomes the
 next Product responsibility without a new competent selection.
+
+
+## Upper LC v1 Product reconciliation — later bounded decision projection
+
+The preceding reconciliation cutoffs and `NONE_SELECTED` navigation describe
+the state **before** the explicit Developer selection
+`DEVELOPER-TECNOTRON-AUTONOMOUS-UPPER-LC-BOOTSTRAP-2026-10-07-001`.
+They are not a live assertion that the later selected
+`TASKCYCLE-TECNOTRON-UPPER-LC-V1-PRODUCT-ADOPTION-001` does not exist.
+Its actual lifecycle and current gate must be observed from competent
+exact-identity evidence; this navigation does not infer terminal closure.
+
+Once this exact candidate is separately accepted and integrated, the adopted
+Upper LC v1 **semantic control boundaries** and ten contract dispositions are
+documented in §16 of
+[Architecture/knowledge/capability ownership baseline](architecture-knowledge-ownership-baseline.md).
+That qualified adoption supersedes the older `new_identity_receipt_contract:
+adopted: false` and `post_close_LC_contract: adopted: false` statements as
+**active navigation only**, not as historical facts: adopted means semantic
+correlation and Post-Close CONTROL_DELTA, **not** new runtime stores or an
+automatic lifecycle transition. It also does not create a new telemetry platform
+or grant GitHub Projects Product authority.
+
+```yaml
+Upper_LC_v1:
+  adoption_subject: TASKCYCLE-TECNOTRON-UPPER-LC-V1-PRODUCT-ADOPTION-001
+  qualified_contract_dispositions: docs/architecture-knowledge-ownership-baseline.md#16-upper-lc-v1--bounded-product-adoption-reconciliation
+  current_TaskCycle_gate: REOBSERVE_EXACT_EVIDENCE
+  acceptance_from_document_presence: FORBIDDEN
+  next_Product_responsibility: COMPETENT_CONTROL_SELECTION_ONLY
+TC_Core_v1:
+  DOD: PASS
+  status: FROZEN_MAINTENANCE
+State_Kernel:
+  final_disposition: UNDECIDED
+Execution_Runner_v0_2:
+  disposition: REUSE
+  Tecnotron_effectful_profile_qualification: NOT_ESTABLISHED
+```
+
+Unselected refinements remain future Product Control candidates, not
+automatically opened TaskCycles or milestones. Historical TaskCycle outcomes,
+frozen packages and existing unresolved decisions remain intact.

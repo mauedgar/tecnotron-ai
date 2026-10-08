@@ -607,3 +607,95 @@ Developer acceptance, Phase 2, integration or publication.
 next_gate: INDEPENDENT_REVIEW
 canonical_Product_effect_from_candidate_creation: NONE
 ```
+
+
+## 16. Upper LC v1 — bounded Product adoption reconciliation
+
+**Adoption boundary.** This section represents the Product decision proposed by
+`TASKCYCLE-TECNOTRON-UPPER-LC-V1-PRODUCT-ADOPTION-001`. It takes canonical
+effect only after exact-candidate Independent Review, distinct Developer
+acceptance, authorized Phase 2 and confirmed integration into `tools`.
+The Developer's TaskCycle bootstrap authorized producing and reviewing this
+candidate, not accepting or integrating it. The originating DevLab architecture
+remains supporting evidence, not an additional Product SOT.
+
+Evidence: `TECNOTRON-CONTROL-003-UPPER-LC-PRODUCT-ADOPTION-HANDOFF-2026-10-07-001`,
+`TS-DEVLAB-UPPER-LC-FORK-RETURN-RECONCILIATION-2026-10-07-001`,
+`TS-EXECUTION-ENGINEERING-RETURN-CAPSULE-2026-10-07-001`, and the
+`docs/SOURCE_OF_TRUTH.md` precedence index at base
+`c60804e167d67a08a025b77328aefff26dd3b27d`. These references identify
+source/cutoff only; they do not import noncanonical authority.
+
+### 16.1 Exact Upper LC contract dispositions
+
+| Upper LC v1 contract | Product disposition | Existing owner and bounded Product delta |
+| --- | --- | --- |
+| Lifecycle Identity / Receipt Map | **ADOPT** | Keep Product work item, responsibility, stable Product Operation, ExecutionAttempt and provider run distinct. Correlate exact subjects, authority, effects and receipts through existing Git / lifecycle evidence; **no new ledger, aggregate or persistence engine**. |
+| Capability / Asset Index | **ADAPT** | Reuse `docs/capability-map.md` as a derived navigation projection, plus exact qualified external capability references. Reuse-before-build and current owner evidence precede addition of a component. No authoritative index service or duplicated catalog. |
+| Actor Model vNext | **ADOPT** | Product Control and Developer remain outside ordinary Actors. Actor responsibility/semantic ceiling is distinct from replaceable model, agent, harness and execution bindings. A sophisticated binding cannot select work, grant authority or accept. |
+| Portable Handoff | **REUSE** | Existing semantic continuation and `docs/context-strategy.md` already own action-relative responsibility, subject, authority, gate, obligations, evidence, uncertainty and cutoff. References are preferred over transcript reconstruction; carrier/session state is attached only if required. |
+| Field Ownership Map | **ADOPT** | Developer owns required grants/acceptance; Product Control owns responsibility/admission/next-work and post-close decisions; semantic Actors own bounded judgments; deterministic Recipes/bindings execute already authorized mechanics; Git owns object/ref truth; repository SOT owns Product knowledge; GitHub Issues/Projects owns operational projection only after promotion. |
+| Horizontal Context Control | **REUSE** | The semantic caller forms evidence requirements and action-sufficiency judgment; deterministic ContextPackager/materializers measure declared coverage. Exact incremental acquisition replaces context rebuild when new material questions emerge; no generic context service. |
+| GitHub Issues / Projects Operational Projection | **ADOPT** | After competent Product promotion, optionally project operational backlog, milestone, spec, task, dependency, evidence and status into the provider. No board-to-worker auto-launch, Product authority transfer, automatic backlog admission or inferred acceptance. Provider-specific field mappings remain separate qualification work. |
+| Feedback / Observability Normalization | **ADAPT** | Normalize signals from existing exact execution results, receipts, validation, review, UNKNOWN recovery and follow-up findings. Provenance and actual outcome govern; no new telemetry platform, mandatory observer Recipe or automatic policy update. |
+| Post-Close Reconciliation | **ADOPT** | After confirmed logical close, reconcile findings, deferred evidence and `CONTROL_DELTA` for Product Control to choose later work. A PASS-class advisory finding does not reopen the reviewed candidate, create a TaskCycle, or automatically become backlog/milestone authority. |
+| TC Core v1 | **PRESERVE** | `DOD: PASS`; `FROZEN_MAINTENANCE`; no reopening evidence. Upper LC is a policy/control layer around the Core, not a second lifecycle machine or redefinition of accepted gates. |
+
+Dispositions specialize existing Tecnotron owners; they do **not** authorize
+physical component replacement, broad cleanup, kernel removal, effectful execution
+or adoption of all DevLab experiments. The historical transition remains:
+research/framing and optional planning → competent Product Control selection →
+bounded Actor/context/capability/handoff → existing TaskCycle Core →
+post-close CONTROL_DELTA. No globally mandatory artifact format is introduced by
+this ordering. Existing Milestone → Spec → Task authority retains its competent
+scope; an experimental DoD does not replace it.
+
+### 16.2 Runner and autonomous-binding qualifications
+
+```yaml
+Execution_Runner_v0_2:
+  disposition: REUSE
+  qualified_source: mauedgar/ts-execution-lab
+  qualified_commit: 083d3b96f533e246c6f6fb58a0e1a7efdc431c31
+  role: OPTIONAL_QUALIFIED_EXTERNAL_EXECUTION_CAPABILITY
+  qualified_profiles:
+    - canonical-sha256/v0
+    - git-exact-subject/v0
+  Tecnotron_specific_binding_conformance: NOT_ESTABLISHED
+  effectful_profiles: NOT_QUALIFIED
+  Product_semantics: OUTSIDE_RUNNER
+  automatic_retry: FORBIDDEN
+  generic_orchestrator_created: false
+  automatic_Tecnotron_runtime_migration: false
+```
+
+Its JSON/Zod/TypeScript runner, local/Actions bindings, stable request identity
+and portable results may be reused when the actual requested profile and runtime
+have competent correspondence. Lab qualification alone cannot certify a
+Tecnotron-specific effectful operation, choose an ExecutionAttempt, reconcile
+UNKNOWN, or create Product authority. This disposition **does not** install or
+invoke the runner.
+
+`BOUNDED_AUTONOMOUS_EXECUTION@v0`, `CHATGPT_WEB_AUTONOMOUS_BINDING@v0`,
+the experiment-specific DoD and same-chat semantic-review observations remain
+**DEFERRED empirical evidence** rather than Actor policy, unconditional review
+independence, universal DoD, conditional auto-acceptance or a mandatory binding.
+Any review still needs its actual frozen interface and applicable independence
+contract.
+
+### 16.3 Unselected refinements and retention
+
+The following are **DEFER** / Product-specific future qualification, not
+adoption blockers: framing schema and planning optionality; context
+serialization, freshness, retention and compaction; GitHub provider fields;
+Post-Close policy edge cases; feedback retention/threshold/failure taxonomies;
+Obsidian UI metadata projection; installed Tecnotron Runner conformance.
+Each needs demonstrated consumer demand and separate authority before any
+implementation. Findings remain traceable as evidence rather than being
+automatically promoted into Product backlog or milestones.
+
+Earlier baseline statements remain historical at their exact cutoffs. This
+section supersedes only their **active navigation** where they represented
+Upper LC lifecycle identity/receipts or Post-Close as not yet adopted. It does
+not supersede unresolved State Kernel disposition, consumer guards, harness
+conformance, WP-PB-001 or the FitFlow incident.
