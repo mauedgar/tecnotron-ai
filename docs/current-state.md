@@ -284,3 +284,70 @@ Execution_Runner_v0_2:
 Unselected refinements remain future Product Control candidates, not
 automatically opened TaskCycles or milestones. Historical TaskCycle outcomes,
 frozen packages and existing unresolved decisions remain intact.
+
+
+## Upper LC v1 operational completeness — Parent terminal-navigation candidate (2026-10-08)
+
+This additive projection describes the **selected** Product Parent
+`TASKCYCLE-TECNOTRON-UPPER-LC-V1-OPERATIONAL-COMPLETENESS-001` and its
+three already selected children. It takes effect only after this Parent's own
+independent review, distinct conditional Developer acceptance, guarded Phase 2,
+and logical close. Earlier sections retain their historical cutoffs and must not
+be interpreted as current live TaskCycle status.
+
+```yaml
+Product_observation_before_Parent_candidate:
+  integration_branch: tools
+  commit: aa88a55d213c7409ddd652c7629051d58d0bf074
+  tree: 9c9f16e7fa4f794d391baf6122dcfeecead731d1
+Upper_LC_v1_selected_children:
+  A:
+    TaskCycle: TASKCYCLE-TECNOTRON-AUTONOMOUS-INDEPENDENT-REVIEW-QUALIFICATION-001
+    terminal: CLOSED_PASS
+  B:
+    TaskCycle: TASKCYCLE-TECNOTRON-POSTCLOSE-TO-PLANNING-BRIDGE-001
+    Product_commit: cf280728fbbfb883f0fe37823d4c8282c7be8ef5
+    terminal: CLOSED_PASS_WITH_BOUNDED_DEVELOPER_EXCEPTION
+    original_initialization: UNRECOVERED
+  C:
+    TaskCycle: TASKCYCLE-TECNOTRON-TERMINAL-OBLIGATION-PREFLIGHT-001
+    Product_commit: aa88a55d213c7409ddd652c7629051d58d0bf074
+    terminal: CLOSED_PASS_WITH_BOUNDED_DEVELOPER_EXCEPTION
+    original_initialization: UNRECOVERED
+    review: ORIGINAL_SEPARATE_CONTEXT_PASS_AND_8_OF_8_TESTS
+current_Upper_LC_actionable_gaps: 0
+upper_lc_refinements_deferred: true
+next_Product_responsibility:
+  selected: false
+  automatic_successor: false
+TC_Core_v1:
+  status: FROZEN_MAINTENANCE
+State_Kernel:
+  final_disposition: UNDECIDED
+```
+
+The bounded Developer ruling
+`TECNOTRON-CONTROL-003-EXCEPTIONAL-LIFECYCLE-RECONCILIATION-HANDOFF-2026-10-08-001.md`
+applies **only** to B and C in this Parent. It does not recover, replace or
+infer their original initialization roots, manifest hashes, ordered obligation
+IDs or satisfaction sets, and it is not a reusable lifecycle policy. Separate
+Phase2B and terminal receipts are indexed below; each receipt is evidence, not a
+second Product authority source:
+
+- B: `mauedgar/ts-execution-transport` path
+  `results/TECNOTRON-BRANCH-B-EXCEPTIONAL-PHASE2B-001/TERMINAL-RECEIPT.json`,
+  Git blob `37ab9846519aeb6ba999c0467adb238c053d335d`.
+- C: `mauedgar/ts-execution-transport` path
+  `results/TECNOTRON-BRANCH-C-EXCEPTIONAL-PHASE2B-002/TERMINAL-RECEIPT.json`,
+  Git blob `05a1c3636780b99d8629ad6aadf8672464093fc8`.
+- C original Independent Review: path
+  `results/TECNOTRON-BRANCH-C-INDEPENDENT-REVIEW-002/REVIEW-RESULT.md`,
+  Git blob `335b83ae0a8f259340f756a5b8036d9a09f4f64e`.
+
+The new C guard is **caller-invoked** and tests compatibility on verified inputs;
+it does not prove binding provenance or automatic enforcement. The Post-Close
+bridge remains semantic; actual Product promotion still needs a deliberate
+competent decision. Preserve all independent-review advisories, exceptional
+receipt limitations and experimental findings as **evidence only**. None is
+automatically routed to Architecture, Execution Engineering or Recipe/Primitive
+maturation, and no GitHub provider projection is adopted.

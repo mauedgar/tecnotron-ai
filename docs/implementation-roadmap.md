@@ -192,3 +192,62 @@ lifecycle identity/receipt and Post-Close semantics were not yet adopted
 identity ledger, telemetry platform, GitHub Projects Product authority or
 automatic TaskCycle selection. Review findings, autonomy observations and
 experimental DoD remain evidence for future competent Control disposition.
+
+
+## Upper LC v1 operational-completeness Parent — selected-work conclusion (2026-10-08)
+
+This additive current-navigation candidate supersedes **only** the earlier
+active-navigation uncertainty about whether Upper LC v1 adoption has actually
+progressed. Original provenance, frozen tasks and source cutoffs stay intact.
+
+The Developer selected one Parent
+`TASKCYCLE-TECNOTRON-UPPER-LC-V1-OPERATIONAL-COMPLETENESS-001`, whose
+three selected child responsibilities have terminal receipts. A closed normally;
+B and C closed **by one-off Developer exceptional lifecycle reconciliation**,
+not by recovered original initialization identities. The actual Product effects
+are Branch B's bounded Post-Close planning clause at `cf280728...` and
+Branch C's optional terminal preflight at `aa88a55...`; no automatic
+backlog, Milestone/Spec/Task promotion, GitHub board projection, mandatory
+preflight enforcement, State Kernel migration or new TC Core contract occurred.
+
+Freshly reconciled adopted Upper LC v1 contracts (authoritative contract meanings
+remain in `docs/architecture-knowledge-ownership-baseline.md` §16):
+
+| Contract | Current Product sufficiency |
+| --- | --- |
+| Lifecycle Identity / Receipt Map | SATISFIED_CURRENTLY — receipt correlation and qualified opt-in terminal preflight; historical B/C gaps disclosed by exceptional receipts |
+| Capability / Asset Index | SATISFIED_CURRENTLY — existing derived capability map, no second owner |
+| Actor Model vNext | SATISFIED_CURRENTLY — Actor/model/harness vs Developer/Control authority bounded |
+| Portable Handoff | SATISFIED_CURRENTLY — exact bounded references without transcript dependence |
+| Field Ownership Map | SATISFIED_CURRENTLY — existing Developer/Control/Git/provider boundaries |
+| Horizontal Context Control | SATISFIED_CURRENTLY — action-relative context and deterministic coverage |
+| GitHub Issues / Projects Operational Projection | DEFERRED_BY_ADOPTED_POLICY — provider mappings have no current promoted-work consumer |
+| Feedback / Observability Normalization | SATISFIED_CURRENTLY — existing receipts/results/findings, no telemetry platform |
+| Post-Close Reconciliation | SATISFIED_CURRENTLY — accepted semantic CONTROL_DELTA → deliberate planning bridge |
+| TC Core v1 | SATISFIED_CURRENTLY — DOD PASS, FROZEN_MAINTENANCE, never reopened |
+
+```yaml
+Upper_LC_v1:
+  audited_contracts: 10
+  SATISFIED_CURRENTLY: 9
+  DEFERRED_BY_ADOPTED_POLICY: 1
+  current_ACTION_REQUIRED_gaps: 0
+  all_selected_children_terminal: true
+  historical_exception_receipts_preserved: true
+experimental_findings:
+  status: PRESERVED_PENDING_UPPER_LC_DISPOSITION
+  Product_authority: NONE
+  Product_effect: NONE
+  promotion_status: NOT_PROMOTED
+  routing_status: NOT_YET_SELECTED
+post_Parent_Close:
+  active_Product_TaskCycle: NONE
+  next_Product_responsibility:
+    selected: false
+    automatic_successor: false
+```
+
+This declaration is conditional on the Parent's own frozen independent review,
+separate Developer acceptance (guarded by the 2026-10-08 bounded ruling), Phase 2,
+exact remote correspondence and logical close. A draft candidate or a reviewer
+PASS does not itself close the Parent or select another responsibility.
