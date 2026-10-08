@@ -774,3 +774,114 @@ The original immutable review results
 `PASS` with nonblocking findings, and both explicitly lacked separate
 reviewer-context qualification. Their accepted subjects and CLOSED_PASS
 terminal effects are not reopened or replaced by this clause.
+
+
+### 16.5 Post-Close CONTROL_DELTA → deliberate planning admission (bounded Branch B candidate)
+
+**Gate and ownership.** This clause is proposed by
+`TASKCYCLE-TECNOTRON-POSTCLOSE-TO-PLANNING-BRIDGE-001`, selected within
+`TASKCYCLE-TECNOTRON-UPPER-LC-V1-OPERATIONAL-COMPLETENESS-001`.
+It becomes adopted Product guidance **only after its own exact candidate,
+independent semantic review, distinct Developer acceptance and confirmed Phase 2**.
+The adopted §16.1 Post-Close / Field Ownership Map, existing WP003
+Milestone → Spec → Task contracts and `docs/task-lifecycle.md` continue to govern.
+This clause is a semantic bridge, **not** a new backlog store, planning engine,
+universal artifact format, lifecycle gate or automatic transition.
+
+#### Distinct identities and states
+
+```text
+review finding / terminal CONTROL_DELTA (evidence)
+  != possible Product backlog candidate (proposal)
+  != explicitly promoted Product backlog work (accepted admission)
+  != Milestone / Spec / Task (competently scoped planning artifacts)
+  != initialized Product TaskCycle (separate assigned lifecycle)
+```
+
+A `CONTROL_DELTA` is a *read-only, derived, source-bound planning input*
+from an actually confirmed logical close, or a separately identified
+nonterminal finding with its accurate gate. Its minimum sufficient fields are:
+
+- source TaskCycle and exact terminal / review / validation receipt references;
+- stable finding identity, literal observed outcome, impact, resolved/unresolved
+  classification, evidence references and observation cutoff;
+- bounded suggested Product disposition or `UNDECIDED` (recommendation only);
+- authority/decision reference **only when** an actual competent Control ruling
+  exists; a target work identity only after an actual separately authorized
+  promotion.
+
+Projections may live within existing Control handoff/decision and repository SOT
+artifacts, with references instead of duplicated source bytes. Transport and
+external task-board state do not become Product authority. Keep the immutable
+original finding even after a later decision or additive resolution receipt:
+`PASS` with advisories is still `PASS` with those advisories.
+
+#### Product Control dispositions
+
+A competent Product Control reconciliation may explicitly classify **each**
+finding without silently altering its original review or terminal evidence:
+
+| Disposition | Product meaning and guard |
+| --- | --- |
+| `NO_ACTION` | No current corrective/planning action; retain source evidence and decision/cutoff. No deletion of historical finding. |
+| `KEEP_AS_EVIDENCE` | Retain a traceable finding for later consumer-specific inspection. No backlog item or task. |
+| `PROMOTE_TO_PRODUCT_BACKLOG` | **Requires a separate explicit competent promotion/admission decision** identifying the Product work and scope. The disposition string alone does not perform promotion. |
+| `RETURN_TO_ARCHITECTURE_RESEARCH` | Return the specific unanswered question to the competent non-Product research line; no Product TaskCycle is selected by this routing. |
+| `RETURN_TO_EXECUTION_ENGINEERING` | Return a bounded execution/binding experiment to its existing evidence line, with no implied Product write. |
+| `BLOCKED_EXTERNAL` | Name exact missing provider/capability/evidence and current consumer; no inferred PASS, retry, workaround authority or automatic successor. |
+
+`UNDECIDED` is a provisional **absence of a Control decision**, not a seventh
+adopted disposition. Where an effect is `UNKNOWN`, reconciliation is required
+*before* any further conditioned effect or promotion depending on it.
+
+#### Competent promotion and planning route
+
+A **promotion** is a separate, traceable Product Control/Developer decision,
+not a transform performed by a reviewer, lifecycle close, board webhook,
+`CONTROL_DELTA` aggregator or an LLM Actor. The competent decision must
+identify at least: promotion authority reference; distinct Product work item
+identity; evidence/provenance/cutoff; scoped problem and intended outcome;
+required acceptance or further research before admission; and intended planning
+route. Missing authority, unclear work identity, insufficient bounded scope, or
+unresolved material `UNKNOWN` means **not promoted**.
+
+After promotion, the competent planning owner selects exactly the level
+appropriate for the *new* responsibility under existing policy:
+
+1. **Direct bounded Task responsibility** — one well-defined, independently
+   reviewable change with clear acceptance/effect boundary and a competent
+   exception/assignment permitting it; does not waive ordinary gates.
+2. **Spec → Task** — a distinct behavior/contract or several dependent changes
+   need accepted requirements and Task decomposition under existing WP003 SDD
+   semantics. A generated Spec is not accepted merely because it exists.
+3. **Milestone → Spec → Task** — a genuinely coordinated Product objective with
+   multiple Specs, dependencies or releases requires deliberate milestone-level
+   authority and review; never auto-create a Milestone from an advisory or DoD.
+
+No route is selected automatically from severity keywords, test PASS,
+review PASS, experimental DoD or GitHub status. Backlog presence does not
+initialize a TaskCycle. A competent new assignment and source baseline remain
+necessary before an effect. Provider projections may be done only **after**
+promotion, through their separately qualified mapping, and are not admissions.
+
+#### Bounded empirical examples (no Product promotions performed)
+
+- **Real evidence-only fixture:** `IR-A001-001-A01`, from accepted/terminal
+  Branch A, reports that fresh external review context was observed but technical
+  internal provider/harness-memory isolation was not independently attested.
+  Control outcome for this fixture: `KEEP_AS_EVIDENCE`, with the original
+  advisory and review SHA retained. This is not a new defect verdict or a
+  Product backlog admission.
+- **Hypothetical promotable fixture, explicitly NOT an actual Product action:**
+  suppose a future reviewer interface measurably leaks mutable implementation
+  scratch into the fresh reviewer context. That factual finding could become
+  a backlog *candidate* and, if a competent later Product decision provides an
+  exact work identity, outcome and scope, be promoted with a Spec → Task route.
+  Without the promotion authority, its status stays `NOT_PROMOTED`;
+  no issue, Milestone, Spec, Task or TaskCycle is created by this example.
+
+This bridge does not adopt optional feedback retention thresholds, generic
+orchestration, automatic board-to-worker launches, final State Kernel
+disposition, WP-PB continuation or a universal backlog schema. Existing
+post-close findings, including all four preserved Branch A advisories, remain
+evidence until separately dispositioned by competent Product Control.
