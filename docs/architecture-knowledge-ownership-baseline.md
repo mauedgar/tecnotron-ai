@@ -699,3 +699,78 @@ section supersedes only their **active navigation** where they represented
 Upper LC lifecycle identity/receipts or Post-Close as not yet adopted. It does
 not supersede unresolved State Kernel disposition, consumer guards, harness
 conformance, WP-PB-001 or the FitFlow incident.
+
+### 16.4 External-review independence binding — bounded qualification candidate
+
+This clause is a **proposed Product qualification**, bounded by
+`TASKCYCLE-TECNOTRON-AUTONOMOUS-INDEPENDENT-REVIEW-QUALIFICATION-001`.
+It has no Product effect unless the exact candidate receives a genuinely
+separate Independent Review, distinct Developer acceptance and confirmed
+Phase 2 on `tools`. It neither adopts the deferred `WP-PB-001` WU01
+candidate nor invents a second general review protocol. The existing accepted
+WP003 REVIEW authority and the adopted Upper LC v1 Actor/field-ownership
+dispositions control; `materialize_frozen_review_interface@v0` supplies
+transport mechanics, never a semantic verdict.
+
+**Binding contract.** A `QUALIFIED_INDEPENDENT_REVIEW_BINDING` may be
+asserted **for one declared provider/context profile only** when all of the
+following are evidenced, not merely promised by a launch prompt:
+
+1. A frozen interface declares one exact repository, candidate commit/tree,
+   parent(s), changed scope, applicable Product authority/criteria, review
+   request, explicit evidence inventory, declared deviations and transport
+   SHA-256/size/entry count. Its contents and correspondence are checked
+   before semantic assessment. Mutable branch names are only locators.
+2. The reviewer is invoked in a **fresh, separate review context**, without
+   originating implementation/control conversation, ChatGPT Memory or prior
+   reviewer judgments as implicit evidence. The invocation input is the
+   frozen interface and a minimal hash-bound launch instruction, not a
+   mutable implementation worktree. Any missing applicable context is
+   `BLOCKED`; the reviewer must not rediscover or reconstruct it secretly.
+3. The declared inventory is exhaustive for adjudication. Unlisted mutable
+   implementation scratch, secrets, sessions and unqualified external
+   repository state are excluded. The reviewer is read-only and may not
+   repair, commit, publish or acquire Product authority.
+4. The resulting semantic report identifies its own unique review ID and the
+   exact candidate/tree and frozen-interface digest that it consumed.
+   A hash check is an identity/integrity proof, **not** a substitute for
+   semantic assessment or for observed provider isolation.
+5. `PASS`, `FAIL` and `BLOCKED` stay distinct: incompetent interface or
+   acquisition gives `BLOCKED`, a competently evidenced candidate defect
+   gives `FAIL`, and completed competent assessment with no blocking
+   candidate defect can give `PASS`. Validation has a separate status.
+6. A `PASS` carrying advisories preserves every original finding and
+   limitation as review evidence / possible `CONTROL_DELTA`, without
+   automatically promoting backlog, triggering repair or implying Product
+   acceptance. Reviewer output cannot authorize Developer acceptance,
+   Phase 2, integration or close.
+7. Candidate mutation demands a **new** exact frozen subject and review
+   identity. The previous review remains immutable; it cannot be relabeled.
+8. Re-review of the **same** candidate is permitted only for a documented
+   competent reason (e.g. prior transport `BLOCKED` or a genuinely distinct
+   needed assessment), with a fresh review identity and explicit linkage to
+   preserved prior history. Chat interruption alone is not a retry reason.
+9. The qualification receipt must distinguish observed independent-context
+   isolation from merely instructed isolation and bind: provider/context
+   profile, launch identity, frozen subject and archive digests, review ID,
+   access limitations, actual verdict, findings, and later Product gate.
+   `SAME_CHAT_NOT_EXTERNALLY_QUALIFIED` remains the truthful disposition
+   of earlier Upper LC adoption / Pilot 002 reviews.
+
+**Acceptance evidence and ceiling.** Evidence from a genuinely fresh
+reviewer that reads the immutable frozen interface and emits an independently
+bound semantic result is needed to finish this TaskCycle's qualification.
+Deterministic fixtures may prove packaging, tamper detection, explicit
+boundaries and verdict/authority separation, but cannot alone establish
+semantic reviewer independence. The qualification never auto-accepts
+a Product candidate and does not make its provider binding mandatory for
+all TaskCycles. A transport failure must be repaired as a new interface
+attempt without silently rerunning a prior semantic verdict.
+
+**Historical fixture provenance (no re-adjudication).**
+The original immutable review results
+`IND-REVIEW-TECNOTRON-UPPER-LC-V1-PRODUCT-ADOPTION-001` and
+`IND-REVIEW-TECNOTRON-LIFECYCLE-COMPAT-PILOT-002-001` both recorded
+`PASS` with nonblocking findings, and both explicitly lacked separate
+reviewer-context qualification. Their accepted subjects and CLOSED_PASS
+terminal effects are not reopened or replaced by this clause.
