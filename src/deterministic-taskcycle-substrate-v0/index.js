@@ -7,4 +7,5 @@ module.exports = {
   taskcycleInitialization: require('./taskcycle-initialization'),
   taskcycleEffectReconciliation: require('./taskcycle-effect-reconciliation'),
   taskcyclePostPhase1Lifecycle: require('./taskcycle-post-phase1-lifecycle'),
+  taskcycleClosureCompatibility: require('./taskcycle-closure-compatibility'),
 };
