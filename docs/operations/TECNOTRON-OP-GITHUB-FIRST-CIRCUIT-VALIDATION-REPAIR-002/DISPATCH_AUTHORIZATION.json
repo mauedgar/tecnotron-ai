@@ -1,0 +1,33 @@
+{
+  "schema": "tecnotron-bounded-product-dispatch-authorization/v0",
+  "record_kind": "DEVELOPER_DIRECT_SINGLE_ATTEMPT_DISPATCH_GRANT",
+  "authorization_ref": "DEVELOPER-TECNOTRON-GITHUB-FIRST-CIRCUIT-REPAIR-VALIDATION-2026-10-09-002",
+  "authority_source": "DIRECT_DEVELOPER",
+  "authority_text": "Corrige lo que creas necesario hasta llegar al close y los gates que hagan falta para volver al chat tecnotron control.",
+  "authority_scope": "Single validation of exact repaired candidate in existing TaskCycle; previous rejected candidate and reviews preserved; no automatic acceptance",
+  "dispatch_authorized": true,
+  "operation_record_commit": "f3b64a4c10119f83ceb1edaa8c747736301bad99",
+  "operation_ref": "TECNOTRON-OP-GITHUB-FIRST-CIRCUIT-VALIDATION-REPAIR-002",
+  "TaskCycle_ref": "TASKCYCLE-TECNOTRON-GITHUB-FIRST-CIRCUIT-PROJECTION-001",
+  "ExecutionAttempt_ref": "TECNOTRON-EA-GITHUB-FIRST-CIRCUIT-VALIDATION-REPAIR-002",
+  "request_sha256": "sha256:648de6a104251cdd1cbf9cd83e190655f809918c2ffabc1c378e8c1f464b33cf",
+  "caller_commit": "291580d39f7b19baf1aba2898c493217d4cb16b3",
+  "profile_source_commit": "95418f00385ce7cbf98fb6de2f7ea7bce3b7afbd",
+  "subject_commit": "f363ac84e372892f24e44accb3ea92afffc7207e",
+  "subject_tree": "63d776e2420ef70beb0a0f0190f8b24204bae79a",
+  "subject_parent": "fb820d97bd480281ba7bab8cf752897aebdf5fb7",
+  "effect_ceiling": "NONE",
+  "preflight": {
+    "prior_original_subject_validation": "PASS_NONE",
+    "prior_repair_attempt_run": "37885745531",
+    "prior_repair_attempt_terminal": "BLOCKED_QUALIFIED_CALLER_SUBJECT_GUARD_BEFORE_VALIDATOR_EFFECT_NONE",
+    "qualified_new_caller_positive": "37885909883_PASS_NONE",
+    "qualified_new_caller_negative": "37885912836_EXPECTED_FAIL_CLOSED",
+    "new_attempt": "NOT_DISPATCHED",
+    "UNKNOWN": "NONE_OBSERVED_SCOPED"
+  },
+  "attempt_limit": 1,
+  "automatic_retry": false,
+  "no_integration": true,
+  "no_phase2": true
+}
