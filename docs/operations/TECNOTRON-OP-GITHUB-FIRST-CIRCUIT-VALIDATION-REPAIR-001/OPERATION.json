@@ -1,0 +1,68 @@
+{
+  "schema": "tecnotron-bounded-control-operation-record/v0",
+  "record_kind": "PRODUCT_OWNED_SOURCE_BOUND_PROSPECTIVE_OPERATION",
+  "product": "mauedgar/tecnotron-ai",
+  "control": "TECNOTRON_CONTROL_004",
+  "operation": {
+    "id": "TECNOTRON-OP-GITHUB-FIRST-CIRCUIT-VALIDATION-REPAIR-001",
+    "taskcycle_id": "TASKCYCLE-TECNOTRON-GITHUB-FIRST-CIRCUIT-PROJECTION-001",
+    "objective": "PROMOTION_GRADE_VALIDATE_REPAIRED_EXACT_CANDIDATE",
+    "state": "PROSPECTIVELY_REGISTERED_NOT_DISPATCHED",
+    "operation_origin": "DEVELOPER_DIRECT_AUTONOMOUS_REPAIR_TO_CLOSE",
+    "taskcycle_original_initialization_mutated": false
+  },
+  "authority": {
+    "type": "DIRECT_DEVELOPER_AUTHORIZATION",
+    "reference": "DEVELOPER-TECNOTRON-GITHUB-FIRST-CIRCUIT-REPAIR-TO-CLOSE-2026-10-09-001",
+    "scope": "REPAIR_MATERIAL_INDEPENDENT_REVIEW_FINDING_AND_PREPARE_ONE_PRODUCT_VALIDATION_ATTEMPT_SUBJECT_TO_PRE_DISPATCH_GRANT",
+    "grant_not_a_kernel_import": true,
+    "attempt_dispatch_authorized": false,
+    "integration_authorized": "CONDITIONAL_POST_REVIEW",
+    "phase_2_authorized": "CONDITIONAL_POST_REVIEW"
+  },
+  "product_baseline": {
+    "integration_branch": "tools",
+    "commit": "5e72795b4e65cd943372fc4a099f8233b31c99a3",
+    "tree": "ddd7bffd2b0be6be67355ab586ff4b5234b99c43"
+  },
+  "exact_subject": {
+    "branch": "candidate/tecnotron-github-first-circuit-projection-002",
+    "commit": "f363ac84e372892f24e44accb3ea92afffc7207e",
+    "tree": "63d776e2420ef70beb0a0f0190f8b24204bae79a",
+    "parent": "fb820d97bd480281ba7bab8cf752897aebdf5fb7"
+  },
+  "selected_qualified_execution": {
+    "caller_workflow": "mauedgar/ts-execution-lab/.github/workflows/tecnotron-validator-product-caller.yml",
+    "caller_commit": "6cf774ade45fa6192ee1667f6264806f99dbd608",
+    "profile_ref": "profile://ts-execution-lab/tecnotron-promotion-grade/v0",
+    "profile_source_commit": "95418f00385ce7cbf98fb6de2f7ea7bce3b7afbd",
+    "input_request_id": "TECNOTRON-GITHUB-FIRST-CIRCUIT-VALIDATION-REPAIR-REQ-001",
+    "prepared_request_ref": "mauedgar/ts-execution-transport@b4fcdec48d052a239f7a7ddae1161d7f280f981e:requests/TECNOTRON-GITHUB-FIRST-CIRCUIT-VALIDATION-REPAIR-001/EXECUTION-REQUEST-PREPARED.json",
+    "prepared_request_sha256": "sha256:1a757a41208d5da4a0ec7141679e617f18551f30333c3f5b55f2bd65c99c433f",
+    "sole_proposed_attempt_ref": "TECNOTRON-EA-GITHUB-FIRST-CIRCUIT-VALIDATION-REPAIR-001",
+    "attempt_state": "PREPARED_NOT_DISPATCHED",
+    "require_fresh_authorized_attempt_and_no_prior_unknown": true,
+    "dispatch_evidence": "PENDING"
+  },
+  "preservation": {
+    "kernel_free": true,
+    "state_kernel_direct_calls": 0,
+    "state_kernel_aggregate_created": false,
+    "no_new_state_backend": true,
+    "Product_tools_changed": false,
+    "previous_candidate_immutable": "7f33fedcb97c00355e253ac64237f734f99e7a15",
+    "previous_review_fail_preserved": true,
+    "no_phase_2_before_acceptance": true
+  },
+  "review_basis": {
+    "prior_implicit_verdict": "FAIL",
+    "prior_external_verdict": "FAIL",
+    "material_finding": "READY_ELIGIBILITY_PROJECT_ITEM_BINDING",
+    "old_reviews_not_transferable": true
+  },
+  "canonicality": {
+    "product_owned_git_control_branch": true,
+    "baseline_tools_sot_integration": false,
+    "not_equivalent_to_state_kernel_operation_aggregate": true
+  }
+}
