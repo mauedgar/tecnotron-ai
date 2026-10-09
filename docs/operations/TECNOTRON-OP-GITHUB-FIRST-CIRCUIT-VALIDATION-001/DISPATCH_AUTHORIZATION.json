@@ -1,0 +1,33 @@
+{
+  "schema": "tecnotron-bounded-product-dispatch-authorization/v0",
+  "record_kind": "DEVELOPER_DIRECT_SINGLE_ATTEMPT_DISPATCH_GRANT",
+  "authorization_ref": "DEVELOPER-TC-GITHUB-FIRST-CIRCUIT-AUTONOMY-TO-INDEPENDENT-REVIEW-2026-10-09-001",
+  "authority_source": "DIRECT_DEVELOPER",
+  "authority_text": "Te doy autonomía para resolver hasta que lleguemos al resultado de la ind review.",
+  "authority_scope": "Existing TASKCYCLE-TECNOTRON-GITHUB-FIRST-CIRCUIT-PROJECTION-001, up to independent-review result; no acceptance/integration/Phase2",
+  "dispatch_authorized": true,
+  "operation_record_commit": "2e9c291d5e3362850a87f47f7a7b46f591758191",
+  "operation_ref": "TECNOTRON-OP-GITHUB-FIRST-CIRCUIT-VALIDATION-001",
+  "TaskCycle_ref": "TASKCYCLE-TECNOTRON-GITHUB-FIRST-CIRCUIT-PROJECTION-001",
+  "ExecutionAttempt_ref": "TECNOTRON-EA-GITHUB-FIRST-CIRCUIT-VALIDATION-001",
+  "request_sha256": "sha256:8c0203fed080f6ab365866d6f24207295fd823b12484fa572b8d1e4059493dc2",
+  "caller_commit": "6cf774ade45fa6192ee1667f6264806f99dbd608",
+  "profile_source_commit": "95418f00385ce7cbf98fb6de2f7ea7bce3b7afbd",
+  "subject_commit": "7f33fedcb97c00355e253ac64237f734f99e7a15",
+  "subject_tree": "a8ec296f737defaac7cf1dbcb88ab2f82b1f21c4",
+  "subject_parent": "fb820d97bd480281ba7bab8cf752897aebdf5fb7",
+  "effect_ceiling": "NONE",
+  "preflight": {
+    "workflow_id": 379242776,
+    "workflow_state": "active",
+    "prior_workflow_runs": 0,
+    "earlier_grant": "NOT_FOUND",
+    "native_prior_unknown": "NONE_OBSERVED_IN_SCOPED_EVIDENCE"
+  },
+  "attempt_limit": 1,
+  "automatic_retry": false,
+  "created_for": "AUTHORIZED_BOUNDED_VALIDATION_ONLY",
+  "no_independent_review_acceptance": true,
+  "no_integration": true,
+  "no_phase2": true
+}
