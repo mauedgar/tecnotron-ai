@@ -1,0 +1,36 @@
+{
+  "kind": "PRODUCT_CONTROL_BOUND_CLOSURE_PROVENANCE_DISPOSITION",
+  "date": "2026-10-09",
+  "authority": "DEVELOPER-TECNOTRON-GITHUB-FIRST-CIRCUIT-CANDIDATE-ACCEPTANCE-2026-10-09-001",
+  "TaskCycle": "TASKCYCLE-TECNOTRON-GITHUB-FIRST-CIRCUIT-PROJECTION-001",
+  "decision": "USE_EXISTING_TASKCYCLE_CLOSURE_COMPATIBILITY_WITH_ORIGINAL_TASK_CARRIER_IDENTITY",
+  "canonical_consumer": {
+    "path": "src/deterministic-taskcycle-substrate-v0/taskcycle-closure-compatibility.js",
+    "git_blob": "4575fec875dd27dacfbad34d46c6f213bee7e5c7",
+    "semantics": "candidate.branch compares literal original initialization TASK_carrier.branch; candidate.parent compares TASK_carrier.commit; code does not assert current Git ref target",
+    "State_Kernel_direct_calls": 0
+  },
+  "candidate": {
+    "original_carrier_branch_identity": "task/tecnotron-github-first-circuit-projection-001",
+    "original_carrier_commit": "fb820d97bd480281ba7bab8cf752897aebdf5fb7",
+    "actual_repair_branch": "candidate/tecnotron-github-first-circuit-projection-002",
+    "actual_repair_commit": "f363ac84e372892f24e44accb3ea92afffc7207e",
+    "repair_tree": "63d776e2420ef70beb0a0f0190f8b24204bae79a",
+    "original_rejected_ref_head": "7f33fedcb97c00355e253ac64237f734f99e7a15",
+    "integrated_tools_head": "f363ac84e372892f24e44accb3ea92afffc7207e"
+  },
+  "interpretation": "candidate.branch in closure-compatibility invocation identifies source Task carrier lineage recorded at initialization, not a new assertion that the physical rejected task branch currently contains the repaired candidate; physical branch and integrated tools ref are independently verified and separately recorded",
+  "constraints": {
+    "do_not_repoint_original_branch": true,
+    "do_not_reinitialize": true,
+    "do_not_replay_effects": true,
+    "require_exact_original_initialization_digest": true,
+    "require_nine_satisfied_obligations": true,
+    "require_canonical_tools_descends_from_tip": true,
+    "require_phase2_receipt": true,
+    "require_no_unknown_effects": true,
+    "close_using_existing_compatibility_only": true
+  },
+  "confidence": "SOURCE_BOUND_CONTRACT_CORRESPONDENCE_NOT_NEW_PRODUCT_SCHEMA",
+  "authority_created": false
+}
