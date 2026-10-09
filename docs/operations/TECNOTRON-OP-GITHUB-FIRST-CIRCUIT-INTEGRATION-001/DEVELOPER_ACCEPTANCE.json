@@ -1,0 +1,62 @@
+{
+  "schema": "tecnotron-developer-acceptance/v0",
+  "record_kind": "PRODUCT_CONTROL_TRANSCRIPTION_OF_DIRECT_DEVELOPER_DECISION",
+  "TaskCycle": "TASKCYCLE-TECNOTRON-GITHUB-FIRST-CIRCUIT-PROJECTION-001",
+  "decision": {
+    "disposition": "ACCEPTED",
+    "authority_ref": "DEVELOPER-TECNOTRON-GITHUB-FIRST-CIRCUIT-CANDIDATE-ACCEPTANCE-2026-10-09-001",
+    "direct_statement": "Acepto el candidato, autorizo continúar con los gates hasta llegar al handoff persistido para tecnotron control",
+    "scope": "ACCEPT_EXACT_REPAIRED_CANDIDATE_AND_AUTHORIZE_BOUNDED_CONDITIONED_PHASE_2_AND_NATIVE_CLOSE",
+    "not_generic_authority": true
+  },
+  "subject": {
+    "repository": "mauedgar/tecnotron-ai",
+    "commit": "f363ac84e372892f24e44accb3ea92afffc7207e",
+    "tree": "63d776e2420ef70beb0a0f0190f8b24204bae79a",
+    "parent": "fb820d97bd480281ba7bab8cf752897aebdf5fb7",
+    "physical_candidate_ref": "refs/heads/candidate/tecnotron-github-first-circuit-projection-002",
+    "original_task_carrier_ref": "refs/heads/task/tecnotron-github-first-circuit-projection-001",
+    "original_task_carrier_commit": "fb820d97bd480281ba7bab8cf752897aebdf5fb7",
+    "old_rejected_candidate_commit": "7f33fedcb97c00355e253ac64237f734f99e7a15"
+  },
+  "acceptance_evidence": {
+    "Product_validation_run": 37886063327,
+    "Product_operation_ref": "TECNOTRON-OP-GITHUB-FIRST-CIRCUIT-VALIDATION-REPAIR-002",
+    "ExecutionAttempt_ref": "TECNOTRON-EA-GITHUB-FIRST-CIRCUIT-VALIDATION-REPAIR-002",
+    "frozen_sha256": "ebbfced63c470096898251f15a11dc3b361184a0cb89c8b39ebc09a0c40cbf36",
+    "independent_review_id": "IND-REVIEW-TECNOTRON-GITHUB-FIRST-CIRCUIT-002-001",
+    "independent_review_blob": "505dff6da4f6a3d2f817716faae407f39abaa925",
+    "independent_review_verdict": "PASS",
+    "original_same_chat_review": "PASS_NONCANONICAL",
+    "material_findings": 0
+  },
+  "integration_authority": {
+    "repository": "mauedgar/tecnotron-ai",
+    "ref": "refs/heads/tools",
+    "expected_old_commit": "5e72795b4e65cd943372fc4a099f8233b31c99a3",
+    "expected_new_commit": "f363ac84e372892f24e44accb3ea92afffc7207e",
+    "method": "EXACT_ACCEPTED_FIRST_PARENT_FAST_FORWARD",
+    "allowed_paths": [
+      "docs/work-packages/tecnotron-github-first-circuit-v1/PLAN.md",
+      "docs/tasks/TEC-TC-GITHUB-FIRST-CIRCUIT-PROJECTION-001/TASK.md",
+      "docs/contracts/github-operational-projection-v0.md",
+      "src/adapters/github.js",
+      "tests/adapters/github-operational-projection.test.js"
+    ],
+    "force": false,
+    "remote_publication_authorized": true,
+    "conditional_on_fresh_preflight": true
+  },
+  "closure_authority": {
+    "authority_ref": "DEVELOPER-TECNOTRON-GITHUB-FIRST-CIRCUIT-CANDIDATE-ACCEPTANCE-2026-10-09-001",
+    "terminal_disposition": "CLOSED_PASS_ONLY_AFTER_NATIVE_OBLIGATIONS_AND_EFFECT_RECONCILIATION_PASS",
+    "taskcycle_reinitialization": false
+  },
+  "preserve": {
+    "previous_candidate_review": "FAIL_HISTORICAL",
+    "ready_project_state": "NOT_DECIDED",
+    "general_Projects_v2_write_qualification": "NOT_ESTABLISHED",
+    "no_additional_backlog": true,
+    "State_Kernel_direct_calls": 0
+  }
+}
