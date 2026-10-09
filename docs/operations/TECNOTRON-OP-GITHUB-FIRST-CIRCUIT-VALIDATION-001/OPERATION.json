@@ -1,0 +1,72 @@
+{
+  "schema": "tecnotron-bounded-control-operation-record/v0",
+  "record_kind": "PRODUCT_OWNED_SOURCE_BOUND_PROSPECTIVE_OPERATION",
+  "product": "mauedgar/tecnotron-ai",
+  "control": "TECNOTRON_CONTROL_004",
+  "operation": {
+    "id": "TECNOTRON-OP-GITHUB-FIRST-CIRCUIT-VALIDATION-001",
+    "taskcycle_id": "TASKCYCLE-TECNOTRON-GITHUB-FIRST-CIRCUIT-PROJECTION-001",
+    "objective": "PROMOTION_GRADE_VALIDATE_EXACT_CANDIDATE",
+    "state": "PROSPECTIVELY_REGISTERED_NOT_DISPATCHED",
+    "operation_origin": "DEVELOPER_DIRECT_PROSPECTIVE_AUTHORIZATION",
+    "taskcycle_original_initialization_mutated": false
+  },
+  "authority": {
+    "type": "DIRECT_DEVELOPER_AUTHORIZATION",
+    "reference": "TECNOTRON-CONTROL-004-DEVELOPER-PROSPECTIVE-OPERATION-AND-INVOCATION-PREPARATION-2026-10-09-001",
+    "scope": "MATERIALIZE_PROSPECTIVE_OPERATION_AND_PREPARE_SINGLE_ATTEMPT_AND_EXTERNAL_WORKFLOW_NOT_DISPATCH",
+    "grant_not_a_kernel_import": true,
+    "attempt_dispatch_authorized": false,
+    "integration_authorized": false,
+    "phase_2_authorized": false
+  },
+  "product_baseline": {
+    "integration_branch": "tools",
+    "commit": "5e72795b4e65cd943372fc4a099f8233b31c99a3",
+    "tree": "ddd7bffd2b0be6be67355ab586ff4b5234b99c43"
+  },
+  "exact_subject": {
+    "branch": "task/tecnotron-github-first-circuit-projection-001",
+    "commit": "7f33fedcb97c00355e253ac64237f734f99e7a15",
+    "tree": "a8ec296f737defaac7cf1dbcb88ab2f82b1f21c4",
+    "parent": "fb820d97bd480281ba7bab8cf752897aebdf5fb7"
+  },
+  "selected_qualified_execution": {
+    "caller_workflow": "mauedgar/ts-execution-lab/.github/workflows/tecnotron-validator-product-caller.yml",
+    "caller_commit": "6cf774ade45fa6192ee1667f6264806f99dbd608",
+    "profile_ref": "profile://ts-execution-lab/tecnotron-promotion-grade/v0",
+    "profile_source_commit": "95418f00385ce7cbf98fb6de2f7ea7bce3b7afbd",
+    "input_request_id": "TECNOTRON-GITHUB-FIRST-CIRCUIT-VALIDATION-REQ-001",
+    "prepared_request_ref": "mauedgar/ts-execution-transport@b25a9bb092a6a630aea6af573c967a6e21b20cb1:requests/TECNOTRON-GITHUB-FIRST-CIRCUIT-VALIDATION-001/EXECUTION-REQUEST-PREPARED.json",
+    "prepared_request_sha256": "sha256:8c0203fed080f6ab365866d6f24207295fd823b12484fa572b8d1e4059493dc2",
+    "sole_proposed_attempt_ref": "TECNOTRON-EA-GITHUB-FIRST-CIRCUIT-VALIDATION-001",
+    "attempt_state": "PREPARED_NOT_DISPATCHED",
+    "require_fresh_authorized_attempt_and_no_prior_unknown": true,
+    "dispatch_evidence": "PENDING"
+  },
+  "preservation": {
+    "kernel_free": true,
+    "state_kernel_direct_calls": 0,
+    "state_kernel_aggregate_created": false,
+    "no_new_state_backend": true,
+    "Product_tools_changed": false,
+    "candidate_changed": false,
+    "frozen_review_interface": "NOT_MATERIALIZED",
+    "implicit_independent_review_pilot": "PENDING_VALIDATION_AND_FREEZE",
+    "canonical_independent_review": "NOT_RUN",
+    "promotion_grade_validation": "PENDING",
+    "GitHub_Projects": "READ_QUALIFIED_WRITES_UNQUALIFIED_SEPARATE",
+    "no_phase_2": true
+  },
+  "provenance": [
+    "mauedgar/ts-execution-transport@b25a9bb092a6a630aea6af573c967a6e21b20cb1:results/TECNOTRON-GITHUB-FIRST-CIRCUIT-PHASE1-001/PROSPECTIVE-OPERATION-AND-ATTEMPT-PREPARATION-2026-10-08-001.md",
+    "mauedgar/ts-execution-transport@7aa5b5e8b78c862ddac32689dcb6a4f514442c27:results/TECNOTRON-GITHUB-FIRST-CIRCUIT-PHASE1-001/CONTROL-004-NATIVE-OPERATION-AND-INVOKER-RECONCILIATION-2026-10-08-001.md",
+    "mauedgar/ts-execution-transport:results/TECNOTRON-VALIDATOR-PRODUCT-CALLER-QUALIFICATION-001/CALLER-QUALIFICATION.json"
+  ],
+  "canonicality": {
+    "product_owned_git_control_branch": true,
+    "baseline_tools_sot_integration": false,
+    "externally_transportable_identity_requires_exact_git_commit": true,
+    "not_equivalent_to_state_kernel_operation_aggregate": true
+  }
+}
