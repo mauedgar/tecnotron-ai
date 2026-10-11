@@ -26,7 +26,7 @@ initialization_anchor:
   tree: 467151f16353970514d485eab0ef731052bac465
 write_scope:
   - docs/tasks/TEC-TC-REVIEW-TXT-CARRIER-ADOPTION-001/TASK.md
-  - scripts/review-txt-carrier.py
+  - scripts/review_txt_carrier.py
   - tests/review-txt-carrier/test_review_txt_carrier.py
   - src/operational-spine-v0/recipes/materialize-frozen-review-interface.js
   - tests/operational-spine-v0/materialize-frozen-review-interface.test.js
