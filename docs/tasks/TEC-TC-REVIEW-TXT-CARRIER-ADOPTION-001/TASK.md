@@ -72,3 +72,11 @@ Vendor exact qualified Python projection as Product-local stable adapter and reu
 6. Effect reconciliation, logical close, and optional consumer adoption only under its own competent scope.
 
 **No mutation or restart of #32/#33, no replacement of IR003 and no merge on test PASS alone.**
+
+## Phase 1 historical reconciliation — preserved source and fresh replacement
+
+The original implementation history `94447dfef9acb8ba8fb048a5c0f3f11b1b1672c3..96bb8b7e4d939efaf77c16c59a343a5f980ca8ce` consists of five linear commits. Its original candidate/tree, native validation, frozen review and Independent Review 003 remain immutable historical evidence; none is represented as acceptance or Phase 2.
+
+The TaskCycle was initialized kernel-free only after that implementation existed; nine original obligations were PENDING, not auto-satisfied. The existing `COMPLETED_BEFORE_LIFECYCLE_INITIALIZATION` reconciler requires a first-parent direct child of the exact TASK carrier with actual changed paths matching this TASK's declared `write_scope`. The original reviewed tip has neither that parent nor a diff in the TASK path.
+
+The bounded recovery is a **new exact Git candidate**, not a rewrite of the original reviewed commit or fabricated lifecycle transition. It uses the exact approved implementation blobs from the old candidate plus this recorded TASK provenance change. The resulting commit must be a real direct child of the TASK carrier with exactly the five declared changed paths, or the operation must block. Its new commit/tree identity must be validated, frozen and independently reviewed before any candidate-specific Developer acceptance or Phase 2. Historical review identities and previous frozen input cannot substitute for the fresh candidate review. No Upper LC, TC Core or review-policy change is authorized by this note.

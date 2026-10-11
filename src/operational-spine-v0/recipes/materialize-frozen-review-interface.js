@@ -107,6 +107,7 @@ const MaterializeFrozenReviewInterfaceInput = z.object({
   output_root: AbsolutePath,
   review_instance: ReviewInstance,
   render_review_prompt: z.boolean().optional(),
+  reviewer_transport: z.enum(['TAR', 'TXT']).optional(),
 }).strict().superRefine((value, ctx) => {
   const instance = value.review_instance;
   const artifacts = [instance.review_request, ...instance.required_evidence_specification];
@@ -399,6 +400,7 @@ function renderReviewPrompt({
   archiveEntryCount,
   manifestSha256,
   exactSubject,
+  reviewText = null,
 }) {
   const transportIdentity = {
     review_interface_id: interfaceId,
@@ -410,12 +412,25 @@ function renderReviewPrompt({
     archive_entry_count: archiveEntryCount,
     manifest_sha256: manifestSha256,
     exact_frozen_subject: exactSubject,
+    ...(reviewText ? {
+      reviewer_transport: 'TXT',
+      review_text_filename: reviewText.filename,
+      review_text_sha256: reviewText.sha256,
+      review_text_size: reviewText.size,
+      review_text_format: 'IR-TXT-REVIEW-PROJECTION/1',
+    } : {}),
   };
   return Buffer.from([
     '# Independent Review Launch',
     '',
-    'Use the attached frozen archive as the complete input boundary for one Independent Review.',
-    'The semantic review questions and acceptance criteria are only those already supplied inside that archive.',
+    ...(reviewText ? [
+      'Use the attached verified UTF-8 TXT as the complete input boundary for one Independent Review.',
+      'The TAR is frozen archival evidence, not an additional reviewer attachment.',
+      'The semantic review questions and acceptance criteria are only those supplied inside the verified TXT.',
+    ] : [
+      'Use the attached frozen archive as the complete input boundary for one Independent Review.',
+      'The semantic review questions and acceptance criteria are only those already supplied inside that archive.',
+    ]),
     '',
     '## Exact Transport Identity',
     '',
@@ -449,6 +464,56 @@ function materializeArtifact(repositoryPath, artifact, git) {
   return Buffer.from(diff.stdout, 'utf8');
 }
 
+function reviewerProjectorPath() {
+  return path.resolve(__dirname, '../../../scripts/review_txt_carrier.py');
+}
+
+function reviewerPythonCommand() {
+  return process.platform === 'win32' ? 'python' : 'python3';
+}
+
+function projectVerifiedReviewText({ archivePath, textPath, reportPath, verificationPath, pythonCommand }) {
+  const script = reviewerProjectorPath();
+  const invoke = (args) => {
+    const result = spawnSync(pythonCommand, [script, ...args], {
+      encoding: 'utf8',
+      shell: false,
+      windowsHide: true,
+      timeout: 120000,
+      maxBuffer: 2 * 1024 * 1024,
+    });
+    if (result.error || result.status !== 0) {
+      throw new Error('REVIEW_TXT_PROJECTOR_FAILED:' + (result.error?.message || result.stderr || result.status));
+    }
+  };
+  invoke(['project-readable', archivePath, '--out', textPath, '--report', reportPath]);
+  invoke(['verify-readable', textPath, '--report', verificationPath]);
+  const projected = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+  const verified = JSON.parse(fs.readFileSync(verificationPath, 'utf8'));
+  const archive = fs.readFileSync(archivePath);
+  if (JSON.stringify(projected) !== JSON.stringify(verified)
+      || verified.status !== 'PASS'
+      || verified.format !== 'IR-TXT-REVIEW-PROJECTION/1'
+      || verified.review_leaf_payload_equivalence !== 'PASS'
+      || verified.all_leaf_payloads_utf8 !== true
+      || verified.source_archive?.sha256 !== sha256(archive)
+      || verified.source_archive?.size !== archive.length) {
+    throw new Error('REVIEW_TXT_PROJECTION_CORRESPONDENCE_MISMATCH');
+  }
+  const text = fs.readFileSync(textPath);
+  if (!text.toString('utf8').startsWith('IR-TXT-REVIEW-PROJECTION/1\n')) {
+    throw new Error('REVIEW_TXT_FORMAT_MISMATCH');
+  }
+  return {
+    sha256: sha256(text),
+    size: text.length,
+    leaf_count: verified.leaf_count,
+    archive_count: verified.archive_count,
+    source_archive_sha256: verified.source_archive.sha256,
+    projector_sha256: sha256(fs.readFileSync(script)),
+  };
+}
+
 function receipt(request, { status, effectState, reason, output, resultRefs = [] }) {
   return RecipeReceipt.parse({
     schema_version: 'tecnotron-recipe-receipt/v0',
@@ -466,7 +531,7 @@ function receipt(request, { status, effectState, reason, output, resultRefs = []
   });
 }
 
-function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAdapter() } = {}) {
+function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAdapter(), pythonCommand = reviewerPythonCommand() } = {}) {
   const definition = RecipeDefinition.parse({
     id: 'materialize_frozen_review_interface',
     version: 'v0',
@@ -482,6 +547,7 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
       'review_instance.validation_evidence_refs',
       'review_instance.authority_and_scope',
       'render_review_prompt (optional)',
+      'reviewer_transport (optional TAR or TXT; TAR is legacy default)',
     ],
     preconditions: [
       'caller supplied the exact semantic review interface under tecnotron-independent-review-protocol/v1',
@@ -494,7 +560,8 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
       'candidate identity and clean worktree remain unchanged',
       'manifest member hashes, sizes, count, and candidate correspondence verify',
       'archive reopens with exactly the declared member set and bytes',
-      'optional external review prompt is bound to the exact archive, manifest, and subject',
+      'when TXT is selected, readable leaf projection is independently verified and bound to archive identity',
+      'optional external review prompt binds the selected reviewer transport and exact frozen subject',
       'prior review interface identities remain unchanged',
       'receipt contains no Independent Review verdict or Developer acceptance',
     ],
@@ -533,8 +600,16 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
     const finalDirectory = path.join(input.output_root, input.interface_id);
     const archivePath = `${finalDirectory}.tar`;
     const promptPath = `${finalDirectory}.review-prompt.md`;
-    if (fs.existsSync(finalDirectory) || fs.existsSync(archivePath) || fs.existsSync(promptPath)) {
+    const textPath = `${finalDirectory}.review-input.txt`;
+    if (fs.existsSync(finalDirectory) || fs.existsSync(archivePath) || fs.existsSync(promptPath) || fs.existsSync(textPath)) {
       return { status: 'BLOCKED', reason: 'REVIEW_INTERFACE_IDENTITY_ALREADY_EXISTS' };
+    }
+    if (input.reviewer_transport === 'TXT') {
+      let scriptStat;
+      try { scriptStat = fs.lstatSync(reviewerProjectorPath()); } catch { return { status: 'UNAVAILABLE', reason: 'REVIEW_TXT_PROJECTOR_UNAVAILABLE' }; }
+      if (!scriptStat.isFile() || scriptStat.isSymbolicLink()) return { status: 'BLOCKED', reason: 'REVIEW_TXT_PROJECTOR_NOT_REGULAR_FILE' };
+      const probe = spawnSync(pythonCommand, ['--version'], { encoding: 'utf8', shell: false, windowsHide: true, timeout: 10000 });
+      if (probe.error || probe.status !== 0) return { status: 'UNAVAILABLE', reason: 'REVIEW_TXT_PYTHON_UNAVAILABLE' };
     }
     return { status: 'READY' };
   }
@@ -545,9 +620,13 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
     const finalDirectory = path.join(input.output_root, input.interface_id);
     const archivePath = `${finalDirectory}.tar`;
     const promptPath = `${finalDirectory}.review-prompt.md`;
+    const textPath = `${finalDirectory}.review-input.txt`;
     const stagingDirectory = path.join(input.output_root, `.${input.interface_id}.${request.execution_attempt_id}.staging`);
     const archiveTemporary = `${archivePath}.${request.execution_attempt_id}.tmp`;
     const promptTemporary = `${promptPath}.${request.execution_attempt_id}.tmp`;
+    const textTemporary = `${textPath}.${request.execution_attempt_id}.tmp`;
+    const projectReportTemporary = `${textTemporary}.project.json`;
+    const verifyReportTemporary = `${textTemporary}.verify.json`;
 
     const recheck = await preflight(request);
     if (recheck.status !== 'READY') {
@@ -612,6 +691,14 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
       const archiveHash = sha256(archive);
       const manifestHash = sha256(manifestBytes);
       const subjectHash = sha256(jsonBytes(input.review_instance.exact_subject));
+      const transport = input.reviewer_transport || 'TAR';
+      const reviewText = transport === 'TXT' ? projectVerifiedReviewText({
+        archivePath: archiveTemporary,
+        textPath: textTemporary,
+        reportPath: projectReportTemporary,
+        verificationPath: verifyReportTemporary,
+        pythonCommand,
+      }) : null;
       let promptBytes = null;
       if (input.render_review_prompt) {
         promptBytes = renderReviewPrompt({
@@ -624,6 +711,11 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
           archiveEntryCount: reopenedMembers.size,
           manifestSha256: manifestHash,
           exactSubject: input.review_instance.exact_subject,
+          reviewText: reviewText ? {
+            filename: path.basename(textPath),
+            sha256: reviewText.sha256,
+            size: reviewText.size,
+          } : null,
         });
         fs.writeFileSync(promptTemporary, promptBytes, { flag: 'wx' });
       }
@@ -635,12 +727,14 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
 
       fs.renameSync(stagingDirectory, finalDirectory);
       fs.renameSync(archiveTemporary, archivePath);
+      if (reviewText) fs.renameSync(textTemporary, textPath);
       if (promptBytes) fs.renameSync(promptTemporary, promptPath);
 
       const finalArchive = fs.readFileSync(archivePath);
       const finalMembers = verifyArchive(entries, finalArchive);
       if (sha256(finalArchive) !== archiveHash) throw new Error('FINAL_ARCHIVE_IDENTITY_MISMATCH');
       if (promptBytes && !fs.readFileSync(promptPath).equals(promptBytes)) throw new Error('REVIEW_PROMPT_BYTES_MISMATCH');
+      if (reviewText && sha256(fs.readFileSync(textPath)) !== reviewText.sha256) throw new Error('REVIEW_TXT_FINAL_HASH_MISMATCH');
       const finalCandidateReason = candidateGuard(request, input, git);
       if (finalCandidateReason) throw new Error(`CANDIDATE_CHANGED_AFTER_MATERIALIZATION:${finalCandidateReason}`);
 
@@ -655,6 +749,18 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
           archive_size: finalArchive.length,
           archive_entry_count: finalMembers.size,
           manifest_sha256: manifestHash,
+          reviewer_transport: transport,
+          ...(reviewText ? { review_text: {
+            path: textPath,
+            sha256: reviewText.sha256,
+            size: reviewText.size,
+            format: 'IR-TXT-REVIEW-PROJECTION/1',
+            leaf_count: reviewText.leaf_count,
+            archive_count: reviewText.archive_count,
+            source_archive_sha256: reviewText.source_archive_sha256,
+            projector_sha256: reviewText.projector_sha256,
+            model_visible_equivalence: 'NOT_ATTESTED',
+          } } : {}),
           declared_payload_count: provenance.length,
           candidate_correspondence: {
             ...input.review_instance.exact_subject,
@@ -668,28 +774,34 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
               archive_sha256: archiveHash,
               manifest_sha256: manifestHash,
               exact_subject_sha256: subjectHash,
+              ...(reviewText ? { review_text_sha256: reviewText.sha256 } : {}),
             },
           } : {}),
         },
         resultRefs: [
           { kind: 'ARTIFACT', id: `review-interface:${input.interface_id}`, sha256: archiveHash },
           { kind: 'ARTIFACT', id: `review-interface-manifest:${input.interface_id}`, sha256: manifestHash },
+          ...(reviewText ? [{ kind: 'ARTIFACT', id: `review-text:${input.interface_id}`, sha256: reviewText.sha256 }] : []),
           { kind: 'GIT_OBJECT', id: `review-subject:${input.interface_id}`, git_oid: subjectCommit(input.review_instance.exact_subject) },
           ...(promptBytes ? [{ kind: 'ARTIFACT', id: `review-prompt:${input.interface_id}`, sha256: sha256(promptBytes) }] : []),
         ],
       });
     } catch (error) {
-      const finalExists = fs.existsSync(finalDirectory) || fs.existsSync(archivePath) || fs.existsSync(promptPath);
+      const finalExists = fs.existsSync(finalDirectory) || fs.existsSync(archivePath) || fs.existsSync(promptPath) || fs.existsSync(textPath);
       if (!finalExists) {
         fs.rmSync(stagingDirectory, { recursive: true, force: true });
         fs.rmSync(archiveTemporary, { force: true });
         fs.rmSync(promptTemporary, { force: true });
+        fs.rmSync(textTemporary, { force: true });
       }
       return receipt(request, {
         status: finalExists ? 'UNKNOWN' : 'FAIL',
         effectState: finalExists ? 'UNKNOWN' : 'NONE',
         reason: `REVIEW_INTERFACE_MATERIALIZATION_FAILED:${error.message || String(error)}`,
       });
+    } finally {
+      fs.rmSync(projectReportTemporary, { force: true });
+      fs.rmSync(verifyReportTemporary, { force: true });
     }
   }
 
