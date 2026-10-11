@@ -501,7 +501,7 @@ function projectVerifiedReviewText({ archivePath, textPath, reportPath, verifica
     throw new Error('REVIEW_TXT_PROJECTION_CORRESPONDENCE_MISMATCH');
   }
   const text = fs.readFileSync(textPath);
-  if (!text.toString('utf8').startsWith('IR-TXT-REVIEW-PROJECTION/1\\n')) {
+  if (!text.toString('utf8').startsWith('IR-TXT-REVIEW-PROJECTION/1\n')) {
     throw new Error('REVIEW_TXT_FORMAT_MISMATCH');
   }
   return {
