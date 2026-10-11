@@ -27,7 +27,7 @@ write_scope:
   - scripts/tests/test-suites.test.js
   - docs/guides/testing-by-type.md
 acceptance_criteria:
-  - "Identify and classify every existing Node test file without cross-category duplicates, while keeping the full baseline npm test behavior until equivalence is independently proven."
+  - "Identify and classify every existing Node test file without cross-category duplicates; preserve all baseline test membership and skip semantics. After exact-subject native side-by-side checks, the default npm test may include newly added inventory self-tests without removing old coverage, subject to separate Independent Review."
   - "Expose distinct review-oriented test commands for unit, contract, integration, operational/lifecycle and compatibility."
   - "Fail closed on a new unclassified test file and preserve explicit tests requiring external FitFlow/project configuration, including honest SKIP outcomes."
   - "Retain State Kernel/legacy tests with active compatibility consumers; remove any test only with exact obsolescence/redundancy evidence and preserved contract coverage."
@@ -47,7 +47,7 @@ The source ownership survey found active compatibility/transition clients for St
 
 ## Phase-1 bounded goal
 
-- Add **additive** type-specific suite selection and an exhaustive deterministic inventory without changing `npm test` or moving/replacing existing tests.
+- Add type-specific suite selection and an exhaustive deterministic inventory without moving/replacing existing tests. The original Task carrier planned to leave `npm test` unchanged; the Phase-1 candidate instead updates its file discovery to include five new inventory self-tests, after native baseline-vs-categorized equivalence checks. This is an explicit amendment requiring independent semantic review, not a retroactive rewrite of the frozen original carrier.
 - Return a manifest of all selected Node test paths and their exact disjoint suite classification; fail for unknown paths instead of silently omitting them.
 - Add self-tests that cover classification, unknown-path rejection, disjoint membership, deterministic inventory and the presence of optional external integrations.
 - Document type-oriented reviewer evidence/limitations without turning deterministic tests into semantic Independent Review or authorization.
@@ -55,4 +55,4 @@ The source ownership survey found active compatibility/transition clients for St
 
 ## Lifecycle boundary
 
-This is a TASK carrier and draft candidate, not an initialized TaskCycle or an accepted change. Product Control must reconcile native initialization, exact Git subject, native tests, frozen review, distinct Developer acceptance, authorized integration and closure before promotion. Existing Beta #32 and #33 candidates/PRs remain untouched. No new Product policy, scheduler, role, or standalone Recipe.
+The original TASK carrier commit is immutable (`52beee7f92626e28f19b30cf8c8a41ec40306229`). This amended TASK is **within the isolated draft candidate**, not an initialized TaskCycle or an accepted change. The Developer on 2026-10-11 expressly authorized integration subject to checks and continuation of close/reconciliation; that approval does not silently furnish a prior missing review or rewrite original operation history. Product Control must reconcile native initialization, exact Git subject, native tests, frozen review, distinct Developer acceptance, authorized integration and closure before promotion. Existing Beta #32 and #33 candidates/PRs remain untouched. No new Product policy, scheduler, role, or standalone Recipe.
