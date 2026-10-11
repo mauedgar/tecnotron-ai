@@ -565,3 +565,61 @@ test('registry resolves the new capability without disturbing adopted Recipes', 
     scope: path.join(f.output, 'REVIEW-INTERFACE-001').replaceAll('\\', '/'),
   }]);
 });
+
+
+test('qualified TXT reviewer projection preserves exact frozen TAR evidence and uses TXT in launch prompt', async t => {
+  const f = fixture(t);
+  const req = request(f, {
+    interfaceId: 'REVIEW-TXT-001',
+    renderPrompt: true,
+    input: { reviewer_transport: 'TXT' },
+  });
+  const recipe = createMaterializeFrozenReviewInterfaceRecipe();
+  assert.deepEqual(await recipe.preflight(req), { status: 'READY' });
+  const result = await recipe.execute(req);
+  assert.equal(result.status, 'PASS', result.reason);
+  assert.equal(result.effect_state, 'CONFIRMED');
+  assert.equal(result.output.reviewer_transport, 'TXT');
+  const archive = fs.readFileSync(result.output.archive_path);
+  const text = fs.readFileSync(result.output.review_text.path);
+  assert.equal(sha256(archive), result.output.archive_sha256);
+  assert.equal(sha256(text), result.output.review_text.sha256);
+  assert.equal(result.output.review_text.size, text.length);
+  assert.equal(result.output.review_text.source_archive_sha256, result.output.archive_sha256);
+  assert.equal(result.output.review_text.model_visible_equivalence, 'NOT_ATTESTED');
+  assert.match(text.toString('utf8'), /^IR-TXT-REVIEW-PROJECTION\/1\n/);
+  assert.match(text.toString('utf8'), /candidate\n/);
+  assert.match(text.toString('utf8'), /validation\.json/);
+  assert.equal(readTar(archive).get('candidate/candidate.txt').toString('utf8'), 'candidate\n');
+  const prompt = fs.readFileSync(result.output.review_prompt.path, 'utf8');
+  assert.match(prompt, /Use the attached verified UTF-8 TXT/);
+  assert.match(prompt, /TAR is frozen archival evidence, not an additional reviewer attachment/);
+  assert.match(prompt, /review_text_sha256/);
+  assert.equal(result.output.review_prompt.review_text_sha256, result.output.review_text.sha256);
+  assert.equal(result.result_refs.some(ref => ref.id === 'review-text:REVIEW-TXT-001'), true);
+  assert.equal(git(f.repo, ['status', '--porcelain=v1', '--untracked-files=all']), '');
+});
+
+test('TXT projection fails closed for non-readable binary evidence, without replacing archive history', async t => {
+  const f = fixture(t);
+  fs.writeFileSync(f.validation, Buffer.from([0xff, 0x00]));
+  const req = request(f, { interfaceId: 'REVIEW-TXT-BINARY-001', input: { reviewer_transport: 'TXT' } });
+  const recipe = createMaterializeFrozenReviewInterfaceRecipe();
+  assert.deepEqual(await recipe.preflight(req), { status: 'READY' });
+  const result = await recipe.execute(req);
+  assert.equal(result.status, 'FAIL');
+  assert.equal(result.effect_state, 'NONE');
+  assert.match(result.reason, /REVIEW_TXT_PROJECTOR_FAILED/);
+  assert.equal(fs.existsSync(path.join(f.output, 'REVIEW-TXT-BINARY-001.tar')), false);
+  assert.equal(fs.existsSync(path.join(f.output, 'REVIEW-TXT-BINARY-001.review-input.txt')), false);
+  assert.equal(fs.existsSync(path.join(f.output, 'REVIEW-TXT-BINARY-001')), false);
+});
+
+test('TXT projector availability is an explicit preflight requirement, TAR callers remain unaffected', async t => {
+  const f = fixture(t);
+  const recipe = createMaterializeFrozenReviewInterfaceRecipe({ pythonCommand: '__missing_python_for_review_txt_test__' });
+  const txt = request(f, { interfaceId: 'REVIEW-TXT-MISSING-PYTHON', input: { reviewer_transport: 'TXT' } });
+  assert.deepEqual(await recipe.preflight(txt), { status: 'UNAVAILABLE', reason: 'REVIEW_TXT_PYTHON_UNAVAILABLE' });
+  assert.deepEqual(await recipe.preflight(request(f)), { status: 'READY' });
+  assert.deepEqual(fs.readdirSync(f.output), []);
+});
