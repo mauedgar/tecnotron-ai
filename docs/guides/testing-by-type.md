@@ -4,7 +4,7 @@
 
 ## Why classify
 
-The repository has 50 existing Node `*.test.js` files (plus one `tests/repo-packager/pack.test.py` outside Node) at `tools@c875ef7c14ac95d8fa80f617cd36b86978290f99`. The original `npm test` uses Node's test runner and remains the authoritative **full Node regression command** during qualification. Test types are **review/evidence filters**: passing a subset does not establish overall validation, semantic sufficiency, provider-native capability, Product acceptance or lifecycle closure.
+The repository has 50 existing Node `*.test.js` files (plus one `tests/repo-packager/pack.test.py` outside Node) at `tools@c875ef7c14ac95d8fa80f617cd36b86978290f99`. The original `npm test` used Node's test runner over directory globs. A native comparison on the candidate at `12bad95e1c41b53dc16d9fa73868b7df2757e9c5` observed original baseline **550 PASS / 4 SKIP** versus the typed full inventory **555 PASS / 4 SKIP**. The five additional tests are the new suite-inventory self-tests; the existing 50 Node test files remain included. The candidate now uses the exhaustive classified inventory for `npm test`, subject to fresh native revalidation and independent review. Test types are **review/evidence filters**: passing a subset does not establish overall validation, semantic sufficiency, provider-native capability, Product acceptance or lifecycle closure.
 
 ## Commands and interpretation
 
@@ -17,7 +17,7 @@ The repository has 50 existing Node `*.test.js` files (plus one `tests/repo-pack
 | `npm run test:operational` | Operational/lifecycle regression | Deterministic TaskCycle, Recipe freeze/integration/closure, reconciliation, and FitFlow-specific current Recipe guards. Mechanical tests are not Phase 2 execution authority. |
 | `npm run test:compatibility` | Maintained legacy compatibility | State Kernel semantics and regression protection for still-present, current compatibility consumers. Historic names are not grounds to delete. |
 | `npm run test:categorized` | Complete categorized Node run | Every discovered `*.test.js` in declared test roots exactly once, with unknown-path guard. Compare with the original `npm test` before ever replacing it. |
-| `npm test` | Existing full Node regression | **Unchanged** until qualifying any replacement: build and original `node --test` glob invocation. |
+| `npm test` | Full Node regression (candidate) | Builds, discovers and runs every classified Node `*.test.js` file exactly once. This changes discovery relative to old globs only to include the five new inventory self-tests; requires candidate-bound validation and review. |
 
 Commands except inventory first run `npm run build`. `npm run typecheck` is a **separate validation dimension**, not a Node test type. Every receipt should preserve full command, exact Git subject, environment, exit code, individual file/test counts, skips, failed tests and evidence location.
 
@@ -43,4 +43,4 @@ Physical test deletion is eligible only with evidence of a retired current sourc
 
 ## Explicit scope / integration
 
-This change adds only a test runner, contract self-tests, npm commands and this guide. It changes **no production source, no existing test, and no baseline `npm test` invocation**. Proposed TASK: `docs/tasks/TEC-TC-TEST-SUITE-TYPE-CLASSIFICATION-001/TASK.md`. Source subject must be qualified at the actual candidate SHA/tree, independently reviewed, separately accepted by Developer and integrated via guarded authorized Phase 2 before claiming these commands as canonical on `tools`.
+This change adds only a test runner, contract self-tests, npm commands and this guide. It changes **no production source and no existing test body**. The candidate replaces `npm test` file selection with exhaustive typed discovery after the native side-by-side comparison; preexisting test membership and status were preserved in that run. No historical regression suite is deleted. Proposed TASK: `docs/tasks/TEC-TC-TEST-SUITE-TYPE-CLASSIFICATION-001/TASK.md`. Source subject must be qualified at the actual candidate SHA/tree, independently reviewed, separately accepted by Developer and integrated via guarded authorized Phase 2 before claiming these commands as canonical on `tools`.
