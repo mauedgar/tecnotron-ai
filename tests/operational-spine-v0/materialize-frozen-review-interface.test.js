@@ -567,6 +567,42 @@ test('registry resolves the new capability without disturbing adopted Recipes', 
 });
 
 
+test('legacy TAR ignores an unrelated sibling TXT while explicit TXT still fails closed', async t => {
+  const f = fixture(t);
+  const recipe = createMaterializeFrozenReviewInterfaceRecipe();
+
+  for (const [mode, transport] of [['default', undefined], ['explicit', 'TAR']]) {
+    const id = `REVIEW-TAR-TXT-SIBLING-${mode}`;
+    const sibling = path.join(f.output, `${id}.review-input.txt`);
+    const unrelatedBytes = Buffer.from(`unrelated existing review text for ${mode}\n`);
+    fs.writeFileSync(sibling, unrelatedBytes);
+    const req = request(f, {
+      interfaceId: id,
+      input: transport ? { reviewer_transport: transport } : {},
+    });
+    assert.deepEqual(await recipe.preflight(req), { status: 'READY' });
+    const result = await recipe.execute(req);
+    assert.equal(result.status, 'PASS', result.reason);
+    assert.equal(result.effect_state, 'CONFIRMED');
+    assert.equal(result.output.reviewer_transport, 'TAR');
+    assert.equal(Object.hasOwn(result.output, 'review_text'), false);
+    assert.equal(fs.readFileSync(sibling).equals(unrelatedBytes), true);
+    assert.equal(fs.existsSync(result.output.archive_path), true);
+  }
+
+  const txtId = 'REVIEW-TXT-SIBLING-COLLISION';
+  const sibling = path.join(f.output, `${txtId}.review-input.txt`);
+  const existingBytes = Buffer.from('prior review input must not be replaced\n');
+  fs.writeFileSync(sibling, existingBytes);
+  const req = request(f, { interfaceId: txtId, input: { reviewer_transport: 'TXT' } });
+  assert.deepEqual(await recipe.preflight(req), {
+    status: 'BLOCKED', reason: 'REVIEW_INTERFACE_IDENTITY_ALREADY_EXISTS',
+  });
+  assert.equal(fs.readFileSync(sibling).equals(existingBytes), true);
+  assert.equal(fs.existsSync(path.join(f.output, txtId)), false);
+  assert.equal(fs.existsSync(path.join(f.output, `${txtId}.tar`)), false);
+});
+
 test('qualified TXT reviewer projection preserves exact frozen TAR evidence and uses TXT in launch prompt', async t => {
   const f = fixture(t);
   const req = request(f, {

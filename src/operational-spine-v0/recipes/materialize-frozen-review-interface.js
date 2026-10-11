@@ -601,7 +601,8 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
     const archivePath = `${finalDirectory}.tar`;
     const promptPath = `${finalDirectory}.review-prompt.md`;
     const textPath = `${finalDirectory}.review-input.txt`;
-    if (fs.existsSync(finalDirectory) || fs.existsSync(archivePath) || fs.existsSync(promptPath) || fs.existsSync(textPath)) {
+    if (fs.existsSync(finalDirectory) || fs.existsSync(archivePath) || fs.existsSync(promptPath)
+        || (input.reviewer_transport === 'TXT' && fs.existsSync(textPath))) {
       return { status: 'BLOCKED', reason: 'REVIEW_INTERFACE_IDENTITY_ALREADY_EXISTS' };
     }
     if (input.reviewer_transport === 'TXT') {
@@ -787,7 +788,8 @@ function createMaterializeFrozenReviewInterfaceRecipe({ git = createReviewGitAda
         ],
       });
     } catch (error) {
-      const finalExists = fs.existsSync(finalDirectory) || fs.existsSync(archivePath) || fs.existsSync(promptPath) || fs.existsSync(textPath);
+      const finalExists = fs.existsSync(finalDirectory) || fs.existsSync(archivePath) || fs.existsSync(promptPath)
+        || (input.reviewer_transport === 'TXT' && fs.existsSync(textPath));
       if (!finalExists) {
         fs.rmSync(stagingDirectory, { recursive: true, force: true });
         fs.rmSync(archiveTemporary, { force: true });
