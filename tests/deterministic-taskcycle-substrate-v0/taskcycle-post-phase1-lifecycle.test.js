@@ -567,21 +567,14 @@ function mergeFixture() {
   return f;
 }
 
-test('bounded two-parent merge closes original Phase1 lifecycle with distinct candidate and canonical identities', () => {
-  const f = mergeFixture();
+test('synthetic merge claims do not qualify as externally verified Git proof', () => {
+  const f=mergeFixture();
   try {
-    const r = createTaskCyclePostPhase1LifecycleCapability({root: f.closeRoot})
+    const result=createTaskCyclePostPhase1LifecycleCapability({root:f.closeRoot})
       .closeFromResolvedLifecycle({request:f.request,observed:f.observed});
-    assert.equal(r.status,'PASS',r.reason);
-    const verified = consumeTaskCyclePostPhase1Lifecycle({
-      location:r.portable_projection.location_or_ref,
-      expected_identity_sha256:r.portable_projection.identity_sha256
-    });
-    assert.equal(verified.projection.TaskCycle.state,'CLOSED');
-    assert.equal(verified.projection.exact_candidate.commit, S.candidate);
-    assert.equal(verified.projection.lifecycle_evidence.Phase_2.post_tools,'a'.repeat(40));
-    assert.equal(verified.projection.lifecycle_evidence.effect_reconciliation.canonical_tree,'b'.repeat(40));
-    assert.deepEqual(verified.projection.pending_obligations,[]);
+    assert.equal(result.status,'BLOCKED');
+    assert.equal(result.effect_state,'NONE');
+    assert.ok(!fs.existsSync(path.join(f.closeRoot,'TC-1','closed-pass')));
   } finally {f.cleanup();}
 });
 

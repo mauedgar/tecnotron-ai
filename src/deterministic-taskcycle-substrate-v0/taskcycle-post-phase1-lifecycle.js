@@ -2,10 +2,12 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const {
   consumeTaskCycleEffectReconciliation,
 } = require('./taskcycle-effect-reconciliation');
+const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-post-phase1-close/v0';
 const MANIFEST_SCHEMA = 'deterministic-taskcycle-post-phase1-close-manifest/v0';
@@ -107,19 +109,116 @@ function phase2EvidenceValid(p2, candidate) {
     && acceptedRange.accepted_tip_tree === candidate.tree
     && acceptedRange.ordered_commit_range[acceptedRange.ordered_commit_range.length - 1] === candidate.commit;
 }
-function qualifiedMergeObservation(request, observed) {
+function gitRead(repositoryPath, args) {
+  const r = spawnSync('git', ['-C', repositoryPath, ...args], {
+    shell: false, encoding: 'utf8', windowsHide: true, timeout: 30000,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  });
+  if (r.status !== 0 || r.signal || r.error || (r.stdout || '').length > 1048576) {
+    throw new Error('VERIFIED_GIT_OPERATION_FAILED:' + args[0]);
+  }
+  return (r.stdout || '').trim();
+}
+function observedGitCommit(repo, sha) {
+  const lines = gitRead(repo, ['cat-file', '-p', sha]).split(/\r?\n/);
+  return {
+    tree: lines.find(x => x.startsWith('tree '))?.slice(5),
+    parents: lines.filter(x => x.startsWith('parent ')).map(x => x.slice(7)),
+  };
+}
+function pathSet(value) {
+  return [...new Set(value)].sort();
+}
+function gitDiffPaths(repo, a, b) {
+  const output = gitRead(repo, ['diff', '--name-only', '-z', '--no-renames', a, b, '--']);
+  return pathSet(output ? output.split('\0').filter(Boolean) : []);
+}
+function verifySourceInitialization(request, source) {
+  if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return null;
+  const v = request.source_initialization;
+  if (!v || !nonEmpty(v.location_or_ref) || !isSha256(v.identity_sha256)
+      || v.identity_sha256 !== source.manifest.source_initialization_identity_sha256
+      || v.identity_sha256 !== source.projection.source_initialization?.identity_sha256
+      || request.source_reconciliation.identity_sha256 !== source.identity_sha256) {
+    return 'ORIGINAL_INITIALIZATION_SOURCE_CHAIN_MISMATCH';
+  }
+  try {
+    const origin = consumeTaskCycleInitialization({
+      location: v.location_or_ref, expected_identity_sha256: v.identity_sha256,
+    });
+    if (!exact(origin.projection.TaskCycle, source.projection.TaskCycle)
+        || !exact(origin.projection.exact_inputs, source.projection.exact_inputs)
+        || origin.projection.TaskCycle.id !== request.taskcycle.id
+        || origin.projection.current_gate !== 'PHASE1_IMPLEMENT_BOUNDED_CANDIDATE'
+        || source.projection.reconciled_effect?.replayed !== false
+        || source.projection.reconciled_effect?.preserved !== true) {
+      return 'ORIGINAL_INITIALIZATION_CORRESPONDENCE_INVALID';
+    }
+  } catch { return 'ORIGINAL_INITIALIZATION_ACQUISITION_FAILED'; }
+  return null;
+}
+function qualifiedMergeObservation(request, observed, source) {
   const p2 = request.Phase_2;
-  if (p2.integration_mode !== 'MERGE_COMMIT') return true;
-  const c = observed?.canonical_tools, m = p2.merge;
-  return !!c && c.branch === 'tools'
-    && c.head_commit === p2.post_tools && c.head_tree === p2.post_tree
-    && Array.isArray(c.merge_parents) && c.merge_parents.length === 2
-    && c.merge_parents[0] === p2.pre_tools
-    && c.merge_parents[1] === request.candidate.commit
-    && nonEmpty(c.verification_ref) && c.verification_ref === m.git_observation_ref
-    && c.preflight_ref === m.preflight_ref
-    && c.lineage_verification_ref === m.lineage_verification_ref
-    && c.remote_effect === 'CONFIRMED' && c.unresolved_UNKNOWN_effects === 0;
+  if (p2.integration_mode !== 'MERGE_COMMIT') return null;
+  const c = observed?.canonical_tools;
+  const m = p2.merge;
+  const v = observed?.trusted_git;
+  if (!c || !v || !nonEmpty(v.checkout)
+      || !nonEmpty(v.expected_repo_origin)
+      || !nonEmpty(v.remote_ref) || v.remote_ref !== 'refs/heads/tools'
+      || !nonEmpty(c.verification_ref) || c.verification_ref !== m.git_observation_ref
+      || c.preflight_ref !== m.preflight_ref
+      || c.lineage_verification_ref !== m.lineage_verification_ref
+      || c.branch !== 'tools' || c.head_commit !== p2.post_tools
+      || c.head_tree !== p2.post_tree || !exact(c.merge_parents, m.parents)
+      || c.remote_effect !== 'CONFIRMED' || c.unresolved_UNKNOWN_effects !== 0) {
+    return 'CANONICAL_MERGE_OBSERVATION_UNVERIFIED';
+  }
+  // Product GitHub origin is qualified by exact repository identity, not a caller-supplied mirror.
+  const expectedOrigin = 'https://github.com/' + request.candidate.repository + '.git';
+  if (v.expected_repo_origin !== expectedOrigin || request.candidate.repository !== 'mauedgar/tecnotron-ai') {
+    return 'CANONICAL_REMOTE_ORIGIN_UNQUALIFIED';
+  }
+  try {
+    const localOrigin = gitRead(v.checkout, ['remote', 'get-url', 'origin']);
+    if (localOrigin !== expectedOrigin) return 'GIT_ORIGIN_MISMATCH';
+    const merge = observedGitCommit(v.checkout, m.commit);
+    const tip = observedGitCommit(v.checkout, request.candidate.commit);
+    if (merge.tree !== m.tree || !exact(merge.parents, m.parents)
+        || tip.tree !== request.candidate.tree
+        || tip.parents.length !== 1 || tip.parents[0] !== request.candidate.parent) {
+      return 'MERGE_OBJECT_OR_CANDIDATE_OBJECT_MISMATCH';
+    }
+    const sourceInput = source.projection.exact_inputs;
+    const phase1 = source.projection.reconciled_effect?.subject;
+    const phase1Obj = observedGitCommit(v.checkout, phase1.commit);
+    if (!exact(phase1Obj.parents, [sourceInput.TASK_carrier.commit])
+        || phase1Obj.tree !== phase1.tree) return 'SOURCE_PHASE1_GIT_PARENT_MISMATCH';
+    const actual = [phase1.commit];
+    for (let j=1;j<m.candidate_lineage.length;j++) {
+      const parent = observedGitCommit(v.checkout,m.candidate_lineage[j]);
+      if (!exact(parent.parents, [actual[j-1]])) return 'REPAIR_LINEAGE_GIT_PARENT_MISMATCH';
+      actual.push(m.candidate_lineage[j]);
+    }
+    if (!exact(actual,m.candidate_lineage)) return 'REPAIR_LINEAGE_GIT_UNVERIFIED';
+    const allowed = pathSet([...sourceInput.write_scope,sourceInput.TASK_carrier.path]);
+    if (!exact(gitDiffPaths(v.checkout,p2.pre_tools,m.commit),allowed)
+        || !exact(gitDiffPaths(v.checkout,sourceInput.Product_baseline.commit,request.candidate.commit),allowed)
+        || !exact(gitDiffPaths(v.checkout,phase1.commit,request.candidate.commit),pathSet(request.candidate.changed_paths.filter(x=>gitDiffPaths(v.checkout,phase1.commit,request.candidate.commit).includes(x))))) {
+      return 'REAL_GIT_CHANGED_PATHS_OUTSIDE_SCOPE';
+    }
+    const repairDiff = gitDiffPaths(v.checkout,phase1.commit,request.candidate.commit);
+    if (repairDiff.some(x=>!sourceInput.write_scope.includes(x))) return 'REPAIR_OUTSIDE_ALLOWED_SCOPE';
+    const resolution = gitRead(v.checkout,['merge-tree','--write-tree',p2.pre_tools,request.candidate.commit]).split(/\r?\n/)[0];
+    if (resolution !== m.tree || resolution !== m.validated_combined_tree) return 'COMBINED_TREE_NOT_GIT_REPRODUCIBLE';
+    const remotelyObserved = gitRead(v.checkout, ['ls-remote','--heads',expectedOrigin,v.remote_ref]);
+    const oid = remotelyObserved.split(/\s+/)[0];
+    if (!isSha(oid)) return 'REMOTE_GIT_UNAVAILABLE';
+    if (oid!==m.commit && gitRead(v.checkout,['merge-base','--is-ancestor',m.commit,oid])!=='' ) {
+      return 'REMOTE_TARGET_CHANGED_WITHOUT_VERIFIED_ANCESTRY';
+    }
+  } catch { return 'TRUSTED_GIT_PROOF_FAILED'; }
+  return null;
 }
 function unique(left, right) {
   return [...new Set([...(left || []), ...(right || [])])];
@@ -236,8 +335,12 @@ function validateSource(request, source) {
     const original = p.exact_inputs;
     const c = request.candidate;
     const m = request.Phase_2.merge;
+    if (!original || !Array.isArray(original.write_scope) || !original.TASK_carrier
+        || !nonEmpty(original.TASK_carrier.path) || !isSha(original.TASK_carrier.commit)) {
+      return 'SOURCE_EXACT_INPUTS_MISSING';
+    }
     const allowed = [...original.write_scope, original.TASK_carrier.path].sort();
-    if (!original || c.provenance.task_carrier_commit !== original.TASK_carrier.commit
+    if (c.provenance.task_carrier_commit !== original.TASK_carrier.commit
         || c.provenance.task_carrier_path !== original.TASK_carrier.path
         || !exact([...c.changed_paths].sort(), [...original.write_scope].sort())
         || !exact([...m.changed_paths].sort(), allowed)
@@ -372,10 +475,6 @@ function createTaskCyclePostPhase1LifecycleCapability({ root }) {
         return terminal(request, 'BLOCKED', 'NONE', 'RESOLVED_LIFECYCLE_OBSERVATION_MISMATCH');
       }
 
-      if (!qualifiedMergeObservation(request, observed)) {
-        return terminal(request, 'BLOCKED', 'NONE', 'CANONICAL_MERGE_OBSERVATION_UNVERIFIED');
-      }
-
       let source;
       try {
         source = consumeTaskCycleEffectReconciliation({
@@ -387,6 +486,10 @@ function createTaskCyclePostPhase1LifecycleCapability({ root }) {
       }
       const sourceInvalid = validateSource(request, source);
       if (sourceInvalid) return terminal(request, 'BLOCKED', 'NONE', sourceInvalid);
+      const initInvalid = verifySourceInitialization(request, source);
+      if (initInvalid) return terminal(request, 'BLOCKED', 'NONE', initInvalid);
+      const gitInvalid = qualifiedMergeObservation(request, observed, source);
+      if (gitInvalid) return terminal(request, 'BLOCKED', 'NONE', gitInvalid);
 
       let baseStat;
       try { baseStat = fs.lstatSync(base); } catch {
