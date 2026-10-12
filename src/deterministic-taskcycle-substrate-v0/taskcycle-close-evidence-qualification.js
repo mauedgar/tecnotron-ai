@@ -67,7 +67,8 @@ function parseRemote(raw, ref) {
   return parts[0];
 }
 function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl,
-  originalTaskCycleId, expectedRemoteCommit, historicalContinuity=null}, {git=createReadOnlyGitAdapter()}={}) {
+  originalTaskCycleId, expectedRemoteCommit, historicalContinuity=null,
+  authorizedScopeAmendments=[]}, {git=createReadOnlyGitAdapter()}={}) {
   // historicalContinuity is retained as a compatibility input only; never an authority.
   const p2=request?.Phase_2, m=p2?.merge, c=request?.candidate;
   if(!p2 || p2.integration_mode!=='MERGE_COMMIT' || !m || !c
@@ -92,6 +93,18 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
       || !same(sorted(scope.baseline_path_scope),sorted([...scope.write_scope,...scope.authorized_added_paths,scope.task_path]))) {
     return {status:'BLOCKED',reason:'BASELINE_SCOPE_UNQUALIFIED'};
   }
+  // An injected scope array cannot by itself enlarge the original TaskCycle.
+  // Control must first qualify an explicit immutable additive record; the
+  // verifier checks the Product Git blob, not the Developer's authority.
+  const added=scope.authorized_added_paths;
+  if(!Array.isArray(authorizedScopeAmendments)
+      || (added.length>0 && authorizedScopeAmendments.length===0)
+      || authorizedScopeAmendments.some(a=>
+        !a || a.source_commit!==c.commit || !sha(a.blob)
+        || typeof a.path!=='string' || !added.includes(a.path)
+        || a.path.startsWith('/') || a.path.includes('..')
+        || a.path.includes('\\') || a.path.includes('\u0000')))
+    return {status:'BLOCKED',reason:'QUALIFIED_SCOPE_AMENDMENT_REQUIRED'};
   try {
     const root=path.resolve(repositoryPath);
     if(execute(git,root,['rev-parse','--show-toplevel'])!==root)
@@ -102,6 +115,11 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
     const rewrites=git.run(root,[...READ_ONLY_GIT_PREFIX,'config','--get-regexp','^url\\..*\\.(insteadOf|pushInsteadOf)$'],{timeoutMs:30000});
     if(rewrites.exit_code!==1 || rewrites.stdout || rewrites.error_code)
       return {status:'BLOCKED',reason:'GIT_URL_REWRITE_UNSAFE'};
+    for(const amendment of authorizedScopeAmendments){
+      const actual=execute(git,root,['rev-parse',c.commit+':'+amendment.path]);
+      if(actual!==amendment.blob)
+        return {status:'BLOCKED',reason:'ORIGINAL_SCOPE_AMENDMENT_GIT_BLOB_MISMATCH'};
+    }
     if(!same(m.parents,[p2.pre_tools,c.commit]))
       return {status:'BLOCKED',reason:'MERGE_PARENT_DECLARATION_MISMATCH'};
     const merge=commit(git,root,m.commit);

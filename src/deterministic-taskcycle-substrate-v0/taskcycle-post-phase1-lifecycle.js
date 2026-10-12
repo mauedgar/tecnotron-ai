@@ -164,6 +164,7 @@ function qualifiedMergeObservation(request, source, surface, resolved) {
       baseline_path_scope:[...original.write_scope,...(resolved?.scope_added_paths || []),original.TASK_carrier.path],
     },
     historicalContinuity:resolved?.historical_continuity || null,
+    authorizedScopeAmendments:resolved?.scope_amendments || [],
   });
   if (valid.status!=='PASS') return 'MERGE_GIT_EVIDENCE_UNVERIFIED:'+valid.reason;
   return null;
@@ -181,9 +182,12 @@ function qualifiedControlEvidence(request, source, resolution) {
   const scopeOk=Array.isArray(added) && repositoryRelativePaths(added)
     && Array.isArray(amendments)
     && amendments.every(a=>a && nonEmpty(a.ref) && isSha(a.blob)
+      && isSha(a.source_commit) && a.source_commit===c.commit
+      && typeof a.path==='string' && repositoryRelativePaths([a.path])
       && nonEmpty(a.Developer_authority_ref) && Array.isArray(a.added_paths)
       && repositoryRelativePaths(a.added_paths))
     && (added.length===0 || amendments.length>0)
+    && amendments.every(a=>added.includes(a.path))
     && exact([...new Set(amendments.flatMap(a=>a.added_paths))].sort(),[...added].sort())
     && exact(p?.effective_write_scope,[...new Set([...(original?.write_scope||[]),...added])].sort());
   if (!p || p.status!=='COMPETENTLY_RESOLVED' || !scopeOk

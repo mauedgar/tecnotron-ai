@@ -1092,3 +1092,26 @@ test('real PR42 MERGE_COMMIT close consumer positive dry-run with recovered orig
     }).already_closed,true);
   } finally { f.cleanup(); }
 });
+
+
+test('F003 additive scope needs immutable amendment attached to exact candidate Git blob',()=>{
+  const p=params('/absent-pr42-test-checkout');
+  const baseAdded='docs/tasks/TEC-TC-TEST-SUITE-TYPE-CLASSIFICATION-001/SCOPE_EXTENSION.md';
+  p.scope.authorized_added_paths=[baseAdded];
+  p.scope.baseline_path_scope.push(baseAdded);
+  const absent=qualifyMergeTopology(p);
+  assert.equal(absent.status,'BLOCKED');
+  assert.equal(absent.reason,'QUALIFIED_SCOPE_AMENDMENT_REQUIRED');
+  const forged=qualifyMergeTopology({...p,authorizedScopeAmendments:[{
+    path:baseAdded,blob:'b'.repeat(40),
+    source_commit:'f'.repeat(40),Developer_authority_ref:'UNVERIFIED',
+  }]});
+  assert.equal(forged.status,'BLOCKED');
+  assert.equal(forged.reason,'QUALIFIED_SCOPE_AMENDMENT_REQUIRED');
+  const unverifiedGit=qualifyMergeTopology({...p,authorizedScopeAmendments:[{
+    path:baseAdded,blob:'b'.repeat(40),
+    source_commit:p.request.candidate.commit,Developer_authority_ref:'UNVERIFIED',
+  }]});
+  assert.equal(unverifiedGit.status,'BLOCKED');
+  assert.equal(unverifiedGit.reason,'VERIFIABLE_GIT_SOURCE_UNAVAILABLE');
+});
