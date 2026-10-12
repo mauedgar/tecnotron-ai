@@ -68,6 +68,7 @@ function parseRemote(raw, ref) {
 }
 function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl,
   originalTaskCycleId, expectedRemoteCommit, historicalContinuity=null}, {git=createReadOnlyGitAdapter()}={}) {
+  // historicalContinuity is retained as a compatibility input only; never an authority.
   const p2=request?.Phase_2, m=p2?.merge, c=request?.candidate;
   if(!p2 || p2.integration_mode!=='MERGE_COMMIT' || !m || !c
       || !Array.isArray(m.parents) || m.parents.length!==2
@@ -132,20 +133,13 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
     if(m.validated_combined_tree!==m.tree)
       return {status:'BLOCKED',reason:'PRETESTED_MERGE_TREE_NOT_BOUND'};
     const remote=parseRemote(execute(git,root,['ls-remote','--heads',remoteUrl,'refs/heads/tools']),'refs/heads/tools');
-    let remote_relation='EXACT_CURRENT';
-    if(remote!==m.commit){
-      if(!historicalContinuity || historicalContinuity.status!=='CONTROL_VERIFIED_HISTORICAL_INTEGRATION'
-          || historicalContinuity.original_merge_commit!==m.commit
-          || historicalContinuity.original_merge_tree!==m.tree
-          || historicalContinuity.original_remote_exact!==true
-          || typeof historicalContinuity.original_immutable_receipt_ref!=='string'
-          || historicalContinuity.original_immutable_receipt_ref.length===0)
-        return {status:'BLOCKED',reason:'REMOTE_EXACT_HEAD_DRIFT'};
-      const ancestor=git.run(root,[...READ_ONLY_GIT_PREFIX,'merge-base','--is-ancestor',m.commit,remote],{timeoutMs:30000});
-      if(ancestor.exit_code!==0 || ancestor.error_code || ancestor.timed_out || ancestor.signal)
-        return {status:'BLOCKED',reason:'REMOTE_HISTORICAL_ANCESTRY_UNVERIFIED'};
-      remote_relation='HISTORICAL_VERIFIED_DESCENDANT_NOT_EXACT';
-    }
+    // F006: a caller-supplied historical receipt string cannot authenticate
+    // the remote OID at a past instant. Fail closed on all drift until a
+    // separately qualified Product Control historical-source binding exists.
+    // Do not silently treat descendant ancestry as remote correspondence.
+    if(remote!==m.commit)
+      return {status:'BLOCKED',reason:'REMOTE_EXACT_HEAD_DRIFT'};
+    const remote_relation='EXACT_CURRENT';
     return {status:'PASS',effect_state:'NONE',verified:{
       merge_commit:m.commit,merge_tree:m.tree,accepted_candidate:c.commit,
       pre_tools:p2.pre_tools,remote_oid:remote,remote_relation,
