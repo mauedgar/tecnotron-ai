@@ -845,6 +845,13 @@ test('merge Control binding requires exact frozen review and logical-close autho
       scope_added_paths:[], scope_amendments:[],
       effective_write_scope:[...initializationRequest().write_scope].sort(),
     };
+    // The resolver's exact hashes must match the candidate and combined
+    // receipt fields, even in a synthetic negative-guard fixture. Earlier
+    // assertions stopped at the new receipt guard rather than Git surface.
+    q.promotion_grade_validation.receipt_sha256='sha256:'+'1'.repeat(64);
+    q.Phase_2.merge.preflight_sha256='sha256:'+'2'.repeat(64);
+    f.observed.promotion_grade_validation=structuredClone(q.promotion_grade_validation);
+    f.observed.Phase_2=structuredClone(q.Phase_2);
     const run = (proof) => createTaskCyclePostPhase1LifecycleCapability({
       root:f.closeRoot,resolveCompetentProductEvidence:()=>proof,
     }).closeFromResolvedLifecycle({request:q,observed:f.observed});
