@@ -71,15 +71,32 @@ function acceptedFirstParentRangeValid(value) {
     && repositoryRelativePaths(value.changed_paths);
 }
 function phase2EvidenceValid(p2, candidate) {
-  if (!p2 || p2.status !== 'PASS'
-      || !isSha(p2.pre_tools)
-      || p2.post_tools !== candidate.commit
-      || p2.post_tree !== candidate.tree
-      || p2.force !== false
-      || p2.remote_correspondence !== 'EXACT') {
-    return false;
+  if (!p2 || p2.status !== 'PASS' || !isSha(p2.pre_tools)
+      || p2.force !== false || p2.remote_correspondence !== 'EXACT') return false;
+
+  if (p2.integration_mode === 'MERGE_COMMIT') {
+    const m = p2.merge;
+    const lineage = m?.candidate_lineage;
+    return m && isSha(m.commit) && isSha(m.tree)
+      && m.commit === p2.post_tools && m.tree === p2.post_tree
+      && m.validated_combined_tree === m.tree && m.candidate_tree === candidate.tree
+      && Array.isArray(m.parents) && m.parents.length === 2
+      && m.parents[0] === p2.pre_tools && m.parents[1] === candidate.commit
+      && uniqueStrings(lineage, true) && lineage.length >= 2
+      && lineage.every(isSha)
+      && lineage[0] === candidate.provenance?.phase1_subject?.commit
+      && lineage[lineage.length - 1] === candidate.commit
+      && lineage[lineage.length - 2] === candidate.parent
+      && repositoryRelativePaths(m.changed_paths)
+      && nonEmpty(m.git_observation_ref) && nonEmpty(m.preflight_ref)
+      && nonEmpty(m.lineage_verification_ref)
+      && m.remote_effect === 'CONFIRMED' && m.unknown_effects === 0
+      && p2.accepted_first_parent_range === undefined;
   }
 
+  // Preserve v0 direct-child and accepted-first-parent-range contracts.
+  if (p2.integration_mode !== undefined && p2.integration_mode !== 'FAST_FORWARD') return false;
+  if (p2.post_tools !== candidate.commit || p2.post_tree !== candidate.tree) return false;
   const acceptedRange = p2.accepted_first_parent_range;
   if (acceptedRange == null) return p2.pre_tools === candidate.parent;
 
@@ -89,6 +106,20 @@ function phase2EvidenceValid(p2, candidate) {
     && acceptedRange.accepted_tip_parent === candidate.parent
     && acceptedRange.accepted_tip_tree === candidate.tree
     && acceptedRange.ordered_commit_range[acceptedRange.ordered_commit_range.length - 1] === candidate.commit;
+}
+function qualifiedMergeObservation(request, observed) {
+  const p2 = request.Phase_2;
+  if (p2.integration_mode !== 'MERGE_COMMIT') return true;
+  const c = observed?.canonical_tools, m = p2.merge;
+  return !!c && c.branch === 'tools'
+    && c.head_commit === p2.post_tools && c.head_tree === p2.post_tree
+    && Array.isArray(c.merge_parents) && c.merge_parents.length === 2
+    && c.merge_parents[0] === p2.pre_tools
+    && c.merge_parents[1] === request.candidate.commit
+    && nonEmpty(c.verification_ref) && c.verification_ref === m.git_observation_ref
+    && c.preflight_ref === m.preflight_ref
+    && c.lineage_verification_ref === m.lineage_verification_ref
+    && c.remote_effect === 'CONFIRMED' && c.unresolved_UNKNOWN_effects === 0;
 }
 function unique(left, right) {
   return [...new Set([...(left || []), ...(right || [])])];
@@ -161,8 +192,10 @@ function validateRequest(r) {
   if (!phase2EvidenceValid(p2, c)) return 'PHASE2_EVIDENCE_INVALID';
 
   const er = r.effect_reconciliation;
-  if (!er || er.status !== 'PASS' || er.canonical_commit !== c.commit
-      || er.canonical_tree !== c.tree || !Array.isArray(er.unresolved_UNKNOWN_effects)
+  const postCommit = p2.integration_mode === 'MERGE_COMMIT' ? p2.post_tools : c.commit;
+  const postTree = p2.integration_mode === 'MERGE_COMMIT' ? p2.post_tree : c.tree;
+  if (!er || er.status !== 'PASS' || er.canonical_commit !== postCommit
+      || er.canonical_tree !== postTree || !Array.isArray(er.unresolved_UNKNOWN_effects)
       || er.unresolved_UNKNOWN_effects.length !== 0) return 'EFFECT_RECONCILIATION_EVIDENCE_INVALID';
 
   const lc = r.logical_close;
@@ -198,6 +231,20 @@ function validateSource(request, source) {
   }
   if (!exact(request.candidate.provenance.phase1_subject, p.reconciled_effect?.subject)) {
     return 'CANDIDATE_PHASE1_PROVENANCE_MISMATCH';
+  }
+  if (request.Phase_2.integration_mode === 'MERGE_COMMIT') {
+    const original = p.exact_inputs;
+    const c = request.candidate;
+    const m = request.Phase_2.merge;
+    const allowed = [...original.write_scope, original.TASK_carrier.path].sort();
+    if (!original || c.provenance.task_carrier_commit !== original.TASK_carrier.commit
+        || c.provenance.task_carrier_path !== original.TASK_carrier.path
+        || !exact([...c.changed_paths].sort(), [...original.write_scope].sort())
+        || !exact([...m.changed_paths].sort(), allowed)
+        || m.candidate_lineage[0] !== p.reconciled_effect.subject.commit
+        || c.parent !== m.candidate_lineage[m.candidate_lineage.length - 2]) {
+      return 'MERGE_CANDIDATE_OR_SCOPE_PROVENANCE_MISMATCH';
+    }
   }
   if (p.reconciled_effect?.obligation_id !== 'implementation'
       || p.reconciled_effect?.replayed !== false
@@ -323,6 +370,10 @@ function createTaskCyclePostPhase1LifecycleCapability({ root }) {
           || !exact(request.effect_reconciliation, observed.effect_reconciliation)
           || !exact(request.logical_close, observed.logical_close)) {
         return terminal(request, 'BLOCKED', 'NONE', 'RESOLVED_LIFECYCLE_OBSERVATION_MISMATCH');
+      }
+
+      if (!qualifiedMergeObservation(request, observed)) {
+        return terminal(request, 'BLOCKED', 'NONE', 'CANONICAL_MERGE_OBSERVATION_UNVERIFIED');
       }
 
       let source;

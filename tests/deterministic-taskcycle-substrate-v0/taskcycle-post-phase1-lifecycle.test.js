@@ -522,3 +522,90 @@ test('fresh process consumes the closed projection only with exact external iden
     }), /POST_PHASE1_LIFECYCLE_IDENTITY_MISMATCH/);
   } finally { f.cleanup(); }
 });
+
+function mergeFixture() {
+  const f = fixture();
+  const c = f.request.candidate;
+  c.parent = S.phase1;
+  c.changed_paths = [...initializationRequest().write_scope];
+  c.provenance.task_carrier_commit = S.task;
+  c.provenance.task_carrier_path = 'docs/tasks/TC-1/TASK.md';
+  const mergeCommit = 'a'.repeat(40);
+  const mergedTree = 'b'.repeat(40);
+  const before = 'c'.repeat(40);
+  const merge = {
+    commit: mergeCommit, tree: mergedTree,
+    parents: [before, c.commit], candidate_tree: c.tree,
+    validated_combined_tree: mergedTree,
+    candidate_lineage: [S.phase1, c.commit],
+    changed_paths: [...c.changed_paths, c.provenance.task_carrier_path],
+    git_observation_ref: 'GIT:MERGE-A',
+    preflight_ref: 'NATIVE:MERGE-TREE-PASS',
+    lineage_verification_ref: 'GIT:REVIEWED-LINEAGE',
+    remote_effect: 'CONFIRMED', unknown_effects: 0,
+  };
+  f.request.Phase_2 = {
+    status: 'PASS', integration_mode: 'MERGE_COMMIT',
+    pre_tools: before, post_tools: mergeCommit, post_tree: mergedTree,
+    force: false, remote_correspondence: 'EXACT', merge,
+  };
+  f.request.effect_reconciliation = {
+    status: 'PASS', canonical_commit: mergeCommit,
+    canonical_tree: mergedTree, unresolved_UNKNOWN_effects: [],
+  };
+  f.observed.candidate = structuredClone(c);
+  f.observed.Phase_2 = structuredClone(f.request.Phase_2);
+  f.observed.effect_reconciliation = structuredClone(f.request.effect_reconciliation);
+  f.observed.canonical_tools = {
+    branch: 'tools', head_commit: mergeCommit, head_tree: mergedTree,
+    merge_parents: [before, c.commit],
+    verification_ref: merge.git_observation_ref,
+    preflight_ref: merge.preflight_ref,
+    lineage_verification_ref: merge.lineage_verification_ref,
+    remote_effect: 'CONFIRMED', unresolved_UNKNOWN_effects: 0,
+  };
+  return f;
+}
+
+test('bounded two-parent merge closes original Phase1 lifecycle with distinct candidate and canonical identities', () => {
+  const f = mergeFixture();
+  try {
+    const r = createTaskCyclePostPhase1LifecycleCapability({root: f.closeRoot})
+      .closeFromResolvedLifecycle({request:f.request,observed:f.observed});
+    assert.equal(r.status,'PASS',r.reason);
+    const verified = consumeTaskCyclePostPhase1Lifecycle({
+      location:r.portable_projection.location_or_ref,
+      expected_identity_sha256:r.portable_projection.identity_sha256
+    });
+    assert.equal(verified.projection.TaskCycle.state,'CLOSED');
+    assert.equal(verified.projection.exact_candidate.commit, S.candidate);
+    assert.equal(verified.projection.lifecycle_evidence.Phase_2.post_tools,'a'.repeat(40));
+    assert.equal(verified.projection.lifecycle_evidence.effect_reconciliation.canonical_tree,'b'.repeat(40));
+    assert.deepEqual(verified.projection.pending_obligations,[]);
+  } finally {f.cleanup();}
+});
+
+test('merge-mode invalid identities and stale effects fail closed with no lifecycle materialization', () => {
+  const cases = [
+    ['missing external observation', f => {delete f.observed.canonical_tools;}],
+    ['reversed parents', f => {f.request.Phase_2.merge.parents.reverse();f.observed.Phase_2 = structuredClone(f.request.Phase_2);} ],
+    ['wrong tested tree', f => {f.request.Phase_2.merge.validated_combined_tree = '9'.repeat(40);f.observed.Phase_2 = structuredClone(f.request.Phase_2);} ],
+    ['bad scope', f => {f.request.Phase_2.merge.changed_paths.push('unrelated.txt');f.observed.Phase_2 = structuredClone(f.request.Phase_2);} ],
+    ['candidate history changed', f => {f.request.Phase_2.merge.candidate_lineage[0]='8'.repeat(40);f.observed.Phase_2=structuredClone(f.request.Phase_2);} ],
+    ['unknown published effect', f => {f.request.Phase_2.merge.unknown_effects=1;f.observed.Phase_2=structuredClone(f.request.Phase_2);} ],
+    ['forced merge', f => {f.request.Phase_2.force=true;f.observed.Phase_2=structuredClone(f.request.Phase_2);} ],
+    ['stale canonical observation', f => {f.observed.canonical_tools.head_commit='7'.repeat(40);} ],
+    ['wrong canonical effect', f => {f.request.effect_reconciliation.canonical_commit=S.candidate;f.observed.effect_reconciliation=structuredClone(f.request.effect_reconciliation);} ],
+  ];
+  for (const [name,mutate] of cases) {
+    const f=mergeFixture();
+    try {
+      mutate(f);
+      const r=createTaskCyclePostPhase1LifecycleCapability({root:f.closeRoot})
+        .closeFromResolvedLifecycle({request:f.request,observed:f.observed});
+      assert.equal(r.status,'BLOCKED',name+':'+r.reason);
+      assert.equal(r.effect_state,'NONE',name);
+      assert.ok(!fs.existsSync(path.join(f.closeRoot,'TC-1','closed-pass')),name);
+    } finally {f.cleanup();}
+  }
+});
