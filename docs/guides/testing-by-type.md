@@ -41,6 +41,14 @@ Three current integration files contain tests that skip unless explicit `FF_PROJ
 
 Physical test deletion is eligible only with evidence of a retired current source consumer **and** full equivalence/coverage at exact revision, including negative guards. Until then, classification (not deletion) is the evidence-safe cleanup. The inventory deliberately rejects unfamiliar `*.test.js` locations until Control assigns a meaningful type: it cannot silently misclassify new tests.
 
+## Fail-closed inventory boundary and frozen baseline (IR003 repair)
+
+The inventory now traverses the repository workspace rather than the former three hard-coded roots. It intentionally excludes **only generated or vendor directory names** `.git`, `node_modules`, `.venv`, `dist`, `coverage`, `.cache`; these are not first-party Node source-test locations. All other `*.test.js` paths are discovered: an unknown location or ambiguous new deterministic-substrate/operational-spine filename fails with `UNCLASSIFIED_NODE_TEST` until a competent type rule is added. Required historical roots `tests`, `scripts/doctor/tests` and `scripts/tests` fail closed when missing.
+
+The runner pins the **exact 50 original Node test paths** from the Product baseline `tools@c875ef7c14ac95d8fa80f617cd36b86978290f99`, rather than inferring preservation from a minimum count or comparing inventory with itself. Missing any baseline path fails `BASELINE_NODE_TEST_MISSING`. The one additional `scripts/tests/test-suites.test.js` file remains an explicit additive self-test. A deliberately removed original test would require an individually justified Product change to this pinned list; no cleanup or baseline deletion is authorized by this repair.
+
+Directory symlinks are rejected before traversing, including configured root symlinks, to prevent running tests outside the checkout. New negative self-tests cover an outside-root `*.test.js`, an omitted pinned baseline member, missing required root, root symlink, and new ambiguous type mappings. This protects deterministic local discovery; it does not attest a provider, full repository build, or Independent Review.
+
 ## Explicit scope / integration
 
 This change adds only a test runner, contract self-tests, npm commands and this guide. It changes **no production source and no existing test body**. The candidate replaces `npm test` file selection with exhaustive typed discovery after the native side-by-side comparison; preexisting test membership and status were preserved in that run. No historical regression suite is deleted. Proposed TASK: `docs/tasks/TEC-TC-TEST-SUITE-TYPE-CLASSIFICATION-001/TASK.md`. Source subject must be qualified at the actual candidate SHA/tree, independently reviewed, separately accepted by Developer and integrated via guarded authorized Phase 2 before claiming these commands as canonical on `tools`.
