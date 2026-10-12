@@ -801,3 +801,70 @@ test('symlinked terminal projection is not accepted as idempotent or overwritten
     assert.deepEqual(fs.readdirSync(outside), []);
   } finally {f.cleanup(); fs.rmSync(outside,{recursive:true,force:true});}
 });
+
+
+test('merge Control binding requires exact frozen review and logical-close authorization correlation', () => {
+  const f = mergeFixture();
+  try {
+    const q = f.request;
+    const resolution = {
+      status:'COMPETENTLY_RESOLVED',
+      taskcycle_id:q.taskcycle.id,
+      original_taskcycle_id:q.taskcycle.id,
+      original_initialization_sha256:q.source_initialization.identity_sha256,
+      original_phase1_sha256:q.source_reconciliation.identity_sha256,
+      exact_candidate_commit:q.candidate.commit,
+      exact_candidate_tree:q.candidate.tree,
+      canonical_integration_commit:q.Phase_2.post_tools,
+      canonical_integration_tree:q.Phase_2.post_tree,
+      reviewer_verdict:'PASS', blocking_findings:0,
+      original_review_id:q.independent_review.id,
+      original_review_sha256:q.independent_review.result_sha256,
+      frozen_review_interface_id:q.frozen_review_interface.id,
+      frozen_review_interface_prompt_sha256:q.frozen_review_interface.prompt_sha256,
+      original_review_interface_prompt_sha256:q.frozen_review_interface.prompt_sha256,
+      frozen_review_interface_ref:'IMMUTABLE:FROZEN-INTERFACE',
+      logical_close_authority_ref:q.logical_close.authority_ref,
+      logical_close_authorization_receipt_ref:'IMMUTABLE:LOGICAL-CLOSE-AUTHORIZATION',
+      logical_close_authorization_receipt_sha256:'sha256:'+'a'.repeat(64),
+      Developer_acceptance:'GRANTED',
+      Developer_authority_source:q.Developer_acceptance.authority_ref,
+      effect_state:'KNOWN', natively_tested_tree:q.Phase_2.post_tree,
+      candidate_tested_commit:q.candidate.commit,
+      candidate_tested_tree:q.candidate.tree,
+      candidate_validation_sha256:'sha256:'+'1'.repeat(64),
+      combined_validation_sha256:'sha256:'+'2'.repeat(64),
+      git_surface_identity_sha256:'sha256:'+'3'.repeat(64),
+      git_surface_receipt_ref:'IMMUTABLE:GIT-SURFACE',
+      original_review_ref:'IMMUTABLE:ORIGINAL-IR',
+      candidate_validation_ref:'IMMUTABLE:CANDIDATE-VALIDATION',
+      combined_validation_ref:'IMMUTABLE:COMBINED-VALIDATION',
+      Control_reconciliation_ref:'IMMUTABLE:CONTROL-RECONCILIATION',
+      qualified_evidence_provenance_ref:'IMMUTABLE:QUALIFIED-ROOT',
+      chronology_verified:true,
+      scope_added_paths:[], scope_amendments:[],
+      effective_write_scope:[...initializationRequest().write_scope].sort(),
+    };
+    const run = (proof) => createTaskCyclePostPhase1LifecycleCapability({
+      root:f.closeRoot,resolveCompetentProductEvidence:()=>proof,
+    }).closeFromResolvedLifecycle({request:q,observed:f.observed});
+    // Passing this callback is not proof of competence: even a syntactically
+    // complete self-claim stops before Git without separately qualified surface.
+    assert.equal(run(resolution).reason,'QUALIFIED_GIT_SURFACE_REQUIRED');
+    const cases = [
+      ['logical close source substituted', {logical_close_authority_ref:'FAKE'}],
+      ['logical close digest absent', {logical_close_authorization_receipt_sha256:null}],
+      ['logical close receipt absent', {logical_close_authorization_receipt_ref:''}],
+      ['review interface digest substituted', {original_review_interface_prompt_sha256:'sha256:'+'f'.repeat(64)}],
+      ['review interface digest absent', {frozen_review_interface_prompt_sha256:null}],
+      ['original review source absent', {frozen_review_interface_ref:''}],
+    ];
+    for (const [description,change] of cases) {
+      const outcome=run({...resolution,...change});
+      assert.equal(outcome.status,'BLOCKED',description);
+      assert.equal(outcome.effect_state,'NONE',description);
+      assert.equal(outcome.reason,'COMPETENT_PRODUCT_CONTROL_RESOLUTION_INVALID',description);
+      assert.deepEqual(fs.readdirSync(f.closeRoot), [],description);
+    }
+  } finally { f.cleanup(); }
+});

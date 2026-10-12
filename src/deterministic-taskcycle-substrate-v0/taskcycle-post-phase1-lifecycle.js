@@ -197,6 +197,15 @@ function qualifiedControlEvidence(request, source, resolution) {
       || p.reviewer_verdict!=='PASS' || p.blocking_findings!==0
       || p.original_review_id!==request.independent_review.id
       || p.original_review_sha256!==request.independent_review.result_sha256
+      // These are mechanical correlations to a Control-verified original,
+      // never a self-authenticating authorization by the injected callback.
+      || p.frozen_review_interface_id!==request.frozen_review_interface.id
+      || p.frozen_review_interface_prompt_sha256!==request.frozen_review_interface.prompt_sha256
+      || p.original_review_interface_prompt_sha256!==request.frozen_review_interface.prompt_sha256
+      || !nonEmpty(p.frozen_review_interface_ref)
+      || p.logical_close_authority_ref!==request.logical_close.authority_ref
+      || !nonEmpty(p.logical_close_authorization_receipt_ref)
+      || !isSha256(p.logical_close_authorization_receipt_sha256)
       || p.Developer_acceptance!=='GRANTED'
       || p.Developer_authority_source!==request.Developer_acceptance.authority_ref
       || p.effect_state!=='KNOWN'
