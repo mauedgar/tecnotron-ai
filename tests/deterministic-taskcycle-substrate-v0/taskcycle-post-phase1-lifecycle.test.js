@@ -761,3 +761,43 @@ test('qualified evidence requires explicit authenticated additive scope instead 
     assert.equal(result.effect_state,'NONE');
   } finally {f.cleanup();}
 });
+
+// IR005 F007 regression: parent and terminal directory symlink escapes
+// must fail without writing even when a target directory exists elsewhere.
+test('symlinked TaskCycle parent is rejected before any lifecycle publication', (t) => {
+  const f = fixture();
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'tc-close-outside-'));
+  try {
+    try { fs.symlinkSync(outside, path.join(f.closeRoot, 'TC-1'), 'dir'); }
+    catch (error) {
+      if (['EPERM','EACCES','ENOSYS'].includes(error?.code)) return t.skip('symlinks unavailable');
+      throw error;
+    }
+    const result = createTaskCyclePostPhase1LifecycleCapability({root:f.closeRoot})
+      .closeFromResolvedLifecycle({request:f.request, observed:f.observed});
+    assert.equal(result.status,'BLOCKED');
+    assert.equal(result.effect_state,'UNKNOWN');
+    assert.equal(result.reason,'POST_PHASE1_LIFECYCLE_PARENT_UNSAFE');
+    assert.deepEqual(fs.readdirSync(outside), []);
+  } finally {f.cleanup(); fs.rmSync(outside,{recursive:true,force:true});}
+});
+
+test('symlinked terminal projection is not accepted as idempotent or overwritten', (t) => {
+  const f = fixture();
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'tc-close-escape-'));
+  try {
+    const parent = path.join(f.closeRoot,'TC-1');
+    fs.mkdirSync(parent);
+    try { fs.symlinkSync(outside, path.join(parent,'closed-pass'), 'dir'); }
+    catch (error) {
+      if (['EPERM','EACCES','ENOSYS'].includes(error?.code)) return t.skip('symlinks unavailable');
+      throw error;
+    }
+    const result = createTaskCyclePostPhase1LifecycleCapability({root:f.closeRoot})
+      .closeFromResolvedLifecycle({request:f.request, observed:f.observed});
+    assert.equal(result.status,'BLOCKED');
+    assert.equal(result.effect_state,'UNKNOWN');
+    assert.equal(result.reason,'POST_PHASE1_LIFECYCLE_TERMINAL_UNSAFE');
+    assert.deepEqual(fs.readdirSync(outside), []);
+  } finally {f.cleanup(); fs.rmSync(outside,{recursive:true,force:true});}
+});

@@ -427,7 +427,23 @@ function packageFor(request, source) {
   return { projection, projectionText, manifest, manifestText, identity: sha256(manifestText) };
 }
 
+// A pre-existing symlinked TaskCycle directory must never redirect a close
+// outside the declared local root. Check the directory itself (not existsSync,
+// which follows symlinks and misses dangling links) and its real parent.
+function secureTerminalDirectory(location, parent) {
+  try {
+    const info = fs.lstatSync(location);
+    if (!info.isDirectory() || info.isSymbolicLink()) return false;
+    return fs.realpathSync(location) === path.join(fs.realpathSync(parent), path.basename(location));
+  } catch { return false; }
+}
+function entryPresent(location) {
+  try { fs.lstatSync(location); return true; }
+  catch (error) { if (error?.code === 'ENOENT') return false; throw error; }
+}
+
 function inspect(root, pkg) {
+  if (!secureTerminalDirectory(root, path.dirname(root))) return 'UNKNOWN';
   try {
     const entries = fs.readdirSync(root).sort();
     if (entries.length !== FILES.length || entries.some((x, i) => x !== FILES[i])) return 'UNKNOWN';
@@ -505,7 +521,13 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
       const parentRoot = path.dirname(finalRoot);
       // Exact terminal readback precedes live Git HEAD check. A genuine historical
       // close stays idempotent even after tools later advances.
-      if (fs.existsSync(finalRoot)) {
+      if (entryPresent(parentRoot) && !secureTerminalDirectory(parentRoot, base)) {
+        return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_PARENT_UNSAFE');
+      }
+      if (entryPresent(finalRoot)) {
+        if (!secureTerminalDirectory(finalRoot, parentRoot)) {
+          return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_TERMINAL_UNSAFE');
+        }
         const state = inspect(finalRoot, pkg);
         if (state === 'EXACT') return pass(request, finalRoot, pkg, true, 'ALREADY_CLOSED_EXACT');
         return terminal(request, 'BLOCKED', state === 'CONFLICT' ? 'NONE' : 'UNKNOWN', state === 'CONFLICT'
@@ -514,7 +536,15 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
       }
       const gitInvalid = qualifiedMergeObservation(request, source, qualifiedGitSurface, resolution.proof);
       if (gitInvalid) return terminal(request, 'BLOCKED', 'NONE', gitInvalid);
-      fs.mkdirSync(parentRoot, { recursive: true });
+      try {
+        if (!entryPresent(parentRoot)) fs.mkdirSync(parentRoot);
+      } catch (error) {
+        return terminal(request, 'FAILED', 'NONE',
+          `POST_PHASE1_LIFECYCLE_PARENT_CREATE_FAILED:${error?.message || String(error)}`);
+      }
+      if (!secureTerminalDirectory(parentRoot, base)) {
+        return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_PARENT_UNSAFE');
+      }
 
       let staging = null;
       try {
@@ -524,13 +554,20 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
         if (inspect(staging, pkg) !== 'EXACT') {
           return terminal(request, 'FAILED', 'NONE', 'STAGED_POST_PHASE1_LIFECYCLE_INVALID');
         }
+        if (!secureTerminalDirectory(parentRoot, base)
+            || !secureTerminalDirectory(staging, parentRoot)) {
+          return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_STAGING_UNSAFE');
+        }
+        if (entryPresent(finalRoot)) {
+          return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_PUBLISH_RACE');
+        }
         fs.renameSync(staging, finalRoot);
         staging = null;
         return inspect(finalRoot, pkg) === 'EXACT'
           ? pass(request, finalRoot, pkg)
           : terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_PUBLISH_UNKNOWN');
       } catch (error) {
-        if (fs.existsSync(finalRoot)) {
+        if (entryPresent(finalRoot)) {
           const state = inspect(finalRoot, pkg);
           if (state === 'EXACT') return pass(request, finalRoot, pkg, true, 'PUBLISH_RACE_RECONCILED_EXACT');
           if (state === 'CONFLICT') {
@@ -540,7 +577,7 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
         }
         return terminal(request, 'FAILED', 'NONE', `POST_PHASE1_LIFECYCLE_MATERIALIZATION_FAILED:${error?.message || String(error)}`);
       } finally {
-        if (staging && fs.existsSync(staging)) {
+        if (staging && entryPresent(staging) && secureTerminalDirectory(staging, parentRoot)) {
           try { fs.rmSync(staging, { recursive: true, force: true }); } catch { /* best effort */ }
         }
       }
