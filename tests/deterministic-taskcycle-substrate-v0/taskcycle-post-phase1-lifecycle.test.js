@@ -578,7 +578,7 @@ test('synthetic merge claims do not qualify as externally verified Git proof', (
     const result=createTaskCyclePostPhase1LifecycleCapability({root:f.closeRoot})
       .closeFromResolvedLifecycle({request:f.request,observed:f.observed});
     assert.equal(result.status,'BLOCKED');
-    assert.equal(result.reason,'QUALIFIED_GIT_SURFACE_REQUIRED');
+    assert.equal(result.reason,'COMPETENT_PRODUCT_CONTROL_RESOLUTION_REQUIRED');
     assert.equal(result.effect_state,'NONE');
     assert.ok(!fs.existsSync(path.join(f.closeRoot,'TC-1','closed-pass')));
   } finally {f.cleanup();}
@@ -632,7 +632,7 @@ test('a qualified Git surface is independent of request/observed.trusted_git dec
     const r=createTaskCyclePostPhase1LifecycleCapability({root:f.closeRoot})
       .closeFromResolvedLifecycle({request:f.request,observed:f.observed});
     assert.equal(r.status,'BLOCKED');
-    assert.equal(r.reason,'QUALIFIED_GIT_SURFACE_REQUIRED');
+    assert.equal(r.reason,'COMPETENT_PRODUCT_CONTROL_RESOLUTION_REQUIRED');
     assert.equal(r.effect_state,'NONE');
   } finally {f.cleanup();}
 });
