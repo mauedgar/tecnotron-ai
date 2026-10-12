@@ -109,6 +109,48 @@ function phase2EvidenceValid(p2, candidate) {
     && acceptedRange.accepted_tip_tree === candidate.tree
     && acceptedRange.ordered_commit_range[acceptedRange.ordered_commit_range.length - 1] === candidate.commit;
 }
+function qualifiedOriginalEvidence(request, observed) {
+  if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return null;
+  const items = observed?.external_evidence;
+  const review = items?.original_review;
+  const approval = items?.Developer_approval;
+  const preflight = items?.combined_tree_preflight;
+  if (!review || !approval || !preflight) return 'ORIGINAL_AUTHORITY_AND_PREFLIGHT_EVIDENCE_REQUIRED';
+  const validateArtifact = (input, digest) => {
+    if (!nonEmpty(input.path) || !isSha256(digest)
+        || !nonEmpty(input.origin_ref) || !nonEmpty(input.owner)) return null;
+    try {
+      const lstat = fs.lstatSync(input.path);
+      if (!lstat.isFile() || lstat.isSymbolicLink()) return null;
+      const raw = fs.readFileSync(input.path, 'utf8');
+      if (Buffer.byteLength(raw,'utf8')>262144 || sha256(raw)!==digest) return null;
+      return raw;
+    } catch {return null;}
+  };
+  const reviewText = validateArtifact(review, request.independent_review.result_sha256);
+  const approvalText = validateArtifact(approval, request.Developer_acceptance.receipt_sha256);
+  const preflightText = validateArtifact(preflight, request.Phase_2.merge.preflight_sha256);
+  if (!reviewText || !approvalText || !preflightText) return 'ORIGINAL_EXTERNAL_ARTIFACT_DIGEST_OR_SOURCE_UNVERIFIED';
+  const c = request.candidate;
+  if (!reviewText.includes(request.independent_review.id)
+      || !reviewText.includes(c.commit) || !reviewText.includes(c.tree)
+      || !/PASS(?:\s+WITH\s+NONBLOCKING|\s+CON\s+HALLAZGOS)?/i.test(reviewText)
+      || !approvalText.includes(c.commit)
+      || !approvalText.includes('Developer')
+      || !approvalText.includes(request.Developer_acceptance.authority_ref)
+      || !approvalText.includes('GRANTED_CANDIDATE_SPECIFIC')
+      || !preflightText.includes(request.Phase_2.pre_tools)
+      || !preflightText.includes(c.commit)
+      || !preflightText.includes(request.Phase_2.post_tree)
+      || !/PASS/.test(preflightText)
+      || !nonEmpty(review.origin_ref) || !nonEmpty(approval.origin_ref) || !nonEmpty(preflight.origin_ref)
+      || approval.owner !== 'DEVELOPER_CONTROL_VERIFIED'
+      || review.owner !== 'INDEPENDENT_REVIEW_ORIGINAL'
+      || preflight.owner !== 'NATIVE_INTEGRATION_PREFLIGHT') {
+    return 'ORIGINAL_EXTERNAL_ARTIFACT_SEMANTICS_UNVERIFIED';
+  }
+  return null;
+}
 function gitRead(repositoryPath, args) {
   const r = spawnSync('git', ['-C', repositoryPath, ...args], {
     shell: false, encoding: 'utf8', windowsHide: true, timeout: 30000,
@@ -490,6 +532,8 @@ function createTaskCyclePostPhase1LifecycleCapability({ root }) {
       if (initInvalid) return terminal(request, 'BLOCKED', 'NONE', initInvalid);
       const gitInvalid = qualifiedMergeObservation(request, observed, source);
       if (gitInvalid) return terminal(request, 'BLOCKED', 'NONE', gitInvalid);
+      const evidenceInvalid = qualifiedOriginalEvidence(request, observed);
+      if (evidenceInvalid) return terminal(request, 'BLOCKED', 'NONE', evidenceInvalid);
 
       let baseStat;
       try { baseStat = fs.lstatSync(base); } catch {

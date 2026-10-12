@@ -602,3 +602,19 @@ test('merge-mode invalid identities and stale effects fail closed with no lifecy
     } finally {f.cleanup();}
   }
 });
+
+test('original reviewer, Developer and preflight must be byte-verified before merge closure', () => {
+  const f = mergeFixture();
+  try {
+    f.observed.trusted_git = { checkout: '/nonexistent/git', expected_repo_origin: 'https://github.com/mauedgar/tecnotron-ai.git', remote_ref:'refs/heads/tools' };
+    f.observed.external_evidence = {
+      original_review: {path:'/nonexistent/review',origin_ref:'LIBRARY:unverified',owner:'INDEPENDENT_REVIEW_ORIGINAL'},
+      Developer_approval: {path:'/nonexistent/approval',origin_ref:'TRANSPORT:unverified',owner:'DEVELOPER_CONTROL_VERIFIED'},
+      combined_tree_preflight: {path:'/nonexistent/preflight',origin_ref:'TRANSPORT:unverified',owner:'NATIVE_INTEGRATION_PREFLIGHT'}
+    };
+    const result = createTaskCyclePostPhase1LifecycleCapability({root:f.closeRoot})
+      .closeFromResolvedLifecycle({request:f.request,observed:f.observed});
+    assert.equal(result.status,'BLOCKED');
+    assert.equal(result.effect_state,'NONE');
+  } finally {f.cleanup();}
+});
