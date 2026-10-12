@@ -179,7 +179,8 @@ function fixture() {
     effect_reconciliation: request.effect_reconciliation,
     logical_close: request.logical_close,
   };
-  return { root, closeRoot, request, observed, cleanup: () => fs.rmSync(root, { recursive: true, force: true }) };
+  return { root, closeRoot, request, observed, initialization: initialized,
+    reconciliation: reconciled, cleanup: () => fs.rmSync(root, { recursive: true, force: true }) };
 }
 
 test('substrate index exports the post-Phase1 lifecycle capability', () => {
@@ -556,6 +557,10 @@ function mergeFixture() {
   f.observed.candidate = structuredClone(c);
   f.observed.Phase_2 = structuredClone(f.request.Phase_2);
   f.observed.effect_reconciliation = structuredClone(f.request.effect_reconciliation);
+  f.request.source_initialization = {
+    location_or_ref: f.initialization.portable_projection.location_or_ref,
+    identity_sha256: f.initialization.portable_projection.identity_sha256,
+  };
   f.observed.canonical_tools = {
     branch: 'tools', head_commit: mergeCommit, head_tree: mergedTree,
     merge_parents: [before, c.commit],
@@ -573,6 +578,7 @@ test('synthetic merge claims do not qualify as externally verified Git proof', (
     const result=createTaskCyclePostPhase1LifecycleCapability({root:f.closeRoot})
       .closeFromResolvedLifecycle({request:f.request,observed:f.observed});
     assert.equal(result.status,'BLOCKED');
+    assert.equal(result.reason,'QUALIFIED_GIT_SURFACE_REQUIRED');
     assert.equal(result.effect_state,'NONE');
     assert.ok(!fs.existsSync(path.join(f.closeRoot,'TC-1','closed-pass')));
   } finally {f.cleanup();}
@@ -616,5 +622,17 @@ test('original reviewer, Developer and preflight must be byte-verified before me
       .closeFromResolvedLifecycle({request:f.request,observed:f.observed});
     assert.equal(result.status,'BLOCKED');
     assert.equal(result.effect_state,'NONE');
+  } finally {f.cleanup();}
+});
+
+test('a qualified Git surface is independent of request/observed.trusted_git declarations', () => {
+  const f=mergeFixture();
+  try {
+    f.observed.trusted_git={checkout:'/tmp/fake',status:'READY'};
+    const r=createTaskCyclePostPhase1LifecycleCapability({root:f.closeRoot})
+      .closeFromResolvedLifecycle({request:f.request,observed:f.observed});
+    assert.equal(r.status,'BLOCKED');
+    assert.equal(r.reason,'QUALIFIED_GIT_SURFACE_REQUIRED');
+    assert.equal(r.effect_state,'NONE');
   } finally {f.cleanup();}
 });
