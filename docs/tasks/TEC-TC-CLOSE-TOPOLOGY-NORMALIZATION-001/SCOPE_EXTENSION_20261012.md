@@ -10,7 +10,7 @@ Current competent Developer request: **"Sí autorizo a normalizar lo necesario p
 The Developer granted a bounded scope expansion **within this already initialized responsibility**, not acceptance of any candidate and not authorization to rewrite the original initialization or begin another TaskCycle. Preserve original exact source records and attach this authorization as an independent amendment. The two original paths remain permitted; the added Product paths for this repair are:
 
 - `src/deterministic-taskcycle-substrate-v0/taskcycle-close-evidence-qualification.js`
-- `tests/deterministic-taskcycle-substrate-v0/taskcycle-close-evidence-qualification.test.js`
+- New independent verifier tests are colocated in the existing explicit operational test suite; no extra test path is introduced.
 - This dated scope amendment record.
 
 The existing `src/operational-spine-v0/git-execution-qualification.js` is a **read-only reused capability**, not a write target.
@@ -20,3 +20,5 @@ Guardrails: Product Control remains the resolver for the actual original Indepen
 Technical design provenance (not additional Product authority): `mauedgar/ts-execution-transport@c96b12831b050f6ddedfb7714791f0d82f781d14:requests/TECNOTRON-CLOSE-TOPOLOGY-NORMALIZATION-20261012-001/SCOPE_AND_TRUST_BOUNDARY_DECISION.md`.
 
 This amendment should be included in the next frozen review inventory. It does **not** retroactively change the historical TASK carrier bytes or initial TaskCycle manifest. Any consumer that requires matching the frozen old scope must explicitly consider both the original historical scope and this separately authorized extension; it must never silently substitute one for the other.
+
+**Scope normalization after native preflight:** The first candidate included a separate `taskcycle-close-evidence-qualification.test.js` that was rejected by the already-accepted fail-closed test classifier (`UNCLASSIFIED_NODE_TEST`). The next candidate deletes that unaccepted file, incorporates the same tests in the original lifecycle test suite, and does not modify the PR42 test runner.
