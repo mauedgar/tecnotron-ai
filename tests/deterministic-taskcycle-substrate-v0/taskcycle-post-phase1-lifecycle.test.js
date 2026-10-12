@@ -923,3 +923,172 @@ test('F006 remote historical self-claim cannot qualify drift; exact current OID 
   assert.equal(drift.reason,'REMOTE_EXACT_HEAD_DRIFT');
   assert.ok(!calls.includes('merge-base'), 'caller-supplied ancestry must not authorize historical remote');
 });
+
+
+test('real PR42 MERGE_COMMIT close consumer positive dry-run with recovered original portable source', {
+  ...(process.env.TS_PRODUCT_GIT_PROOF==='1' ? {} : {skip:'requires exact Product Git checkout and official remote HEAD'})
+}, () => {
+  // This is a locally ephemeral mechanical integration test, NEVER a Product
+  // close, Developer grant, or independent Controller trust-source attestation.
+  // Recovered immutable Transport bytes are preserved verbatim, not regenerated.
+  const fsHash = text => 'sha256:' + require('node:crypto').createHash('sha256')
+    .update(text, 'utf8').digest('hex');
+  const orig = ["{\n  \"files\": {\n    \"projection.json\": \"sha256:7e77d8a970252b9c941a7d0ff9610ec14ec6a2ad94f171a03f4e5f2751c762fa\"\n  },\n  \"responsibility\": \"CLASSIFY_ACTIVE_TESTS_FOR_FOCUSED_VALIDATION_AND_SAFE_CLEANUP\",\n  \"schema\": \"deterministic-taskcycle-initialization-manifest/v0\",\n  \"semantics\": {\n    \"State_Kernel_direct_calls\": 0,\n    \"creates_authority\": false,\n    \"external_identity_required\": true,\n    \"new_persistence_backend\": false\n  },\n  \"taskcycle_id\": \"TASKCYCLE-TECNOTRON-TEST-SUITE-TYPE-CLASSIFICATION-001\"\n}\n","{\n  \"TaskCycle\": {\n    \"id\": \"TASKCYCLE-TECNOTRON-TEST-SUITE-TYPE-CLASSIFICATION-001\",\n    \"responsibility\": \"CLASSIFY_ACTIVE_TESTS_FOR_FOCUSED_VALIDATION_AND_SAFE_CLEANUP\",\n    \"state\": \"ACTIVE\"\n  },\n  \"authority_refs\": [\n    \"DEVELOPER-TECNOTRON-DIRECT-TEST-CLASSIFICATION-AND-CLEANUP-2026-10-11\",\n    \"DEVELOPER-TECNOTRON-TEST-INTEGRATION-CLOSE-2026-10-11\"\n  ],\n  \"current_gate\": \"PHASE1_IMPLEMENT_BOUNDED_CANDIDATE\",\n  \"evidence_refs\": [\n    \"GIT:d47dffd5b25da3f883f0f08d34ad9e8e0cb081ac\",\n    \"TRANSPORT:9c0d48525f493b8c3d229beec47074e50572370f\"\n  ],\n  \"exact_inputs\": {\n    \"Product_baseline\": {\n      \"commit\": \"c875ef7c14ac95d8fa80f617cd36b86978290f99\",\n      \"integration_branch\": \"tools\",\n      \"repository\": \"mauedgar/tecnotron-ai\",\n      \"tree\": \"467151f16353970514d485eab0ef731052bac465\"\n    },\n    \"TASK_carrier\": {\n      \"branch\": \"candidate/tecnotron-test-suite-types-normalized-001\",\n      \"commit\": \"b43ce9fc518510a0f5b41ab29df88bbefacca11f\",\n      \"path\": \"docs/tasks/TEC-TC-TEST-SUITE-TYPE-CLASSIFICATION-001/TASK.md\",\n      \"tree\": \"d6fe1880d45006f4321eaeee4c580c8f083f1dc5\"\n    },\n    \"write_scope\": [\n      \"package.json\",\n      \"scripts/tests/run-by-type.js\",\n      \"scripts/tests/test-suites.test.js\",\n      \"docs/guides/testing-by-type.md\"\n    ]\n  },\n  \"pending_obligations\": [\n    {\n      \"authority_ref\": null,\n      \"id\": \"implementation\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"promotion_grade_validation\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"exact_candidate\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"frozen_review_interface\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"independent_review\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"Developer_acceptance\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"Phase_2\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"effect_reconciliation\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"logical_close\",\n      \"status\": \"PENDING\"\n    }\n  ],\n  \"schema\": \"deterministic-taskcycle-initialization/v0\",\n  \"semantics\": {\n    \"State_Kernel_direct_calls\": 0,\n    \"State_Kernel_named_semantic_owner\": false,\n    \"creates_authority\": false,\n    \"new_persistence_backend\": false\n  }\n}\n","{\n  \"files\": {\n    \"projection.json\": \"sha256:3b55a11fd33b9f9884a18cf9f7a6abbae27530262bad5a1956548dc93ee7c291\"\n  },\n  \"obligation_id\": \"implementation\",\n  \"responsibility\": \"CLASSIFY_ACTIVE_TESTS_FOR_FOCUSED_VALIDATION_AND_SAFE_CLEANUP\",\n  \"schema\": \"deterministic-taskcycle-effect-reconciliation-manifest/v0\",\n  \"semantics\": {\n    \"State_Kernel_direct_calls\": 0,\n    \"creates_authority\": false,\n    \"external_identity_required\": true,\n    \"new_persistence_backend\": false\n  },\n  \"source_initialization_identity_sha256\": \"sha256:c5c710ce32ec117d633fc93a92fab4cd319191219130a265a593436cf5c96f1e\",\n  \"taskcycle_id\": \"TASKCYCLE-TECNOTRON-TEST-SUITE-TYPE-CLASSIFICATION-001\"\n}\n","{\n  \"TaskCycle\": {\n    \"id\": \"TASKCYCLE-TECNOTRON-TEST-SUITE-TYPE-CLASSIFICATION-001\",\n    \"responsibility\": \"CLASSIFY_ACTIVE_TESTS_FOR_FOCUSED_VALIDATION_AND_SAFE_CLEANUP\",\n    \"state\": \"ACTIVE\"\n  },\n  \"authority_refs\": [\n    \"DEVELOPER-TECNOTRON-DIRECT-TEST-CLASSIFICATION-AND-CLEANUP-2026-10-11\",\n    \"DEVELOPER-TECNOTRON-TEST-INTEGRATION-CLOSE-2026-10-11\"\n  ],\n  \"current_gate\": \"PROMOTION_GRADE_VALIDATION\",\n  \"evidence_refs\": [\n    \"GIT:d47dffd5b25da3f883f0f08d34ad9e8e0cb081ac\",\n    \"TRANSPORT:9c0d48525f493b8c3d229beec47074e50572370f\",\n    \"PR41_ORIGINAL_TREE:d2cbc04162441f0bc0c10d49093fd41ed65075a5\"\n  ],\n  \"exact_inputs\": {\n    \"Product_baseline\": {\n      \"commit\": \"c875ef7c14ac95d8fa80f617cd36b86978290f99\",\n      \"integration_branch\": \"tools\",\n      \"repository\": \"mauedgar/tecnotron-ai\",\n      \"tree\": \"467151f16353970514d485eab0ef731052bac465\"\n    },\n    \"TASK_carrier\": {\n      \"branch\": \"candidate/tecnotron-test-suite-types-normalized-001\",\n      \"commit\": \"b43ce9fc518510a0f5b41ab29df88bbefacca11f\",\n      \"path\": \"docs/tasks/TEC-TC-TEST-SUITE-TYPE-CLASSIFICATION-001/TASK.md\",\n      \"tree\": \"d6fe1880d45006f4321eaeee4c580c8f083f1dc5\"\n    },\n    \"write_scope\": [\n      \"package.json\",\n      \"scripts/tests/run-by-type.js\",\n      \"scripts/tests/test-suites.test.js\",\n      \"docs/guides/testing-by-type.md\"\n    ]\n  },\n  \"obligations\": [\n    {\n      \"authority_ref\": null,\n      \"id\": \"implementation\",\n      \"status\": \"SATISFIED\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"promotion_grade_validation\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"exact_candidate\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"frozen_review_interface\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"independent_review\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"Developer_acceptance\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"Phase_2\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"effect_reconciliation\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"authority_ref\": null,\n      \"id\": \"logical_close\",\n      \"status\": \"PENDING\"\n    }\n  ],\n  \"reconciled_effect\": {\n    \"mutation_during_reconciliation\": \"NONE\",\n    \"obligation_id\": \"implementation\",\n    \"preserved\": true,\n    \"replayed\": false,\n    \"semantic_status\": \"COMPLETED_BEFORE_LIFECYCLE_INITIALIZATION\",\n    \"subject\": {\n      \"branch\": \"candidate/tecnotron-test-suite-types-normalized-001\",\n      \"changed_paths\": [\n        \"package.json\",\n        \"scripts/tests/run-by-type.js\",\n        \"scripts/tests/test-suites.test.js\",\n        \"docs/guides/testing-by-type.md\"\n      ],\n      \"commit\": \"d47dffd5b25da3f883f0f08d34ad9e8e0cb081ac\",\n      \"parent\": \"b43ce9fc518510a0f5b41ab29df88bbefacca11f\",\n      \"repository\": \"mauedgar/tecnotron-ai\",\n      \"tree\": \"d2cbc04162441f0bc0c10d49093fd41ed65075a5\"\n    }\n  },\n  \"schema\": \"deterministic-taskcycle-effect-reconciliation/v0\",\n  \"semantics\": {\n    \"State_Kernel_direct_calls\": 0,\n    \"State_Kernel_named_semantic_owner\": false,\n    \"creates_authority\": false,\n    \"new_persistence_backend\": false\n  },\n  \"source_initialization\": {\n    \"identity_sha256\": \"sha256:c5c710ce32ec117d633fc93a92fab4cd319191219130a265a593436cf5c96f1e\"\n  }\n}\n"];
+  const identities = ["sha256:c5c710ce32ec117d633fc93a92fab4cd319191219130a265a593436cf5c96f1e","sha256:fb6b16a9fae52330f79d69c47950e123ff62a1ede4d4cd0d989fde6e18f37125"];
+  assert.equal(fsHash(orig[0]), identities[0], 'original Init SHA256');
+  assert.equal(fsHash(orig[2]), identities[1], 'original Phase1 SHA256');
+  const source = JSON.parse(orig[3]), init = JSON.parse(orig[1]);
+  assert.equal(source.TaskCycle.id, 'TASKCYCLE-TECNOTRON-TEST-SUITE-TYPE-CLASSIFICATION-001');
+  assert.equal(source.source_initialization.identity_sha256, identities[0]);
+  assert.deepEqual(source.exact_inputs, init.exact_inputs);
+  const f = fixture();
+  try {
+    const sourceInit = path.join(f.root, 'recovered-original-init');
+    const sourcePhase1 = path.join(f.root, 'recovered-original-phase1');
+    for (const dir of [sourceInit, sourcePhase1]) fs.mkdirSync(dir);
+    for (const [dir, start] of [[sourceInit, 0], [sourcePhase1, 2]]) {
+      fs.writeFileSync(path.join(dir, 'manifest.json'), orig[start]);
+      fs.writeFileSync(path.join(dir, 'projection.json'), orig[start+1]);
+    }
+    const original = source.exact_inputs;
+    const c = f.request.candidate;
+    Object.assign(f.request, {
+      taskcycle:{...source.TaskCycle},
+      source_initialization:{location_or_ref:sourceInit, identity_sha256:identities[0]},
+      source_reconciliation:{location_or_ref:sourcePhase1, identity_sha256:identities[1]},
+    });
+    Object.assign(c, {
+      branch:original.TASK_carrier.branch,
+      commit:"08e94d6d17b9a2071c36c920574683a969fb53ba",
+      tree:"f8d8ba33dd7f3322b48d46f03998aa606afd3ce1",
+      parent:source.reconciled_effect.subject.commit,
+      changed_paths:[...original.write_scope],
+      provenance:{
+        phase1_subject:source.reconciled_effect.subject,
+        task_carrier_commit:original.TASK_carrier.commit,
+        task_carrier_path:original.TASK_carrier.path,
+      },
+    });
+    const pre="58c9b68d468588d58c4d85d032a799f83846123d";
+    const mergeCommit="2a42a1bbda6e9fecccb28c42c9c2dd294b3b1c89";
+    const mergedTree="04e57337ac129bd40774d48cf2cfee041f904cfa";
+    const acceptedPaths=[...original.write_scope, original.TASK_carrier.path];
+    const candidateReceipt='sha256:'+'a'.repeat(64); // Fixture identity; external Control must independently qualify.
+    const combinedReceipt='sha256:'+'b'.repeat(64);  // Fixture identity; external Control must independently qualify.
+    f.request.promotion_grade_validation={
+      provider:'NATIVE',run_id:'PR42-CANDIDATE',job_id:'NODE-562',status:'PASS',
+      exact_candidate_commit:c.commit,exact_candidate_tree:c.tree,
+      full_tests:{total:562,passed:558,failed:0,skipped:4},
+      contracts_check:'PASS',post_validation_git_guard:'PASS',receipt_sha256:candidateReceipt,
+    };
+    f.request.frozen_review_interface={
+      id:'TECNOTRON-PR42-WEBINLINE-IR004-20261012-001',
+      prompt_sha256:'sha256:1bba505f34816a9c760e86d0e43591a297086dcc108afc0398e8752831109b19',
+      subject_commit:c.commit, subject_tree:c.tree,
+    };
+    f.request.independent_review={
+      id:'IND-REVIEW-TECNOTRON-TEST-SUITE-TYPES-NORMALIZED-004',
+      verdict:'PASS',subject_commit:c.commit,subject_tree:c.tree,
+      result_sha256:'sha256:5abaca5f75e827b1756c3ad29f921b486da574d84faae5eb061d203cb4972a87',
+      blocking_findings:[],
+    };
+    const DeveloperAuthority='TECNOTRON-PR42-DEVELOPER-ACCEPTANCE-20261012-001';
+    const closeAuthority='TECNOTRON-PR42-POST-CLOSE-GRANT';
+    f.request.Developer_acceptance={
+      status:'GRANTED',authority_ref:DeveloperAuthority,
+      subject_commit:c.commit,subject_tree:c.tree,
+    };
+    const mergeInfo={
+      commit:mergeCommit,tree:mergedTree,parents:[pre,c.commit],
+      candidate_tree:c.tree,validated_combined_tree:mergedTree,
+      candidate_lineage:[source.reconciled_effect.subject.commit,c.commit],
+      changed_paths:acceptedPaths,
+      git_observation_ref:'GIT:PR42-MERGE-READBACK',
+      preflight_ref:'TRANSPORT:PR42-PHASE2A',
+      preflight_sha256:combinedReceipt,
+      lineage_verification_ref:'GIT:PR42-LINEAGE-READBACK',
+      remote_effect:'CONFIRMED',unknown_effects:0,
+    };
+    f.request.Phase_2={
+      status:'PASS',integration_mode:'MERGE_COMMIT',pre_tools:pre,
+      post_tools:mergeCommit,post_tree:mergedTree,
+      force:false,remote_correspondence:'EXACT',merge:mergeInfo,
+    };
+    f.request.effect_reconciliation={
+      status:'PASS',canonical_commit:mergeCommit,
+      canonical_tree:mergedTree,unresolved_UNKNOWN_effects:[],
+    };
+    f.request.logical_close={terminal_disposition_ref:'CLOSED_PASS',authority_ref:closeAuthority};
+    f.request.authority_refs=[DeveloperAuthority,closeAuthority];
+    f.request.evidence_refs=['GIT:PR42','TRANSPORT:PR42-ORIGINAL-SOURCES'];
+    f.observed={
+      candidate:structuredClone(c),
+      promotion_grade_validation:structuredClone(f.request.promotion_grade_validation),
+      frozen_review_interface:structuredClone(f.request.frozen_review_interface),
+      independent_review:structuredClone(f.request.independent_review),
+      Developer_acceptance:structuredClone(f.request.Developer_acceptance),
+      Phase_2:structuredClone(f.request.Phase_2),
+      effect_reconciliation:structuredClone(f.request.effect_reconciliation),
+      logical_close:structuredClone(f.request.logical_close),
+    };
+    // This qualifiedControlEvidence callback is a fixture, not authenticated
+    // Product Control. The true caller must acquire original provider bytes,
+    // verify Developer identity, scope amendment and independent IR externally.
+    const proof={
+      status:'COMPETENTLY_RESOLVED',
+      taskcycle_id:source.TaskCycle.id,original_taskcycle_id:source.TaskCycle.id,
+      original_initialization_sha256:identities[0],
+      original_phase1_sha256:identities[1],
+      exact_candidate_commit:c.commit,exact_candidate_tree:c.tree,
+      canonical_integration_commit:mergeCommit,canonical_integration_tree:mergedTree,
+      reviewer_verdict:'PASS',blocking_findings:0,
+      original_review_id:f.request.independent_review.id,
+      original_review_sha256:f.request.independent_review.result_sha256,
+      frozen_review_interface_id:f.request.frozen_review_interface.id,
+      frozen_review_interface_prompt_sha256:f.request.frozen_review_interface.prompt_sha256,
+      original_review_interface_prompt_sha256:f.request.frozen_review_interface.prompt_sha256,
+      frozen_review_interface_ref:'TRANSPORT:PR42-FROZEN-IR004',
+      logical_close_authority_ref:closeAuthority,
+      logical_close_authorization_receipt_ref:'TRANSPORT:PR42-UNQUALIFIED-CLOSE-FIXTURE',
+      logical_close_authorization_receipt_sha256:'sha256:'+'c'.repeat(64),
+      Developer_acceptance:'GRANTED',Developer_authority_source:DeveloperAuthority,
+      effect_state:'KNOWN',natively_tested_tree:mergedTree,
+      candidate_tested_commit:c.commit,candidate_tested_tree:c.tree,
+      candidate_validation_sha256:candidateReceipt,combined_validation_sha256:combinedReceipt,
+      git_surface_identity_sha256:'sha256:'+'d'.repeat(64),
+      git_surface_receipt_ref:'GIT:PR42-QUALIFIED-SURFACE-FIXTURE',
+      original_review_ref:'LIBRARY:ORIGINAL-IR004',
+      candidate_validation_ref:'TRANSPORT:PR42-CANDIDATE-NATIVE',
+      combined_validation_ref:'TRANSPORT:PR42-COMBINED-NATIVE',
+      Control_reconciliation_ref:'TRANSPORT:PR42-CONTROL',
+      qualified_evidence_provenance_ref:'GIT:PR42-VERIFIED-CHECKOUT',
+      chronology_verified:true,scope_added_paths:[],scope_amendments:[],
+      effective_write_scope:[...original.write_scope].sort(),
+    };
+    const capability=createTaskCyclePostPhase1LifecycleCapability({
+      root:f.closeRoot,
+      qualifiedGitSurface:{
+        repositoryPath:path.resolve(process.cwd()),
+        binding:'CONTROL_QUALIFIED_GIT',
+        remoteUrl:'https://github.com/mauedgar/tecnotron-ai.git',
+        qualification_identity_sha256:proof.git_surface_identity_sha256,
+        qualification_receipt_ref:proof.git_surface_receipt_ref,
+      },
+      resolveCompetentProductEvidence:()=>proof,
+    });
+    const result=capability.closeFromResolvedLifecycle({request:f.request,observed:f.observed});
+    assert.equal(result.status,'PASS',JSON.stringify(result));
+    assert.equal(result.effect_state,'CONFIRMED');
+    assert.equal(result.already_closed,false);
+    const consumed=consumeTaskCyclePostPhase1Lifecycle({
+      location:result.portable_projection.location_or_ref,
+      expected_identity_sha256:result.portable_projection.identity_sha256,
+    });
+    assert.equal(consumed.projection.TaskCycle.state,'CLOSED');
+    assert.equal(consumed.projection.terminal_disposition_ref,'CLOSED_PASS');
+    assert.equal(consumed.projection.pending_obligations.length,0);
+    assert.equal(capability.closeFromResolvedLifecycle({
+      request:f.request,observed:f.observed,
+    }).already_closed,true);
+  } finally { f.cleanup(); }
+});
