@@ -664,7 +664,7 @@ const taskPath='docs/tasks/TEC-TC-TEST-SUITE-TYPE-CLASSIFICATION-001/TASK.md';
 function params(root) {
   return { repositoryPath:root,phase1,originalTaskCycleId:'TASKCYCLE-TECNOTRON-TEST-SUITE-TYPE-CLASSIFICATION-001',
     expectedRemoteCommit:merge,remoteUrl:'https://github.com/mauedgar/tecnotron-ai.git',
-    scope:{write_scope:writeScope,task_path:taskPath,baseline_path_scope:[...writeScope,taskPath]},
+    scope:{write_scope:writeScope,authorized_added_paths:[],task_path:taskPath,baseline_path_scope:[...writeScope,taskPath]},
     request:{taskcycle:{id:'TASKCYCLE-TECNOTRON-TEST-SUITE-TYPE-CLASSIFICATION-001'},
       candidate:{repository:'mauedgar/tecnotron-ai',commit:candidate,tree:'f8d8ba33dd7f3322b48d46f03998aa606afd3ce1',
         parent:phase1.commit},
@@ -696,7 +696,68 @@ test('real two-parent PR42 merge requires exact official GitHub HEAD, parents, t
   const r=qualifyMergeTopology(params(path.resolve(process.cwd())));
   assert.equal(r.status,'PASS',JSON.stringify(r));
   assert.equal(r.verified.merge_commit,merge);
-  assert.equal(r.verified.recomputed_combined_tree,tree);
+  assert.equal(r.verified.combined_tree_claim,tree);
   assert.equal(r.verified.remote_oid,merge);
   assert.deepEqual(r.verified.actual_changed_paths,[...writeScope,taskPath].sort());
+});
+
+test('merge closure rejects absent competent resolution even with asserted status strings', () => {
+  const f=mergeFixture();
+  try {
+    const fabricated=(input)=>({status:'COMPETENTLY_RESOLVED',
+      taskcycle_id:input.request.taskcycle.id,
+      exact_candidate_commit:input.request.candidate.commit,
+      exact_candidate_tree:input.request.candidate.tree,
+      canonical_integration_commit:input.request.Phase_2.post_tools,
+      canonical_integration_tree:input.request.Phase_2.post_tree,
+      reviewer_verdict:'PASS',blocking_findings:0,Developer_acceptance:'GRANTED'});
+    const result=createTaskCyclePostPhase1LifecycleCapability({
+      root:f.closeRoot,resolveCompetentProductEvidence:fabricated
+    }).closeFromResolvedLifecycle({request:f.request,observed:f.observed});
+    assert.equal(result.status,'BLOCKED');
+    assert.equal(result.reason,'COMPETENT_PRODUCT_CONTROL_RESOLUTION_INVALID');
+    assert.equal(result.effect_state,'NONE');
+  } finally {f.cleanup();}
+});
+
+test('qualified evidence requires explicit authenticated additive scope instead of editing historical init', () => {
+  const f=mergeFixture();
+  try {
+    const invented=(input)=>({status:'COMPETENTLY_RESOLVED',
+      taskcycle_id:input.request.taskcycle.id,
+      original_taskcycle_id:input.request.taskcycle.id,
+      original_initialization_sha256:input.request.source_initialization.identity_sha256,
+      original_phase1_sha256:input.request.source_reconciliation.identity_sha256,
+      exact_candidate_commit:input.request.candidate.commit,
+      exact_candidate_tree:input.request.candidate.tree,
+      canonical_integration_commit:input.request.Phase_2.post_tools,
+      canonical_integration_tree:input.request.Phase_2.post_tree,
+      reviewer_verdict:'PASS',blocking_findings:0,
+      original_review_id:input.request.independent_review.id,
+      original_review_sha256:input.request.independent_review.result_sha256,
+      Developer_acceptance:'GRANTED',
+      Developer_authority_source:input.request.Developer_acceptance.authority_ref,
+      effect_state:'KNOWN',natively_tested_tree:input.request.Phase_2.post_tree,
+      candidate_tested_commit:input.request.candidate.commit,
+      candidate_tested_tree:input.request.candidate.tree,
+      candidate_validation_sha256:'sha256:'+'1'.repeat(64),
+      combined_validation_sha256:'sha256:'+'2'.repeat(64),
+      git_surface_identity_sha256:'sha256:'+'3'.repeat(64),
+      git_surface_receipt_ref:'GIT:SURFACE',
+      original_review_ref:'LIBRARY:ORIGINAL',
+      candidate_validation_ref:'NATIVE:CANDIDATE',
+      combined_validation_ref:'NATIVE:COMBINED',
+      Control_reconciliation_ref:'TRANSPORT:RECONCILIATION',
+      qualified_evidence_provenance_ref:'GIT:IDENTITY',
+      chronology_verified:true,
+      scope_added_paths:['src/new-verifier.js'],
+      scope_amendments:[], // Missing competent immutable amendment => BLOCK.
+      effective_write_scope:[...initializationRequest().write_scope,'src/new-verifier.js'].sort()});
+    const result=createTaskCyclePostPhase1LifecycleCapability({
+      root:f.closeRoot,resolveCompetentProductEvidence:invented
+    }).closeFromResolvedLifecycle({request:f.request,observed:f.observed});
+    assert.equal(result.status,'BLOCKED');
+    assert.equal(result.reason,'COMPETENT_PRODUCT_CONTROL_RESOLUTION_INVALID');
+    assert.equal(result.effect_state,'NONE');
+  } finally {f.cleanup();}
 });

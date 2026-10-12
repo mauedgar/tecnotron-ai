@@ -133,13 +133,17 @@ function verifySourceInitialization(request, source) {
   } catch { return 'ORIGINAL_INITIALIZATION_ACQUISITION_FAILED'; }
   return null;
 }
-function qualifiedMergeObservation(request, source, surface) {
+function qualifiedMergeObservation(request, source, surface, resolved) {
   if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return null;
   // surface is supplied by Product Control at capability construction, never
   // sourced from request/observed.trusted_git. It has no Product authority.
   if (!surface || !surface.repositoryPath
       || surface.binding !== 'CONTROL_QUALIFIED_GIT'
-      || surface.remoteUrl !== 'https://github.com/mauedgar/tecnotron-ai.git') {
+      || surface.remoteUrl !== 'https://github.com/mauedgar/tecnotron-ai.git'
+      || !isSha256(surface.qualification_identity_sha256)
+      || surface.qualification_identity_sha256 !== resolved?.git_surface_identity_sha256
+      || !nonEmpty(surface.qualification_receipt_ref)
+      || surface.qualification_receipt_ref !== resolved?.git_surface_receipt_ref) {
     return 'QUALIFIED_GIT_SURFACE_REQUIRED';
   }
   const p=source.projection, original=p.exact_inputs;
@@ -156,39 +160,63 @@ function qualifiedMergeObservation(request, source, surface) {
     scope:{
       write_scope:original.write_scope,
       task_path:original.TASK_carrier.path,
-      baseline_path_scope:[...original.write_scope,original.TASK_carrier.path],
+      authorized_added_paths:resolved?.scope_added_paths || [],
+      baseline_path_scope:[...original.write_scope,...(resolved?.scope_added_paths || []),original.TASK_carrier.path],
     },
+    historicalContinuity:resolved?.historical_continuity || null,
   });
   if (valid.status!=='PASS') return 'MERGE_GIT_EVIDENCE_UNVERIFIED:'+valid.reason;
   return null;
 }
 function qualifiedControlEvidence(request, source, resolution) {
-  if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return null;
-  if (typeof resolution !== 'function') return 'COMPETENT_PRODUCT_CONTROL_RESOLUTION_REQUIRED';
-  // The authority check is not a local string comparison or a new role:
-  // Control resolves the original Library IR, Developer chat decision, and
-  // native runner receipts independently before providing this capability.
+  if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return {error:null,proof:null};
+  if (typeof resolution !== 'function')
+    return {error:'COMPETENT_PRODUCT_CONTROL_RESOLUTION_REQUIRED',proof:null};
   let p;
   try {p=resolution({request,source});} catch {
-    return 'ORIGINAL_PRODUCT_AUTHORITY_SOURCE_UNAVAILABLE';
+    return {error:'ORIGINAL_PRODUCT_AUTHORITY_SOURCE_UNAVAILABLE',proof:null};
   }
-  if (!p || p.status!=='COMPETENTLY_RESOLVED'
+  const c=request.candidate, p2=request.Phase_2, original=source.projection.exact_inputs;
+  const added=p?.scope_added_paths, amendments=p?.scope_amendments;
+  const scopeOk=Array.isArray(added) && repositoryRelativePaths(added)
+    && Array.isArray(amendments)
+    && amendments.every(a=>a && nonEmpty(a.ref) && isSha(a.blob)
+      && nonEmpty(a.Developer_authority_ref) && Array.isArray(a.added_paths)
+      && repositoryRelativePaths(a.added_paths))
+    && (added.length===0 || amendments.length>0)
+    && exact([...new Set(amendments.flatMap(a=>a.added_paths))].sort(),[...added].sort())
+    && exact(p?.effective_write_scope,[...new Set([...(original?.write_scope||[]),...added])].sort());
+  if (!p || p.status!=='COMPETENTLY_RESOLVED' || !scopeOk
       || p.taskcycle_id!==request.taskcycle.id
-      || p.exact_candidate_commit!==request.candidate.commit
-      || p.exact_candidate_tree!==request.candidate.tree
-      || p.canonical_integration_commit!==request.Phase_2.post_tools
-      || p.canonical_integration_tree!==request.Phase_2.post_tree
+      || p.original_taskcycle_id!==request.taskcycle.id
+      || p.original_initialization_sha256!==request.source_initialization?.identity_sha256
+      || p.original_phase1_sha256!==request.source_reconciliation.identity_sha256
+      || p.exact_candidate_commit!==c.commit || p.exact_candidate_tree!==c.tree
+      || p.canonical_integration_commit!==p2.post_tools
+      || p.canonical_integration_tree!==p2.post_tree
       || p.reviewer_verdict!=='PASS' || p.blocking_findings!==0
+      || p.original_review_id!==request.independent_review.id
+      || p.original_review_sha256!==request.independent_review.result_sha256
       || p.Developer_acceptance!=='GRANTED'
+      || p.Developer_authority_source!==request.Developer_acceptance.authority_ref
       || p.effect_state!=='KNOWN'
-      || p.natively_tested_tree!==request.Phase_2.post_tree
-      || !isSha256(p.original_review_sha256)
-      || !isSha256(p.original_validation_sha256)
-      || !nonEmpty(p.Developer_authority_source)
-      || !nonEmpty(p.Control_reconciliation_ref)) {
-    return 'COMPETENT_PRODUCT_CONTROL_RESOLUTION_INVALID';
+      || p.natively_tested_tree!==p2.post_tree
+      || p.candidate_tested_commit!==c.commit || p.candidate_tested_tree!==c.tree
+      || !isSha256(p.candidate_validation_sha256)
+      || p.candidate_validation_sha256 !== request.promotion_grade_validation.receipt_sha256
+      || !isSha256(p.combined_validation_sha256)
+      || p.combined_validation_sha256 !== request.Phase_2.merge.preflight_sha256
+      || !isSha256(p.git_surface_identity_sha256)
+      || !nonEmpty(p.git_surface_receipt_ref)
+      || !nonEmpty(p.original_review_ref)
+      || !nonEmpty(p.candidate_validation_ref)
+      || !nonEmpty(p.combined_validation_ref)
+      || !nonEmpty(p.Control_reconciliation_ref)
+      || !nonEmpty(p.qualified_evidence_provenance_ref)
+      || p.chronology_verified!==true) {
+    return {error:'COMPETENT_PRODUCT_CONTROL_RESOLUTION_INVALID',proof:null};
   }
-  return null;
+  return {error:null,proof:p};
 }
 function unique(left, right) {
   return [...new Set([...(left || []), ...(right || [])])];
@@ -280,7 +308,7 @@ function validateRequest(r) {
   return null;
 }
 
-function validateSource(request, source) {
+function validateSource(request, source, resolved = null) {
   const p = source.projection;
   if (!exact(p.TaskCycle, {
     id: request.taskcycle.id,
@@ -309,10 +337,13 @@ function validateSource(request, source) {
         || !nonEmpty(original.TASK_carrier.path) || !isSha(original.TASK_carrier.commit)) {
       return 'SOURCE_EXACT_INPUTS_MISSING';
     }
-    const allowed = [...original.write_scope, original.TASK_carrier.path].sort();
+    const effective = resolved?.effective_write_scope;
+    if (!Array.isArray(effective) || !repositoryRelativePaths(effective))
+      return 'QUALIFIED_EFFECTIVE_SCOPE_REQUIRED';
+    const allowed = [...effective, original.TASK_carrier.path].sort();
     if (c.provenance.task_carrier_commit !== original.TASK_carrier.commit
         || c.provenance.task_carrier_path !== original.TASK_carrier.path
-        || !exact([...c.changed_paths].sort(), [...original.write_scope].sort())
+        || !exact([...c.changed_paths].sort(), effective)
         || !exact([...m.changed_paths].sort(), allowed)
         || m.candidate_lineage[0] !== p.reconciled_effect.subject.commit
         || c.parent !== m.candidate_lineage[m.candidate_lineage.length - 2]) {
@@ -454,14 +485,12 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
       } catch (error) {
         return terminal(request, 'BLOCKED', 'NONE', `SOURCE_RECONCILIATION_CONSUME_FAILED:${error?.message || String(error)}`);
       }
-      const sourceInvalid = validateSource(request, source);
+      const resolution = qualifiedControlEvidence(request, source, resolveCompetentProductEvidence);
+      if (resolution.error) return terminal(request, 'BLOCKED', 'NONE', resolution.error);
+      const sourceInvalid = validateSource(request, source, resolution.proof);
       if (sourceInvalid) return terminal(request, 'BLOCKED', 'NONE', sourceInvalid);
       const initInvalid = verifySourceInitialization(request, source);
       if (initInvalid) return terminal(request, 'BLOCKED', 'NONE', initInvalid);
-      const gitInvalid = qualifiedMergeObservation(request, source, qualifiedGitSurface);
-      if (gitInvalid) return terminal(request, 'BLOCKED', 'NONE', gitInvalid);
-      const evidenceInvalid = qualifiedControlEvidence(request, source, resolveCompetentProductEvidence);
-      if (evidenceInvalid) return terminal(request, 'BLOCKED', 'NONE', evidenceInvalid);
 
       let baseStat;
       try { baseStat = fs.lstatSync(base); } catch {
@@ -474,8 +503,8 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
       const pkg = packageFor(request, source);
       const finalRoot = path.join(base, safeId(request.taskcycle.id), 'closed-pass');
       const parentRoot = path.dirname(finalRoot);
-      fs.mkdirSync(parentRoot, { recursive: true });
-
+      // Exact terminal readback precedes live Git HEAD check. A genuine historical
+      // close stays idempotent even after tools later advances.
       if (fs.existsSync(finalRoot)) {
         const state = inspect(finalRoot, pkg);
         if (state === 'EXACT') return pass(request, finalRoot, pkg, true, 'ALREADY_CLOSED_EXACT');
@@ -483,6 +512,9 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
           ? 'POST_PHASE1_LIFECYCLE_IDENTITY_CONFLICT'
           : 'POST_PHASE1_LIFECYCLE_PROJECTION_AMBIGUOUS');
       }
+      const gitInvalid = qualifiedMergeObservation(request, source, qualifiedGitSurface, resolution.proof);
+      if (gitInvalid) return terminal(request, 'BLOCKED', 'NONE', gitInvalid);
+      fs.mkdirSync(parentRoot, { recursive: true });
 
       let staging = null;
       try {

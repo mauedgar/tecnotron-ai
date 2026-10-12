@@ -47,7 +47,7 @@ function parseRemote(raw, ref) {
   return parts[0];
 }
 function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl,
-  originalTaskCycleId, expectedRemoteCommit}, {git=createGitCliAdapter()}={}) {
+  originalTaskCycleId, expectedRemoteCommit, historicalContinuity=null}, {git=createGitCliAdapter()}={}) {
   const p2=request?.Phase_2, m=p2?.merge, c=request?.candidate;
   if(!p2 || p2.integration_mode!=='MERGE_COMMIT' || !m || !c
       || !Array.isArray(m.parents) || m.parents.length!==2
@@ -66,7 +66,9 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
       || !sha(expectedRemoteCommit) || expectedRemoteCommit!==m.commit) {
     return {status:'BLOCKED',reason:'PRODUCT_REMOTE_BINDING_UNQUALIFIED'};
   }
-  if(!Array.isArray(scope.baseline_path_scope) || !same(sorted(scope.baseline_path_scope),sorted([...scope.write_scope,scope.task_path]))) {
+  if(!Array.isArray(scope.baseline_path_scope) || !Array.isArray(scope.authorized_added_paths)
+      || !scope.authorized_added_paths.every(x=>typeof x==='string')
+      || !same(sorted(scope.baseline_path_scope),sorted([...scope.write_scope,...scope.authorized_added_paths,scope.task_path]))) {
     return {status:'BLOCKED',reason:'BASELINE_SCOPE_UNQUALIFIED'};
   }
   try {
@@ -98,24 +100,38 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
       if(!same(observed.parents,[lineage[i-1]]))
         return {status:'BLOCKED',reason:'REPAIR_LINEAGE_EDGE_INVALID'};
       const diff=paths(git,root,lineage[i-1],lineage[i]);
-      if(diff.some(x=>!scope.write_scope.includes(x)))
+      if(diff.some(x=>![...scope.write_scope,...scope.authorized_added_paths].includes(x)))
         return {status:'BLOCKED',reason:'REPAIR_LINEAGE_SCOPE_VIOLATION'};
     }
     const integrated=paths(git,root,p2.pre_tools,m.commit);
-    const authorized=sorted([...scope.write_scope,scope.task_path]);
-    if(!same(integrated,authorized)||!same(sorted(m.changed_paths),authorized))
+    const authorized=sorted([...scope.write_scope,...scope.authorized_added_paths,scope.task_path]);
+    if(!same(integrated,sorted(m.changed_paths)) || integrated.some(x=>!authorized.includes(x)))
       return {status:'BLOCKED',reason:'REAL_MERGE_DIFF_SCOPE_MISMATCH'};
-    const recomputed=execute(git,root,['merge-tree','--write-tree',p2.pre_tools,c.commit])
-      .split(/\r?\n/)[0];
-    if(recomputed!==m.tree || recomputed!==m.validated_combined_tree)
-      return {status:'BLOCKED',reason:'RECOMPUTED_MERGE_TREE_MISMATCH'};
+    // Git merge-tree --write-tree writes objects; closure verifies immutable commit
+    // objects, while Control authenticates the original native combined-tree receipt.
+    if(m.validated_combined_tree!==m.tree)
+      return {status:'BLOCKED',reason:'PRETESTED_MERGE_TREE_NOT_BOUND'};
     const remote=parseRemote(execute(git,root,['ls-remote','--heads',remoteUrl,'refs/heads/tools']),'refs/heads/tools');
-    if(remote!==m.commit)return {status:'BLOCKED',reason:'REMOTE_EXACT_HEAD_DRIFT'};
+    let remote_relation='EXACT_CURRENT';
+    if(remote!==m.commit){
+      if(!historicalContinuity || historicalContinuity.status!=='CONTROL_VERIFIED_HISTORICAL_INTEGRATION'
+          || historicalContinuity.original_merge_commit!==m.commit
+          || historicalContinuity.original_merge_tree!==m.tree
+          || historicalContinuity.original_remote_exact!==true
+          || typeof historicalContinuity.original_immutable_receipt_ref!=='string'
+          || historicalContinuity.original_immutable_receipt_ref.length===0)
+        return {status:'BLOCKED',reason:'REMOTE_EXACT_HEAD_DRIFT'};
+      const ancestor=git.run(root,['--no-replace-objects','merge-base','--is-ancestor',m.commit,remote],{timeoutMs:30000});
+      if(ancestor.exit_code!==0 || ancestor.error_code || ancestor.timed_out || ancestor.signal)
+        return {status:'BLOCKED',reason:'REMOTE_HISTORICAL_ANCESTRY_UNVERIFIED'};
+      remote_relation='HISTORICAL_VERIFIED_DESCENDANT_NOT_EXACT';
+    }
     return {status:'PASS',effect_state:'NONE',verified:{
       merge_commit:m.commit,merge_tree:m.tree,accepted_candidate:c.commit,
-      pre_tools:p2.pre_tools,remote_oid:remote,actual_changed_paths:integrated,
-      exact_candidate_lineage:[...lineage],recomputed_combined_tree:recomputed,
-      check_method:'GIT_CLI_BOUNDED_READ_ONLY',Product_authority:'NONE',
+      pre_tools:p2.pre_tools,remote_oid:remote,remote_relation,
+      actual_changed_paths:integrated,exact_candidate_lineage:[...lineage],
+      combined_tree_claim:m.validated_combined_tree,
+      check_method:'GIT_CLI_BOUNDED_READ_ONLY_NO_OBJECT_WRITES',Product_authority:'NONE',
     }};
   }catch(e){return {status:'BLOCKED',reason:'VERIFIABLE_GIT_SOURCE_UNAVAILABLE',detail:String(e?.message||e).slice(0,180)};}
 }
