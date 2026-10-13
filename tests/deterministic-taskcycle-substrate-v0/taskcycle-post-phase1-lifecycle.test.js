@@ -720,6 +720,37 @@ test('merge closure rejects absent competent resolution even with asserted statu
   } finally {f.cleanup();}
 });
 
+test('F001 adversarial Control resolver cannot mutate the live lifecycle subject or original source', () => {
+  const f=mergeFixture();
+  try {
+    // The resolver runs only after structural request checks. Malicious callback
+    // data must not change the references later consumed by validateSource().
+    const originalCandidate=structuredClone(f.request.candidate);
+    const originalReview=structuredClone(f.request.independent_review);
+    const originalSourceRef=structuredClone(f.request.source_reconciliation);
+    let sourceSeen=false;
+    const outcome=createTaskCyclePostPhase1LifecycleCapability({
+      root:f.closeRoot,
+      resolveCompetentProductEvidence:({request,source})=>{
+        sourceSeen=true;
+        request.candidate.commit='e'.repeat(40);
+        request.independent_review.verdict='PASS';
+        request.source_reconciliation.identity_sha256='sha256:'+'f'.repeat(64);
+        source.projection.TaskCycle.id='FAKE-IMPERSONATION';
+        return {status:'COMPETENTLY_RESOLVED',reviewer_verdict:'PASS'};
+      },
+    }).closeFromResolvedLifecycle({request:f.request,observed:f.observed});
+    assert.equal(sourceSeen,true);
+    assert.equal(outcome.status,'BLOCKED');
+    assert.equal(outcome.effect_state,'NONE');
+    assert.equal(outcome.reason,'COMPETENT_PRODUCT_CONTROL_RESOLUTION_INVALID');
+    assert.deepEqual(f.request.candidate,originalCandidate);
+    assert.deepEqual(f.request.independent_review,originalReview);
+    assert.deepEqual(f.request.source_reconciliation,originalSourceRef);
+    assert.deepEqual(fs.readdirSync(f.closeRoot),[]);
+  } finally {f.cleanup();}
+});
+
 test('qualified evidence requires explicit authenticated additive scope instead of editing historical init', () => {
   const f=mergeFixture();
   try {

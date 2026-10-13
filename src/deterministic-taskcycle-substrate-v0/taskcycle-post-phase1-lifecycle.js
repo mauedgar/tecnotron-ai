@@ -174,7 +174,11 @@ function qualifiedControlEvidence(request, source, resolution) {
   if (typeof resolution !== 'function')
     return {error:'COMPETENT_PRODUCT_CONTROL_RESOLUTION_REQUIRED',proof:null};
   let p;
-  try {p=resolution({request,source});} catch {
+  // Pass snapshots to externally supplied Control resolver. A callback is not
+  // an authority oracle and must not mutate the original lifecycle request or
+  // source projection that this consumer subsequently validates and publishes.
+  // Control remains responsible for authenticating the resolver's provenance.
+  try {p=resolution({request:structuredClone(request),source:structuredClone(source)});} catch {
     return {error:'ORIGINAL_PRODUCT_AUTHORITY_SOURCE_UNAVAILABLE',proof:null};
   }
   const c=request.candidate, p2=request.Phase_2, original=source.projection.exact_inputs;
