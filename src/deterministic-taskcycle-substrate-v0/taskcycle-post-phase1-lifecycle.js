@@ -134,7 +134,7 @@ function verifySourceInitialization(request, source) {
   return null;
 }
 function qualifiedMergeObservation(request, source, surface, resolved) {
-  if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return null;
+  if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return {error:null,verified:null};
   // surface is supplied by Product Control at capability construction, never
   // sourced from request/observed.trusted_git. It has no Product authority.
   if (!surface || !surface.repositoryPath
@@ -144,11 +144,11 @@ function qualifiedMergeObservation(request, source, surface, resolved) {
       || surface.qualification_identity_sha256 !== resolved?.git_surface_identity_sha256
       || !nonEmpty(surface.qualification_receipt_ref)
       || surface.qualification_receipt_ref !== resolved?.git_surface_receipt_ref) {
-    return 'QUALIFIED_GIT_SURFACE_REQUIRED';
+    return {error:'QUALIFIED_GIT_SURFACE_REQUIRED'};
   }
   const p=source.projection, original=p.exact_inputs;
   if (!original || !Array.isArray(original.write_scope) || !original.TASK_carrier
-      || !p.reconciled_effect?.subject) return 'ORIGINAL_SOURCE_INCOMPLETE';
+      || !p.reconciled_effect?.subject) return {error:'ORIGINAL_SOURCE_INCOMPLETE'};
   const m=request.Phase_2.merge;
   const valid=qualifyMergeTopology({
     repositoryPath:surface.repositoryPath,
@@ -166,8 +166,8 @@ function qualifiedMergeObservation(request, source, surface, resolved) {
     historicalContinuity:resolved?.historical_continuity || null,
     authorizedScopeAmendments:resolved?.scope_amendments || [],
   });
-  if (valid.status!=='PASS') return 'MERGE_GIT_EVIDENCE_UNVERIFIED:'+valid.reason;
-  return null;
+  if (valid.status!=='PASS') return {error:'MERGE_GIT_EVIDENCE_UNVERIFIED:'+valid.reason};
+  return {error:null,verified:valid.verified};
 }
 function qualifiedControlEvidence(request, source, resolution) {
   if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return {error:null,proof:null};
@@ -547,8 +547,9 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
           ? 'POST_PHASE1_LIFECYCLE_IDENTITY_CONFLICT'
           : 'POST_PHASE1_LIFECYCLE_PROJECTION_AMBIGUOUS');
       }
-      const gitInvalid = qualifiedMergeObservation(request, source, qualifiedGitSurface, resolution.proof);
-      if (gitInvalid) return terminal(request, 'BLOCKED', 'NONE', gitInvalid);
+      const gitObservation = qualifiedMergeObservation(request, source, qualifiedGitSurface, resolution.proof);
+      if (gitObservation.error)
+        return terminal(request, 'BLOCKED', 'NONE', gitObservation.error);
       try {
         if (!entryPresent(parentRoot)) fs.mkdirSync(parentRoot);
       } catch (error) {
@@ -573,6 +574,17 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
         }
         if (entryPresent(finalRoot)) {
           return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_PUBLISH_RACE');
+        }
+        // The independent Git remote can advance between qualification and
+        // local publication. Recheck the actual Git evidence at the last
+        // possible moment, and reject a different remote head even if it is
+        // still a descendant. This does not claim an atomic cross-provider lock.
+        if (request.Phase_2.integration_mode==='MERGE_COMMIT') {
+          const publicationGit = qualifiedMergeObservation(request, source, qualifiedGitSurface, resolution.proof);
+          if (publicationGit.error)
+            return terminal(request, 'BLOCKED', 'NONE', 'PREPUBLICATION_GIT_RECHECK:'+publicationGit.error);
+          if (publicationGit.verified?.remote_oid !== gitObservation.verified?.remote_oid)
+            return terminal(request, 'BLOCKED', 'NONE', 'REMOTE_HEAD_CHANGED_DURING_LOCAL_CLOSE');
         }
         fs.renameSync(staging, finalRoot);
         staging = null;

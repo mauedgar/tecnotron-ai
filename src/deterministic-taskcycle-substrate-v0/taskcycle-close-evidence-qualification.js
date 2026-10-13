@@ -151,13 +151,26 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
     if(m.validated_combined_tree!==m.tree)
       return {status:'BLOCKED',reason:'PRETESTED_MERGE_TREE_NOT_BOUND'};
     const remote=parseRemote(execute(git,root,['ls-remote','--heads',remoteUrl,'refs/heads/tools']),'refs/heads/tools');
-    // F006: a caller-supplied historical receipt string cannot authenticate
-    // the remote OID at a past instant. Fail closed on all drift until a
-    // separately qualified Product Control historical-source binding exists.
-    // Do not silently treat descendant ancestry as remote correspondence.
-    if(remote!==m.commit)
-      return {status:'BLOCKED',reason:'REMOTE_EXACT_HEAD_DRIFT'};
-    const remote_relation='EXACT_CURRENT';
+    // F006: verify historical continuation using the observed remote's
+    // actual immutable commit DAG. Caller-supplied historicalContinuity
+    // is NEVER authority or proof. No lazy fetch or object writes.
+    let remote_relation='EXACT_CURRENT';
+    if(remote!==m.commit){
+      const ancestry=git.run(root,[...READ_ONLY_GIT_PREFIX,
+        'merge-base','--is-ancestor',m.commit,remote],{timeoutMs:30000});
+      if(ancestry.exit_code!==0 || ancestry.error_code || ancestry.timed_out
+          || ancestry.signal || ancestry.stdout || ancestry.stderr) {
+        return {status:'BLOCKED',reason:ancestry.exit_code===1
+          && !ancestry.error_code && !ancestry.timed_out && !ancestry.signal
+          && !ancestry.stdout && !ancestry.stderr
+          ?'REMOTE_HEAD_OUTSIDE_MERGE_LINEAGE':'REMOTE_DESCENDANT_PROOF_UNAVAILABLE'};
+      }
+      // Fail closed if the head is not an already available local Git commit.
+      // An execution surface must acquire its immutable objects separately;
+      // this verifier must not download or mutate objects during close.
+      commit(git,root,remote);
+      remote_relation='VERIFIED_REMOTE_DESCENDANT';
+    }
     return {status:'PASS',effect_state:'NONE',verified:{
       merge_commit:m.commit,merge_tree:m.tree,accepted_candidate:c.commit,
       pre_tools:p2.pre_tools,remote_oid:remote,remote_relation,

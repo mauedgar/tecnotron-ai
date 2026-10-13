@@ -876,59 +876,71 @@ test('merge Control binding requires exact frozen review and logical-close autho
   } finally { f.cleanup(); }
 });
 
-test('F006 remote historical self-claim cannot qualify drift; exact current OID can', () => {
+test('F006 real remote ancestry qualifies legitimate descendants, never caller claims', () => {
   const root=path.resolve(process.cwd());
   const input=params(root);
-  const preCommit=pre, accepted=candidate, mergeCommit=merge;
+  const mergeCommit=merge, descendants='f'.repeat(40), unrelated='e'.repeat(40);
   const gitTreeByOid={
-    [mergeCommit]:{tree,parents:[preCommit,accepted]},
-    [accepted]:{tree:input.request.candidate.tree,parents:[phase1.commit]},
+    [mergeCommit]:{tree,parents:[pre,candidate]},
+    [candidate]:{tree:input.request.candidate.tree,parents:[phase1.commit]},
     [phase1.commit]:{tree:phase1.tree,parents:[phase1.task_carrier]},
+    [descendants]:{tree:'9'.repeat(40),parents:[mergeCommit]},
+    [unrelated]:{tree:'8'.repeat(40),parents:['7'.repeat(40)]},
   };
-  let remoteOid=mergeCommit;
+  let remoteOid=mergeCommit, ancestryUnavailable=false;
   const calls=[];
   const git={run(cwd,argv){
     assert.equal(cwd,root);
     assert.ok(argv.includes('--no-replace-objects'));
-    const command=argv.slice(argv.indexOf('--no-replace-objects')+1);
-    const [action,...rest]=command;
+    const [action,...rest]=argv.slice(argv.indexOf('--no-replace-objects')+1);
     calls.push(action);
-    let status=0,stdout='';
-    if(action==='rev-parse') {
+    let exit_code=0,stdout='',stderr='';
+    if(action==='rev-parse'){
       stdout=rest[0]==='--show-toplevel' ? root : rest[0].replace('^{commit}','');
     } else if(action==='config'){
-      if(rest[0]==='--local') stdout='https://github.com/mauedgar/tecnotron-ai.git';
-      else status=1;
+      if(rest[0]==='--local')stdout='https://github.com/mauedgar/tecnotron-ai.git';
+      else exit_code=1;
     } else if(action==='cat-file'){
       const object=gitTreeByOid[rest[1]];
       assert.ok(object,'Unknown expected object: '+rest[1]);
       stdout='tree '+object.tree+'\n'+object.parents.map(x=>'parent '+x+'\n').join('')+'\ncommit body';
     } else if(action==='diff'){
-      const from=rest[3], to=rest[4];
-      if(from===phase1.commit && to===accepted) stdout='';
-      else if(from===preCommit && to===mergeCommit) stdout=[...writeScope,taskPath].sort().join('\0')+'\0';
+      const from=rest[3],to=rest[4];
+      if(from===phase1.commit&&to===candidate)stdout='';
+      else if(from===pre&&to===mergeCommit)stdout=[...writeScope,taskPath].sort().join('\0')+'\0';
       else throw Error('Unqualified Git diff range '+from+'..'+to);
     } else if(action==='ls-remote'){
       stdout=remoteOid+'\trefs/heads/tools\n';
+    } else if(action==='merge-base'){
+      assert.deepEqual(rest,['--is-ancestor',mergeCommit,remoteOid]);
+      if(ancestryUnavailable){exit_code=128;stderr='missing local object';}
+      else exit_code=remoteOid===descendants?0:1;
     } else throw Error('Unqualified Git command '+action);
-    return {exit_code:status,stdout,stderr:'',error_code:null,timed_out:false,signal:null};
+    return {exit_code,stdout,stderr,error_code:null,timed_out:false,signal:null};
   }};
   const historicalContinuity={
     status:'CONTROL_VERIFIED_HISTORICAL_INTEGRATION',
     original_merge_commit:mergeCommit,
-    original_merge_tree:tree,
     original_remote_exact:true,
     original_immutable_receipt_ref:'UNVERIFIED:SELF_CLAIM',
   };
   const exact=qualifyMergeTopology({...input,historicalContinuity},{git});
   assert.equal(exact.status,'PASS',JSON.stringify(exact));
   assert.equal(exact.verified.remote_relation,'EXACT_CURRENT');
-  remoteOid='f'.repeat(40);
-  const drift=qualifyMergeTopology({...input,historicalContinuity},{git});
-  assert.equal(drift.status,'BLOCKED');
-  assert.equal(drift.effect_state,undefined);
-  assert.equal(drift.reason,'REMOTE_EXACT_HEAD_DRIFT');
-  assert.ok(!calls.includes('merge-base'), 'caller-supplied ancestry must not authorize historical remote');
+  remoteOid=descendants;
+  const legitimate=qualifyMergeTopology({...input,historicalContinuity},{git});
+  assert.equal(legitimate.status,'PASS',JSON.stringify(legitimate));
+  assert.equal(legitimate.verified.remote_oid,descendants);
+  assert.equal(legitimate.verified.remote_relation,'VERIFIED_REMOTE_DESCENDANT');
+  assert.ok(calls.includes('merge-base'),'real DAG, not caller-supplied ancestry');
+  remoteOid=unrelated;
+  const spoof=qualifyMergeTopology({...input,historicalContinuity},{git});
+  assert.equal(spoof.status,'BLOCKED');
+  assert.equal(spoof.reason,'REMOTE_HEAD_OUTSIDE_MERGE_LINEAGE');
+  remoteOid=descendants;ancestryUnavailable=true;
+  const missing=qualifyMergeTopology({...input,historicalContinuity},{git});
+  assert.equal(missing.status,'BLOCKED');
+  assert.equal(missing.reason,'REMOTE_DESCENDANT_PROOF_UNAVAILABLE');
 });
 
 
