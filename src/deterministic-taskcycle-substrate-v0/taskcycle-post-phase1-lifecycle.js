@@ -7,7 +7,7 @@ const {
   consumeTaskCycleEffectReconciliation,
 } = require('./taskcycle-effect-reconciliation');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
-const { qualifyMergeTopology, qualifyGithubControlInvocation } = require('./taskcycle-close-evidence-qualification');
+const { qualifyMergeTopology } = require('./taskcycle-close-evidence-qualification');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-post-phase1-close/v0';
 const MANIFEST_SCHEMA = 'deterministic-taskcycle-post-phase1-close-manifest/v0';
@@ -524,15 +524,6 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
       if (sourceInvalid) return terminal(request, 'BLOCKED', 'NONE', sourceInvalid);
       const initInvalid = verifySourceInitialization(request, source);
       if (initInvalid) return terminal(request, 'BLOCKED', 'NONE', initInvalid);
-      // F001: the *invoking identity* is independently confirmed through the
-      // existing GitHub provider. An issue comment is not Product authority:
-      // original Developer grants/review/Control remain separately qualified.
-      // Do this before either first close OR the idempotent terminal path.
-      if (request.Phase_2.integration_mode === 'MERGE_COMMIT') {
-        const issuer = qualifyGithubControlInvocation(request, resolution.proof);
-        if (issuer.status !== 'PASS')
-          return terminal(request, 'BLOCKED', 'NONE', issuer.reason);
-      }
 
       let baseStat;
       try { baseStat = fs.lstatSync(base); } catch {
