@@ -889,7 +889,9 @@ test('merge Control binding requires exact frozen review and logical-close autho
     }).closeFromResolvedLifecycle({request:q,observed:f.observed});
     // Passing this callback is not proof of competence: even a syntactically
     // complete self-claim stops before Git without separately qualified surface.
-    assert.equal(run(resolution).reason,'QUALIFIED_GIT_SURFACE_REQUIRED');
+    // The independently authenticated Control invoker must be proven BEFORE
+    // the Git checkout surface. A complete synthetic callback cannot get there.
+    assert.equal(run(resolution).reason,'CONTROL_GITHUB_AUTHORITATIVE_INVOCATION_REQUIRED');
     const cases = [
       ['logical close source substituted', {logical_close_authority_ref:'FAKE'}],
       ['logical close digest absent', {logical_close_authorization_receipt_sha256:null}],
