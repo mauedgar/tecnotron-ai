@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { qualifyGithubControlInvocation } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-close-evidence-qualification');
 const {
   createTaskCycleInitializationCapability,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-initialization');
@@ -975,7 +976,7 @@ test('F006 real remote ancestry qualifies legitimate descendants, never caller c
 });
 
 
-test('real PR42 MERGE_COMMIT close consumer positive dry-run with recovered original portable source', {
+test('real PR42 MERGE_COMMIT original sources and Git cannot publish on synthetic Control callback', {
   ...(process.env.TS_PRODUCT_GIT_PROOF==='1' ? {} : {skip:'requires exact Product Git checkout and official remote HEAD'})
 }, () => {
   // This is a locally ephemeral mechanical integration test, NEVER a Product
@@ -1127,19 +1128,10 @@ test('real PR42 MERGE_COMMIT close consumer positive dry-run with recovered orig
       resolveCompetentProductEvidence:()=>proof,
     });
     const result=capability.closeFromResolvedLifecycle({request:f.request,observed:f.observed});
-    assert.equal(result.status,'PASS',JSON.stringify(result));
-    assert.equal(result.effect_state,'CONFIRMED');
-    assert.equal(result.already_closed,false);
-    const consumed=consumeTaskCyclePostPhase1Lifecycle({
-      location:result.portable_projection.location_or_ref,
-      expected_identity_sha256:result.portable_projection.identity_sha256,
-    });
-    assert.equal(consumed.projection.TaskCycle.state,'CLOSED');
-    assert.equal(consumed.projection.terminal_disposition_ref,'CLOSED_PASS');
-    assert.equal(consumed.projection.pending_obligations.length,0);
-    assert.equal(capability.closeFromResolvedLifecycle({
-      request:f.request,observed:f.observed,
-    }).already_closed,true);
+    assert.equal(result.status,'BLOCKED',JSON.stringify(result));
+    assert.equal(result.effect_state,'NONE');
+    assert.equal(result.reason,'CONTROL_GITHUB_AUTHORITATIVE_INVOCATION_REQUIRED');
+    assert.ok(!fs.existsSync(path.join(f.closeRoot,source.TaskCycle.id,'closed-pass')));
   } finally { f.cleanup(); }
 });
 
@@ -1164,4 +1156,41 @@ test('F003 additive scope needs immutable amendment attached to exact candidate 
   }]});
   assert.equal(unverifiedGit.status,'BLOCKED');
   assert.equal(unverifiedGit.reason,'VERIFIABLE_GIT_SOURCE_UNAVAILABLE');
+});
+
+test('F001 real issuer binding rejects full synthetic Control authorizations and unqualified actors',()=>{
+  const hash = text => 'sha256:'+require('node:crypto').createHash('sha256').update(text).digest('hex');
+  const request = {taskcycle:{id:'TASKCYCLE-X'},source_initialization:{identity_sha256:'sha256:'+'a'.repeat(64)},
+    source_reconciliation:{identity_sha256:'sha256:'+'b'.repeat(64)},
+    candidate:{commit:'c'.repeat(40),tree:'d'.repeat(40)},
+    independent_review:{id:'IR-X',result_sha256:'sha256:'+'e'.repeat(64)},
+    Developer_acceptance:{authority_ref:'DEV-X'},
+    logical_close:{authority_ref:'CONTROL-X'},
+    Phase_2:{post_tools:'f'.repeat(40),post_tree:'0'.repeat(40)}};
+  const authorized={schema:'TECNOTRON_CONTROL_INVOKE_LOGICAL_CLOSE/v1',
+    intent:'AUTHORIZE_LOGICAL_CLOSE',Product_repository:'mauedgar/tecnotron-ai',PR:43,
+    TaskCycle:request.taskcycle.id,original_initialization_sha256:request.source_initialization.identity_sha256,
+    original_phase1_sha256:request.source_reconciliation.identity_sha256,
+    exact_candidate_commit:request.candidate.commit,exact_candidate_tree:request.candidate.tree,
+    canonical_integration_commit:request.Phase_2.post_tools,canonical_integration_tree:request.Phase_2.post_tree,
+    original_review_id:request.independent_review.id,original_review_sha256:request.independent_review.result_sha256,
+    Developer_acceptance_ref:'DEV-X',logical_close_authority_ref:'CONTROL-X',
+    effect_state:'KNOWN',Product_effect:'LOCAL_LOGICAL_CLOSE_ONLY'};
+  const body=JSON.stringify(authorized);
+  const proof={github_control_comment_id:6151249430,github_control_comment_sha256:hash(body)};
+  const remote={id:6151249430,user:{id:54420195,login:'mauedgar'},author_association:'OWNER',
+    issue_url:'https://api.github.com/repos/mauedgar/tecnotron-ai/issues/43',
+    url:'https://api.github.com/repos/mauedgar/tecnotron-ai/issues/comments/6151249430',
+    created_at:'2026-10-13T17:24:48Z',updated_at:'2026-10-13T17:24:48Z',body};
+  const check = remoteResult=>qualifyGithubControlInvocation(request,proof,{readComment:()=>remoteResult});
+  assert.equal(qualifyGithubControlInvocation(request,{}).reason,'CONTROL_GITHUB_AUTHORITATIVE_INVOCATION_REQUIRED');
+  assert.equal(check({...remote,user:{id:100,login:'attacker'}}).reason,'CONTROL_GITHUB_ISSUER_IDENTITY_OR_BYTES_INVALID');
+  assert.equal(check({...remote,author_association:'NONE'}).reason,'CONTROL_GITHUB_ISSUER_IDENTITY_OR_BYTES_INVALID');
+  assert.equal(check({...remote,updated_at:'2026-10-13T17:25:01Z'}).reason,'CONTROL_GITHUB_ISSUER_IDENTITY_OR_BYTES_INVALID');
+  assert.equal(check({...remote,body:JSON.stringify({...authorized,intent:'F001_IDENTITY_TEST_ONLY'})}).reason,'CONTROL_GITHUB_ISSUER_IDENTITY_OR_BYTES_INVALID');
+  assert.equal(check({...remote,body:'COMPETENTLY_RESOLVED'}).reason,'CONTROL_GITHUB_ISSUER_IDENTITY_OR_BYTES_INVALID');
+  assert.equal(check({...remote,issue_url:'https://api.github.com/repos/mauedgar/tecnotron-ai/issues/42'}).reason,'CONTROL_GITHUB_ISSUER_IDENTITY_OR_BYTES_INVALID');
+  assert.equal(check({...remote,body:JSON.stringify({...authorized,Developer_acceptance_ref:'FAKE'})}).reason,'CONTROL_GITHUB_ISSUER_IDENTITY_OR_BYTES_INVALID');
+  assert.equal(check(remote).status,'PASS','isolated qualified GitHub issuer fixture; not actual Product approval');
+  assert.equal(check(null).reason,'CONTROL_GITHUB_ISSUER_READBACK_UNAVAILABLE');
 });

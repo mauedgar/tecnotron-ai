@@ -7,7 +7,7 @@ const {
   consumeTaskCycleEffectReconciliation,
 } = require('./taskcycle-effect-reconciliation');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
-const { qualifyMergeTopology } = require('./taskcycle-close-evidence-qualification');
+const { qualifyMergeTopology, qualifyGithubControlInvocation } = require('./taskcycle-close-evidence-qualification');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-post-phase1-close/v0';
 const MANIFEST_SCHEMA = 'deterministic-taskcycle-post-phase1-close-manifest/v0';
@@ -554,6 +554,11 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
       const gitObservation = qualifiedMergeObservation(request, source, qualifiedGitSurface, resolution.proof);
       if (gitObservation.error)
         return terminal(request, 'BLOCKED', 'NONE', gitObservation.error);
+      // A callback cannot grant itself Product authority. For merge closes,
+      // bind this exact action to independent, live GitHub issuer readback.
+      const issuer = qualifyGithubControlInvocation(request, resolution.proof);
+      if (issuer.status !== 'PASS')
+        return terminal(request, 'BLOCKED', 'NONE', issuer.reason);
       try {
         if (!entryPresent(parentRoot)) fs.mkdirSync(parentRoot);
       } catch (error) {
