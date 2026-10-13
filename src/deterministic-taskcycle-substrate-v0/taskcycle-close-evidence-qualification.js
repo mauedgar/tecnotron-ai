@@ -185,7 +185,8 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
 // A self-declared resolver, hash, or Git commit cannot authenticate Control.
 // For MERGE_COMMIT an actual, unedited issue comment authored by the qualified
 // GitHub account must expressly authorize this *exact logical-close subject*.
-// GitHub proves the comment's account identity; competent Control separately
+// The comment attests an invocation, NEVER creates authorization. GitHub proves
+// its account identity; competent Control separately
 // owns verification of the Developer and review decisions named in the comment.
 // Readback uses the fixed GitHub HTTPS API, no user token, credential export,
 // redirects, configurable endpoint, or caller-supplied reader in production.
@@ -194,7 +195,7 @@ const { createHash } = require('node:crypto');
 const OWNER_USER_ID = 54420195;
 const OWNER_LOGIN = 'mauedgar';
 const COMMENTS_API = 'https://api.github.com/repos/mauedgar/tecnotron-ai/issues/comments/';
-const COMMENT_SCHEMA = 'TECNOTRON_CONTROL_INVOKE_LOGICAL_CLOSE/v1';
+const COMMENT_SCHEMA = 'TECNOTRON_CONTROL_INVOKE_PREAUTHORIZED_CLOSE/v1';
 const COMMENT_SCRIPT = String.raw`
 const https=require('node:https');
 const id=process.argv[1];
@@ -237,7 +238,9 @@ function qualifyGithubControlInvocation(request, proof, {readComment=readControl
   let decision;
   try {decision=JSON.parse(comment.body);}catch{return {status:'BLOCKED',reason:'CONTROL_GITHUB_EXPLICIT_DECISION_REQUIRED'};}
   const req=request, p2=req.Phase_2;
-  if(decision.schema!==COMMENT_SCHEMA || decision.intent!=='AUTHORIZE_LOGICAL_CLOSE'
+  if(!decision || typeof decision!=='object' || Array.isArray(decision))
+    return {status:'BLOCKED',reason:'CONTROL_GITHUB_EXPLICIT_DECISION_REQUIRED'};
+  if(decision.schema!==COMMENT_SCHEMA || decision.intent!=='INVOKE_ALREADY_AUTHORIZED_LOGICAL_CLOSE'
       || decision.Product_repository!=='mauedgar/tecnotron-ai'
       || decision.PR!==43 || decision.TaskCycle!==req.taskcycle.id
       || decision.original_initialization_sha256!==req.source_initialization?.identity_sha256

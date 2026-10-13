@@ -524,6 +524,15 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
       if (sourceInvalid) return terminal(request, 'BLOCKED', 'NONE', sourceInvalid);
       const initInvalid = verifySourceInitialization(request, source);
       if (initInvalid) return terminal(request, 'BLOCKED', 'NONE', initInvalid);
+      // F001: the *invoking identity* is independently confirmed through the
+      // existing GitHub provider. An issue comment is not Product authority:
+      // original Developer grants/review/Control remain separately qualified.
+      // Do this before either first close OR the idempotent terminal path.
+      if (request.Phase_2.integration_mode === 'MERGE_COMMIT') {
+        const issuer = qualifyGithubControlInvocation(request, resolution.proof);
+        if (issuer.status !== 'PASS')
+          return terminal(request, 'BLOCKED', 'NONE', issuer.reason);
+      }
 
       let baseStat;
       try { baseStat = fs.lstatSync(base); } catch {
@@ -554,11 +563,6 @@ function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurfac
       const gitObservation = qualifiedMergeObservation(request, source, qualifiedGitSurface, resolution.proof);
       if (gitObservation.error)
         return terminal(request, 'BLOCKED', 'NONE', gitObservation.error);
-      // A callback cannot grant itself Product authority. For merge closes,
-      // bind this exact action to independent, live GitHub issuer readback.
-      const issuer = qualifyGithubControlInvocation(request, resolution.proof);
-      if (issuer.status !== 'PASS')
-        return terminal(request, 'BLOCKED', 'NONE', issuer.reason);
       try {
         if (!entryPresent(parentRoot)) fs.mkdirSync(parentRoot);
       } catch (error) {

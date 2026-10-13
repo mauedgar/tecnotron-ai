@@ -1167,8 +1167,8 @@ test('F001 real issuer binding rejects full synthetic Control authorizations and
     Developer_acceptance:{authority_ref:'DEV-X'},
     logical_close:{authority_ref:'CONTROL-X'},
     Phase_2:{post_tools:'f'.repeat(40),post_tree:'0'.repeat(40)}};
-  const authorized={schema:'TECNOTRON_CONTROL_INVOKE_LOGICAL_CLOSE/v1',
-    intent:'AUTHORIZE_LOGICAL_CLOSE',Product_repository:'mauedgar/tecnotron-ai',PR:43,
+  const authorized={schema:'TECNOTRON_CONTROL_INVOKE_PREAUTHORIZED_CLOSE/v1',
+    intent:'INVOKE_ALREADY_AUTHORIZED_LOGICAL_CLOSE',Product_repository:'mauedgar/tecnotron-ai',PR:43,
     TaskCycle:request.taskcycle.id,original_initialization_sha256:request.source_initialization.identity_sha256,
     original_phase1_sha256:request.source_reconciliation.identity_sha256,
     exact_candidate_commit:request.candidate.commit,exact_candidate_tree:request.candidate.tree,
