@@ -1165,3 +1165,113 @@ test('F003 additive scope needs immutable amendment attached to exact candidate 
   assert.equal(unverifiedGit.status,'BLOCKED');
   assert.equal(unverifiedGit.reason,'VERIFIABLE_GIT_SOURCE_UNAVAILABLE');
 });
+
+const PR43_HISTORY={
+  taskcycle:'TASKCYCLE-TECNOTRON-CLOSE-TOPOLOGY-NORMALIZATION-001',
+  phase1:'b21bf4d7a199302893ec28949d38fc6a7dd740cb',
+  oldTree:'2aa5d16b4f9d984bb690cb3d694eba7b5a34a4f9',
+  taskCarrier:'205ced1d39e7b2eec939ebcb7eadf8ed197e041b',
+  accepted:'5ad3e4cd6b27ad62a5a80ff1c1f2b69eb8c7bf57',
+  parent:'437bedc318bb098674ad9b0e4358e168f415defc',
+  integrated:'1ecce07708a5760c99d7faf55f2344f2eabbc119',
+  tree:'025ce7524d1b8bf1753cfc4af964ee554d3b0977',
+  baseline:'2a42a1bbda6e9fecccb28c42c9c2dd294b3b1c89',
+  added:'tests/deterministic-taskcycle-substrate-v0/taskcycle-close-evidence-qualification.test.js',
+  chain:[
+    'b21bf4d7a199302893ec28949d38fc6a7dd740cb',
+    '08e6fbba7e273c0d05d1b7055b1d0417c879c3c1',
+    '8c26c9d3e418a7f55f3b0910619e8b2364611923',
+    '0422dfa3b4347278b0243f603653db1923543f0b',
+    '584ccc2d386b0784116a84a9b0c5a0e9691dd5c8',
+    'd2286652540e8edce592695aaafd61a2d069991c',
+    '09c2263a2a05239b9c08fa46c2ed34c88edde993',
+    '697a270a3f625be958d69aa1aeeb6d5c53e92a76',
+    '1cec99a4ef19920b908c7f551c46fda72e6cf573',
+    '9f9396610e77e904c88c764d3ab1eec8f3bd9d75',
+    '77a23e569a848e1b8a51a4625de99dc03a239b3a',
+    '1dcea463230a6159f498d2e391945cc81c96b52b',
+    'aa6c273de44a3544ce0543c4a7439e75996e8051',
+    '7a7d69d7f76e4cb7a73fdfcbf45c5028d4fcfbd2',
+    '3333ca0e389dc0bcc949a740770d0b70a233d013',
+    '0b818d20c5f149d9225a4544df64596664654fff',
+    '020039a493007cb3ff995f367b5d934f7cc0db0d',
+    '437bedc318bb098674ad9b0e4358e168f415defc',
+    '5ad3e4cd6b27ad62a5a80ff1c1f2b69eb8c7bf57',
+  ],
+};
+test('exact PR43 rejected add/remove pair is the only historically exceptional repair scope',()=>{
+  const e=PR43_HISTORY,root=path.resolve(process.cwd());
+  const originalPaths=[
+    'src/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle.js',
+    'tests/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle.test.js',
+  ],extra=[
+    'src/deterministic-taskcycle-substrate-v0/taskcycle-close-evidence-qualification.js',
+    'docs/tasks/TEC-TC-CLOSE-TOPOLOGY-NORMALIZATION-001/SCOPE_EXTENSION_20261012.md',
+  ],task='docs/tasks/TEC-TC-CLOSE-TOPOLOGY-NORMALIZATION-001/TASK.md';
+  const amendedBlob='2a94f17acf4e353c9b0e12dc94428293f23dfece';
+  const obj={};
+  for(let i=0;i<e.chain.length;i++)obj[e.chain[i]]={tree:i===0?e.oldTree:i===e.chain.length-1?e.tree:'a'.repeat(40),
+    parents:[i?e.chain[i-1]:e.taskCarrier]};
+  obj[e.integrated]={tree:e.tree,parents:[e.baseline,e.accepted]};
+  const input={
+    repositoryPath:root,phase1:{commit:e.phase1,tree:e.oldTree,task_carrier:e.taskCarrier},
+    originalTaskCycleId:e.taskcycle,remoteUrl:'https://github.com/mauedgar/tecnotron-ai.git',
+    expectedRemoteCommit:e.integrated,
+    scope:{write_scope:originalPaths,authorized_added_paths:extra,task_path:task,
+      baseline_path_scope:[...originalPaths,...extra,task]},
+    authorizedScopeAmendments:[{source_commit:e.accepted,blob:amendedBlob,path:extra[1]}],
+    request:{taskcycle:{id:e.taskcycle},candidate:{repository:'mauedgar/tecnotron-ai',commit:e.accepted,
+      tree:e.tree,parent:e.parent},
+      Phase_2:{integration_mode:'MERGE_COMMIT',pre_tools:e.baseline,post_tools:e.integrated,post_tree:e.tree,
+        status:'PASS',force:false,remote_correspondence:'EXACT',
+        merge:{commit:e.integrated,tree:e.tree,parents:[e.baseline,e.accepted],
+          candidate_lineage:[...e.chain],validated_combined_tree:e.tree,changed_paths:[...originalPaths,...extra,task]}}}
+  };
+  let additionalPath=null,pairPresent=true,wrongTransit=false;
+  const git={run(cwd,argv){
+    assert.equal(cwd,root);
+    assert.ok(argv.includes('--no-replace-objects'));
+    const [cmd,...args]=argv.slice(argv.indexOf('--no-replace-objects')+1);
+    let stdout='',exit_code=0,stderr='';
+    if(cmd==='rev-parse') {
+      const target=args[0];stdout=target==='--show-toplevel'?root:
+        target===e.accepted+':'+extra[1]?amendedBlob:target.replace('^{commit}','');
+    }else if(cmd==='config'){if(args[0]==='--local')stdout='https://github.com/mauedgar/tecnotron-ai.git';else exit_code=1;
+    }else if(cmd==='cat-file'){
+      const o=obj[args[1]];assert.ok(o,'unknown mock object '+args[1]);
+      stdout='tree '+o.tree+'\n'+o.parents.map(p=>'parent '+p+'\n').join('')+'\nobject';
+    }else if(cmd==='diff'){
+      const a=args[3],b=args[4];
+      const ix=e.chain.indexOf(a);
+      if(a===e.baseline&&b===e.integrated)stdout=[...originalPaths,...extra,task].sort().join('\0')+'\0';
+      else {
+        assert.ok(ix>=0 && e.chain[ix+1]===b,'unknown edge '+a+'..'+b);
+        const changed=[originalPaths[0]];
+        if(ix===2||ix===3)changed.push(e.added);
+        if(additionalPath&&ix===3)changed.push(additionalPath);
+        stdout=changed.sort().join('\0')+'\0';
+      }
+    }else if(cmd==='ls-tree'){
+      assert.deepEqual(args.slice(0,3),['--name-only','-r','-z']);
+      const oid=args[3],p=args[5];assert.equal(p,e.added);
+      stdout=oid==='0422dfa3b4347278b0243f603653db1923543f0b'
+        ||(wrongTransit&&oid==='584ccc2d386b0784116a84a9b0c5a0e9691dd5c8')?p+'\0':'';
+    }else if(cmd==='ls-remote')stdout=e.integrated+'\trefs/heads/tools\n';
+    else throw Error('unexpected mock Git action '+cmd);
+    return {exit_code,stdout,stderr,error_code:null,timed_out:false,signal:null};
+  }};
+  let r=qualifyMergeTopology(input,{git});
+  assert.equal(r.status,'PASS',JSON.stringify(r));
+  assert.equal(r.verified.accepted_candidate,e.accepted);
+  additionalPath='tests/extra-undocumented.test.js';
+  r=qualifyMergeTopology(input,{git});
+  assert.equal(r.reason,'REPAIR_LINEAGE_SCOPE_VIOLATION');
+  additionalPath=null;wrongTransit=true;
+  r=qualifyMergeTopology(input,{git});
+  assert.equal(r.status,'BLOCKED','transient file must be absent after remove');
+  wrongTransit=false;
+  input.originalTaskCycleId='OTHER_TASKCYCLE';
+  input.request.taskcycle.id='OTHER_TASKCYCLE';
+  r=qualifyMergeTopology(input,{git});
+  assert.equal(r.reason,'REPAIR_LINEAGE_SCOPE_VIOLATION');
+});
