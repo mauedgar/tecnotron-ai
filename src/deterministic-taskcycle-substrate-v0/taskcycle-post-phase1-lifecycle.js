@@ -6,6 +6,8 @@ const { createHash } = require('node:crypto');
 const {
   consumeTaskCycleEffectReconciliation,
 } = require('./taskcycle-effect-reconciliation');
+const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
+const { qualifyMergeTopology } = require('./taskcycle-close-evidence-qualification');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-post-phase1-close/v0';
 const MANIFEST_SCHEMA = 'deterministic-taskcycle-post-phase1-close-manifest/v0';
@@ -71,15 +73,32 @@ function acceptedFirstParentRangeValid(value) {
     && repositoryRelativePaths(value.changed_paths);
 }
 function phase2EvidenceValid(p2, candidate) {
-  if (!p2 || p2.status !== 'PASS'
-      || !isSha(p2.pre_tools)
-      || p2.post_tools !== candidate.commit
-      || p2.post_tree !== candidate.tree
-      || p2.force !== false
-      || p2.remote_correspondence !== 'EXACT') {
-    return false;
+  if (!p2 || p2.status !== 'PASS' || !isSha(p2.pre_tools)
+      || p2.force !== false || p2.remote_correspondence !== 'EXACT') return false;
+
+  if (p2.integration_mode === 'MERGE_COMMIT') {
+    const m = p2.merge;
+    const lineage = m?.candidate_lineage;
+    return m && isSha(m.commit) && isSha(m.tree)
+      && m.commit === p2.post_tools && m.tree === p2.post_tree
+      && m.validated_combined_tree === m.tree && m.candidate_tree === candidate.tree
+      && Array.isArray(m.parents) && m.parents.length === 2
+      && m.parents[0] === p2.pre_tools && m.parents[1] === candidate.commit
+      && uniqueStrings(lineage, true) && lineage.length >= 2
+      && lineage.every(isSha)
+      && lineage[0] === candidate.provenance?.phase1_subject?.commit
+      && lineage[lineage.length - 1] === candidate.commit
+      && lineage[lineage.length - 2] === candidate.parent
+      && repositoryRelativePaths(m.changed_paths)
+      && nonEmpty(m.git_observation_ref) && nonEmpty(m.preflight_ref)
+      && nonEmpty(m.lineage_verification_ref)
+      && m.remote_effect === 'CONFIRMED' && m.unknown_effects === 0
+      && p2.accepted_first_parent_range === undefined;
   }
 
+  // Preserve v0 direct-child and accepted-first-parent-range contracts.
+  if (p2.integration_mode !== undefined && p2.integration_mode !== 'FAST_FORWARD') return false;
+  if (p2.post_tools !== candidate.commit || p2.post_tree !== candidate.tree) return false;
   const acceptedRange = p2.accepted_first_parent_range;
   if (acceptedRange == null) return p2.pre_tools === candidate.parent;
 
@@ -89,6 +108,132 @@ function phase2EvidenceValid(p2, candidate) {
     && acceptedRange.accepted_tip_parent === candidate.parent
     && acceptedRange.accepted_tip_tree === candidate.tree
     && acceptedRange.ordered_commit_range[acceptedRange.ordered_commit_range.length - 1] === candidate.commit;
+}
+function verifySourceInitialization(request, source) {
+  if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return null;
+  const v = request.source_initialization;
+  if (!v || !nonEmpty(v.location_or_ref) || !isSha256(v.identity_sha256)
+      || v.identity_sha256 !== source.manifest.source_initialization_identity_sha256
+      || v.identity_sha256 !== source.projection.source_initialization?.identity_sha256
+      || request.source_reconciliation.identity_sha256 !== source.identity_sha256) {
+    return 'ORIGINAL_INITIALIZATION_SOURCE_CHAIN_MISMATCH';
+  }
+  try {
+    const origin = consumeTaskCycleInitialization({
+      location: v.location_or_ref, expected_identity_sha256: v.identity_sha256,
+    });
+    if (!exact(origin.projection.TaskCycle, source.projection.TaskCycle)
+        || !exact(origin.projection.exact_inputs, source.projection.exact_inputs)
+        || origin.projection.TaskCycle.id !== request.taskcycle.id
+        || origin.projection.current_gate !== 'PHASE1_IMPLEMENT_BOUNDED_CANDIDATE'
+        || source.projection.reconciled_effect?.replayed !== false
+        || source.projection.reconciled_effect?.preserved !== true) {
+      return 'ORIGINAL_INITIALIZATION_CORRESPONDENCE_INVALID';
+    }
+  } catch { return 'ORIGINAL_INITIALIZATION_ACQUISITION_FAILED'; }
+  return null;
+}
+function qualifiedMergeObservation(request, source, surface, resolved) {
+  if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return {error:null,verified:null};
+  // surface is supplied by Product Control at capability construction, never
+  // sourced from request/observed.trusted_git. It has no Product authority.
+  if (!surface || !surface.repositoryPath
+      || surface.binding !== 'CONTROL_QUALIFIED_GIT'
+      || surface.remoteUrl !== 'https://github.com/mauedgar/tecnotron-ai.git'
+      || !isSha256(surface.qualification_identity_sha256)
+      || surface.qualification_identity_sha256 !== resolved?.git_surface_identity_sha256
+      || !nonEmpty(surface.qualification_receipt_ref)
+      || surface.qualification_receipt_ref !== resolved?.git_surface_receipt_ref) {
+    return {error:'QUALIFIED_GIT_SURFACE_REQUIRED'};
+  }
+  const p=source.projection, original=p.exact_inputs;
+  if (!original || !Array.isArray(original.write_scope) || !original.TASK_carrier
+      || !p.reconciled_effect?.subject) return {error:'ORIGINAL_SOURCE_INCOMPLETE'};
+  const m=request.Phase_2.merge;
+  const valid=qualifyMergeTopology({
+    repositoryPath:surface.repositoryPath,
+    remoteUrl:surface.remoteUrl,
+    expectedRemoteCommit:request.Phase_2.post_tools,
+    request,
+    phase1:{...p.reconciled_effect.subject,task_carrier:original.TASK_carrier.commit},
+    originalTaskCycleId:request.taskcycle.id,
+    scope:{
+      write_scope:original.write_scope,
+      task_path:original.TASK_carrier.path,
+      authorized_added_paths:resolved?.scope_added_paths || [],
+      baseline_path_scope:[...original.write_scope,...(resolved?.scope_added_paths || []),original.TASK_carrier.path],
+    },
+    historicalContinuity:resolved?.historical_continuity || null,
+    authorizedScopeAmendments:resolved?.scope_amendments || [],
+  });
+  if (valid.status!=='PASS') return {error:'MERGE_GIT_EVIDENCE_UNVERIFIED:'+valid.reason};
+  return {error:null,verified:valid.verified};
+}
+function qualifiedControlEvidence(request, source, resolution) {
+  if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return {error:null,proof:null};
+  if (typeof resolution !== 'function')
+    return {error:'COMPETENT_PRODUCT_CONTROL_RESOLUTION_REQUIRED',proof:null};
+  let p;
+  // Pass snapshots to externally supplied Control resolver. A callback is not
+  // an authority oracle and must not mutate the original lifecycle request or
+  // source projection that this consumer subsequently validates and publishes.
+  // Control remains responsible for authenticating the resolver's provenance.
+  try {p=resolution({request:structuredClone(request),source:structuredClone(source)});} catch {
+    return {error:'ORIGINAL_PRODUCT_AUTHORITY_SOURCE_UNAVAILABLE',proof:null};
+  }
+  const c=request.candidate, p2=request.Phase_2, original=source.projection.exact_inputs;
+  const added=p?.scope_added_paths, amendments=p?.scope_amendments;
+  const scopeOk=Array.isArray(added) && repositoryRelativePaths(added)
+    && Array.isArray(amendments)
+    && amendments.every(a=>a && nonEmpty(a.ref) && isSha(a.blob)
+      && isSha(a.source_commit) && a.source_commit===c.commit
+      && typeof a.path==='string' && repositoryRelativePaths([a.path])
+      && nonEmpty(a.Developer_authority_ref) && Array.isArray(a.added_paths)
+      && repositoryRelativePaths(a.added_paths))
+    && (added.length===0 || amendments.length>0)
+    && amendments.every(a=>added.includes(a.path))
+    && exact([...new Set(amendments.flatMap(a=>a.added_paths))].sort(),[...added].sort())
+    && exact(p?.effective_write_scope,[...new Set([...(original?.write_scope||[]),...added])].sort());
+  if (!p || p.status!=='COMPETENTLY_RESOLVED' || !scopeOk
+      || p.taskcycle_id!==request.taskcycle.id
+      || p.original_taskcycle_id!==request.taskcycle.id
+      || p.original_initialization_sha256!==request.source_initialization?.identity_sha256
+      || p.original_phase1_sha256!==request.source_reconciliation.identity_sha256
+      || p.exact_candidate_commit!==c.commit || p.exact_candidate_tree!==c.tree
+      || p.canonical_integration_commit!==p2.post_tools
+      || p.canonical_integration_tree!==p2.post_tree
+      || p.reviewer_verdict!=='PASS' || p.blocking_findings!==0
+      || p.original_review_id!==request.independent_review.id
+      || p.original_review_sha256!==request.independent_review.result_sha256
+      // These are mechanical correlations to a Control-verified original,
+      // never a self-authenticating authorization by the injected callback.
+      || p.frozen_review_interface_id!==request.frozen_review_interface.id
+      || p.frozen_review_interface_prompt_sha256!==request.frozen_review_interface.prompt_sha256
+      || p.original_review_interface_prompt_sha256!==request.frozen_review_interface.prompt_sha256
+      || !nonEmpty(p.frozen_review_interface_ref)
+      || p.logical_close_authority_ref!==request.logical_close.authority_ref
+      || !nonEmpty(p.logical_close_authorization_receipt_ref)
+      || !isSha256(p.logical_close_authorization_receipt_sha256)
+      || p.Developer_acceptance!=='GRANTED'
+      || p.Developer_authority_source!==request.Developer_acceptance.authority_ref
+      || p.effect_state!=='KNOWN'
+      || p.natively_tested_tree!==p2.post_tree
+      || p.candidate_tested_commit!==c.commit || p.candidate_tested_tree!==c.tree
+      || !isSha256(p.candidate_validation_sha256)
+      || p.candidate_validation_sha256 !== request.promotion_grade_validation.receipt_sha256
+      || !isSha256(p.combined_validation_sha256)
+      || p.combined_validation_sha256 !== request.Phase_2.merge.preflight_sha256
+      || !isSha256(p.git_surface_identity_sha256)
+      || !nonEmpty(p.git_surface_receipt_ref)
+      || !nonEmpty(p.original_review_ref)
+      || !nonEmpty(p.candidate_validation_ref)
+      || !nonEmpty(p.combined_validation_ref)
+      || !nonEmpty(p.Control_reconciliation_ref)
+      || !nonEmpty(p.qualified_evidence_provenance_ref)
+      || p.chronology_verified!==true) {
+    return {error:'COMPETENT_PRODUCT_CONTROL_RESOLUTION_INVALID',proof:null};
+  }
+  return {error:null,proof:p};
 }
 function unique(left, right) {
   return [...new Set([...(left || []), ...(right || [])])];
@@ -161,8 +306,10 @@ function validateRequest(r) {
   if (!phase2EvidenceValid(p2, c)) return 'PHASE2_EVIDENCE_INVALID';
 
   const er = r.effect_reconciliation;
-  if (!er || er.status !== 'PASS' || er.canonical_commit !== c.commit
-      || er.canonical_tree !== c.tree || !Array.isArray(er.unresolved_UNKNOWN_effects)
+  const postCommit = p2.integration_mode === 'MERGE_COMMIT' ? p2.post_tools : c.commit;
+  const postTree = p2.integration_mode === 'MERGE_COMMIT' ? p2.post_tree : c.tree;
+  if (!er || er.status !== 'PASS' || er.canonical_commit !== postCommit
+      || er.canonical_tree !== postTree || !Array.isArray(er.unresolved_UNKNOWN_effects)
       || er.unresolved_UNKNOWN_effects.length !== 0) return 'EFFECT_RECONCILIATION_EVIDENCE_INVALID';
 
   const lc = r.logical_close;
@@ -178,7 +325,7 @@ function validateRequest(r) {
   return null;
 }
 
-function validateSource(request, source) {
+function validateSource(request, source, resolved = null) {
   const p = source.projection;
   if (!exact(p.TaskCycle, {
     id: request.taskcycle.id,
@@ -198,6 +345,27 @@ function validateSource(request, source) {
   }
   if (!exact(request.candidate.provenance.phase1_subject, p.reconciled_effect?.subject)) {
     return 'CANDIDATE_PHASE1_PROVENANCE_MISMATCH';
+  }
+  if (request.Phase_2.integration_mode === 'MERGE_COMMIT') {
+    const original = p.exact_inputs;
+    const c = request.candidate;
+    const m = request.Phase_2.merge;
+    if (!original || !Array.isArray(original.write_scope) || !original.TASK_carrier
+        || !nonEmpty(original.TASK_carrier.path) || !isSha(original.TASK_carrier.commit)) {
+      return 'SOURCE_EXACT_INPUTS_MISSING';
+    }
+    const effective = resolved?.effective_write_scope;
+    if (!Array.isArray(effective) || !repositoryRelativePaths(effective))
+      return 'QUALIFIED_EFFECTIVE_SCOPE_REQUIRED';
+    const allowed = [...effective, original.TASK_carrier.path].sort();
+    if (c.provenance.task_carrier_commit !== original.TASK_carrier.commit
+        || c.provenance.task_carrier_path !== original.TASK_carrier.path
+        || !exact([...c.changed_paths].sort(), effective)
+        || !exact([...m.changed_paths].sort(), allowed)
+        || m.candidate_lineage[0] !== p.reconciled_effect.subject.commit
+        || c.parent !== m.candidate_lineage[m.candidate_lineage.length - 2]) {
+      return 'MERGE_CANDIDATE_OR_SCOPE_PROVENANCE_MISMATCH';
+    }
   }
   if (p.reconciled_effect?.obligation_id !== 'implementation'
       || p.reconciled_effect?.replayed !== false
@@ -276,7 +444,23 @@ function packageFor(request, source) {
   return { projection, projectionText, manifest, manifestText, identity: sha256(manifestText) };
 }
 
+// A pre-existing symlinked TaskCycle directory must never redirect a close
+// outside the declared local root. Check the directory itself (not existsSync,
+// which follows symlinks and misses dangling links) and its real parent.
+function secureTerminalDirectory(location, parent) {
+  try {
+    const info = fs.lstatSync(location);
+    if (!info.isDirectory() || info.isSymbolicLink()) return false;
+    return fs.realpathSync(location) === path.join(fs.realpathSync(parent), path.basename(location));
+  } catch { return false; }
+}
+function entryPresent(location) {
+  try { fs.lstatSync(location); return true; }
+  catch (error) { if (error?.code === 'ENOENT') return false; throw error; }
+}
+
 function inspect(root, pkg) {
+  if (!secureTerminalDirectory(root, path.dirname(root))) return 'UNKNOWN';
   try {
     const entries = fs.readdirSync(root).sort();
     if (entries.length !== FILES.length || entries.some((x, i) => x !== FILES[i])) return 'UNKNOWN';
@@ -308,7 +492,7 @@ function pass(request, finalRoot, pkg, already_closed = false, reason = null) {
   };
 }
 
-function createTaskCyclePostPhase1LifecycleCapability({ root }) {
+function createTaskCyclePostPhase1LifecycleCapability({ root, qualifiedGitSurface = null, resolveCompetentProductEvidence = null }) {
   const base = path.resolve(root);
   return {
     closeFromResolvedLifecycle({ request, observed }) {
@@ -334,8 +518,12 @@ function createTaskCyclePostPhase1LifecycleCapability({ root }) {
       } catch (error) {
         return terminal(request, 'BLOCKED', 'NONE', `SOURCE_RECONCILIATION_CONSUME_FAILED:${error?.message || String(error)}`);
       }
-      const sourceInvalid = validateSource(request, source);
+      const resolution = qualifiedControlEvidence(request, source, resolveCompetentProductEvidence);
+      if (resolution.error) return terminal(request, 'BLOCKED', 'NONE', resolution.error);
+      const sourceInvalid = validateSource(request, source, resolution.proof);
       if (sourceInvalid) return terminal(request, 'BLOCKED', 'NONE', sourceInvalid);
+      const initInvalid = verifySourceInitialization(request, source);
+      if (initInvalid) return terminal(request, 'BLOCKED', 'NONE', initInvalid);
 
       let baseStat;
       try { baseStat = fs.lstatSync(base); } catch {
@@ -348,14 +536,32 @@ function createTaskCyclePostPhase1LifecycleCapability({ root }) {
       const pkg = packageFor(request, source);
       const finalRoot = path.join(base, safeId(request.taskcycle.id), 'closed-pass');
       const parentRoot = path.dirname(finalRoot);
-      fs.mkdirSync(parentRoot, { recursive: true });
-
-      if (fs.existsSync(finalRoot)) {
+      // Exact terminal readback precedes live Git HEAD check. A genuine historical
+      // close stays idempotent even after tools later advances.
+      if (entryPresent(parentRoot) && !secureTerminalDirectory(parentRoot, base)) {
+        return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_PARENT_UNSAFE');
+      }
+      if (entryPresent(finalRoot)) {
+        if (!secureTerminalDirectory(finalRoot, parentRoot)) {
+          return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_TERMINAL_UNSAFE');
+        }
         const state = inspect(finalRoot, pkg);
         if (state === 'EXACT') return pass(request, finalRoot, pkg, true, 'ALREADY_CLOSED_EXACT');
         return terminal(request, 'BLOCKED', state === 'CONFLICT' ? 'NONE' : 'UNKNOWN', state === 'CONFLICT'
           ? 'POST_PHASE1_LIFECYCLE_IDENTITY_CONFLICT'
           : 'POST_PHASE1_LIFECYCLE_PROJECTION_AMBIGUOUS');
+      }
+      const gitObservation = qualifiedMergeObservation(request, source, qualifiedGitSurface, resolution.proof);
+      if (gitObservation.error)
+        return terminal(request, 'BLOCKED', 'NONE', gitObservation.error);
+      try {
+        if (!entryPresent(parentRoot)) fs.mkdirSync(parentRoot);
+      } catch (error) {
+        return terminal(request, 'FAILED', 'NONE',
+          `POST_PHASE1_LIFECYCLE_PARENT_CREATE_FAILED:${error?.message || String(error)}`);
+      }
+      if (!secureTerminalDirectory(parentRoot, base)) {
+        return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_PARENT_UNSAFE');
       }
 
       let staging = null;
@@ -366,13 +572,31 @@ function createTaskCyclePostPhase1LifecycleCapability({ root }) {
         if (inspect(staging, pkg) !== 'EXACT') {
           return terminal(request, 'FAILED', 'NONE', 'STAGED_POST_PHASE1_LIFECYCLE_INVALID');
         }
+        if (!secureTerminalDirectory(parentRoot, base)
+            || !secureTerminalDirectory(staging, parentRoot)) {
+          return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_STAGING_UNSAFE');
+        }
+        if (entryPresent(finalRoot)) {
+          return terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_PUBLISH_RACE');
+        }
+        // The independent Git remote can advance between qualification and
+        // local publication. Recheck the actual Git evidence at the last
+        // possible moment, and reject a different remote head even if it is
+        // still a descendant. This does not claim an atomic cross-provider lock.
+        if (request.Phase_2.integration_mode==='MERGE_COMMIT') {
+          const publicationGit = qualifiedMergeObservation(request, source, qualifiedGitSurface, resolution.proof);
+          if (publicationGit.error)
+            return terminal(request, 'BLOCKED', 'NONE', 'PREPUBLICATION_GIT_RECHECK:'+publicationGit.error);
+          if (publicationGit.verified?.remote_oid !== gitObservation.verified?.remote_oid)
+            return terminal(request, 'BLOCKED', 'NONE', 'REMOTE_HEAD_CHANGED_DURING_LOCAL_CLOSE');
+        }
         fs.renameSync(staging, finalRoot);
         staging = null;
         return inspect(finalRoot, pkg) === 'EXACT'
           ? pass(request, finalRoot, pkg)
           : terminal(request, 'BLOCKED', 'UNKNOWN', 'POST_PHASE1_LIFECYCLE_PUBLISH_UNKNOWN');
       } catch (error) {
-        if (fs.existsSync(finalRoot)) {
+        if (entryPresent(finalRoot)) {
           const state = inspect(finalRoot, pkg);
           if (state === 'EXACT') return pass(request, finalRoot, pkg, true, 'PUBLISH_RACE_RECONCILED_EXACT');
           if (state === 'CONFLICT') {
@@ -382,7 +606,7 @@ function createTaskCyclePostPhase1LifecycleCapability({ root }) {
         }
         return terminal(request, 'FAILED', 'NONE', `POST_PHASE1_LIFECYCLE_MATERIALIZATION_FAILED:${error?.message || String(error)}`);
       } finally {
-        if (staging && fs.existsSync(staging)) {
+        if (staging && entryPresent(staging) && secureTerminalDirectory(staging, parentRoot)) {
           try { fs.rmSync(staging, { recursive: true, force: true }); } catch { /* best effort */ }
         }
       }
