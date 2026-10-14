@@ -66,6 +66,48 @@ function parseRemote(raw, ref) {
   if(parts.length!==2 || !sha(parts[0]) || parts[1]!==ref)throw Error('REMOTE_REF_MALFORMED');
   return parts[0];
 }
+
+// This is NOT an expandable scope list or a Product authorization mechanism.
+// Developer authorized reconciliation of precisely one historically rejected
+// add+remove test fixture in the already-merged PR43 lineage. The immutable
+// pair is attested by actual Git objects, including file absence at both ends.
+// Every unrelated path/edge and every other TaskCycle remains fail-closed.
+const PR43_REJECTED_TRANSIENT_TEST = Object.freeze({
+  taskcycle: 'TASKCYCLE-TECNOTRON-CLOSE-TOPOLOGY-NORMALIZATION-001',
+  phase1: 'b21bf4d7a199302893ec28949d38fc6a7dd740cb',
+  accepted: '5ad3e4cd6b27ad62a5a80ff1c1f2b69eb8c7bf57',
+  integrated: '1ecce07708a5760c99d7faf55f2344f2eabbc119',
+  pre_tools: '2a42a1bbda6e9fecccb28c42c9c2dd294b3b1c89',
+  before_add: '8c26c9d3e418a7f55f3b0910619e8b2364611923',
+  add: '0422dfa3b4347278b0243f603653db1923543f0b',
+  remove: '584ccc2d386b0784116a84a9b0c5a0e9691dd5c8',
+  file: 'tests/deterministic-taskcycle-substrate-v0/taskcycle-close-evidence-qualification.test.js',
+});
+function exactPathPresent(git, root, oid, filename) {
+  const raw=execute(git,root,['ls-tree','--name-only','-r','-z',oid,'--',filename],{binary:true});
+  if(raw==='')return false;
+  if(raw===filename+'\0')return true;
+  throw Error('UNEXPECTED_GIT_TREE_PATH');
+}
+function isExactPR43RejectedTransientPair({git,root,request,originalTaskCycleId,phase1,lineage,index,diff}) {
+  const e=PR43_REJECTED_TRANSIENT_TEST, m=request.Phase_2.merge, c=request.candidate;
+  if(originalTaskCycleId!==e.taskcycle || request.taskcycle.id!==e.taskcycle
+      || phase1.commit!==e.phase1 || c.commit!==e.accepted
+      || m.commit!==e.integrated || request.Phase_2.pre_tools!==e.pre_tools
+      || lineage.indexOf(e.before_add)<0
+      || !same(sorted(diff.filter(x=>x===e.file)),[e.file]))return false;
+  const a=lineage.indexOf(e.before_add);
+  if(lineage[a+1]!==e.add || lineage[a+2]!==e.remove
+      || !([a+1,a+2].includes(index)))return false;
+  // The exact immutable Git edges are separately checked for first-parent
+  // consistency by the loop; verify real add, real removal, no final artifact.
+  return !exactPathPresent(git,root,e.before_add,e.file)
+    && exactPathPresent(git,root,e.add,e.file)
+    && !exactPathPresent(git,root,e.remove,e.file)
+    && !exactPathPresent(git,root,e.accepted,e.file)
+    && !exactPathPresent(git,root,e.pre_tools,e.file);
+}
+
 function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl,
   originalTaskCycleId, expectedRemoteCommit, historicalContinuity=null,
   authorizedScopeAmendments=[]}, {git=createReadOnlyGitAdapter()}={}) {
@@ -139,7 +181,11 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
       if(!same(observed.parents,[lineage[i-1]]))
         return {status:'BLOCKED',reason:'REPAIR_LINEAGE_EDGE_INVALID'};
       const diff=paths(git,root,lineage[i-1],lineage[i]);
-      if(diff.some(x=>![...scope.write_scope,...scope.authorized_added_paths].includes(x)))
+      const unexpected=diff.filter(x=>![...scope.write_scope,...scope.authorized_added_paths].includes(x));
+      if(unexpected.length && !(unexpected.length===1
+          && isExactPR43RejectedTransientPair({
+            git,root,request,originalTaskCycleId,phase1,lineage,index:i,diff:unexpected,
+          })))
         return {status:'BLOCKED',reason:'REPAIR_LINEAGE_SCOPE_VIOLATION'};
     }
     const integrated=paths(git,root,p2.pre_tools,m.commit);
