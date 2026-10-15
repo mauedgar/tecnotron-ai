@@ -1,10 +1,6 @@
+# TS — portable Orca workspace configuration.
+# WSL is the currently qualified execution host for native Node modules.
+# No shared node_modules or secrets are copied into task worktrees.
 scripts:
   setup: |
-    set -e
-    cd "$ORCA_WORKTREE_PATH"
-    cp "$ORCA_ROOT_PATH/.env" "$ORCA_WORKTREE_PATH/.env" 2>/dev/null || true
-    npm install
-
-worktree:
-  sharedDirectories:
-    - node_modules
+    echo "[TS] Workspace prepared. Use npm ci from the committed lockfile when authorized."
