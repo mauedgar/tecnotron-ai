@@ -1,0 +1,61 @@
+name: Tecnotron native Node validation
+
+on:
+  pull_request:
+    branches:
+      - tools
+    paths:
+      - .github/workflows/native-validation.yml
+      - package.json
+      - package-lock.json
+      - src/**
+      - src-typescript/**
+      - tests/**
+      - scripts/**
+  push:
+    branches:
+      - tools
+    paths:
+      - .github/workflows/native-validation.yml
+      - package.json
+      - package-lock.json
+      - src/**
+      - src-typescript/**
+      - tests/**
+      - scripts/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tecnotron-native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact repository snapshot
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node 22 with npm download cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies from pinned lock
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run repository test suite
+        run: npm test
+
+      - name: Validate portable contract package
+        run: npm run contracts:check
