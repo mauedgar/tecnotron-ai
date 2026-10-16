@@ -1,10 +1,6 @@
+# Portable, informational-only workspace preparation.
+# Use the selected native runtime and its npm cache for separately authorized tasks.
+# node_modules and virtual environments remain isolated per worktree and OS.
 scripts:
   setup: |
-    set -e
-    cd "$ORCA_WORKTREE_PATH"
-    cp "$ORCA_ROOT_PATH/.env" "$ORCA_WORKTREE_PATH/.env" 2>/dev/null || true
-    npm install
-
-worktree:
-  sharedDirectories:
-    - node_modules
+    echo "[TEC] Workspace ready. Explicit task preparation required; dependencies and credentials are isolated."
