@@ -8,6 +8,7 @@ on:
       - .github/workflows/native-validation.yml
       - package.json
       - package-lock.json
+      - tsconfig*.json
       - src/**
       - src-typescript/**
       - tests/**
@@ -19,6 +20,7 @@ on:
       - .github/workflows/native-validation.yml
       - package.json
       - package-lock.json
+      - tsconfig*.json
       - src/**
       - src-typescript/**
       - tests/**
@@ -33,18 +35,33 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout exact repository snapshot
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact checkout subject
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          observed="$(git rev-parse HEAD)"
+          tree="$(git rev-parse 'HEAD^{tree}')"
+          if [ "$observed" != "$EXPECTED_SHA" ]; then
+            echo "SUBJECT_MISMATCH expected=$EXPECTED_SHA observed=$observed" >&2
+            exit 1
+          fi
+          printf 'VALIDATED_SUBJECT_SHA=%s\nVALIDATED_SUBJECT_TREE=%s\n' "$observed" "$tree"
 
       - name: Set up Node 22 with npm download cache
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "22"
+          node-version: "22.23.3"
           cache: npm
           cache-dependency-path: package-lock.json
 
