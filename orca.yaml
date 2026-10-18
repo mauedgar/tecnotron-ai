@@ -1,6 +1,5 @@
-# Portable, informational-only workspace preparation.
-# Use the selected native runtime and its npm cache for separately authorized tasks.
-# node_modules and virtual environments remain isolated per worktree and OS.
+# Informational-only setup: no automatic dependency installation or .env copying.
+# This config does not request shared node_modules; verify external Orca settings separately.
 scripts:
   setup: |
-    echo "[TEC] Workspace ready. Explicit task preparation required; dependencies and credentials are isolated."
+    echo "[TEC] No automatic install or .env copying in this setup. Check external workspace configuration before use."
