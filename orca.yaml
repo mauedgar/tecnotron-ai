@@ -1,10 +1,5 @@
+# Informational-only setup: no automatic dependency installation or .env copying.
+# This config does not request shared node_modules; verify external Orca settings separately.
 scripts:
   setup: |
-    set -e
-    cd "$ORCA_WORKTREE_PATH"
-    cp "$ORCA_ROOT_PATH/.env" "$ORCA_WORKTREE_PATH/.env" 2>/dev/null || true
-    npm install
-
-worktree:
-  sharedDirectories:
-    - node_modules
+    echo "[TEC] No automatic install or .env copying in this setup. Check external workspace configuration before use."
