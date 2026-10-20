@@ -9,4 +9,5 @@ module.exports = {
   taskcyclePostPhase1Lifecycle: require('./taskcycle-post-phase1-lifecycle'),
   taskcycleClosureCompatibility: require('./taskcycle-closure-compatibility'),
   taskcycleTerminalPreflight: require('./taskcycle-terminal-preflight'),
+  conditionedAcceptancePreflight: require('./conditioned-acceptance-preflight'),
 };
