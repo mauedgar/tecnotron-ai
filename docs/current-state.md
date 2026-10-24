@@ -351,3 +351,49 @@ competent decision. Preserve all independent-review advisories, exceptional
 receipt limitations and experimental findings as **evidence only**. None is
 automatically routed to Architecture, Execution Engineering or Recipe/Primitive
 maturation, and no GitHub provider projection is adopted.
+
+## Beta Run 001 — historical evidence limitations before OP03/04 (2026-10-24)
+
+This is a **factual status and navigation note**, not a terminal TaskCycle
+receipt, not a TaskCycle transition, and not an assertion of Product `Done`.
+It preserves every earlier dated cutoff in this document. The prospective
+scope is selected by the Developer-delegated Product Control disposition
+recorded in [Tecnotron issue #31](https://github.com/mauedgar/tecnotron-ai/issues/31#issuecomment-6382659918).
+The rejected PR #51, including its original semantic IR `FAIL`, remains
+unmerged and is **not** adopted by this note.
+
+At `tools@d4aa51dffdb7cc7f7c0ccfb4d1d3505b100f5912`, the accepted
+implementations for `ULC-OP-01` (issue #32, PR #49) and `ULC-OP-02`
+(issue #33, PR #50) are present in Product Git. Both issues are closed
+and each candidate had its own historical Independent Review and Developer
+acceptance. These are **implementation and provider facts only**.
+The original TaskCycles
+`TASKCYCLE-TECNOTRON-ULC-OP01-CONDITIONED-ACCEPTANCE-001` and
+`TASKCYCLE-TECNOTRON-ULC-OP02-ACTOR-CONTEXT-CONSUMER-001`
+have **no verified source-native terminal receipt** at this cutoff.
+The separately proposed exceptional logical terminal receipts remain
+`NOT_PUBLISHED`, and the former publication refusal must not be evaded.
+No original obligations, terminal events or missing first-parent ancestry
+are reconstructed or declared satisfied. The two historical lifecycle
+proof gaps are retained as **unresolved historical evidence**, without
+replaying the original operations or blocking unrelated prospective work
+by default; this is not a source-native closure claim.
+
+Issue #30 has a genuine original native TaskCycle `CLOSED_PASS` with its
+own receipt. Its later GitHub Projects item showed provider status `Done`
+after native GitHub automation, **not** a new Product acceptance.
+The historical PR #45 was superseded by integrated PR #47; rejected and
+unmerged candidates remain provenance rather than canonical code.
+
+The Developer explicitly held issue #34 (`ULC-OP-03/04`) from TaskCycle
+initialization while prior selected responsibilities were being reconciled.
+This note alone does not release that hold, select #34 or authorize Phase 2.
+A subsequent competent Product readiness decision must check the then-current
+SOT, accepted integration refs, outstanding original effects and exact
+authority before any successor activity.
+
+Future Beads usage remains a **separate candidate experiment**, not a
+Product-selected state store, TaskCycle authority, scheduler or replacement
+of the filesystem State Kernel. Any later adoption needs evidence of
+identity, provenance, invariants and provider-independent correspondence;
+this current Beta Run does not change those contracts.
