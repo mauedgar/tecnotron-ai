@@ -414,3 +414,42 @@ Github_Projects: NO_READY_OR_DONE_BY_INFERENCE
 exact document-only Git subject and current authority, before Developer
 acceptance and integration. Until accepted, this candidate has no Product
 planning authority, and the historical `tools` roadmap remains canonical.
+
+### 2026-10-24 — prospective planning authority clarification before OP03/04
+
+The 2026-10-09 roadmap section above remains historical *proposal*
+provenance. PR #36 physically merged its bytes; the original Independent
+Review did not return an independently verifiable result, and its candidate
+acceptance was not thereby proved. Do not backdate a PASS or Developer grant.
+This subsequent Developer-selected planning clarification does not modify that
+history or the classification `PRODUCT_CANDIDATE` of future lanes.
+
+Product Control may now use the listed `ULC-OP-03/04` categories as a
+**bounded work-selection menu**, not as accepted implementation contracts,
+a prepared TaskCycle, a GitHub Project `Ready` field, or an automatic
+continuation. At the recorded Beta Run cutoff, OP01/OP02 code was
+separately accepted and integrated in PR49/PR50; their original source-native
+TaskCycle terminal proof remains **UNVERIFIED** and is preserved as
+historical evidence, not silently called ordinary `CLOSED_PASS`. New
+factual current-state navigation is kept in [Current State](current-state.md);
+it is **not** a terminal receipt or substitute for a refused receipt.
+
+Issue #30's genuine original first-circuit TaskCycle closed natively;
+its GitHub Projects `Done` value was observed as a provider automation
+effect and cannot grant Product acceptance. Historical PR45/PR46 were
+closed unmerged; recovered CI/dependency repair was separately validated,
+reviewed, Developer-accepted and integrated through PR52. Older planning
+and technical attempts retain their original findings and cutoffs.
+
+Before any OP03/04 TaskCycle or Phase 2, Control must **separately** select
+a concrete consumer on current Product identity and its applicable existing
+contract. Typed native Actions evidence from actual accepted GitHub runs
+may inform that selection but must never imply Developer acceptance.
+Issue #35 (OP05/09) remains conditional and does not block independent
+bounded OP03/04 planning by default.
+
+Beads and any State Kernel replacement are still **deferred**, with no
+authority, component contract or integration granted here. Evaluate a
+future Beads binding in an isolated consumer experiment against existing
+TaskCycle identity, provenance, durability and provider-independent
+correspondence; no migration decision is part of this roadmap clarification.
