@@ -72,25 +72,59 @@ test('V2-only configuration selects a single bounded primary; unused agents stay
   }
 });
 
-test('V2 native actor effective permissions fail closed for unassigned effects', () => {
+test('generic V2 implementer is inert without an authorized exact execution binding', () => {
   const id = 'ulc-implementer';
-  const approved = ['src/adapters/github.js', 'tests/adapters/github-native-actions-evidence.test.js'];
-  for (const file of approved) assert.equal(effect(id, 'edit', file), 'allow');
-  for (const denied of ['src/adapters/opencode-cli.js', 'tests/contract/opencode-v2-upper-lc-agents.test.js',
-    'docs/SOURCE_OF_TRUTH.md', '.opencode/agents/ulc-implementer.md']) {
-    assert.equal(effect(id, 'edit', denied), 'deny', denied);
+  assert.deepEqual(config.agents[id].permissions, [{ action: '*', resource: '*', effect: 'deny' }]);
+  for (const [action, resource] of [
+    ['edit','src/adapters/github.js'],
+    ['edit','tests/adapters/github-native-actions-evidence.test.js'],
+    ['edit','src/foo.js'],
+    ['read','docs/SOURCE_OF_TRUTH.md'],
+    ['shell','node --test tests/adapters/github-native-actions-evidence.test.js'],
+    ['shell','git push origin tools'],
+    ['subagent','general'],
+    ['external_directory','/tmp/outside'],
+    ['webfetch','https://example.com'],
+  ]) assert.equal(effect(id, action, resource), 'deny', action + ':' + resource);
+  const body = fs.readFileSync(path.join(AGENTS,'ulc-implementer.md'),'utf8');
+  for (const forbidden of ['#34', 'ULC-OP-03', '40082522885', 'src/adapters/github.js',
+    'tests/adapters/github-native-actions-evidence.test.js']) {
+    assert.equal(body.includes(forbidden), false, forbidden + ' leaked into reusable agent');
   }
-  assert.equal(effect(id, 'read', 'src/adapters/github.js'), 'allow');
-  assert.equal(effect(id, 'read', '.env'), 'deny');
-  assert.equal(effect(id, 'read', 'nested/.env.production'), 'deny');
-  assert.equal(effect(id, 'shell', 'git status --short'), 'allow');
-  assert.equal(effect(id, 'shell', 'node --check src/adapters/github.js'), 'allow');
-  assert.equal(effect(id, 'shell', 'git push origin tools'), 'deny');
-  assert.equal(effect(id, 'shell', 'npm install'), 'deny');
-  assert.equal(effect(id, 'subagent', 'general'), 'deny');
-  assert.equal(effect(id, 'execute', '*'), 'deny');
-  assert.equal(effect(id, 'external_directory', '/tmp/outside'), 'deny');
-  assert.equal(effect(id, 'webfetch', 'https://example.com'), 'deny');
+  assert.match(body, /ContextPackager/);
+  assert.match(body, /ExecutionAttempt/);
+  assert.match(body, /BLOCKED_PRECONDITION/);
+});
+
+test('test-only example bindings demonstrate distinct per-task scopes; no runtime authorization inferred', () => {
+  const canBind = r => !!(r && r.authority_ref && r.taskcycle_id && r.operation_id &&
+    r.execution_attempt_id && r.owner && r.commit && r.tree && r.context_ref &&
+    Array.isArray(r.write_scope) && r.write_scope.length > 0 &&
+    r.write_scope.every(p => typeof p === 'string' && !p.includes('..')));
+  const bind = (r) => {
+    if (!canBind(r)) return null;
+    return [...config.permissions, ...config.agents['ulc-implementer'].permissions,
+      ...r.write_scope.map(p=>({action:'edit',resource:p,effect:'allow'}))];
+  };
+  const a={authority_ref:'product:authorization-A',taskcycle_id:'TC-A',operation_id:'OP-A',
+    execution_attempt_id:'ATT-A',owner:'actor-A',commit:'a'.repeat(40),tree:'b'.repeat(40),
+    context_ref:'context:A',write_scope:['src/adapters/github.js']};
+  const b={...a,taskcycle_id:'TC-B',operation_id:'OP-B',execution_attempt_id:'ATT-B',
+    context_ref:'context:B',write_scope:['src/other.js']};
+  const project=(rules,action,resource)=>rules.reduce((state,rule)=>{
+    return match(rule.action,action) && match(rule.resource,resource) ? rule.effect : state;
+  },'ask');
+  for (const t of [a,b]) {
+    const rules=bind(t);
+    assert.equal(project(rules,'edit',t.write_scope[0]),'allow');
+    assert.equal(project(rules,'edit','docs/SOURCE_OF_TRUTH.md'),'deny');
+    assert.equal(project(rules,'shell','git push origin tools'),'deny');
+  }
+  assert.equal(project(bind(a),'edit','src/other.js'),'deny');
+  assert.equal(project(bind(b),'edit','src/adapters/github.js'),'deny');
+  assert.equal(bind({...a,authority_ref:null}),null);
+  assert.equal(bind({...a,write_scope:['../escape']}),null);
+  // This mechanical fixture is not proof of V2 host config merge, auth, policy, or dispatch.
 });
 
 test('inactive reviewer cannot mutate sources, authorize other agents or bypass review selection', () => {

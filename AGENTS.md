@@ -49,16 +49,18 @@ projections under `docs/archive/opencode-agent-profiles-v1/`, not current
 OpenCode agents. Do not revive their V1 `permission: deny` frontmatter as a
 V2 runtime binding or route work to those IDs.
 
-The current project-scoped V2 agents are `ulc-implementer` (only enabled
-primary for the bounded #34 code paths) and `ulc-reviewer` (disabled unless
-Product Control separately selects and qualifies that independent review
-binding). The built-ins `build`, `plan`, `general`, and `explore` are
+The current project-scoped V2 agents are `ulc-implementer` (reusable,
+primary, **deny-all without an exact execution binding**) and `ulc-reviewer`
+(disabled unless Product Control separately selects and qualifies that
+independent review binding). The built-ins `build`, `plan`, `general`, and `explore` are
 disabled by project config. `opencode.json` uses V2 `agents` and ordered
 `permissions`; validate the **actual effective runtime config**, model and
 auth before launch, and do not fall back silently to built-in `build`.
 
-The active #34 kernel-free TaskCycle's source boundaries, carrier and exact
-Operation/ExecutionAttempt remain governed by Product Control. This profile
+All per-task read and write scopes, context, validation commands, owner and
+Operation/ExecutionAttempt are supplied by the exact runtime/TaskCycle binding;
+no issue-specific paths belong in the reusable agent definition. The active
+#34 kernel-free TaskCycle's source boundaries remain governed by Product Control. This profile
 maintenance is independent, does not dispatch its Phase 1, and cannot expand
 the two-file write-set. Do not use State Kernel in the active process; its
 physical cleanup and Beads adoption remain separate.
