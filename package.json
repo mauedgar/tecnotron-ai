@@ -9,7 +9,6 @@
   "type": "commonjs",
   "dependencies": {
     "better-sqlite3": "^13.0.3",
-    "sqlite3": "^6.0.1",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
@@ -38,7 +37,6 @@
     "test:categorized": "npm run build && node scripts/tests/run-by-type.js all"
   },
   "allowScripts": {
-    "better-sqlite3@13.0.3": true,
-    "sqlite3@6.0.1": true
+    "better-sqlite3@13.0.3": true
   }
 }
