@@ -390,13 +390,17 @@ alternate-path retry, or security workaround is authorized. Existing Phase 2B
 observations remain exact evidence and are not retroactively converted into
 terminal lifecycle events.
 
-**Next-work independence:** issue #34 (`ULC-OP-03/04`) is open,
-`TASKCYCLE_NOT_INITIALIZED`, and has no demonstrated technical dependency
-on a synthetic OP01/OP02 native closure. It may undergo independent,
-read-only provider-consumer qualification and bounded planning under
-competent Product Control, while its own TaskCycle initialization, candidate
-acceptance, integration and new effects require distinct applicable authority
-and gates. This observation creates **no** automatic #34 activation.
+**Developer-directed hold on #34 (2026-10-24):** issue #34
+(`ULC-OP-03/04`) remains open and `TASKCYCLE_NOT_INITIALIZED`.
+The Developer explicitly requires competent reconciliation/disposition of
+all prior selected Beta Run debt before any #34 activation or qualification
+work. This hold overrides the former suggestion of immediate independent
+#34 planning and provider-consumer qualification. Do not initialize its
+TaskCycle, dispatch its operations, or infer Product `Ready` from Issue
+state, candidate planning or unrelated receipts. After outstanding historical
+responsibilities are competently disposed and exact current Product state is
+reobserved, only a new competent selection may release this hold. No
+synthetic native OP01/OP02 closure is a dependency workaround.
 
 Exact supporting technical qualification:
 `mauedgar/ts-execution-transport@d02c3ff7adeabbaf7033bcf15c04000157e72ecb:results/TECNOTRON-BETA-001-OP01-OP02-TECHNICAL-QUALIFICATION-20261023-001/CONTROL_EE_RETURN.md`,
