@@ -10,7 +10,7 @@ const { loadAgentProfiles } = require('../../src/registries');
 const { cases: invalidCases } = require('../fixtures/opencode-agent-profiles/invalid-cases');
 
 const ROOT = path.resolve(__dirname, '../..');
-const AGENTS_DIR = path.join(ROOT, '.opencode', 'agents');
+const AGENTS_DIR = path.join(ROOT, 'docs', 'archive', 'opencode-agent-profiles-v1');
 const DISCOVERY_FIXTURE = path.resolve(__dirname, '../fixtures/opencode-agent-profiles/discovery.yaml');
 const FRONTMATTER_KEYS = ['description', 'mode', 'permission'];
 const PROJECTION_KEYS = [
@@ -95,14 +95,14 @@ function setAtPath(value, parts, replacement) {
   target[parts.at(-1)] = replacement;
 }
 
-test('AC-LAUNCH-002 discovers exactly the nine accepted project-scoped profiles', () => {
+test('AC-LAUNCH-002 preserves exactly the nine historical v1 agent profile blobs', () => {
   const sourceIds = Object.keys(loadAgentProfiles().profiles).sort();
   const fixtureIds = [...readDiscoveryFixture().accepted_profile_ids].sort();
   assert.deepStrictEqual(fixtureIds, sourceIds, 'discovery fixture drifted from tecnotron-agent-profile/v1');
   assert.deepStrictEqual(discoverProfileIds(), sourceIds);
 });
 
-test('AC-LAUNCH-002 projects every profile directly from tecnotron-agent-profile/v1', () => {
+test('AC-LAUNCH-002 qualifies archived historical projections against frozen tecnotron-agent-profile/v1', () => {
   const sourceProfiles = loadAgentProfiles().profiles;
   for (const [id, sourceProfile] of Object.entries(sourceProfiles)) {
     const document = parseAgentFile(path.join(AGENTS_DIR, `${id}.md`));
