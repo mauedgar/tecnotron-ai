@@ -361,23 +361,23 @@ maturation, and no GitHub provider projection is adopted.
 > new Product TaskCycle. Preserve earlier cutoffs above.
 
 The observed Product integration anchor for this reconciliation is
-\`mauedgar/tecnotron-ai:tools@d4aa51dffdb7cc7f7c0ccfb4d1d3505b100f5912\`,
-tree \`0da5d62aa07b74477a0ed91e6383d314b0197501\`.
+`mauedgar/tecnotron-ai:tools@d4aa51dffdb7cc7f7c0ccfb4d1d3505b100f5912`,
+tree `0da5d62aa07b74477a0ed91e6383d314b0197501`.
 The one-off Developer exception for **only** the two original responsibilities
-is \`mauedgar/ts-execution-transport@d7fdba1e3c50ca692d8e89efba4adae68bbc695f:grants/TECNOTRON-BETA-001-OP01-OP02-EXCEPTIONAL-HISTORICAL-LINEAGE-20261020-001/DEVELOPER_DISPOSITION.md\`,
-blob \`a4ee0056fa8c7e42f4a243c747a725a82383f18f\`.
+is `mauedgar/ts-execution-transport@d7fdba1e3c50ca692d8e89efba4adae68bbc695f:grants/TECNOTRON-BETA-001-OP01-OP02-EXCEPTIONAL-HISTORICAL-LINEAGE-20261020-001/DEVELOPER_DISPOSITION.md`,
+blob `a4ee0056fa8c7e42f4a243c747a725a82383f18f`.
 
 | Historical original TaskCycle | Implemented / accepted / Git integrated | Existing exceptional Phase 2B observation |
 | --- | --- | --- |
-| \`TASKCYCLE-TECNOTRON-ULC-OP01-CONDITIONED-ACCEPTANCE-001\` (issue #32) | exact accepted \`a3d71cb8e87b6cf555e17ff9cd285e5003b41a1d\`, original independent IR006 PASS, separate Developer acceptance, PR49 merge \`f8ae25812212a0007be8a26214eb2c102d0c0198\`; issue CLOSED/completed | \`results/TECNOTRON-BETA-001-OP01-EXCEPTIONAL-PHASE2B-20261020-001/RECONCILIATION_RECEIPT.json\`, Transport blob \`678ebb355ac9992a0c47eb1b79f6c8824b84aa7b\` — PASS one-off observation |
-| \`TASKCYCLE-TECNOTRON-ULC-OP02-ACTOR-CONTEXT-CONSUMER-001\` (issue #33) | exact accepted \`e53f32f9ecdb0e5a2b3e6231819d5fc3a97d23f8\`, original bounded independent IR004 PASS, separate Developer acceptance, PR50 merge \`d4aa51dffdb7cc7f7c0ccfb4d1d3505b100f5912\`; issue CLOSED/completed | \`results/TECNOTRON-BETA-001-OP02-EXCEPTIONAL-PHASE2B-20261020-001/RECONCILIATION_RECEIPT.json\`, Transport blob \`d36f103dab5f4ab0a778b1d0ba8fd06e04ec4f5d\` — PASS one-off observation |
+| `TASKCYCLE-TECNOTRON-ULC-OP01-CONDITIONED-ACCEPTANCE-001` (issue #32) | exact accepted `a3d71cb8e87b6cf555e17ff9cd285e5003b41a1d`, original independent IR006 PASS, separate Developer acceptance, PR49 merge `f8ae25812212a0007be8a26214eb2c102d0c0198`; issue CLOSED/completed | `results/TECNOTRON-BETA-001-OP01-EXCEPTIONAL-PHASE2B-20261020-001/RECONCILIATION_RECEIPT.json`, Transport blob `678ebb355ac9992a0c47eb1b79f6c8824b84aa7b` — PASS one-off observation |
+| `TASKCYCLE-TECNOTRON-ULC-OP02-ACTOR-CONTEXT-CONSUMER-001` (issue #33) | exact accepted `e53f32f9ecdb0e5a2b3e6231819d5fc3a97d23f8`, original bounded independent IR004 PASS, separate Developer acceptance, PR50 merge `d4aa51dffdb7cc7f7c0ccfb4d1d3505b100f5912`; issue CLOSED/completed | `results/TECNOTRON-BETA-001-OP02-EXCEPTIONAL-PHASE2B-20261020-001/RECONCILIATION_RECEIPT.json`, Transport blob `d36f103dab5f4ab0a778b1d0ba8fd06e04ec4f5d` — PASS one-off observation |
 
 Both Phase 2B receipts explicitly state
-\`PASS_BY_ONE_OFF_DEVELOPER_EXCEPTION_FOR_PRODUCT_LOGICAL_DISPOSITION\`,
-\`effect_state=OBSERVATION_ONLY\`, original native terminal state \`UNVERIFIED\`
-and separately published logical terminal receipt \`PENDING_SEPARATE_RECEIPT\`.
+`PASS_BY_ONE_OFF_DEVELOPER_EXCEPTION_FOR_PRODUCT_LOGICAL_DISPOSITION`,
+`effect_state=OBSERVATION_ONLY`, original native terminal state `UNVERIFIED`
+and separately published logical terminal receipt `PENDING_SEPARATE_RECEIPT`.
 The accepted current-base candidates diverge from the original Phase 1
-carrier/first-parent lineage. **No ordinary native TaskCycle \`CLOSED_PASS\`
+carrier/first-parent lineage. **No ordinary native TaskCycle `CLOSED_PASS`
 is established, no source-native closure effect is claimed, and no original
 obligation satisfaction is inferred.** OP01 original initialization was
 portable only (native consume not qualified); OP02 original native
@@ -390,8 +390,8 @@ alternate-path retry, or security workaround is authorized. Existing Phase 2B
 observations remain exact evidence and are not retroactively converted into
 terminal lifecycle events.
 
-**Next-work independence:** issue #34 (\`ULC-OP-03/04\`) is open,
-\`TASKCYCLE_NOT_INITIALIZED\`, and has no demonstrated technical dependency
+**Next-work independence:** issue #34 (`ULC-OP-03/04`) is open,
+`TASKCYCLE_NOT_INITIALIZED`, and has no demonstrated technical dependency
 on a synthetic OP01/OP02 native closure. It may undergo independent,
 read-only provider-consumer qualification and bounded planning under
 competent Product Control, while its own TaskCycle initialization, candidate
@@ -399,5 +399,5 @@ acceptance, integration and new effects require distinct applicable authority
 and gates. This observation creates **no** automatic #34 activation.
 
 Exact supporting technical qualification:
-\`mauedgar/ts-execution-transport@d02c3ff7adeabbaf7033bcf15c04000157e72ecb:results/TECNOTRON-BETA-001-OP01-OP02-TECHNICAL-QUALIFICATION-20261023-001/CONTROL_EE_RETURN.md\`,
-blob \`07c811a6a0abecaa8061dc515e48dc64b37eaf60\`.
+`mauedgar/ts-execution-transport@d02c3ff7adeabbaf7033bcf15c04000157e72ecb:results/TECNOTRON-BETA-001-OP01-OP02-TECHNICAL-QUALIFICATION-20261023-001/CONTROL_EE_RETURN.md`,
+blob `07c811a6a0abecaa8061dc515e48dc64b37eaf60`.
