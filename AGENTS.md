@@ -59,11 +59,11 @@ auth before launch, and do not fall back silently to built-in `build`.
 
 All per-task read and write scopes, context, validation commands, owner and
 Operation/ExecutionAttempt are supplied by the exact runtime/TaskCycle binding;
-no issue-specific paths belong in the reusable agent definition. The active
-#34 kernel-free TaskCycle's source boundaries remain governed by Product Control. This profile
-maintenance is independent, does not dispatch its Phase 1, and cannot expand
-the two-file write-set. Do not use State Kernel in the active process; its
-physical cleanup and Beads adoption remain separate.
+no issue-specific paths belong in the reusable agent definition. TaskCycle
+boundaries, permitted write scopes, Kernel retirement decisions and any future
+Beads adoption remain governed by the exact competent Product contract, not
+by this global instruction file. Profile maintenance cannot dispatch Phase 1
+or expand any active TaskCycle's scope.
 
 The existing `src/adapters/opencode-cli.js` has a tested OpenCode v1
 compatibility boundary. The V2 actor definitions are **not** evidence of

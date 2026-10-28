@@ -97,10 +97,19 @@ test('generic V2 implementer is inert without an authorized exact execution bind
 });
 
 test('test-only example bindings demonstrate distinct per-task scopes; no runtime authorization inferred', () => {
+  // Test-only projection, not an executable authorization/permission policy.
+  const safeExampleScope = p => {
+    if (typeof p !== 'string' || !p || p.trim() !== p ||
+        p.startsWith('/') || p.includes('\\') || /[?*\[\]\x00]/.test(p) ||
+        /^[a-z]:/i.test(p)) return false;
+    const segments = p.split('/');
+    return segments.every(s => s !== '' && s !== '.' && s !== '..' &&
+      !['.git', '.env', 'node_modules'].includes(s) && !s.startsWith('.env.'));
+  };
   const canBind = r => !!(r && r.authority_ref && r.taskcycle_id && r.operation_id &&
     r.execution_attempt_id && r.owner && r.commit && r.tree && r.context_ref &&
     Array.isArray(r.write_scope) && r.write_scope.length > 0 &&
-    r.write_scope.every(p => typeof p === 'string' && !p.includes('..')));
+    r.write_scope.every(safeExampleScope));
   const bind = (r) => {
     if (!canBind(r)) return null;
     return [...config.permissions, ...config.agents['ulc-implementer'].permissions,
@@ -124,6 +133,11 @@ test('test-only example bindings demonstrate distinct per-task scopes; no runtim
   assert.equal(project(bind(b),'edit','src/adapters/github.js'),'deny');
   assert.equal(bind({...a,authority_ref:null}),null);
   assert.equal(bind({...a,write_scope:['../escape']}),null);
+  for (const bad of ['*', 'src/*.js', '/etc/passwd', 'C:\\Windows\\System32',
+    '.git/config', '.env', 'src/.env.production', 'src//secret',
+    'src/../secret', './src/foo.js', 'src\\sub\\file.js', 'src/']) {
+    assert.equal(bind({...a,write_scope:[bad]}), null, bad);
+  }
   // This mechanical fixture is not proof of V2 host config merge, auth, policy, or dispatch.
 });
 
@@ -133,6 +147,11 @@ test('inactive reviewer cannot mutate sources, authorize other agents or bypass 
   assert.equal(effect(id, 'edit', 'src/adapters/github.js'), 'deny');
   assert.equal(effect(id, 'shell', 'git push origin tools'), 'deny');
   assert.equal(effect(id, 'subagent', 'ulc-implementer'), 'deny');
-  assert.equal(effect(id, 'read', 'src/adapters/github.js'), 'allow');
-  assert.equal(effect(id, 'websearch', 'test'), 'deny');
+  assert.deepEqual(config.agents[id].permissions,
+    [{ action: '*', resource: '*', effect: 'deny' }]);
+  for (const [action, resource] of [['read', 'src/adapters/github.js'],
+    ['glob', '*'], ['grep', 'secret'], ['shell', 'git show HEAD:private.key'],
+    ['websearch', 'test']]) {
+    assert.equal(effect(id, action, resource), 'deny', action + ':' + resource);
+  }
 });
