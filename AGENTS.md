@@ -41,3 +41,31 @@ updated: 2026-08-30
 - El proveedor de workspace controla workspace y sesión; Git worktree provee
   aislamiento. Ninguna de esas responsabilidades pertenece al Agent CLI ni al
   AI Core.
+
+## Upper LC — OpenCode V2 actor surface (2026-10-24)
+
+The nine previous `.opencode/agents/*.md` agents are immutable historical
+projections under `docs/archive/opencode-agent-profiles-v1/`, not current
+OpenCode agents. Do not revive their V1 `permission: deny` frontmatter as a
+V2 runtime binding or route work to those IDs.
+
+The current project-scoped V2 agents are `ulc-implementer` (reusable,
+primary, **deny-all without an exact execution binding**) and `ulc-reviewer`
+(disabled unless Product Control separately selects and qualifies that
+independent review binding). The built-ins `build`, `plan`, `general`, and `explore` are
+disabled by project config. `opencode.json` uses V2 `agents` and ordered
+`permissions`; validate the **actual effective runtime config**, model and
+auth before launch, and do not fall back silently to built-in `build`.
+
+All per-task read and write scopes, context, validation commands, owner and
+Operation/ExecutionAttempt are supplied by the exact runtime/TaskCycle binding;
+no issue-specific paths belong in the reusable agent definition. TaskCycle
+boundaries, permitted write scopes, Kernel retirement decisions and any future
+Beads adoption remain governed by the exact competent Product contract, not
+by this global instruction file. Profile maintenance cannot dispatch Phase 1
+or expand any active TaskCycle's scope.
+
+The existing `src/adapters/opencode-cli.js` has a tested OpenCode v1
+compatibility boundary. The V2 actor definitions are **not** evidence of
+adapter/launcher compatibility, runtime permissions, full test PASS,
+independent review or Developer candidate acceptance. Preserve these gates.

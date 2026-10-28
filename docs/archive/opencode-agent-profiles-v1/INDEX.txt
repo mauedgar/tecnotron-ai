@@ -1,0 +1,7 @@
+# Historical OpenCode v1 actor projections (preserved)
+
+The nine files in this directory are the **unchanged Git blobs** previously discoverable under `.opencode/agents/`. They represent the frozen `tecnotron-agent-profile/v1` projection/test lineage and are **not executable agents, active routing, current authorization or a v2 permission schema**. Historical references to their earlier paths still identify the corresponding Git commits.
+
+The legacy registry at `src/registries/agent-profiles.yaml`, its schema and associated contract fixtures remain as historical source/contract evidence; this archive does not rewrite their previous disposition. Existing tests continue to qualify that frozen projection using these exact files.
+
+Current executable definitions are limited to `.opencode/agents/ulc-implementer.md` and the **disabled** `ulc-reviewer.md`, with V2 `agents`/`permissions` binding in `opencode.json`. Never infer new Product acceptance, launcher compatibility or runtime isolation merely from this configuration. Upper LC #34 remains a separate active TaskCycle; Beads experiments are independent and use no agents.
