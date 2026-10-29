@@ -105,6 +105,11 @@ class GitHubAdapter {
     return { status: 'UNKNOWN', reason: 'POST_EFFECT_CORRESPONDENCE_UNVERIFIED', effect_state: 'UNKNOWN', receipt };
   }
 
+  /** Observación nativa read-only del run de Actions; nunca usa el cliente ni escribe. */
+  observeActionsRunEvidence(observations, expected) {
+    return observeNativeActionsRunEvidence(observations, expected);
+  }
+
 }
 
 /** Read-only correlation: Issue open is not a GitHub Projects Backlog observation. */
@@ -141,4 +146,200 @@ function evaluateOperationalReady({ issueObservation, projectObservation, decisi
   return { status: 'ELIGIBLE', issueUrl: issueObservation.issueUrl, authorityRef: decision.authorityRef, projectId: projectObservation.projectId, projectItemId: projectObservation.projectItemId, statusFieldId: projectObservation.statusFieldId, statusOptionId: projectObservation.statusOptionId };
 }
 
-module.exports = { GitHubAdapter, GitHubAdapterError, taskReference, issuePatch, observePromotedIssue, evaluateOperationalReady };
+/* Cota cerrada (OP03): observación read-only de evidencia nativa de GitHub Actions.
+   Nunca evalúa efecto de Producto, nunca escribe, nunca infiere identidad de
+   Operation/ExecutionAttempt/owner a partir de evidencia del proveedor. */
+const ACTIONS_EVENT_SUPPORTED = ['pull_request'];
+const ACTIONS_STATUS_SUPPORTED = ['completed', 'in_progress'];
+const ACTIONS_CONCLUSION_SUPPORTED = ['success', 'failure', 'cancelled'];
+const SHA_RE = /^[0-9a-f]{40}$/;
+const NATIVE_ID_RE = /^\d[0-9]*$/;
+const ISO_Z_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+const OBSERVATION_FIELDS = [
+  'repository', 'url', 'run_id', 'run_attempt', 'job_id', 'workflow', 'event',
+  'status', 'conclusion', 'checkout_commit', 'checkout_tree', 'observed_at',
+  'reported_validation',
+];
+const OBSERVER_EXPECTATION_FIELDS = [
+  'repository', 'runId', 'runAttempt', 'jobId', 'event', 'checkoutCommit',
+  'checkoutTree', 'observationCutoff', 'operationRef', 'executionAttemptRef',
+  'ownerRef', 'authorityRef',
+];
+
+function observationBlocked(reason, extra) {
+  return { status: 'BLOCKED', reason, effect_state: 'NONE', ...extra };
+}
+
+function invalidObservationRecord(record, index, reason) {
+  return { error: { record: index, reason } };
+}
+
+function validateObservationRecord(record, index) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    return invalidObservationRecord(record, index, 'MALFORMED_OBSERVATION_RECORD');
+  }
+  const unsupported = Object.keys(record).filter((key) => !OBSERVATION_FIELDS.includes(key));
+  if (unsupported.length) return invalidObservationRecord(record, index, `UNSUPPORTED_PROVIDER_FIELD:${unsupported[0]}`);
+  for (const key of OBSERVATION_FIELDS.filter((k) => k !== 'conclusion' && k !== 'reported_validation')) {
+    if (!(key in record) || record[key] === null || record[key] === '' || record[key] === undefined) {
+      return invalidObservationRecord(record, index, `MISSING_REQUIRED_OBSERVATION_FIELD:${key}`);
+    }
+  }
+  for (const field of ['run_id', 'run_attempt', 'job_id']) {
+    const value = record[field];
+    if ((typeof value !== 'string' && typeof value !== 'number') || !NATIVE_ID_RE.test(String(value)) ||
+        Number(value) < 1) {
+      return invalidObservationRecord(record, index, `INVALID_NATIVE_IDENTITY:${field}`);
+    }
+  }
+  if (Number(record.run_attempt) < 1) {
+    return invalidObservationRecord(record, index, 'INVALID_NATIVE_IDENTITY:run_attempt');
+  }
+  const url = `https://github.com/${record.repository}/actions/runs/${record.run_id}`;
+  if (record.url !== url) return invalidObservationRecord(record, index, 'PROVIDER_URL_IDENTITY_MISMATCH');
+  if (!ACTIONS_EVENT_SUPPORTED.includes(record.event)) {
+    return invalidObservationRecord(record, index, 'UNSUPPORTED_EVENT');
+  }
+  if (typeof record.workflow !== 'string' || !record.workflow.trim()) {
+    return invalidObservationRecord(record, index, 'MISSING_WORKFLOW_IDENTITY');
+  }
+  if (!SHA_RE.test(String(record.checkout_commit)) || !SHA_RE.test(String(record.checkout_tree))) {
+    return invalidObservationRecord(record, index, 'INVALID_SOURCE_CHECKOUT_SUBJECT');
+  }
+  if (!ISO_Z_RE.test(String(record.observed_at))) {
+    return invalidObservationRecord(record, index, 'OBSERVATION_TIMESTAMP_INVALID');
+  }
+  if (!ACTIONS_STATUS_SUPPORTED.includes(record.status)) {
+    return invalidObservationRecord(record, index, 'UNSUPPORTED_PROVIDER_STATUS');
+  }
+  if (record.status === 'completed') {
+    const conclusion = record.conclusion;
+    if (conclusion === undefined || conclusion === null) {
+      return invalidObservationRecord(record, index, 'MISSING_PROVIDER_RESULT');
+    }
+    if (!ACTIONS_CONCLUSION_SUPPORTED.includes(conclusion)) {
+      return invalidObservationRecord(record, index, 'UNSUPPORTED_PROVIDER_CONCLUSION');
+    }
+  } else if (!(record.conclusion === undefined || record.conclusion === null)) {
+    return invalidObservationRecord(record, index, 'UNSUPPORTED_PROVIDER_CONCLUSION');
+  }
+  if ('reported_validation' in record &&
+      (typeof record.reported_validation !== 'string' || !record.reported_validation.trim())) {
+    return invalidObservationRecord(record, index, 'INVALID_REPORTED_VALIDATION');
+  }
+  return null;
+}
+
+function validateExpectation(expected) {
+  const unsupported = Object.keys(expected).filter((key) => !OBSERVER_EXPECTATION_FIELDS.includes(key));
+  if (unsupported.length) return `UNSUPPORTED_OBSERVER_REQUEST_FIELD:${unsupported[0]}`;
+  for (const key of ['repository', 'runId', 'runAttempt', 'jobId', 'event', 'checkoutCommit', 'checkoutTree', 'observationCutoff']) {
+    if (!(key in expected) || expected[key] === undefined) {
+      return `OBSERVER_EXPECTATION_MISSING:${key}`;
+    }
+  }
+  if (!ISO_Z_RE.test(String(expected.observationCutoff))) return 'OBSERVATION_CUTOFF_INVALID';
+  if (!SHA_RE.test(String(expected.checkoutCommit)) || !SHA_RE.test(String(expected.checkoutTree))) {
+    return 'EXPECTED_SOURCE_SUBJECT_INVALID';
+  }
+  for (const field of ['runId', 'jobId', 'runAttempt']) {
+    const value = expected[field];
+    if ((typeof value !== 'string' && typeof value !== 'number') || !NATIVE_ID_RE.test(String(value)) ||
+        Number(value) < 1) {
+      return `INVALID_NATIVE_IDENTITY:expected.${field}`;
+    }
+  }
+  if (Number(expected.runAttempt) < 1) return 'INVALID_NATIVE_IDENTITY:expected.runAttempt';
+  return null;
+}
+
+/** Normaliza/valida observaciones nativas de un run de Actions; siempre read-only. */
+function observeNativeActionsRunEvidence(observations, expected) {
+  if (!expected || typeof expected !== 'object' || Array.isArray(expected)) {
+    return observationBlocked('OBSERVER_EXPECTATION_MISSING');
+  }
+  const expectationError = validateExpectation(expected);
+  if (expectationError) return observationBlocked(expectationError);
+  if (!Array.isArray(observations) || observations.length === 0) {
+    return observationBlocked('OBSERVATION_COLLECTION_INVALID');
+  }
+  const errors = observations.map((record, index) => validateObservationRecord(record, index)).filter(Boolean);
+  if (errors.length) return observationBlocked(errors[0].error.reason, { offending_record: errors[0].error.record });
+  const core = (record) => ({ ...record });
+  const canonical = core(observations[0]);
+  for (const [index, record] of observations.slice(1).entries()) {
+    const same = ['run_id', 'run_attempt', 'job_id'].every((key) => String(record[key]) === String(canonical[key]));
+    if (!same) return observationBlocked('INCOHERENT_OBSERVATION_IDENTITY', { offending_record: index + 1 });
+    if (JSON.stringify(core(record)) !== JSON.stringify(canonical)) {
+      return observationBlocked('CONFLICTING_DUPLICATE_OBSERVATION', { offending_record: index + 1 });
+    }
+  }
+  const mismatchField = Object.entries({
+    repository: [canonical.repository, expected.repository],
+    run_id: [canonical.run_id, expected.runId],
+    run_attempt: [canonical.run_attempt, expected.runAttempt],
+    job_id: [canonical.job_id, expected.jobId],
+    event: [canonical.event, expected.event],
+    checkout_commit: [canonical.checkout_commit, expected.checkoutCommit],
+    checkout_tree: [canonical.checkout_tree, expected.checkoutTree],
+  }).find(([, [actual, wanted]]) => String(actual) !== String(wanted));
+  if (mismatchField) {
+    const reason = (mismatchField[0] === 'checkout_commit' || mismatchField[0] === 'checkout_tree')
+      ? 'SOURCE_COMMIT_OR_TREE_MISMATCH'
+      : 'NATIVE_IDENTITY_MISMATCH';
+    return observationBlocked(reason, { expected_field: mismatchField[0] });
+  }
+  if (String(canonical.observed_at) > String(expected.observationCutoff)) {
+    return observationBlocked('OBSERVATION_EXCEEDS_CUTOFF');
+  }
+  const product_bindings = {
+    operation: expected.operationRef !== undefined ? { ref: expected.operationRef, verification: 'UNVERIFIED' } : 'UNVERIFIED',
+    execution_attempt: expected.executionAttemptRef !== undefined ? { ref: expected.executionAttemptRef, verification: 'UNVERIFIED' } : 'UNVERIFIED',
+    owner: expected.ownerRef !== undefined ? { ref: expected.ownerRef, verification: 'UNVERIFIED' } : 'UNVERIFIED',
+    authority: expected.authorityRef !== undefined ? { ref: expected.authorityRef, verification: 'UNVERIFIED' } : 'UNVERIFIED',
+  };
+  const normalized = {
+    repository: canonical.repository,
+    actions_run_url: canonical.url,
+    run_id: canonical.run_id,
+    run_attempt: canonical.run_attempt,
+    job_id: canonical.job_id,
+    workflow: canonical.workflow,
+    event: canonical.event,
+    checkout_commit: canonical.checkout_commit,
+    checkout_tree: canonical.checkout_tree,
+    observation_cutoff: expected.observationCutoff,
+  };
+  const duplicateCount = observations.length;
+  if (canonical.status !== 'completed') {
+    return {
+      status: 'UNKNOWN',
+      reason: 'PROVIDER_RESULT_NOT_TERMINAL_NO_BLIND_RETRY',
+      retries_attempted: 0,
+      provider: 'GITHUB_ACTIONS',
+      normalized,
+      provider_result: { status: canonical.status, conclusion: null, reported_validation: canonical.reported_validation || null },
+      duplicates_seen: duplicateCount,
+      product_bindings,
+      product_effect: 'NOT_EVALUATED',
+      observation_effect_state: 'NONE',
+    };
+  }
+  return {
+    status: 'PASS',
+    provider: 'GITHUB_ACTIONS',
+    normalized,
+    provider_result: {
+      status: canonical.status,
+      conclusion: canonical.conclusion,
+      reported_validation: canonical.reported_validation || null,
+    },
+    duplicates_seen: duplicateCount,
+    product_bindings,
+    product_effect: 'NOT_EVALUATED',
+    observation_effect_state: 'NONE',
+    pass_semantics: 'EVIDENCE_NORMALIZATION_ONLY_NOT_PRODUCT_ACCEPTANCE',
+  };
+}
+
+module.exports = { GitHubAdapter, GitHubAdapterError, taskReference, issuePatch, observePromotedIssue, evaluateOperationalReady, observeNativeActionsRunEvidence };
