@@ -146,200 +146,237 @@ function evaluateOperationalReady({ issueObservation, projectObservation, decisi
   return { status: 'ELIGIBLE', issueUrl: issueObservation.issueUrl, authorityRef: decision.authorityRef, projectId: projectObservation.projectId, projectItemId: projectObservation.projectItemId, statusFieldId: projectObservation.statusFieldId, statusOptionId: projectObservation.statusOptionId };
 }
 
-/* Cota cerrada (OP03): observación read-only de evidencia nativa de GitHub Actions.
-   Nunca evalúa efecto de Producto, nunca escribe, nunca infiere identidad de
-   Operation/ExecutionAttempt/owner a partir de evidencia del proveedor. */
-const ACTIONS_EVENT_SUPPORTED = ['pull_request'];
-const ACTIONS_STATUS_SUPPORTED = ['completed', 'in_progress'];
-const ACTIONS_CONCLUSION_SUPPORTED = ['success', 'failure', 'cancelled'];
+/* OP03 — normalized, bounded read-only GitHub Actions evidence.
+   Caller-supplied provider observations are NOT self-authenticating.
+   No Product Operation/ExecutionAttempt/owner/authority can be inferred here. */
+const ACTIONS_EVENTS = ['pull_request'];
+const ACTIONS_STATUSES = ['completed', 'in_progress'];
+const ACTIONS_CONCLUSIONS = ['success', 'failure', 'cancelled'];
 const SHA_RE = /^[0-9a-f]{40}$/;
-const NATIVE_ID_RE = /^\d[0-9]*$/;
-const ISO_Z_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
-const OBSERVATION_FIELDS = [
+const UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+const STAGES = ['audit', 'typecheck', 'tests', 'contracts'];
+const STAGE_FIELDS = ['kind', 'name', 'status', 'conclusion', 'source_url'];
+const VALIDATION_FIELDS = ['total', 'pass', 'skip', 'fail', 'source_url'];
+const PROVIDER_FIELDS = [
   'repository', 'url', 'run_id', 'run_attempt', 'job_id', 'workflow', 'event',
   'status', 'conclusion', 'checkout_commit', 'checkout_tree', 'observed_at',
-  'reported_validation',
+  'run_started_at', 'native_updated_at', 'stages', 'validation', 'reported_validation',
 ];
-const OBSERVER_EXPECTATION_FIELDS = [
+const EXPECTED_FIELDS = [
   'repository', 'runId', 'runAttempt', 'jobId', 'event', 'checkoutCommit',
   'checkoutTree', 'observationCutoff', 'operationRef', 'executionAttemptRef',
   'ownerRef', 'authorityRef',
 ];
 
-function observationBlocked(reason, extra) {
-  return { status: 'BLOCKED', reason, effect_state: 'NONE', ...extra };
+function blockedNative(reason, extra = {}) {
+  // These effects describe this pure, read-only observation, NEVER a Product effect.
+  return { status: 'BLOCKED', reason, product_effect: 'NOT_EVALUATED',
+    observation_effect_state: 'NONE', ...extra };
 }
-
-function invalidObservationRecord(record, index, reason) {
-  return { error: { record: index, reason } };
+function nativeId(value) {
+  // No implicit rounding of identifiers beyond Number.MAX_SAFE_INTEGER.
+  if (typeof value === 'number') return Number.isSafeInteger(value) && value > 0 ? String(value) : null;
+  return typeof value === 'string' && /^[1-9][0-9]*$/.test(value) ? value : null;
 }
-
-function validateObservationRecord(record, index) {
-  if (!record || typeof record !== 'object' || Array.isArray(record)) {
-    return invalidObservationRecord(record, index, 'MALFORMED_OBSERVATION_RECORD');
+function utcSecond(value) {
+  return typeof value === 'string' && UTC_RE.test(value) &&
+    Number.isFinite(Date.parse(value)) &&
+    new Date(Date.parse(value)).toISOString() === value.replace(/Z$/, '.000Z');
+}
+function nativeJobUrl(record) {
+  return 'https://github.com/' + record.repository + '/actions/runs/' +
+    nativeId(record.run_id) + '/job/' + nativeId(record.job_id);
+}
+function nativeStagesError(record) {
+  const stages = record.stages;
+  if (!Array.isArray(stages) || stages.length !== STAGES.length) return 'STAGE_RESULTS_INCOMPLETE';
+  const names = new Set();
+  for (const stage of stages) {
+    if (!stage || typeof stage !== 'object' || Array.isArray(stage) ||
+        Object.keys(stage).some((k) => !STAGE_FIELDS.includes(k)) ||
+        STAGE_FIELDS.some((k) => !Object.hasOwn(stage, k))) return 'INVALID_NATIVE_STAGE';
+    if (!STAGES.includes(stage.kind) || names.has(stage.kind)) return 'INVALID_NATIVE_STAGE_IDENTITY';
+    names.add(stage.kind);
+    if (typeof stage.name !== 'string' || !stage.name.trim() ||
+        stage.status !== 'completed' ||
+        !['success', 'failure', 'cancelled', 'skipped'].includes(stage.conclusion) ||
+        stage.source_url !== nativeJobUrl(record)) return 'INVALID_NATIVE_STAGE_RESULT';
   }
-  const unsupported = Object.keys(record).filter((key) => !OBSERVATION_FIELDS.includes(key));
-  if (unsupported.length) return invalidObservationRecord(record, index, `UNSUPPORTED_PROVIDER_FIELD:${unsupported[0]}`);
-  for (const key of OBSERVATION_FIELDS.filter((k) => k !== 'conclusion' && k !== 'reported_validation')) {
-    if (!(key in record) || record[key] === null || record[key] === '' || record[key] === undefined) {
-      return invalidObservationRecord(record, index, `MISSING_REQUIRED_OBSERVATION_FIELD:${key}`);
-    }
+  return STAGES.every((k) => names.has(k)) ? null : 'STAGE_RESULTS_INCOMPLETE';
+}
+function nativeValidationError(record) {
+  const value = record.validation;
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).some((k) => !VALIDATION_FIELDS.includes(k)) ||
+      VALIDATION_FIELDS.some((k) => !Object.hasOwn(value, k))) return 'VALIDATION_OUTCOME_INCOMPLETE';
+  if (['total', 'pass', 'skip', 'fail'].some((k) => !Number.isSafeInteger(value[k]) || value[k] < 0) ||
+      value.total !== value.pass + value.skip + value.fail ||
+      value.source_url !== nativeJobUrl(record)) return 'INVALID_VALIDATION_OUTCOME';
+  const prefix = value.pass + ' PASS, ' + value.skip + ' SKIP, ' + value.fail + ' FAIL;';
+  return typeof record.reported_validation === 'string' &&
+    record.reported_validation.startsWith(prefix) ? null : 'VALIDATION_SUMMARY_MISMATCH';
+}
+function validateNativeRecord(record) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return 'MALFORMED_OBSERVATION_RECORD';
+  const unknown = Object.keys(record).find((key) => !PROVIDER_FIELDS.includes(key));
+  if (unknown) return 'UNSUPPORTED_PROVIDER_FIELD:' + unknown;
+  for (const key of PROVIDER_FIELDS.filter((k) =>
+    !['conclusion', 'native_updated_at', 'stages', 'validation', 'reported_validation'].includes(k))) {
+    if (!Object.hasOwn(record, key) || record[key] === undefined ||
+        record[key] === null || record[key] === '') return 'MISSING_REQUIRED_OBSERVATION_FIELD:' + key;
   }
-  for (const field of ['run_id', 'run_attempt', 'job_id']) {
-    const value = record[field];
-    if ((typeof value !== 'string' && typeof value !== 'number') || !NATIVE_ID_RE.test(String(value)) ||
-        Number(value) < 1) {
-      return invalidObservationRecord(record, index, `INVALID_NATIVE_IDENTITY:${field}`);
-    }
+  for (const key of ['run_id', 'run_attempt', 'job_id']) {
+    if (!nativeId(record[key])) return 'INVALID_NATIVE_IDENTITY:' + key;
   }
-  if (Number(record.run_attempt) < 1) {
-    return invalidObservationRecord(record, index, 'INVALID_NATIVE_IDENTITY:run_attempt');
-  }
-  const url = `https://github.com/${record.repository}/actions/runs/${record.run_id}`;
-  if (record.url !== url) return invalidObservationRecord(record, index, 'PROVIDER_URL_IDENTITY_MISMATCH');
-  if (!ACTIONS_EVENT_SUPPORTED.includes(record.event)) {
-    return invalidObservationRecord(record, index, 'UNSUPPORTED_EVENT');
-  }
-  if (typeof record.workflow !== 'string' || !record.workflow.trim()) {
-    return invalidObservationRecord(record, index, 'MISSING_WORKFLOW_IDENTITY');
-  }
+  if (record.url !== 'https://github.com/' + record.repository +
+      '/actions/runs/' + nativeId(record.run_id)) return 'PROVIDER_URL_IDENTITY_MISMATCH';
+  if (!ACTIONS_EVENTS.includes(record.event)) return 'UNSUPPORTED_EVENT';
+  if (typeof record.workflow !== 'string' || !record.workflow.trim()) return 'MISSING_WORKFLOW_IDENTITY';
   if (!SHA_RE.test(String(record.checkout_commit)) || !SHA_RE.test(String(record.checkout_tree))) {
-    return invalidObservationRecord(record, index, 'INVALID_SOURCE_CHECKOUT_SUBJECT');
+    return 'INVALID_SOURCE_CHECKOUT_SUBJECT';
   }
-  if (!ISO_Z_RE.test(String(record.observed_at))) {
-    return invalidObservationRecord(record, index, 'OBSERVATION_TIMESTAMP_INVALID');
-  }
-  if (!ACTIONS_STATUS_SUPPORTED.includes(record.status)) {
-    return invalidObservationRecord(record, index, 'UNSUPPORTED_PROVIDER_STATUS');
-  }
+  if (!utcSecond(record.run_started_at) || !utcSecond(record.observed_at)) return 'OBSERVATION_TIMESTAMP_INVALID';
+  if (record.observed_at < record.run_started_at) return 'OBSERVATION_BEFORE_RUN_START';
+  if (!ACTIONS_STATUSES.includes(record.status)) return 'UNSUPPORTED_PROVIDER_STATUS';
   if (record.status === 'completed') {
-    const conclusion = record.conclusion;
-    if (conclusion === undefined || conclusion === null) {
-      return invalidObservationRecord(record, index, 'MISSING_PROVIDER_RESULT');
+    if (!utcSecond(record.native_updated_at) ||
+        record.native_updated_at < record.run_started_at ||
+        record.observed_at < record.native_updated_at) return 'TERMINAL_OBSERVATION_BEFORE_NATIVE_UPDATE';
+    const stageError = nativeStagesError(record);
+    if (stageError) return stageError;
+    const validationError = nativeValidationError(record);
+    if (validationError) return validationError;
+    if (!ACTIONS_CONCLUSIONS.includes(record.conclusion)) return 'UNSUPPORTED_PROVIDER_CONCLUSION';
+    if (record.conclusion === 'success' &&
+        (record.stages.some((s) => s.conclusion !== 'success') || record.validation.fail !== 0)) {
+      return 'PROVIDER_STAGE_CONCLUSION_CONFLICT';
     }
-    if (!ACTIONS_CONCLUSION_SUPPORTED.includes(conclusion)) {
-      return invalidObservationRecord(record, index, 'UNSUPPORTED_PROVIDER_CONCLUSION');
-    }
-  } else if (!(record.conclusion === undefined || record.conclusion === null)) {
-    return invalidObservationRecord(record, index, 'UNSUPPORTED_PROVIDER_CONCLUSION');
-  }
-  if ('reported_validation' in record &&
-      (typeof record.reported_validation !== 'string' || !record.reported_validation.trim())) {
-    return invalidObservationRecord(record, index, 'INVALID_REPORTED_VALIDATION');
+  } else if (record.conclusion != null) {
+    return 'UNSUPPORTED_PROVIDER_CONCLUSION';
+  } else if (record.native_updated_at != null || record.stages != null ||
+             record.validation != null || record.reported_validation != null) {
+    return 'NONTERMINAL_WITH_TERMINAL_PROOF';
   }
   return null;
 }
-
-function validateExpectation(expected) {
-  const unsupported = Object.keys(expected).filter((key) => !OBSERVER_EXPECTATION_FIELDS.includes(key));
-  if (unsupported.length) return `UNSUPPORTED_OBSERVER_REQUEST_FIELD:${unsupported[0]}`;
-  for (const key of ['repository', 'runId', 'runAttempt', 'jobId', 'event', 'checkoutCommit', 'checkoutTree', 'observationCutoff']) {
-    if (!(key in expected) || expected[key] === undefined) {
-      return `OBSERVER_EXPECTATION_MISSING:${key}`;
-    }
-  }
-  if (!ISO_Z_RE.test(String(expected.observationCutoff))) return 'OBSERVATION_CUTOFF_INVALID';
-  if (!SHA_RE.test(String(expected.checkoutCommit)) || !SHA_RE.test(String(expected.checkoutTree))) {
-    return 'EXPECTED_SOURCE_SUBJECT_INVALID';
-  }
-  for (const field of ['runId', 'jobId', 'runAttempt']) {
-    const value = expected[field];
-    if ((typeof value !== 'string' && typeof value !== 'number') || !NATIVE_ID_RE.test(String(value)) ||
-        Number(value) < 1) {
-      return `INVALID_NATIVE_IDENTITY:expected.${field}`;
-    }
-  }
-  if (Number(expected.runAttempt) < 1) return 'INVALID_NATIVE_IDENTITY:expected.runAttempt';
-  return null;
-}
-
-/** Normaliza/valida observaciones nativas de un run de Actions; siempre read-only. */
-function observeNativeActionsRunEvidence(observations, expected) {
+function validateNativeExpectation(expected) {
   if (!expected || typeof expected !== 'object' || Array.isArray(expected)) {
-    return observationBlocked('OBSERVER_EXPECTATION_MISSING');
+    return 'OBSERVER_EXPECTATION_MISSING';
   }
-  const expectationError = validateExpectation(expected);
-  if (expectationError) return observationBlocked(expectationError);
+  const unknown = Object.keys(expected).find((key) => !EXPECTED_FIELDS.includes(key));
+  if (unknown) return 'UNSUPPORTED_OBSERVER_REQUEST_FIELD:' + unknown;
+  for (const key of ['repository', 'runId', 'runAttempt', 'jobId', 'event',
+    'checkoutCommit', 'checkoutTree', 'observationCutoff']) {
+    if (expected[key] == null || expected[key] === '') return 'OBSERVER_EXPECTATION_MISSING:' + key;
+  }
+  for (const key of ['runId', 'runAttempt', 'jobId']) {
+    if (!nativeId(expected[key])) return 'INVALID_NATIVE_IDENTITY:expected.' + key;
+  }
+  if (!utcSecond(expected.observationCutoff)) return 'OBSERVATION_CUTOFF_INVALID';
+  if (!SHA_RE.test(String(expected.checkoutCommit)) ||
+      !SHA_RE.test(String(expected.checkoutTree))) return 'EXPECTED_SOURCE_SUBJECT_INVALID';
+  return null;
+}
+function fingerprintNative(record) {
+  // Fixed-field ordering, IDs normalized to canonical strings, stages unordered.
+  return JSON.stringify(PROVIDER_FIELDS.map((field) => {
+    const value = record[field];
+    if (['run_id', 'run_attempt', 'job_id'].includes(field)) return nativeId(value);
+    if (field === 'stages' && Array.isArray(value)) {
+      return [...value].sort((a, b) => a.kind.localeCompare(b.kind))
+        .map((stage) => STAGE_FIELDS.map((key) => stage[key]));
+    }
+    if (field === 'validation' && value) return VALIDATION_FIELDS.map((key) => value[key]);
+    return value == null ? null : value;
+  }));
+}
+
+/** Pure read-only normalization. All Product bindings remain UNVERIFIED. */
+function observeNativeActionsRunEvidence(observations, expected) {
+  const expectationError = validateNativeExpectation(expected);
+  if (expectationError) return blockedNative(expectationError);
   if (!Array.isArray(observations) || observations.length === 0) {
-    return observationBlocked('OBSERVATION_COLLECTION_INVALID');
+    return blockedNative('OBSERVATION_COLLECTION_INVALID');
   }
-  const errors = observations.map((record, index) => validateObservationRecord(record, index)).filter(Boolean);
-  if (errors.length) return observationBlocked(errors[0].error.reason, { offending_record: errors[0].error.record });
-  const core = (record) => ({ ...record });
-  const canonical = core(observations[0]);
-  for (const [index, record] of observations.slice(1).entries()) {
-    const same = ['run_id', 'run_attempt', 'job_id'].every((key) => String(record[key]) === String(canonical[key]));
-    if (!same) return observationBlocked('INCOHERENT_OBSERVATION_IDENTITY', { offending_record: index + 1 });
-    if (JSON.stringify(core(record)) !== JSON.stringify(canonical)) {
-      return observationBlocked('CONFLICTING_DUPLICATE_OBSERVATION', { offending_record: index + 1 });
+  for (let i = 0; i < observations.length; i++) {
+    const error = validateNativeRecord(observations[i]);
+    if (error) return blockedNative(error, { offending_record: i });
+  }
+  const original = observations[0];
+  const fingerprint = fingerprintNative(original);
+  for (let i = 1; i < observations.length; i++) {
+    const record = observations[i];
+    if (['run_id', 'run_attempt', 'job_id'].some((key) =>
+      nativeId(record[key]) !== nativeId(original[key]))) {
+      return blockedNative('INCOHERENT_OBSERVATION_IDENTITY', { offending_record: i });
+    }
+    if (fingerprintNative(record) !== fingerprint) {
+      return blockedNative('CONFLICTING_DUPLICATE_OBSERVATION', { offending_record: i });
     }
   }
-  const mismatchField = Object.entries({
-    repository: [canonical.repository, expected.repository],
-    run_id: [canonical.run_id, expected.runId],
-    run_attempt: [canonical.run_attempt, expected.runAttempt],
-    job_id: [canonical.job_id, expected.jobId],
-    event: [canonical.event, expected.event],
-    checkout_commit: [canonical.checkout_commit, expected.checkoutCommit],
-    checkout_tree: [canonical.checkout_tree, expected.checkoutTree],
-  }).find(([, [actual, wanted]]) => String(actual) !== String(wanted));
-  if (mismatchField) {
-    const reason = (mismatchField[0] === 'checkout_commit' || mismatchField[0] === 'checkout_tree')
-      ? 'SOURCE_COMMIT_OR_TREE_MISMATCH'
-      : 'NATIVE_IDENTITY_MISMATCH';
-    return observationBlocked(reason, { expected_field: mismatchField[0] });
-  }
-  if (String(canonical.observed_at) > String(expected.observationCutoff)) {
-    return observationBlocked('OBSERVATION_EXCEEDS_CUTOFF');
+  const identity = {
+    repository: [original.repository, expected.repository],
+    run_id: [nativeId(original.run_id), nativeId(expected.runId)],
+    run_attempt: [nativeId(original.run_attempt), nativeId(expected.runAttempt)],
+    job_id: [nativeId(original.job_id), nativeId(expected.jobId)],
+    event: [original.event, expected.event],
+    checkout_commit: [original.checkout_commit, expected.checkoutCommit],
+    checkout_tree: [original.checkout_tree, expected.checkoutTree],
+  };
+  const mismatch = Object.entries(identity).find(([, values]) => values[0] !== values[1]);
+  if (mismatch) return blockedNative(
+    ['checkout_commit', 'checkout_tree'].includes(mismatch[0])
+      ? 'SOURCE_COMMIT_OR_TREE_MISMATCH' : 'NATIVE_IDENTITY_MISMATCH',
+    { expected_field: mismatch[0] }
+  );
+  if (original.observed_at > expected.observationCutoff) {
+    return blockedNative('OBSERVATION_EXCEEDS_CUTOFF');
   }
   const product_bindings = {
-    operation: expected.operationRef !== undefined ? { ref: expected.operationRef, verification: 'UNVERIFIED' } : 'UNVERIFIED',
-    execution_attempt: expected.executionAttemptRef !== undefined ? { ref: expected.executionAttemptRef, verification: 'UNVERIFIED' } : 'UNVERIFIED',
-    owner: expected.ownerRef !== undefined ? { ref: expected.ownerRef, verification: 'UNVERIFIED' } : 'UNVERIFIED',
-    authority: expected.authorityRef !== undefined ? { ref: expected.authorityRef, verification: 'UNVERIFIED' } : 'UNVERIFIED',
+    operation: expected.operationRef === undefined ? 'UNVERIFIED' :
+      { ref: expected.operationRef, verification: 'UNVERIFIED' },
+    execution_attempt: expected.executionAttemptRef === undefined ? 'UNVERIFIED' :
+      { ref: expected.executionAttemptRef, verification: 'UNVERIFIED' },
+    owner: expected.ownerRef === undefined ? 'UNVERIFIED' :
+      { ref: expected.ownerRef, verification: 'UNVERIFIED' },
+    authority: expected.authorityRef === undefined ? 'UNVERIFIED' :
+      { ref: expected.authorityRef, verification: 'UNVERIFIED' },
   };
   const normalized = {
-    repository: canonical.repository,
-    actions_run_url: canonical.url,
-    run_id: canonical.run_id,
-    run_attempt: canonical.run_attempt,
-    job_id: canonical.job_id,
-    workflow: canonical.workflow,
-    event: canonical.event,
-    checkout_commit: canonical.checkout_commit,
-    checkout_tree: canonical.checkout_tree,
+    repository: original.repository,
+    actions_run_url: original.url,
+    job_url: nativeJobUrl(original),
+    run_id: nativeId(original.run_id),
+    run_attempt: nativeId(original.run_attempt),
+    job_id: nativeId(original.job_id),
+    workflow: original.workflow,
+    event: original.event,
+    checkout_commit: original.checkout_commit,
+    checkout_tree: original.checkout_tree,
+    run_started_at: original.run_started_at,
+    native_updated_at: original.native_updated_at || null,
+    observed_at: original.observed_at,
     observation_cutoff: expected.observationCutoff,
+    stages: original.stages ? original.stages.map((s) => ({ ...s })) : null,
+    validation: original.validation ? { ...original.validation } : null,
+    provenance: 'CALLER_ASSERTED_NOT_SELF_AUTHENTICATING',
   };
-  const duplicateCount = observations.length;
-  if (canonical.status !== 'completed') {
-    return {
-      status: 'UNKNOWN',
-      reason: 'PROVIDER_RESULT_NOT_TERMINAL_NO_BLIND_RETRY',
-      retries_attempted: 0,
-      provider: 'GITHUB_ACTIONS',
-      normalized,
-      provider_result: { status: canonical.status, conclusion: null, reported_validation: canonical.reported_validation || null },
-      duplicates_seen: duplicateCount,
-      product_bindings,
-      product_effect: 'NOT_EVALUATED',
-      observation_effect_state: 'NONE',
-    };
-  }
-  return {
-    status: 'PASS',
-    provider: 'GITHUB_ACTIONS',
-    normalized,
-    provider_result: {
-      status: canonical.status,
-      conclusion: canonical.conclusion,
-      reported_validation: canonical.reported_validation || null,
-    },
-    duplicates_seen: duplicateCount,
-    product_bindings,
-    product_effect: 'NOT_EVALUATED',
+  const result = {
+    provider: 'GITHUB_ACTIONS', normalized, duplicates_seen: observations.length,
+    product_bindings, product_effect: 'NOT_EVALUATED',
     observation_effect_state: 'NONE',
-    pass_semantics: 'EVIDENCE_NORMALIZATION_ONLY_NOT_PRODUCT_ACCEPTANCE',
+    provider_result: {
+      status: original.status, conclusion: original.conclusion || null,
+      reported_validation: original.reported_validation || null,
+    },
   };
+  if (original.status !== 'completed') {
+    return { ...result, status: 'UNKNOWN',
+      reason: 'PROVIDER_RESULT_NOT_TERMINAL_NO_BLIND_RETRY', retries_attempted: 0 };
+  }
+  // PASS denotes evidence normalization ONLY. Provider conclusion may be failure/cancelled.
+  return { ...result, status: 'PASS',
+    pass_semantics: 'EVIDENCE_NORMALIZATION_ONLY_NOT_PRODUCT_ACCEPTANCE' };
 }
-
-module.exports = { GitHubAdapter, GitHubAdapterError, taskReference, issuePatch, observePromotedIssue, evaluateOperationalReady, observeNativeActionsRunEvidence };
+module.exports = { GitHubAdapter, GitHubAdapterError, taskReference, issuePatch,
+  observePromotedIssue, evaluateOperationalReady, observeNativeActionsRunEvidence };

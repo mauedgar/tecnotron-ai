@@ -6,21 +6,35 @@ const { GitHubAdapter, observeNativeActionsRunEvidence } = require('../../src/ad
 // Genuine provider identity frozen in ULC-OP03-TASK.md / OP03_CONTEXT_DECLARATION.txt (issue #34):
 // GitHub Actions run 40082522885 attempt 1 job 120838820954, event pull_request, completed/success,
 // checkout commit 2169c2144ee05116d735743df66eec01e6e57bf4 tree a44b9dedbed04d16437bad94085f29e6bc38c0d0.
-// The workflow label is unfrozen provider metadata: the fixture uses a neutral value and NO test
-// infers Product Operation/ExecutionAttempt/owner/authority identity from any provider field.
+// Workflow and source-native timestamps match provider run 40082522885.
+// All submitted observations still require external provider provenance verification.
 const GENUINE = {
   repository: 'mauedgar/tecnotron-ai',
   url: 'https://github.com/mauedgar/tecnotron-ai/actions/runs/40082522885',
   run_id: 40082522885,
   run_attempt: 1,
   job_id: 120838820954,
-  workflow: 'ACTIONS-EVIDENCE-FIXTURE',
+  workflow: 'Tecnotron native Node validation',
   event: 'pull_request',
   status: 'completed',
   conclusion: 'success',
   checkout_commit: '2169c2144ee05116d735743df66eec01e6e57bf4',
   checkout_tree: 'a44b9dedbed04d16437bad94085f29e6bc38c0d0',
-  observed_at: '2026-10-24T00:00:00Z',
+  run_started_at: '2026-10-24T09:34:56Z',
+  native_updated_at: '2026-10-24T09:35:26Z',
+  observed_at: '2026-10-24T09:35:26Z',
+  stages: ['audit', 'typecheck', 'tests', 'contracts'].map((kind, index) => ({
+    kind, name: [
+      'Audit resolved dependencies (moderate severity and above)',
+      'Typecheck', 'Run repository test suite', 'Validate portable contract package',
+    ][index],
+    status: 'completed', conclusion: 'success',
+    source_url: 'https://github.com/mauedgar/tecnotron-ai/actions/runs/40082522885/job/120838820954',
+  })),
+  validation: {
+    total: 659, pass: 653, skip: 6, fail: 0,
+    source_url: 'https://github.com/mauedgar/tecnotron-ai/actions/runs/40082522885/job/120838820954',
+  },
   reported_validation: '653 PASS, 6 SKIP, 0 FAIL; audit/typecheck/contracts PASS',
 };
 const BASE_EXPECTATION = {
@@ -42,9 +56,14 @@ test('genuine native observation normalizes terminal success without Product inf
   assert.equal(r.status, 'PASS');
   assert.equal(r.provider, 'GITHUB_ACTIONS');
   assert.equal(r.normalized.actions_run_url, GENUINE.url);
-  assert.equal(r.normalized.run_id, 40082522885);
-  assert.equal(r.normalized.run_attempt, 1);
-  assert.equal(r.normalized.job_id, 120838820954);
+  assert.equal(r.normalized.run_id, '40082522885');
+  assert.equal(r.normalized.run_attempt, '1');
+  assert.equal(r.normalized.job_id, '120838820954');
+  assert.equal(r.normalized.workflow, GENUINE.workflow);
+  assert.equal(r.normalized.observed_at, GENUINE.observed_at);
+  assert.deepEqual(r.normalized.stages, GENUINE.stages);
+  assert.deepEqual(r.normalized.validation, GENUINE.validation);
+  assert.equal(r.normalized.provenance, 'CALLER_ASSERTED_NOT_SELF_AUTHENTICATING');
   assert.equal(r.normalized.checkout_commit, GENUINE.checkout_commit);
   assert.equal(r.normalized.checkout_tree, GENUINE.checkout_tree);
   assert.equal(r.normalized.observation_cutoff, BASE_EXPECTATION.observationCutoff);
@@ -134,7 +153,9 @@ test('observation cutoff blocks later records', () => {
 });
 
 test('in-progress provider result yields UNKNOWN with no blind retry', () => {
-  const r = observe([record({ status: 'in_progress', conclusion: null })], expect());
+  const r = observe([record({ status: 'in_progress', conclusion: null,
+    native_updated_at: undefined, stages: undefined, validation: undefined,
+    reported_validation: undefined })], expect());
   assert.equal(r.status, 'UNKNOWN');
   assert.equal(r.reason, 'PROVIDER_RESULT_NOT_TERMINAL_NO_BLIND_RETRY');
   assert.equal(r.retries_attempted, 0);
@@ -186,4 +207,78 @@ test('legacy adapter contracts remain exported and unchanged', () => {
     assert.equal(typeof mod[name], 'function');
   }
   assert.equal(new mod.GitHubAdapterError('x').name, 'GitHubAdapterError');
+});
+
+
+test('provider-faithful terminal observation cannot predate run or native completion update', () => {
+  assert.equal(GENUINE.workflow, 'Tecnotron native Node validation');
+  assert.equal(GENUINE.run_started_at, '2026-10-24T09:34:56Z');
+  assert.equal(GENUINE.native_updated_at, '2026-10-24T09:35:26Z');
+  assert.equal(observe([record({ observed_at: '2026-10-24T09:34:55Z' })], expect()).reason,
+    'OBSERVATION_BEFORE_RUN_START');
+  assert.equal(observe([record({ observed_at: '2026-10-24T09:35:25Z' })], expect()).reason,
+    'TERMINAL_OBSERVATION_BEFORE_NATIVE_UPDATE');
+  assert.equal(observe([record({ native_updated_at: undefined })], expect()).reason,
+    'TERMINAL_OBSERVATION_BEFORE_NATIVE_UPDATE');
+});
+
+test('native duplicate deduplication is insensitive to property and stage order or safe string IDs', () => {
+  const reversed = Object.fromEntries(Object.entries(GENUINE).reverse());
+  reversed.run_id = String(GENUINE.run_id);
+  reversed.run_attempt = String(GENUINE.run_attempt);
+  reversed.job_id = String(GENUINE.job_id);
+  reversed.stages = [...GENUINE.stages].reverse().map((x) =>
+    Object.fromEntries(Object.entries(x).reverse()));
+  reversed.validation = Object.fromEntries(Object.entries(GENUINE.validation).reverse());
+  const identical = observe([record(), reversed], expect());
+  assert.equal(identical.status, 'PASS');
+  assert.equal(identical.duplicates_seen, 2);
+  assert.equal(observe([record(), { ...reversed, validation: { ...GENUINE.validation, fail: 1 } }], expect()).reason,
+    'INVALID_VALIDATION_OUTCOME');
+});
+
+test('provider stage results and original validation proof are mandatory and bounded', () => {
+  assert.equal(observe([record({ stages: undefined })], expect()).reason, 'STAGE_RESULTS_INCOMPLETE');
+  assert.equal(observe([record({ stages: GENUINE.stages.slice(1) })], expect()).reason, 'STAGE_RESULTS_INCOMPLETE');
+  assert.equal(observe([record({ stages: GENUINE.stages.map((s) => ({ ...s, source_url: 'https://other.invalid' })) })], expect()).reason,
+    'INVALID_NATIVE_STAGE_RESULT');
+  assert.equal(observe([record({ validation: undefined })], expect()).reason, 'VALIDATION_OUTCOME_INCOMPLETE');
+  assert.equal(observe([record({ validation: { ...GENUINE.validation, total: 660 } })], expect()).reason,
+    'INVALID_VALIDATION_OUTCOME');
+  assert.equal(observe([record({ reported_validation: undefined })], expect()).reason,
+    'VALIDATION_SUMMARY_MISMATCH');
+  assert.equal(observe([record({ validation: { ...GENUINE.validation, source_url: 'unverified' } })], expect()).reason,
+    'INVALID_VALIDATION_OUTCOME');
+});
+
+test('read-only BLOCKED never asserts a Product effect; future consumer cannot treat it as NONE', () => {
+  const result = observe([record({ checkout_tree: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' })], expect());
+  assert.equal(result.status, 'BLOCKED');
+  assert.equal(result.product_effect, 'NOT_EVALUATED');
+  assert.equal(result.observation_effect_state, 'NONE');
+  assert.equal(Object.hasOwn(result, 'effect_state'), false);
+});
+
+test('invalid calendar dates and unsafe numeric native identities fail closed', () => {
+  assert.equal(observe([record({ observed_at: '2026-99-99T99:99:99Z' })], expect()).reason,
+    'OBSERVATION_TIMESTAMP_INVALID');
+  assert.equal(observe([record({ observed_at: '2026-02-30T09:35:26Z' })], expect()).reason,
+    'OBSERVATION_TIMESTAMP_INVALID');
+  assert.equal(observe([record()], expect({ observationCutoff: '2026-02-30T00:00:00Z' })).reason,
+    'OBSERVATION_CUTOFF_INVALID');
+  assert.equal(observe([record({ run_id: Number.MAX_SAFE_INTEGER + 2 })], expect()).reason,
+    'INVALID_NATIVE_IDENTITY:run_id');
+  assert.equal(observe([record()], expect({ jobId: Number.MAX_SAFE_INTEGER + 2 })).reason,
+    'INVALID_NATIVE_IDENTITY:expected.jobId');
+});
+
+test('negative terminal provider conclusion is normalized, never reported as Product acceptance', () => {
+  const validation = { ...GENUINE.validation, pass: 652, fail: 1 };
+  const stages = GENUINE.stages.map((s) => s.kind === 'tests' ? { ...s, conclusion: 'failure' } : { ...s });
+  const result = observe([record({ conclusion: 'failure', validation, stages,
+    reported_validation: '652 PASS, 6 SKIP, 1 FAIL; audit/typecheck/contracts PASS' })], expect());
+  assert.equal(result.status, 'PASS');
+  assert.equal(result.provider_result.conclusion, 'failure');
+  assert.equal(result.product_effect, 'NOT_EVALUATED');
+  assert.match(result.pass_semantics, /NOT_PRODUCT_ACCEPTANCE/);
 });
