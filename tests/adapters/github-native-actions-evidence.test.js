@@ -119,7 +119,13 @@ test('conflicting duplicates fail closed', () => {
   assert.equal(divergent.status, 'BLOCKED');
   assert.equal(divergent.reason, 'CONFLICTING_DUPLICATE_OBSERVATION');
   assert.equal(divergent.offending_record, 1);
-  const incoherent = observe([record(), record({ job_id: 120838820955 })], expect());
+  const staleStages = observe([record(), record({ job_id: 120838820955 })], expect());
+  assert.equal(staleStages.reason, 'INVALID_NATIVE_STAGE_RESULT');
+  const alternateJob = record({ job_id: 120838820955 });
+  const alternateUrl = 'https://github.com/mauedgar/tecnotron-ai/actions/runs/40082522885/job/120838820955';
+  alternateJob.stages = alternateJob.stages.map((stage) => ({ ...stage, source_url: alternateUrl }));
+  alternateJob.validation = { ...alternateJob.validation, source_url: alternateUrl };
+  const incoherent = observe([record(), alternateJob], expect());
   assert.equal(incoherent.status, 'BLOCKED');
   assert.equal(incoherent.reason, 'INCOHERENT_OBSERVATION_IDENTITY');
   assert.equal(incoherent.offending_record, 1);
