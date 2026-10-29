@@ -2,4 +2,12 @@
 # This config does not request shared node_modules; verify external Orca settings separately.
 scripts:
   setup: |
-    echo "[TEC] No automatic install or .env copying in this setup. Check external workspace configuration before use."
+    echo "[TEC] Workspace visible. Preparation, credentials and processes remain explicit."
+
+defaultTabs:
+  - title: '01 · TEC · Control'
+    command: 'echo "[TEC/Control] Reobserve SOT, authority, DoD, attempt and effects before acting. No process started."'
+  - title: '02 · TEC · Shell'
+    command: 'echo "[TEC/Shell] Explicit task shell. No dependencies, credentials or agents were started."'
+  - title: '03 · TEC · Validate'
+    command: 'echo "[TEC/Validate] Run deterministic validation only for the exact authorized subject."'
