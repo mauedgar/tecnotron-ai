@@ -321,3 +321,43 @@ test('validation summary rejects forged trailing assertions and contradictions',
   assert.equal(r.provider_result.conclusion, 'failure');
   assert.equal(r.product_effect, 'NOT_EVALUATED');
 });
+
+test('IR003-F009: selected native run refuses workflow spoofing with real or forged stages', () => {
+  const alteredLabel = 'other workflow';
+  assert.equal(observe([record({ workflow: alteredLabel })], expect()).reason,
+    'SELECTED_RUN_WORKFLOW_MISMATCH');
+  const alteredName = GENUINE.stages.map((stage) => stage.kind === 'audit' ?
+    { ...stage, name: 'Forged audit passed' } : { ...stage });
+  assert.equal(observe([record({ workflow: alteredLabel, stages: alteredName })], expect()).reason,
+    'SELECTED_RUN_WORKFLOW_MISMATCH');
+  const alteredNumber = GENUINE.stages.map((stage) => stage.kind === 'audit' ?
+    { ...stage, step_number: 22 } : { ...stage });
+  assert.equal(observe([record({ workflow: alteredLabel, stages: alteredNumber })], expect()).reason,
+    'SELECTED_RUN_WORKFLOW_MISMATCH');
+  assert.equal(observe([record()], expect()).status, 'PASS');
+});
+
+test('IR003-F009: a different native run retains bounded structural-only semantics', () => {
+  const anotherRunId = 40082522886;
+  const anotherJobId = 120838820955;
+  const jobUrl = 'https://github.com/mauedgar/tecnotron-ai/actions/runs/' +
+    anotherRunId + '/job/' + anotherJobId;
+  const other = record({
+    run_id: anotherRunId,
+    job_id: anotherJobId,
+    url: 'https://github.com/mauedgar/tecnotron-ai/actions/runs/' + anotherRunId,
+    workflow: 'other workflow',
+    stages: GENUINE.stages.map((stage) => stage.kind === 'audit' ?
+      { ...stage, name: 'Synthetic alternate audit', step_number: 22, source_url: jobUrl } :
+      { ...stage, source_url: jobUrl }),
+    validation: { ...GENUINE.validation, source_url: jobUrl },
+  });
+  const observation = observe([other], expect({
+    runId: anotherRunId,
+    jobId: anotherJobId,
+  }));
+  assert.equal(observation.status, 'PASS');
+  assert.equal(observation.normalized.provenance, 'CALLER_ASSERTED_NOT_SELF_AUTHENTICATING');
+  assert.equal(observation.product_effect, 'NOT_EVALUATED');
+  assert.equal(observation.product_bindings.operation, 'UNVERIFIED');
+});

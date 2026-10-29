@@ -158,6 +158,14 @@ const STAGES = ['audit', 'typecheck', 'tests', 'contracts'];
 const STAGE_FIELDS = ['kind', 'step_number', 'name', 'status', 'conclusion', 'source_url'];
 // Scoped to the selected real native job profile; caller assertions still require native receipt.
 const SELECTED_WORKFLOW = 'Tecnotron native Node validation';
+const SELECTED_NATIVE_SOURCE = Object.freeze({
+  repository: 'mauedgar/tecnotron-ai',
+  run_id: '40082522885',
+  run_attempt: '1',
+  job_id: '120838820954',
+  checkout_commit: '2169c2144ee05116d735743df66eec01e6e57bf4',
+  checkout_tree: 'a44b9dedbed04d16437bad94085f29e6bc38c0d0',
+});
 const SELECTED_STAGE_PROFILE = Object.freeze({
   audit: { step_number: 6, name: 'Audit resolved dependencies (moderate severity and above)' },
   typecheck: { step_number: 7, name: 'Typecheck' },
@@ -186,6 +194,15 @@ function nativeId(value) {
   if (typeof value === 'number') return Number.isSafeInteger(value) && value > 0 ? String(value) : null;
   return typeof value === 'string' && /^[1-9][0-9]*$/.test(value) ? value : null;
 }
+function isSelectedNativeSource(record) {
+  // Selection never depends on the untrusted workflow label being checked.
+  return record.repository === SELECTED_NATIVE_SOURCE.repository &&
+    nativeId(record.run_id) === SELECTED_NATIVE_SOURCE.run_id &&
+    nativeId(record.run_attempt) === SELECTED_NATIVE_SOURCE.run_attempt &&
+    nativeId(record.job_id) === SELECTED_NATIVE_SOURCE.job_id &&
+    record.checkout_commit === SELECTED_NATIVE_SOURCE.checkout_commit &&
+    record.checkout_tree === SELECTED_NATIVE_SOURCE.checkout_tree;
+}
 function utcSecond(value) {
   return typeof value === 'string' && UTC_RE.test(value) &&
     Number.isFinite(Date.parse(value)) &&
@@ -209,7 +226,7 @@ function nativeStagesError(record) {
     if (!Number.isSafeInteger(stage.step_number) || stage.step_number < 1 ||
         numbers.has(stage.step_number)) return 'INVALID_NATIVE_STAGE_NUMBER';
     numbers.add(stage.step_number);
-    const expected = record.workflow === SELECTED_WORKFLOW ? SELECTED_STAGE_PROFILE[stage.kind] : null;
+    const expected = isSelectedNativeSource(record) ? SELECTED_STAGE_PROFILE[stage.kind] : null;
     if (expected && (stage.step_number !== expected.step_number || stage.name !== expected.name)) {
       return 'SELECTED_WORKFLOW_STAGE_MISMATCH';
     }
@@ -250,6 +267,9 @@ function validateNativeRecord(record) {
       '/actions/runs/' + nativeId(record.run_id)) return 'PROVIDER_URL_IDENTITY_MISMATCH';
   if (!ACTIONS_EVENTS.includes(record.event)) return 'UNSUPPORTED_EVENT';
   if (typeof record.workflow !== 'string' || !record.workflow.trim()) return 'MISSING_WORKFLOW_IDENTITY';
+  if (isSelectedNativeSource(record) && record.workflow !== SELECTED_WORKFLOW) {
+    return 'SELECTED_RUN_WORKFLOW_MISMATCH';
+  }
   if (!SHA_RE.test(String(record.checkout_commit)) || !SHA_RE.test(String(record.checkout_tree))) {
     return 'INVALID_SOURCE_CHECKOUT_SUBJECT';
   }
