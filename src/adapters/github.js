@@ -155,7 +155,15 @@ const ACTIONS_CONCLUSIONS = ['success', 'failure', 'cancelled'];
 const SHA_RE = /^[0-9a-f]{40}$/;
 const UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 const STAGES = ['audit', 'typecheck', 'tests', 'contracts'];
-const STAGE_FIELDS = ['kind', 'name', 'status', 'conclusion', 'source_url'];
+const STAGE_FIELDS = ['kind', 'step_number', 'name', 'status', 'conclusion', 'source_url'];
+// Scoped to the selected real native job profile; caller assertions still require native receipt.
+const SELECTED_WORKFLOW = 'Tecnotron native Node validation';
+const SELECTED_STAGE_PROFILE = Object.freeze({
+  audit: { step_number: 6, name: 'Audit resolved dependencies (moderate severity and above)' },
+  typecheck: { step_number: 7, name: 'Typecheck' },
+  tests: { step_number: 8, name: 'Run repository test suite' },
+  contracts: { step_number: 9, name: 'Validate portable contract package' },
+});
 const VALIDATION_FIELDS = ['total', 'pass', 'skip', 'fail', 'source_url'];
 const PROVIDER_FIELDS = [
   'repository', 'url', 'run_id', 'run_attempt', 'job_id', 'workflow', 'event',
@@ -191,12 +199,20 @@ function nativeStagesError(record) {
   const stages = record.stages;
   if (!Array.isArray(stages) || stages.length !== STAGES.length) return 'STAGE_RESULTS_INCOMPLETE';
   const names = new Set();
+  const numbers = new Set();
   for (const stage of stages) {
     if (!stage || typeof stage !== 'object' || Array.isArray(stage) ||
         Object.keys(stage).some((k) => !STAGE_FIELDS.includes(k)) ||
         STAGE_FIELDS.some((k) => !Object.hasOwn(stage, k))) return 'INVALID_NATIVE_STAGE';
     if (!STAGES.includes(stage.kind) || names.has(stage.kind)) return 'INVALID_NATIVE_STAGE_IDENTITY';
     names.add(stage.kind);
+    if (!Number.isSafeInteger(stage.step_number) || stage.step_number < 1 ||
+        numbers.has(stage.step_number)) return 'INVALID_NATIVE_STAGE_NUMBER';
+    numbers.add(stage.step_number);
+    const expected = record.workflow === SELECTED_WORKFLOW ? SELECTED_STAGE_PROFILE[stage.kind] : null;
+    if (expected && (stage.step_number !== expected.step_number || stage.name !== expected.name)) {
+      return 'SELECTED_WORKFLOW_STAGE_MISMATCH';
+    }
     if (typeof stage.name !== 'string' || !stage.name.trim() ||
         stage.status !== 'completed' ||
         !['success', 'failure', 'cancelled', 'skipped'].includes(stage.conclusion) ||
@@ -212,9 +228,11 @@ function nativeValidationError(record) {
   if (['total', 'pass', 'skip', 'fail'].some((k) => !Number.isSafeInteger(value[k]) || value[k] < 0) ||
       value.total !== value.pass + value.skip + value.fail ||
       value.source_url !== nativeJobUrl(record)) return 'INVALID_VALIDATION_OUTCOME';
-  const prefix = value.pass + ' PASS, ' + value.skip + ' SKIP, ' + value.fail + ' FAIL;';
-  return typeof record.reported_validation === 'string' &&
-    record.reported_validation.startsWith(prefix) ? null : 'VALIDATION_SUMMARY_MISMATCH';
+  const summaryStatus = ['audit', 'typecheck', 'contracts'].every((kind) =>
+    record.stages.find((stage) => stage.kind === kind)?.conclusion === 'success') ? 'PASS' : 'FAIL';
+  const summary = value.pass + ' PASS, ' + value.skip + ' SKIP, ' + value.fail +
+    ' FAIL; audit/typecheck/contracts ' + summaryStatus;
+  return record.reported_validation === summary ? null : 'VALIDATION_SUMMARY_MISMATCH';
 }
 function validateNativeRecord(record) {
   if (!record || typeof record !== 'object' || Array.isArray(record)) return 'MALFORMED_OBSERVATION_RECORD';

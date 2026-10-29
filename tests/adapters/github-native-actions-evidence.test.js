@@ -24,7 +24,7 @@ const GENUINE = {
   native_updated_at: '2026-10-24T09:35:26Z',
   observed_at: '2026-10-24T09:35:26Z',
   stages: ['audit', 'typecheck', 'tests', 'contracts'].map((kind, index) => ({
-    kind, name: [
+    kind, step_number: [6, 7, 8, 9][index], name: [
       'Audit resolved dependencies (moderate severity and above)',
       'Typecheck', 'Run repository test suite', 'Validate portable contract package',
     ][index],
@@ -287,4 +287,37 @@ test('negative terminal provider conclusion is normalized, never reported as Pro
   assert.equal(result.provider_result.conclusion, 'failure');
   assert.equal(result.product_effect, 'NOT_EVALUATED');
   assert.match(result.pass_semantics, /NOT_PRODUCT_ACCEPTANCE/);
+});
+
+test('selected native stage number and name correspondence is exact', () => {
+  assert.deepEqual(GENUINE.stages.map((s) => s.step_number), [6, 7, 8, 9]);
+  assert.equal(observe([record()], expect()).status, 'PASS');
+  const mismatchedName = GENUINE.stages.map((s) => s.kind === 'audit' ?
+    { ...s, name: 'Fake audit stage' } : { ...s });
+  assert.equal(observe([record({ stages: mismatchedName })], expect()).reason,
+    'SELECTED_WORKFLOW_STAGE_MISMATCH');
+  const mismatchedNumber = GENUINE.stages.map((s) => s.kind === 'tests' ?
+    { ...s, step_number: 18 } : { ...s });
+  assert.equal(observe([record({ stages: mismatchedNumber })], expect()).reason,
+    'SELECTED_WORKFLOW_STAGE_MISMATCH');
+  const repeatedNumber = GENUINE.stages.map((s) => s.kind === 'tests' ?
+    { ...s, step_number: 6 } : { ...s });
+  assert.equal(observe([record({ stages: repeatedNumber })], expect()).reason,
+    'INVALID_NATIVE_STAGE_NUMBER');
+});
+
+test('validation summary rejects forged trailing assertions and contradictions', () => {
+  assert.equal(observe([record({ reported_validation:
+    '653 PASS, 6 SKIP, 0 FAIL; audit/typecheck/contracts PASS; Product accepted' })], expect()).reason,
+    'VALIDATION_SUMMARY_MISMATCH');
+  assert.equal(observe([record({ reported_validation:
+    '653 PASS, 6 SKIP, 0 FAIL; audit/typecheck/contracts FAIL' })], expect()).reason,
+    'VALIDATION_SUMMARY_MISMATCH');
+  const failedAudit = GENUINE.stages.map((s) => s.kind === 'audit' ?
+    { ...s, conclusion: 'failure' } : { ...s });
+  const r = observe([record({ stages: failedAudit, conclusion: 'failure',
+    reported_validation: '653 PASS, 6 SKIP, 0 FAIL; audit/typecheck/contracts FAIL' })], expect());
+  assert.equal(r.status, 'PASS');
+  assert.equal(r.provider_result.conclusion, 'failure');
+  assert.equal(r.product_effect, 'NOT_EVALUATED');
 });
