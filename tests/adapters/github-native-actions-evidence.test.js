@@ -115,7 +115,11 @@ test('duplicated identical observation is idempotent', () => {
 });
 
 test('conflicting duplicates fail closed', () => {
-  const divergent = observe([record(), record({ workflow: 'OTHER-WORKFLOW' })], expect());
+  const spoofedWorkflow = observe([record(), record({ workflow: 'OTHER-WORKFLOW' })], expect());
+  assert.equal(spoofedWorkflow.status, 'BLOCKED');
+  assert.equal(spoofedWorkflow.reason, 'SELECTED_RUN_WORKFLOW_MISMATCH');
+  assert.equal(spoofedWorkflow.offending_record, 1);
+  const divergent = observe([record(), record({ observed_at: '2026-10-24T09:35:27Z' })], expect());
   assert.equal(divergent.status, 'BLOCKED');
   assert.equal(divergent.reason, 'CONFLICTING_DUPLICATE_OBSERVATION');
   assert.equal(divergent.offending_record, 1);
