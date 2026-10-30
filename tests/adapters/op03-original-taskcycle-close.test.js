@@ -13,8 +13,8 @@ const digest='a'.repeat(40),other='b'.repeat(40);
 const subj={commit:digest,tree:other,sourceBlob:'c'.repeat(40),testBlob:'d'.repeat(40),
   ciRun:40991197489,ciJob:123853756131};
 const rev={requestCommit:'1'.repeat(40),requestBlob:'2'.repeat(40)};
-const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR005';
-const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR005-ATTEMPT-001';
+const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR006';
+const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR006-ATTEMPT-001';
 const tick=String.fromCharCode(96);
 const input=[subj.commit,subj.tree,subj.sourceBlob,subj.testBlob,
   subj.ciRun,subj.ciJob,attempt].join(' ');
@@ -275,8 +275,43 @@ test('F005: an ordered-list or heading contradictory verdict also rejects',()=>{
   }
 });
 
-test('F002: native terminal selection must name IR005 only, not IR004',()=>{
+test('F002: native terminal selection must name IR006 only, not IR005',()=>{
   const source=fs.readFileSync(require.resolve('../../scripts/op03-original-taskcycle-close'),'utf8');
-  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR005_FROZEN_INPUT'));
-  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR004_FROZEN_INPUT'),false);
+  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR006_FROZEN_INPUT'));
+  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR005_FROZEN_INPUT'),false);
+});
+
+
+test('IR005-F008: decorated competing subject declarations fail closed',()=>{
+  const wrong='f'.repeat(40),wrongTree='e'.repeat(40);
+  for(const line of [
+    '**Reviewed subject**: '+tick+wrong+tick,
+    '**Reviewed candidate commit**: '+tick+wrong+tick,
+    '- [ ] **REVIEWED SUBJECT COMMIT:** '+tick+wrong+tick,
+    '> 1. [x] **Reviewed subject**: '+tick+wrong+tick,
+    tick+'Reviewed subject'+tick+': '+tick+wrong+tick,
+    '3) - [X] '+tick+'Reviewed tree'+tick+': '+tick+wrongTree+tick,
+    '- [x] **REVIEWED SUBJECT TREE:** '+tick+wrongTree+tick
+  ]){
+    assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,line);
+  }
+});
+
+test('IR005-F009: decorated second FAIL verdicts fail closed',()=>{
+  for(const line of [
+    '**ORIGINAL SEMANTIC VERDICT**: FAIL',
+    '1. **ORIGINAL SEMANTIC VERDICT**: FAIL',
+    '> ### **ORIGINAL SEMANTIC VERDICT**: FAIL',
+    '- [ ] **ORIGINAL SEMANTIC VERDICT**: FAIL',
+    '**ORIG**INAL SEMANTIC VERDICT: FAIL',
+    tick+'ORIGINAL SEMANTIC VERDICT'+tick+': FAIL'
+  ]){
+    assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,line);
+  }
+});
+
+test('IR005: canonical PASS and explicit historical nondeclarations remain valid',()=>{
+  assert.doesNotThrow(()=>verifyOriginalReviewPass(pass+'\nHistorical unrelated SHA: '+('f'.repeat(40)),input,subj,rev));
 });
