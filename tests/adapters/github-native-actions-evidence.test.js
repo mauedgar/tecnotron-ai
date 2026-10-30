@@ -100,7 +100,7 @@ test('mismatched checkout tree or commit cannot pass as native subject', () => {
   const other40 = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
   const wrongTree = observe([record()], expect({ checkoutTree: other40 }));
   assert.equal(wrongTree.status, 'BLOCKED');
-  assert.equal(wrongTree.reason, 'SELECTED_RUN_SOURCE_MISMATCH');
+  assert.equal(wrongTree.reason, 'SELECTED_EXPECTED_SOURCE_MISMATCH');
   const wrongCommit = observe([record({ checkout_commit: other40 })], expect());
   assert.equal(wrongCommit.reason, 'SELECTED_RUN_SOURCE_MISMATCH');
   assert.equal(observe([record()], expect({ runId: 999999 })).reason, 'NATIVE_IDENTITY_MISMATCH');
