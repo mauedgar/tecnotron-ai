@@ -238,3 +238,9 @@ test('a BLOCKED diagnostic carries no Product terminal disposition',()=>{
   assert.equal(r.effect_state,'NONE');
   assert.equal(r.terminal_disposition_ref,null);
 });
+
+test('F002: native terminal consumer selects only the current IR004 Control interface',()=>{
+  const source=fs.readFileSync(require.resolve('../../scripts/op03-original-taskcycle-close'),'utf8');
+  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR004_FROZEN_INPUT'));
+  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR003_FROZEN_INPUT'),false);
+});
