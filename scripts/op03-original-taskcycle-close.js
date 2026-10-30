@@ -72,39 +72,102 @@ function apiBlob(api,repo,ref,p,expected) {
   expect(blobSha(b)===expected && v.sha===expected,'NATIVE_BLOB_INTEGRITY_MISMATCH');
   return b.toString('utf8');
 }
+const QUALIFIED_FACTS = new WeakSet();
+const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR002-20261030-001/';
+const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR002-ATTEMPT-001';
 function exactIssueCommentId(ref) {
-  const m=/^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/34#issuecomment-(\d+)$/.exec(ref||'');
-  expect(m && m[1] && m[1]!== '6512731481','TERMINAL_MAINTENANCE_AUTHORITY_NOT_CANDIDATE_SPECIFIC');
+  const m = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/34#issuecomment-(\d+)$/.exec(ref || '');
+  expect(m, 'INVALID_EXACT_DEVELOPER_DECISION_REF');
   return m[1];
 }
-function verifyTerminalAdapterIntegration(api, currentHead, acceptanceRef, phase2Ref) {
-  if (currentHead===SUBJECT.merge) return {status:'NOT_YET_INTEGRATED',currentHead};
-  const pr=api(apiPath(PRODUCT,'pulls/58'));
-  expect(pr?.merged===true && pr.merge_commit_sha===currentHead
-    && typeof pr.head?.sha==='string','TERMINAL_ADAPTER_NOT_INTEGRATED');
-  const m=api(apiPath(PRODUCT,'git/commits/'+currentHead));
-  expect(m.tree?.sha && JSON.stringify(m.parents?.map(p=>p.sha))===
-    JSON.stringify([SUBJECT.merge,pr.head.sha]),'TERMINAL_ADAPTER_MERGE_PARENT_DRIFT');
-  const compare=api(apiPath(PRODUCT,'compare/'+SUBJECT.merge+'...'+currentHead));
-  expect(JSON.stringify(compare.files?.map(f=>f.filename).sort())===
-    JSON.stringify(['scripts/op03-original-taskcycle-close.js',
-      'tests/adapters/op03-original-taskcycle-close.test.js']),
-    'TERMINAL_ADAPTER_SCOPE_DRIFT');
-  const a=api(apiPath(PRODUCT,'issues/comments/'+exactIssueCommentId(acceptanceRef)));
-  const p=api(apiPath(PRODUCT,'issues/comments/'+exactIssueCommentId(phase2Ref)));
-  expect(a?.body?.includes('DEVELOPER_ACCEPTED_TERMINAL_COMPAT_EXACT_CANDIDATE') &&
-    a.body.includes(pr.head.sha) && a.body.includes(m.parents[1].sha),
-    'TERMINAL_ADAPTER_DEVELOPER_ACCEPTANCE_UNVERIFIED');
-  expect(p?.body?.includes('DEVELOPER_GRANTED_TERMINAL_COMPAT_PHASE2') &&
-    p.body.includes(pr.head.sha) && acceptanceRef!==phase2Ref,
-    'TERMINAL_ADAPTER_PHASE2_AUTHORITY_UNVERIFIED');
-  const localSource=blobSha(fs.readFileSync(__filename));
-  const native=api(apiPath(PRODUCT,'contents/scripts/op03-original-taskcycle-close.js?ref='+currentHead));
-  expect(native?.sha===localSource,'EXECUTED_TERMINAL_ADAPTER_SOURCE_DRIFT');
-  return {status:'QUALIFIED_MERGED',currentHead,prHead:pr.head.sha,tree:m.tree.sha,
-    authority_refs:[acceptanceRef,phase2Ref],native_script_blob:localSource};
+function ownerDecision(api, ref) {
+  const x = api(apiPath(PRODUCT, 'issues/comments/' + exactIssueCommentId(ref)));
+  expect(x && x.html_url === ref && x.user?.login === 'mauedgar'
+    && x.author_association === 'OWNER' && typeof x.body === 'string'
+    && typeof x.created_at === 'string' && x.updated_at === x.created_at,
+    'COMPETENT_DEVELOPER_DECISION_PROVENANCE_MISSING');
+  return x;
 }
-function inspectNative(api,{terminalAcceptanceRef=null,terminalPhase2Ref=null}={}) {
+function verifyOriginalReviewPass(report, request, q) {
+  const m = /^\*\*ORIGINAL SEMANTIC VERDICT:\s*(PASS(?: \([A-Z _-]+\))?|FAIL|BLOCKED)\b[^\n]*\*\*/m.exec(report);
+  expect(m && m[1].startsWith('PASS') && report.includes(REVIEW_ATTEMPT)
+    && report.includes(q.commit) && report.includes(q.tree)
+    && request.includes(q.commit) && request.includes(q.tree)
+    && request.includes(q.sourceBlob) && request.includes(q.testBlob),
+    'PR58_EXACT_INDEPENDENT_REVIEW_NOT_PASS');
+}
+function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
+  if (currentHead === SUBJECT.merge) return { status: 'NOT_YET_INTEGRATED', currentHead };
+  const q = qualification;
+  const candidate = q?.candidate, rev = q?.review;
+  const sha = v => typeof v === 'string' && /^[a-f0-9]{40}$/.test(v);
+  expect(candidate && rev && sha(candidate.commit) && sha(candidate.tree)
+    && sha(candidate.sourceBlob) && sha(candidate.testBlob)
+    && Number.isSafeInteger(candidate.ciRun) && candidate.ciRun > 0
+    && sha(rev.commit) && sha(rev.blob) && sha(rev.requestCommit) && sha(rev.requestBlob)
+    && q.acceptanceRef && q.phase2Ref && q.terminalRef,
+    'EXACT_ACCEPTED_REVIEWED_SUBJECT_REQUIRED');
+  const pr = api(apiPath(PRODUCT, 'pulls/58'));
+  expect(pr?.merged === true && pr.merge_commit_sha === currentHead
+    && pr.head?.sha === candidate.commit, 'PR58_EXACT_MERGE_MISSING');
+  const merge = api(apiPath(PRODUCT, 'git/commits/' + currentHead));
+  const candidateCommit = api(apiPath(PRODUCT, 'git/commits/' + candidate.commit));
+  expect(candidateCommit.tree?.sha === candidate.tree
+    && JSON.stringify(merge.parents?.map(p => p.sha))
+      === JSON.stringify([SUBJECT.merge, candidate.commit]) && sha(merge.tree?.sha),
+    'PR58_REVIEWED_COMMIT_TREE_OR_PARENTS_MISMATCH');
+  const diff = api(apiPath(PRODUCT, 'compare/' + SUBJECT.merge + '...' + currentHead));
+  expect(JSON.stringify(diff.files?.map(f => f.filename).sort()) === JSON.stringify([
+    'scripts/op03-original-taskcycle-close.js',
+    'tests/adapters/op03-original-taskcycle-close.test.js'
+  ]), 'PR58_CANDIDATE_WRITE_SCOPE_MISMATCH');
+  apiBlob(api, PRODUCT, candidate.commit, 'scripts/op03-original-taskcycle-close.js', candidate.sourceBlob);
+  apiBlob(api, PRODUCT, candidate.commit, 'tests/adapters/op03-original-taskcycle-close.test.js', candidate.testBlob);
+  const mergedSource = api(apiPath(PRODUCT,
+    'contents/scripts/op03-original-taskcycle-close.js?ref=' + currentHead));
+  expect(mergedSource?.sha === candidate.sourceBlob
+    && blobSha(fs.readFileSync(__filename)) === candidate.sourceBlob,
+    'EXECUTED_PR58_SOURCE_BLOB_NOT_REVIEWED');
+  const ci = api(apiPath(PRODUCT, 'actions/runs/' + candidate.ciRun));
+  const jobs = api(apiPath(PRODUCT, 'actions/runs/' + candidate.ciRun + '/jobs'));
+  expect(ci.head_sha === candidate.commit && ci.run_attempt === 1
+    && ci.status === 'completed' && ci.conclusion === 'success'
+    && jobs.jobs?.some(j => j.conclusion === 'success'
+      && j.steps?.some(st => st.name === 'Run repository test suite' && st.conclusion === 'success')),
+    'PR58_EXACT_NATIVE_CI_NOT_PASS');
+  const reviewText = apiBlob(api, TRANSPORT, rev.commit,
+    REVIEW_DIR + 'ORIGINAL_REVIEW_RESULT.md', rev.blob);
+  const requestText = apiBlob(api, TRANSPORT, rev.requestCommit,
+    REVIEW_DIR + 'IMMUTABLE_REVIEW_REQUEST.md', rev.requestBlob);
+  verifyOriginalReviewPass(reviewText, requestText, candidate);
+  expect(new Set([q.acceptanceRef, q.phase2Ref, q.terminalRef]).size === 3,
+    'DEVELOPER_DECISIONS_NOT_DISTINCT');
+  const a = ownerDecision(api, q.acceptanceRef);
+  const p = ownerDecision(api, q.phase2Ref);
+  const t = ownerDecision(api, q.terminalRef);
+  expect(a.created_at < p.created_at && p.created_at < t.created_at
+    && a.body.includes('DEVELOPER_ACCEPTED_TERMINAL_COMPAT_EXACT_CANDIDATE')
+    && /^>\s*Acepto el candidato de cierre OP03 PR #58/m.test(a.body)
+    && p.body.includes('DEVELOPER_GRANTED_TERMINAL_COMPAT_PHASE2')
+    && /^>\s*Autorizo Phase 2 para el candidato de cierre OP03 PR #58/m.test(p.body)
+    && t.body.includes('DEVELOPER_AUTHORIZED_ORIGINAL_OP03_LOGICAL_CLOSE')
+    && /^>\s*Autorizo el cierre lógico de la TaskCycle original OP03/m.test(t.body)
+    && a.body.includes(candidate.commit) && a.body.includes(candidate.tree)
+    && a.body.includes(rev.blob) && p.body.includes(candidate.commit)
+    && p.body.includes(candidate.tree) && p.body.includes(q.acceptanceRef)
+    && t.body.includes(currentHead) && t.body.includes(candidate.commit)
+    && t.body.includes(q.phase2Ref) && t.body.includes(rev.blob),
+    'DEVELOPER_DIRECT_DECISIONS_NOT_SOURCE_BOUND');
+  return {status: 'QUALIFIED_MERGED', currentHead, prHead: candidate.commit,
+    tree: merge.tree.sha, authority_refs: [q.acceptanceRef, q.phase2Ref, q.terminalRef],
+    native_script_blob: candidate.sourceBlob,
+    independent_review_ref: 'https://github.com/' + TRANSPORT + '/blob/' + rev.commit
+      + '/' + REVIEW_DIR + 'ORIGINAL_REVIEW_RESULT.md',
+    frozen_review_ref: 'https://github.com/' + TRANSPORT + '/blob/' + rev.requestCommit
+      + '/' + REVIEW_DIR + 'IMMUTABLE_REVIEW_REQUEST.md',
+    ci_ref: 'https://github.com/' + PRODUCT + '/actions/runs/' + candidate.ciRun};
+}
+function inspectNative(api,{qualification=null}={}) {
   const mi=apiBlob(api,TRANSPORT,INITIAL_REF,INITIAL_DIR+'/manifest.json',INIT_BLOBS.manifest);
   const pi=apiBlob(api,TRANSPORT,INITIAL_REF,INITIAL_DIR+'/projection.json',INIT_BLOBS.projection);
   const manifest=JSON.parse(mi), initial=JSON.parse(pi);
@@ -125,8 +188,7 @@ function inspectNative(api,{terminalAcceptanceRef=null,terminalPhase2Ref=null}={
   apiBlob(api,PRODUCT,SUBJECT.carrier,'docs/tasks/TEC-TC-ULC-OP03-ACTIONS-EVIDENCE-CONSUMER-001/TASK.md',SUBJECT.carrierBlob);
   const branch=api(apiPath(PRODUCT,'branches/tools'));
   expect(typeof branch.commit?.sha==='string','CANONICAL_TOOLS_HEAD_UNAVAILABLE');
-  const adapter=verifyTerminalAdapterIntegration(api,branch.commit.sha,
-    terminalAcceptanceRef,terminalPhase2Ref);
+  const adapter=verifyTerminalAdapterIntegration(api,branch.commit.sha,qualification);
   const merge=api(apiPath(PRODUCT,'git/commits/'+SUBJECT.merge));
   expect(merge.tree?.sha===SUBJECT.mergeTree
     && JSON.stringify(merge.parents?.map(p=>p.sha))===JSON.stringify([SUBJECT.pre,SUBJECT.accepted]),
@@ -188,7 +250,7 @@ function inspectNative(api,{terminalAcceptanceRef=null,terminalPhase2Ref=null}={
     && receipt.effect_reconciliation?.canonical_commit===SUBJECT.merge
     && receipt.effect_reconciliation?.unresolved_UNKNOWN_effects?.length===0,
     'PHASE2_EFFECT_RECONCILIATION_INCOMPLETE');
-  return {initial,manifest,source_identity:INITIAL_HASH,adapter,
+  const facts={initial,manifest,source_identity:INITIAL_HASH,adapter,
     authority_refs:[ACCEPT_REF,GRANT_REF,...(adapter.authority_refs||[])],
     evidence_refs:[
       'https://github.com/mauedgar/tecnotron-ai/actions/runs/'+SUBJECT.originalRun,
@@ -197,18 +259,36 @@ function inspectNative(api,{terminalAcceptanceRef=null,terminalPhase2Ref=null}={
       'https://github.com/mauedgar/ts-execution-transport/blob/'+SUBJECT.phase2ReceiptCommit+'/results/TECNOTRON-OP03-PR57-PHASE2-INTEGRATION-20261029-001/PHASE2_AND_EFFECT_RECEIPT.json',
       MERGE_REF
     ]};
+  if(adapter.status==='QUALIFIED_MERGED') QUALIFIED_FACTS.add(facts);
+  return facts;
 }
 function buildPackage(facts,terminalAuthorityRef) {
-  expect(typeof terminalAuthorityRef==='string' && terminalAuthorityRef.includes('github.com/mauedgar/tecnotron-ai/issues/34#issuecomment-'),
-    'COMPETENT_TERMINAL_AUTHORITY_REFERENCE_REQUIRED');
+  expect(QUALIFIED_FACTS.has(facts) && facts.adapter?.status==='QUALIFIED_MERGED'
+    && terminalAuthorityRef===facts.adapter.authority_refs[2],
+    'COMPETENT_TERMINAL_AUTHORITY_AND_SOURCE_RECEIPTS_REQUIRED');
   const p=facts.initial;
+  const perObligation = {
+    implementation:['https://github.com/'+TRANSPORT+'/blob/1e164af9135bbfcbc960ccb658679760a5106099/results/TECNOTRON-OP03-PHASE1-ATTEMPT006-TERMINAL-20261029-001/TECHNICAL_RETURN.md'],
+    promotion_grade_validation:[facts.evidence_refs[1]],
+    exact_candidate:[MERGE_REF],
+    frozen_review_interface:[facts.adapter.frozen_review_ref],
+    independent_review:[facts.adapter.independent_review_ref],
+    Developer_acceptance:[ACCEPT_REF],
+    Phase_2:[GRANT_REF,MERGE_REF],
+    effect_reconciliation:[facts.evidence_refs[3],MERGE_REF],
+    logical_close:[terminalAuthorityRef]
+  };
   const obligations=p.pending_obligations.map(o=>({
     ...o,status:'SATISFIED',satisfaction:{
       authority_ref:o.id==='Developer_acceptance'?ACCEPT_REF:
         o.id==='Phase_2'?GRANT_REF:terminalAuthorityRef,
-      evidence_refs:[...facts.evidence_refs,terminalAuthorityRef]
+      evidence_refs:perObligation[o.id]
     }
   }));
+  expect(obligations.length===9 && obligations.every(o=>
+    Array.isArray(o.satisfaction.evidence_refs) &&
+    o.satisfaction.evidence_refs.length>0 && o.satisfaction.evidence_refs.every(Boolean)),
+    'ORIGINAL_OBLIGATION_RECEIPTS_INCOMPLETE');
   const projection={
     schema:SCHEMA,TaskCycle:{...p.TaskCycle,state:'CLOSED'},
     source_initialization:{identity_sha256:facts.source_identity,original_gate:p.current_gate},
@@ -219,7 +299,8 @@ function buildPackage(facts,terminalAuthorityRef) {
     native_verification:{provider:'GitHub CLI authenticated native GET',authenticity:'PROVIDER_READ_AT_EXECUTION_NOT_SIGNED_AT_SOURCE',
       observation:'CONSUMED_LIVE_NATIVE_RUN_JOB_GIT_OBJECTS_AND_SOURCE_BLOBS',read_only:true},
     authority_refs:[...new Set([...p.authority_refs,...facts.authority_refs,terminalAuthorityRef])],
-    evidence_refs:[...new Set([...p.evidence_refs,...facts.evidence_refs,terminalAuthorityRef])],
+    evidence_refs:[...new Set([...p.evidence_refs,...facts.evidence_refs,terminalAuthorityRef,
+      facts.adapter.ci_ref,facts.adapter.independent_review_ref,facts.adapter.frozen_review_ref])],
     preserved_limitations:['F007','IR005-A011','REVIEWER_EXTERNAL_CONTEXT_ISOLATION_NOT_ATTESTED'],
     semantics:{creates_authority:false,State_Kernel_direct_calls:0,
       original_obligation_ids_preserved:true,Product_effects_replayed:false,
@@ -262,15 +343,12 @@ function publishOnce(root,pkg) {
     return {status:'PASS',effect_state:'CONFIRMED',already_closed:false,location:finalDir,identity_sha256:pkg.identity_sha256};
   } finally { if(fs.existsSync(staging)) fs.rmSync(staging,{recursive:true,force:true}); }
 }
-function close({api=githubCLI,root,terminalAuthorityRef,terminalAcceptanceRef=null,
-  terminalPhase2Ref=null,commit=false}) {
+function close({api=githubCLI,root,terminalAuthorityRef,qualification=null,commit=false}) {
   try {
-    const facts=inspectNative(api,{terminalAcceptanceRef,terminalPhase2Ref});
-    if (commit) expect(facts.adapter.status==='QUALIFIED_MERGED',
-      'TERMINAL_ADAPTER_ACCEPTED_PHASE2_INTEGRATION_REQUIRED');
-    const pkg=buildPackage(facts,terminalAuthorityRef);
-    if (!commit) return {status:'READY',effect_state:'NONE',identity_sha256:pkg.identity_sha256,
+    const facts=inspectNative(api,{qualification});
+    if (!commit) return {status:'READY',effect_state:'NONE',
       original_taskcycle_id:ID,obligations:OBLIGATIONS.length};
+    const pkg=buildPackage(facts,terminalAuthorityRef);
     const receipt=publishOnce(root,pkg);
     return {...receipt,original_taskcycle_id:ID,obligations:OBLIGATIONS.length,
       termination:'CLOSED_PASS',product_effects_replayed:false};
@@ -287,13 +365,12 @@ if(require.main===module) {
   const args=process.argv.slice(2);
   const root=args.includes('--output-root')?args[args.indexOf('--output-root')+1]:null;
   const authority=args.includes('--terminal-authority-ref')?args[args.indexOf('--terminal-authority-ref')+1]:null;
-  const acceptance=args.includes('--terminal-acceptance-ref')?args[args.indexOf('--terminal-acceptance-ref')+1]:null;
-  const phase2=args.includes('--terminal-phase2-ref')?args[args.indexOf('--terminal-phase2-ref')+1]:null;
+  const qualificationPath=args.includes('--qualification-json')?args[args.indexOf('--qualification-json')+1]:null;
+  const qualification=qualificationPath?JSON.parse(fs.readFileSync(qualificationPath,'utf8')):null;
   const commit=args.includes('--commit');
-  const result=close({root,terminalAuthorityRef:authority,terminalAcceptanceRef:acceptance,
-    terminalPhase2Ref:phase2,commit});
+  const result=close({root,terminalAuthorityRef:authority,qualification,commit});
   process.stdout.write(serialize(result));
   if(result.status==='BLOCKED') process.exitCode=2;
 }
 module.exports={close,inspectNative,buildPackage,publishOnce,blocked,SUBJECT,OBLIGATIONS,
-  SCHEMA,INITIAL_HASH,blobSha,sha256,verifyTerminalAdapterIntegration};
+  SCHEMA,INITIAL_HASH,blobSha,sha256,verifyTerminalAdapterIntegration,verifyOriginalReviewPass};
