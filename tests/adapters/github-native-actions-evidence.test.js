@@ -100,11 +100,9 @@ test('mismatched checkout tree or commit cannot pass as native subject', () => {
   const other40 = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
   const wrongTree = observe([record()], expect({ checkoutTree: other40 }));
   assert.equal(wrongTree.status, 'BLOCKED');
-  assert.equal(wrongTree.reason, 'SOURCE_COMMIT_OR_TREE_MISMATCH');
-  assert.equal(wrongTree.expected_field, 'checkout_tree');
+  assert.equal(wrongTree.reason, 'SELECTED_RUN_SOURCE_MISMATCH');
   const wrongCommit = observe([record({ checkout_commit: other40 })], expect());
-  assert.equal(wrongCommit.reason, 'SOURCE_COMMIT_OR_TREE_MISMATCH');
-  assert.equal(wrongCommit.expected_field, 'checkout_commit');
+  assert.equal(wrongCommit.reason, 'SELECTED_RUN_SOURCE_MISMATCH');
   assert.equal(observe([record()], expect({ runId: 999999 })).reason, 'NATIVE_IDENTITY_MISMATCH');
 });
 
@@ -124,12 +122,25 @@ test('conflicting duplicates fail closed', () => {
   assert.equal(divergent.reason, 'CONFLICTING_DUPLICATE_OBSERVATION');
   assert.equal(divergent.offending_record, 1);
   const staleStages = observe([record(), record({ job_id: 120838820955 })], expect());
-  assert.equal(staleStages.reason, 'INVALID_NATIVE_STAGE_RESULT');
+  assert.equal(staleStages.reason, 'SELECTED_RUN_SOURCE_MISMATCH');
   const alternateJob = record({ job_id: 120838820955 });
   const alternateUrl = 'https://github.com/mauedgar/tecnotron-ai/actions/runs/40082522885/job/120838820955';
   alternateJob.stages = alternateJob.stages.map((stage) => ({ ...stage, source_url: alternateUrl }));
   alternateJob.validation = { ...alternateJob.validation, source_url: alternateUrl };
-  const incoherent = observe([record(), alternateJob], expect());
+  const mismatchedJob = observe([record(), alternateJob], expect());
+  assert.equal(mismatchedJob.reason, 'SELECTED_RUN_SOURCE_MISMATCH');
+  const otherRunId = 40082522886;
+  const anotherRun = record({
+    run_id: otherRunId,
+    url: 'https://github.com/mauedgar/tecnotron-ai/actions/runs/' + otherRunId,
+    stages: GENUINE.stages.map((stage) => ({ ...stage,
+      source_url: 'https://github.com/mauedgar/tecnotron-ai/actions/runs/' +
+        otherRunId + '/job/120838820954' })),
+    validation: { ...GENUINE.validation, source_url:
+      'https://github.com/mauedgar/tecnotron-ai/actions/runs/' +
+      otherRunId + '/job/120838820954' },
+  });
+  const incoherent = observe([record(), anotherRun], expect());
   assert.equal(incoherent.status, 'BLOCKED');
   assert.equal(incoherent.reason, 'INCOHERENT_OBSERVATION_IDENTITY');
   assert.equal(incoherent.offending_record, 1);
@@ -364,4 +375,58 @@ test('IR003-F009: a different native run retains bounded structural-only semanti
   assert.equal(observation.normalized.provenance, 'CALLER_ASSERTED_NOT_SELF_AUTHENTICATING');
   assert.equal(observation.product_effect, 'NOT_EVALUATED');
   assert.equal(observation.product_bindings.operation, 'UNVERIFIED');
+});
+
+test('IR004-F010: selected run rejects jointly forged checkout record and expectation', () => {
+  const fakeCommit = 'b'.repeat(40);
+  const fakeTree = 'c'.repeat(40);
+  const forgedStages = GENUINE.stages.map((s) => s.kind === 'audit' ?
+    { ...s, step_number: 22, name: 'Forged audit' } : { ...s });
+  const spoof = { checkout_commit: fakeCommit, workflow: 'fake workflow',
+    stages: forgedStages };
+  assert.equal(observe([record(spoof)], expect({ checkoutCommit: fakeCommit })).reason,
+    'SELECTED_EXPECTED_SOURCE_MISMATCH');
+  assert.equal(observe([record(spoof)], expect()).reason,
+    'SELECTED_RUN_SOURCE_MISMATCH');
+  assert.equal(observe([record({ checkout_tree: fakeTree, workflow: 'fake workflow',
+    stages: forgedStages })], expect({ checkoutTree: fakeTree })).reason,
+    'SELECTED_EXPECTED_SOURCE_MISMATCH');
+  assert.equal(observe([record({ checkout_tree: fakeTree })], expect()).reason,
+    'SELECTED_RUN_SOURCE_MISMATCH');
+  assert.equal(observe([record({ workflow: 'fake workflow' })], expect()).reason,
+    'SELECTED_RUN_WORKFLOW_MISMATCH');
+  assert.equal(observe([record()], expect()).status, 'PASS');
+});
+
+test('IR004-F010: selected run rejects changed repo, attempt, job and expected source', () => {
+  assert.equal(observe([record({ repository: 'other/tecnotron-ai' })],
+    expect({ repository: 'other/tecnotron-ai' })).reason,
+    'SELECTED_EXPECTED_SOURCE_MISMATCH');
+  assert.equal(observe([record({ run_attempt: 2 })], expect({ runAttempt: 2 })).reason,
+    'SELECTED_EXPECTED_SOURCE_MISMATCH');
+  assert.equal(observe([record({ job_id: 120838820955 })],
+    expect({ jobId: 120838820955 })).reason,
+    'SELECTED_EXPECTED_SOURCE_MISMATCH');
+  assert.equal(observe([record({ job_id: 120838820955 })], expect()).reason,
+    'SELECTED_RUN_SOURCE_MISMATCH');
+});
+
+test('IR004-F010: another run preserves structural-only boundary and no Product effect', () => {
+  const otherRunId = 40082522911;
+  const otherJobId = 120838821000;
+  const jobUrl = 'https://github.com/mauedgar/tecnotron-ai/actions/runs/' +
+    otherRunId + '/job/' + otherJobId;
+  const alternate = record({
+    run_id: otherRunId, job_id: otherJobId,
+    url: 'https://github.com/mauedgar/tecnotron-ai/actions/runs/' + otherRunId,
+    workflow: 'alternate workflow',
+    stages: GENUINE.stages.map((s) => s.kind === 'audit' ?
+      { ...s, name: 'Other audit', step_number: 22, source_url: jobUrl } :
+      { ...s, source_url: jobUrl }),
+    validation: { ...GENUINE.validation, source_url: jobUrl },
+  });
+  const out = observe([alternate], expect({ runId: otherRunId, jobId: otherJobId }));
+  assert.equal(out.status, 'PASS');
+  assert.equal(out.normalized.provenance, 'CALLER_ASSERTED_NOT_SELF_AUTHENTICATING');
+  assert.equal(out.product_effect, 'NOT_EVALUATED');
 });

@@ -194,14 +194,22 @@ function nativeId(value) {
   if (typeof value === 'number') return Number.isSafeInteger(value) && value > 0 ? String(value) : null;
   return typeof value === 'string' && /^[1-9][0-9]*$/.test(value) ? value : null;
 }
-function isSelectedNativeSource(record) {
-  // Selection never depends on the untrusted workflow label being checked.
-  return record.repository === SELECTED_NATIVE_SOURCE.repository &&
-    nativeId(record.run_id) === SELECTED_NATIVE_SOURCE.run_id &&
-    nativeId(record.run_attempt) === SELECTED_NATIVE_SOURCE.run_attempt &&
-    nativeId(record.job_id) === SELECTED_NATIVE_SOURCE.job_id &&
-    record.checkout_commit === SELECTED_NATIVE_SOURCE.checkout_commit &&
-    record.checkout_tree === SELECTED_NATIVE_SOURCE.checkout_tree;
+function isSelectedNativeRun(runId) {
+  // One selected genuine run; source fields must be checked, never used to disable checks.
+  // A different run is structural-only and NOT authenticated by this normalizer.
+  return nativeId(runId) === SELECTED_NATIVE_SOURCE.run_id;
+}
+function selectedNativeRecordError(record) {
+  if (!isSelectedNativeRun(record.run_id)) return null;
+  if (record.repository !== SELECTED_NATIVE_SOURCE.repository ||
+      nativeId(record.run_attempt) !== SELECTED_NATIVE_SOURCE.run_attempt ||
+      nativeId(record.job_id) !== SELECTED_NATIVE_SOURCE.job_id ||
+      record.checkout_commit !== SELECTED_NATIVE_SOURCE.checkout_commit ||
+      record.checkout_tree !== SELECTED_NATIVE_SOURCE.checkout_tree) {
+    return 'SELECTED_RUN_SOURCE_MISMATCH';
+  }
+  if (record.workflow !== SELECTED_WORKFLOW) return 'SELECTED_RUN_WORKFLOW_MISMATCH';
+  return null;
 }
 function utcSecond(value) {
   return typeof value === 'string' && UTC_RE.test(value) &&
@@ -226,7 +234,7 @@ function nativeStagesError(record) {
     if (!Number.isSafeInteger(stage.step_number) || stage.step_number < 1 ||
         numbers.has(stage.step_number)) return 'INVALID_NATIVE_STAGE_NUMBER';
     numbers.add(stage.step_number);
-    const expected = isSelectedNativeSource(record) ? SELECTED_STAGE_PROFILE[stage.kind] : null;
+    const expected = isSelectedNativeRun(record.run_id) ? SELECTED_STAGE_PROFILE[stage.kind] : null;
     if (expected && (stage.step_number !== expected.step_number || stage.name !== expected.name)) {
       return 'SELECTED_WORKFLOW_STAGE_MISMATCH';
     }
@@ -267,9 +275,8 @@ function validateNativeRecord(record) {
       '/actions/runs/' + nativeId(record.run_id)) return 'PROVIDER_URL_IDENTITY_MISMATCH';
   if (!ACTIONS_EVENTS.includes(record.event)) return 'UNSUPPORTED_EVENT';
   if (typeof record.workflow !== 'string' || !record.workflow.trim()) return 'MISSING_WORKFLOW_IDENTITY';
-  if (isSelectedNativeSource(record) && record.workflow !== SELECTED_WORKFLOW) {
-    return 'SELECTED_RUN_WORKFLOW_MISMATCH';
-  }
+  const selectedError = selectedNativeRecordError(record);
+  if (selectedError) return selectedError;
   if (!SHA_RE.test(String(record.checkout_commit)) || !SHA_RE.test(String(record.checkout_tree))) {
     return 'INVALID_SOURCE_CHECKOUT_SUBJECT';
   }
@@ -313,6 +320,14 @@ function validateNativeExpectation(expected) {
   if (!utcSecond(expected.observationCutoff)) return 'OBSERVATION_CUTOFF_INVALID';
   if (!SHA_RE.test(String(expected.checkoutCommit)) ||
       !SHA_RE.test(String(expected.checkoutTree))) return 'EXPECTED_SOURCE_SUBJECT_INVALID';
+  if (isSelectedNativeRun(expected.runId) &&
+      (expected.repository !== SELECTED_NATIVE_SOURCE.repository ||
+       nativeId(expected.runAttempt) !== SELECTED_NATIVE_SOURCE.run_attempt ||
+       nativeId(expected.jobId) !== SELECTED_NATIVE_SOURCE.job_id ||
+       expected.checkoutCommit !== SELECTED_NATIVE_SOURCE.checkout_commit ||
+       expected.checkoutTree !== SELECTED_NATIVE_SOURCE.checkout_tree)) {
+    return 'SELECTED_EXPECTED_SOURCE_MISMATCH';
+  }
   return null;
 }
 function fingerprintNative(record) {
