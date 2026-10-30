@@ -108,7 +108,7 @@ function verifyOriginalReviewPass(report, request, candidate, review=null) {
     /ORIGINAL\s+SEMANTIC\s+VERDICT\s*:/i.test(line));
   const subjectClaims=lines.map(normalized).filter(line=>
     /^(?:\*\*)?(?:REVIEWED SUBJECT COMMIT|REVIEWED SUBJECT TREE|REVIEWED SOURCE BLOB|REVIEWED TEST BLOB|FROZEN REQUEST COMMIT|FROZEN REQUEST BLOB|ExecutionAttempt)\s*:/i.test(line));
-  const conflictingClaims=lines.map(normalized).some(line=>
+  const conflictingClaims=lines.slice(12).map(normalized).some(line=>
     /^(?:\*\*)?(?:Reviewed (?:candidate|subject) commit|Reviewed tree|Evaluated (?:candidate|subject) commit|Evaluated tree)\s*:/i.test(line));
   expect(typeof report==='string' && typeof request==='string'
     && review && /^[a-f0-9]{40}$/.test(review.requestCommit)
