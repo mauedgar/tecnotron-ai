@@ -609,7 +609,9 @@ test('IR010 F020 requires all eight direct original AC outcomes',()=>{
     const bounded=pass.replace(ac,'- AC0'+i+' PARTIAL')
       .replace('**ORIGINAL SEMANTIC VERDICT: PASS**',
         '**ORIGINAL SEMANTIC VERDICT: PASS (BOUNDED)**');
-    assert.doesNotThrow(()=>verifyOriginalReviewPass(bounded,input,subj,rev),ac);
+    if(i===5) assert.throws(()=>verifyOriginalReviewPass(bounded,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,ac);
+    else assert.doesNotThrow(()=>verifyOriginalReviewPass(bounded,input,subj,rev),ac);
   }
   assert.throws(()=>verifyOriginalReviewPass(
     pass.slice(0,pass.indexOf('\n## Acceptance criteria')),input,subj,rev),
