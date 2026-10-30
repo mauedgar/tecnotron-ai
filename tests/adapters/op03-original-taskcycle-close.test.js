@@ -13,8 +13,8 @@ const digest='a'.repeat(40),other='b'.repeat(40);
 const subj={commit:digest,tree:other,sourceBlob:'c'.repeat(40),testBlob:'d'.repeat(40),
   ciRun:40991197489,ciJob:123853756131};
 const rev={requestCommit:'1'.repeat(40),requestBlob:'2'.repeat(40)};
-const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR004';
-const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR004-ATTEMPT-001';
+const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR005';
+const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR005-ATTEMPT-001';
 const tick=String.fromCharCode(96);
 const input=[subj.commit,subj.tree,subj.sourceBlob,subj.testBlob,
   subj.ciRun,subj.ciJob,attempt].join(' ');
@@ -239,8 +239,44 @@ test('a BLOCKED diagnostic carries no Product terminal disposition',()=>{
   assert.equal(r.terminal_disposition_ref,null);
 });
 
-test('F002: native terminal consumer selects only the current IR004 Control interface',()=>{
+test('F006: ordered-list numbered duplicate authoritative identity is rejected',()=>{
+  const wrong='f'.repeat(40);
+  for(const prefix of ['1. ','42) ','  4. ','> 2. ','- 2. ','### ','#### > 2. ']){
+    const r=pass+'\n'+prefix+'**REVIEWED SUBJECT COMMIT:** '+tick+wrong+tick;
+    assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+  }
+});
+
+test('F006: headings and numbered lists cannot hide different reviewed candidate',()=>{
+  const wrong='f'.repeat(40);
+  for(const line of ['### Reviewed candidate commit: '+wrong,
+    '1. Reviewed tree: '+('e'.repeat(40)),
+    '**Reviewed subject:** '+tick+wrong+tick,
+    '2. **Reviewed subject:** '+tick+wrong+tick,
+    '> ### Evaluated subject commit: '+wrong,
+    '3) Selected target: '+wrong]){
+    assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+  }
+});
+
+test('F006: ordinary historical non-declarations remain compatible',()=>{
+  const r=pass+'\nHistorical references (not reviewed): '+[
+    'f'.repeat(40),'e'.repeat(40)].join(' ');
+  assert.doesNotThrow(()=>verifyOriginalReviewPass(r,input,subj,rev));
+});
+
+test('F005: an ordered-list or heading contradictory verdict also rejects',()=>{
+  for(const prefix of ['1. ','22) ','### ','> ### ','- 1. ']){
+    assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+prefix+
+      '**ORIGINAL SEMANTIC VERDICT: FAIL**',input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+  }
+});
+
+test('F002: native terminal selection must name IR005 only, not IR004',()=>{
   const source=fs.readFileSync(require.resolve('../../scripts/op03-original-taskcycle-close'),'utf8');
-  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR004_FROZEN_INPUT'));
-  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR003_FROZEN_INPUT'),false);
+  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR005_FROZEN_INPUT'));
+  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR004_FROZEN_INPUT'),false);
 });

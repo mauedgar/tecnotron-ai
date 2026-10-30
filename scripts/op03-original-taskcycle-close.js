@@ -73,8 +73,8 @@ function apiBlob(api,repo,ref,p,expected) {
   return b.toString('utf8');
 }
 const QUALIFIED_FACTS = new WeakSet();
-const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR004-20261030-001/';
-const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR004-ATTEMPT-001';
+const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR005-20261030-001/';
+const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR005-ATTEMPT-001';
 function exactIssueCommentId(ref) {
   const m = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/34#issuecomment-(\d+)$/.exec(ref || '');
   expect(m, 'INVALID_EXACT_DEVELOPER_DECISION_REF');
@@ -91,7 +91,7 @@ function ownerDecision(api, ref) {
 function verifyOriginalReviewPass(report, request, candidate, review=null) {
   // One top-level verdict only; quoted, indented and list-marked duplicates fail closed.
   const lines=String(report).replace(/\r\n/g,'\n').split('\n');
-  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR004';
+  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR005';
   const verdict=/^\*\*ORIGINAL SEMANTIC VERDICT: PASS(?: \(BOUNDED\))?\*\*$/;
   const tick=String.fromCharCode(96);
   const top=[
@@ -103,13 +103,20 @@ function verifyOriginalReviewPass(report, request, candidate, review=null) {
     '**FROZEN REQUEST BLOB:** '+tick+review?.requestBlob+tick,
     '**ExecutionAttempt:** '+tick+REVIEW_ATTEMPT+tick
   ];
-  const normalized=line=>String(line).replace(/^\s*(?:(?:>\s*)|(?:[-*+]\s+))*/,'').trim();
-  const claims=lines.map(normalized).filter(line =>
+  // Presentation wrappers cannot conceal an additional semantic declaration.
+  const normalized=line=>String(line).replace(
+    /^\s*(?:(?:>\s*)|(?:#{1,6}\s+)|(?:[-*+]\s+)|(?:[0-9]+[.)]\s+))*/,'').trim();
+  const semanticLines=lines.map(normalized);
+  const claims=semanticLines.filter(line =>
     /ORIGINAL\s+SEMANTIC\s+VERDICT\s*:/i.test(line));
-  const subjectClaims=lines.map(normalized).filter(line=>
-    /^(?:\*\*)?(?:REVIEWED SUBJECT COMMIT|REVIEWED SUBJECT TREE|REVIEWED SOURCE BLOB|REVIEWED TEST BLOB|FROZEN REQUEST COMMIT|FROZEN REQUEST BLOB|ExecutionAttempt)\s*:/i.test(line));
-  const conflictingClaims=lines.slice(12).map(normalized).some(line=>
-    /^(?:\*\*)?(?:Reviewed (?:candidate|subject) commit|Reviewed tree|Evaluated (?:candidate|subject) commit|Evaluated tree)\s*:/i.test(line));
+  const canonicalClaim=/^(?:\*\*)?(?:REVIEWED SUBJECT COMMIT|REVIEWED SUBJECT TREE|REVIEWED SOURCE BLOB|REVIEWED TEST BLOB|FROZEN REQUEST COMMIT|FROZEN REQUEST BLOB|ExecutionAttempt)\s*:/i;
+  const subjectClaims=semanticLines.filter(line=>canonicalClaim.test(line));
+  // Canonical reviewed subject belongs exclusively to exact lines 5-11.
+  // Historical references may appear in prose, but alternate declarations
+  // anywhere else are ambiguous and fail closed.
+  const competingClaim=/^(?:\*\*)?(?:(?:(?:Reviewed|Evaluated|Assessed|Selected)\s+(?:(?:subject|candidate|target)\s+)?(?:commit|tree|source blob|test blob))|(?:Reviewed|Evaluated|Assessed|Selected)\s+(?:subject|candidate|target)|(?:Subject|Candidate|Target)\s+(?:reviewed|evaluated|selected)|(?:Target|Review target)\s+(?:commit|tree)|Reviewed tree|Evaluated tree)\s*:/i;
+  const conflictingClaims=semanticLines.slice(12).some(line=>
+    canonicalClaim.test(line)||competingClaim.test(line));
   expect(typeof report==='string' && typeof request==='string'
     && review && /^[a-f0-9]{40}$/.test(review.requestCommit)
     && /^[a-f0-9]{40}$/.test(review.requestBlob)
@@ -171,13 +178,13 @@ function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
   expect(new Set([q.controlRef, q.acceptanceRef, q.phase2Ref, q.terminalRef]).size === 4,
     'DEVELOPER_AND_CONTROL_DECISIONS_NOT_DISTINCT');
   const selected=ownerDecision(api,q.controlRef);
-  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR004_FROZEN_INPUT')
+  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR005_FROZEN_INPUT')
     && selected.body.includes(candidate.commit) && selected.body.includes(candidate.tree)
     && selected.body.includes(candidate.sourceBlob) && selected.body.includes(candidate.testBlob)
     && selected.body.includes(String(candidate.ciRun)) && selected.body.includes(String(candidate.ciJob))
     && selected.body.includes(rev.requestCommit) && selected.body.includes(rev.requestBlob)
     && requestText.includes(String(candidate.ciRun)) && requestText.includes(String(candidate.ciJob)),
-    'CONTROL_SELECTED_FROZEN_IR004_INTERFACE_MISMATCH');
+    'CONTROL_SELECTED_FROZEN_IR005_INTERFACE_MISMATCH');
   const a = ownerDecision(api, q.acceptanceRef);
   const p = ownerDecision(api, q.phase2Ref);
   const t = ownerDecision(api, q.terminalRef);
