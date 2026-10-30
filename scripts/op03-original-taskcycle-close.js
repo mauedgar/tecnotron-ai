@@ -318,30 +318,82 @@ function buildPackage(facts,terminalAuthorityRef) {
   const manifestText=serialize(manifest);
   return {projection,manifest,projectionText,manifestText,identity_sha256:sha256(manifestText)};
 }
-function publishOnce(root,pkg) {
-  expect(typeof root==='string' && path.isAbsolute(root) && fs.existsSync(root)
-    && fs.lstatSync(root).isDirectory() && !fs.lstatSync(root).isSymbolicLink(),
-    'SAFE_EXISTING_ABSOLUTE_OUTPUT_ROOT_REQUIRED');
-  const base=path.resolve(root); const finalDir=path.join(base,ID,'closed-pass-op03');
-  const parent=path.dirname(finalDir); fs.mkdirSync(parent,{recursive:true});
-  if (fs.existsSync(finalDir)) {
-    const a=fs.readFileSync(path.join(finalDir,'manifest.json'),'utf8');
-    const b=fs.readFileSync(path.join(finalDir,'projection.json'),'utf8');
-    expect(a===pkg.manifestText && b===pkg.projectionText,'EXISTING_TERMINAL_CONFLICT');
-    consumeTaskCycleClosureCompatibility({location:finalDir,expected_identity_sha256:pkg.identity_sha256});
-    return {status:'PASS',effect_state:'CONFIRMED',already_closed:true,location:finalDir,identity_sha256:pkg.identity_sha256};
+function safeExistingDirectory(p) {
+  expect(typeof p==='string' && path.isAbsolute(p), 'ABSOLUTE_OUTPUT_DIRECTORY_REQUIRED');
+  const abs=path.resolve(p), root=path.parse(abs).root, rest=abs.slice(root.length);
+  let current=root;
+  for (const part of rest.split(path.sep).filter(Boolean)) {
+    current=path.join(current,part);
+    const st=fs.lstatSync(current);
+    expect(st.isDirectory() && !st.isSymbolicLink() && st.nlink>=1,
+      'OUTPUT_DIRECTORY_SYMLINK_OR_NOT_DIRECTORY');
+    const resolved=fs.realpathSync.native(current);
+    const norm=x=>process.platform==='win32'?x.toLowerCase():x;
+    expect(norm(path.resolve(resolved))===norm(current),'OUTPUT_DIRECTORY_ESCAPE');
   }
-  const staging=fs.mkdtempSync(path.join(parent,'.op03-close-staging-'));
+  return abs;
+}
+function safeTerminalFiles(dir,pkg) {
+  safeExistingDirectory(dir);
+  const entries=fs.readdirSync(dir).sort();
+  expect(JSON.stringify(entries)===JSON.stringify(['manifest.json','projection.json']),
+    'TERMINAL_FILES_CONFLICT');
+  for(const file of entries) {
+    const st=fs.lstatSync(path.join(dir,file));
+    expect(st.isFile() && !st.isSymbolicLink() && st.nlink===1,
+      'TERMINAL_FILE_SYMLINK_OR_HARDLINK');
+  }
+  expect(fs.readFileSync(path.join(dir,'manifest.json'),'utf8')===pkg.manifestText
+    && fs.readFileSync(path.join(dir,'projection.json'),'utf8')===pkg.projectionText,
+    'TERMINAL_CONTENT_CONFLICT');
+  consumeTaskCycleClosureCompatibility({location:dir,
+    expected_identity_sha256:pkg.identity_sha256});
+  return true;
+}
+function publishOnce(root,pkg) {
+  const base=safeExistingDirectory(root);
+  const parent=path.join(base,ID),finalDir=path.join(parent,'closed-pass-op03');
+  const lock=path.join(base,'.op03-original-taskcycle-close.lock');
+  const lockFd=fs.openSync(lock,fs.constants.O_CREAT|fs.constants.O_EXCL|
+    fs.constants.O_WRONLY|(fs.constants.O_NOFOLLOW||0),0o600);
+  let staging=null;
   try {
-    fs.writeFileSync(path.join(staging,'manifest.json'),pkg.manifestText,{flag:'wx'});
-    fs.writeFileSync(path.join(staging,'projection.json'),pkg.projectionText,{flag:'wx'});
+    safeExistingDirectory(base);
+    try {
+      fs.mkdirSync(parent,{mode:0o700});
+    } catch(e) {
+      if(e.code!=='EEXIST')throw e;
+    }
+    safeExistingDirectory(parent);
+    if(fs.existsSync(finalDir) || (()=>{try{fs.lstatSync(finalDir);return true;}catch{return false;}})()) {
+      safeTerminalFiles(finalDir,pkg);
+      return {status:'PASS',effect_state:'CONFIRMED',already_closed:true,
+        location:finalDir,identity_sha256:pkg.identity_sha256};
+    }
+    staging=fs.mkdtempSync(path.join(parent,'.op03-close-staging-'));
+    safeExistingDirectory(staging);
+    fs.writeFileSync(path.join(staging,'manifest.json'),pkg.manifestText,{flag:'wx',mode:0o600});
+    fs.writeFileSync(path.join(staging,'projection.json'),pkg.projectionText,{flag:'wx',mode:0o600});
+    safeExistingDirectory(parent);
+    safeTerminalFiles(staging,pkg);
+    expect(!fs.existsSync(finalDir),'TERMINAL_OUTPUT_ALREADY_PRESENT');
     fs.renameSync(staging,finalDir);
-    expect(fs.readFileSync(path.join(finalDir,'manifest.json'),'utf8')===pkg.manifestText &&
-      fs.readFileSync(path.join(finalDir,'projection.json'),'utf8')===pkg.projectionText,
-      'POST_WRITE_ORIGINAL_TERMINAL_UNVERIFIED');
-    consumeTaskCycleClosureCompatibility({location:finalDir,expected_identity_sha256:pkg.identity_sha256});
-    return {status:'PASS',effect_state:'CONFIRMED',already_closed:false,location:finalDir,identity_sha256:pkg.identity_sha256};
-  } finally { if(fs.existsSync(staging)) fs.rmSync(staging,{recursive:true,force:true}); }
+    staging=null;
+    safeExistingDirectory(parent);
+    safeTerminalFiles(finalDir,pkg);
+    return {status:'PASS',effect_state:'CONFIRMED',already_closed:false,
+      location:finalDir,identity_sha256:pkg.identity_sha256};
+  } finally {
+    if(staging) {
+      try {safeExistingDirectory(staging);
+        fs.rmSync(staging,{recursive:true});} catch {}
+    }
+    fs.closeSync(lockFd);
+    try {
+      const st=fs.lstatSync(lock);
+      if(st.isFile() && !st.isSymbolicLink() && st.nlink===1)fs.unlinkSync(lock);
+    } catch {}
+  }
 }
 function close({api=githubCLI,root,terminalAuthorityRef,qualification=null,commit=false}) {
   try {
