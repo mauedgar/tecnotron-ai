@@ -45,7 +45,9 @@ const PATHS = Object.freeze(['src/adapters/github.js','tests/adapters/github-nat
 const ACCEPT_REF = 'https://github.com/mauedgar/tecnotron-ai/issues/34#issuecomment-6512300519';
 const GRANT_REF = 'https://github.com/mauedgar/tecnotron-ai/issues/34#issuecomment-6512357634';
 const MERGE_REF = 'https://github.com/mauedgar/tecnotron-ai/pull/57';
-const SCHEMA = 'tecnotron-op03-original-taskcycle-terminal-compat/v0';
+const SCHEMA = 'deterministic-taskcycle-obligation-compatible-close/v0';
+const MANIFEST_SCHEMA = 'deterministic-taskcycle-obligation-compatible-close-manifest/v0';
+const { consumeTaskCycleClosureCompatibility } = require('../src/deterministic-taskcycle-substrate-v0/taskcycle-closure-compatibility');
 function stable(x) {
   if (Array.isArray(x)) return x.map(stable);
   if (x && typeof x === 'object') return Object.fromEntries(Object.entries(x).sort(([a],[b]) => a.localeCompare(b)).map(([k,v])=>[k,stable(v)]));
@@ -111,7 +113,8 @@ function inspectNative(api) {
     && run.status==='completed' && run.conclusion==='success','PROMOTION_VALIDATION_NOT_CONFIRMED');
   const jobs=api(apiPath(PRODUCT,'actions/runs/'+SUBJECT.ciRun+'/jobs'));
   expect(jobs.jobs?.some(j=>j.id===SUBJECT.ciJob && j.conclusion==='success'
-    && j.steps?.filter(s=>/Audit|Typecheck|Run repository|portable contract/i.test(s.name))
+    && j.steps?.filter(s=>/Audit|Typecheck|Run repository|portable contract/i.test(s.name)).length===4
+    && j.steps.filter(s=>/Audit|Typecheck|Run repository|portable contract/i.test(s.name))
       .every(s=>s.conclusion==='success')),'CI_JOB_NOT_CONFIRMED');
   const original=api(apiPath(PRODUCT,'actions/runs/'+SUBJECT.originalRun));
   const originalJobs=api(apiPath(PRODUCT,'actions/runs/'+SUBJECT.originalRun+'/jobs'));
@@ -119,6 +122,11 @@ function inspectNative(api) {
     && original.run_attempt===1 && original.head_sha==='2169c2144ee05116d735743df66eec01e6e57bf4'
     && originalJobs.jobs?.some(j=>j.id===SUBJECT.originalJob && j.conclusion==='success'),
     'ORIGINAL_NATIVE_RUN_UNVERIFIED');
+  const phase1=apiBlob(api,TRANSPORT,'1e164af9135bbfcbc960ccb658679760a5106099',
+    'results/TECNOTRON-OP03-PHASE1-ATTEMPT006-TERMINAL-20261029-001/TECHNICAL_RETURN.md',
+    '690f91f2363d8db53bc7134a34673266b828b0d7');
+  expect(phase1.includes('ATTEMPT-006') && phase1.includes('exit') && phase1.includes('PASS'),
+    'ORIGINAL_PHASE1_EFFECT_NOT_RECONCILED');
   const report=apiBlob(api,TRANSPORT,SUBJECT.reportCommit,
     'reviews/TECNOTRON-OP03-PR57-WEB_INLINE-IR005-20261029-001/ORIGINAL_REVIEW_RESULT.md',SUBJECT.reportBlob);
   expect(/PASS/.test(report) && report.includes(SUBJECT.accepted),'INDEPENDENT_REVIEW_SUBJECT_OR_VERDICT_MISMATCH');
@@ -154,9 +162,11 @@ function buildPackage(facts,terminalAuthorityRef) {
     'COMPETENT_TERMINAL_AUTHORITY_REFERENCE_REQUIRED');
   const p=facts.initial;
   const obligations=p.pending_obligations.map(o=>({
-    id:o.id,status:'SATISFIED',authority_ref:o.id==='Developer_acceptance'?ACCEPT_REF:
-      o.id==='Phase_2'?GRANT_REF:terminalAuthorityRef,
-    evidence_refs:[...facts.evidence_refs,terminalAuthorityRef]
+    ...o,status:'SATISFIED',satisfaction:{
+      authority_ref:o.id==='Developer_acceptance'?ACCEPT_REF:
+        o.id==='Phase_2'?GRANT_REF:terminalAuthorityRef,
+      evidence_refs:[...facts.evidence_refs,terminalAuthorityRef]
+    }
   }));
   const projection={
     schema:SCHEMA,TaskCycle:{...p.TaskCycle,state:'CLOSED'},
@@ -176,8 +186,9 @@ function buildPackage(facts,terminalAuthorityRef) {
   };
   const projectionText=serialize(projection);
   const manifest={
-    schema:SCHEMA+'-manifest/v0',taskcycle_id:ID,
-    original_initialization_identity_sha256:facts.source_identity,
+    schema:MANIFEST_SCHEMA,taskcycle_id:ID,
+    source_initialization_identity_sha256:facts.source_identity,
+    candidate_commit:SUBJECT.accepted,
     files:{'projection.json':sha256(projectionText)},
     original_obligation_ids:[...OBLIGATIONS],
     semantics:{creates_authority:false,State_Kernel_direct_calls:0,Product_effects_replayed:false}
@@ -186,12 +197,16 @@ function buildPackage(facts,terminalAuthorityRef) {
   return {projection,manifest,projectionText,manifestText,identity_sha256:sha256(manifestText)};
 }
 function publishOnce(root,pkg) {
+  expect(typeof root==='string' && path.isAbsolute(root) && fs.existsSync(root)
+    && fs.lstatSync(root).isDirectory() && !fs.lstatSync(root).isSymbolicLink(),
+    'SAFE_EXISTING_ABSOLUTE_OUTPUT_ROOT_REQUIRED');
   const base=path.resolve(root); const finalDir=path.join(base,ID,'closed-pass-op03');
   const parent=path.dirname(finalDir); fs.mkdirSync(parent,{recursive:true});
   if (fs.existsSync(finalDir)) {
     const a=fs.readFileSync(path.join(finalDir,'manifest.json'),'utf8');
     const b=fs.readFileSync(path.join(finalDir,'projection.json'),'utf8');
     expect(a===pkg.manifestText && b===pkg.projectionText,'EXISTING_TERMINAL_CONFLICT');
+    consumeTaskCycleClosureCompatibility({location:finalDir,expected_identity_sha256:pkg.identity_sha256});
     return {status:'PASS',effect_state:'CONFIRMED',already_closed:true,location:finalDir,identity_sha256:pkg.identity_sha256};
   }
   const staging=fs.mkdtempSync(path.join(parent,'.op03-close-staging-'));
@@ -202,6 +217,7 @@ function publishOnce(root,pkg) {
     expect(fs.readFileSync(path.join(finalDir,'manifest.json'),'utf8')===pkg.manifestText &&
       fs.readFileSync(path.join(finalDir,'projection.json'),'utf8')===pkg.projectionText,
       'POST_WRITE_ORIGINAL_TERMINAL_UNVERIFIED');
+    consumeTaskCycleClosureCompatibility({location:finalDir,expected_identity_sha256:pkg.identity_sha256});
     return {status:'PASS',effect_state:'CONFIRMED',already_closed:false,location:finalDir,identity_sha256:pkg.identity_sha256};
   } finally { if(fs.existsSync(staging)) fs.rmSync(staging,{recursive:true,force:true}); }
 }
@@ -213,12 +229,19 @@ function close({api=githubCLI,root,terminalAuthorityRef,commit=false}) {
     const receipt=publishOnce(root,pkg);
     return {...receipt,original_taskcycle_id:ID,obligations:OBLIGATIONS.length,
       termination:'CLOSED_PASS',product_effects_replayed:false};
-  } catch(e) { return blocked(e.code||'UNVERIFIED_NATIVE_EVIDENCE'); }
+  } catch(e) {
+    if (commit && typeof root==='string' && path.isAbsolute(root) &&
+        fs.existsSync(path.join(root,ID,'closed-pass-op03'))) {
+      return {status:'BLOCKED',effect_state:'UNKNOWN',reason:e.code||'POST_WRITE_IDENTITY_UNVERIFIED',
+        terminal_disposition_ref:null,State_Kernel_direct_calls:0};
+    }
+    return blocked(e.code||'UNVERIFIED_NATIVE_EVIDENCE');
+  }
 }
 if(require.main===module) {
   const args=process.argv.slice(2);
-  const root=args[args.indexOf('--output-root')+1];
-  const authority=args[args.indexOf('--terminal-authority-ref')+1];
+  const root=args.includes('--output-root')?args[args.indexOf('--output-root')+1]:null;
+  const authority=args.includes('--terminal-authority-ref')?args[args.indexOf('--terminal-authority-ref')+1]:null;
   const commit=args.includes('--commit');
   const result=close({root,terminalAuthorityRef:authority,commit});
   process.stdout.write(serialize(result));
