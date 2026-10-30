@@ -73,8 +73,8 @@ function apiBlob(api,repo,ref,p,expected) {
   return b.toString('utf8');
 }
 const QUALIFIED_FACTS = new WeakSet();
-const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR007-20261030-001/';
-const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR007-ATTEMPT-001';
+const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR008-20261030-001/';
+const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR008-ATTEMPT-001';
 function exactIssueCommentId(ref) {
   const m = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/34#issuecomment-(\d+)$/.exec(ref || '');
   expect(m, 'INVALID_EXACT_DEVELOPER_DECISION_REF');
@@ -91,7 +91,7 @@ function ownerDecision(api, ref) {
 function verifyOriginalReviewPass(report, request, candidate, review=null) {
   // One top-level verdict only; quoted, indented and list-marked duplicates fail closed.
   const lines=String(report).replace(/\r\n/g,'\n').split('\n');
-  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR007';
+  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR008';
   const verdict=/^\*\*ORIGINAL SEMANTIC VERDICT: PASS(?: \(BOUNDED\))?\*\*$/;
   const tick=String.fromCharCode(96);
   const top=[
@@ -103,18 +103,24 @@ function verifyOriginalReviewPass(report, request, candidate, review=null) {
     '**FROZEN REQUEST BLOB:** '+tick+review?.requestBlob+tick,
     '**ExecutionAttempt:** '+tick+REVIEW_ATTEMPT+tick
   ];
-  // Closed report grammar: exact canonical lines 1-12; narrative is inert.
-  // Markdown rendering features outside the supported subset fail closed.
+  // Fail-closed inert narrative; only the exact header can assert authority.
+  const allowedSections=new Set([
+    '## Evidence','## Findings','## Limitations','## Acceptance criteria',
+    '## Disposition','## Scope','## Validation'
+  ]);
   const restrictedBody=lines.slice(12).every(line=>{
-    // Links/references, HTML, escapes, entities, blockquotes and invisible
-    // direction controls can mask rendered declarations: reject the line.
-    if (/[\[\]\\<>&\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(line)) return false;
-    // Permit prose, headings, ordinary lists, emphasis and inline code.
-    // But no second declaration vocabulary anywhere in the narrative.
-    const flat=String(line).normalize('NFKC')
-      .replace(/^\s*(?:(?:#{1,6}\s+)|(?:[-*+]\s+)|(?:[0-9]+[.)]\s+))*/,'')
-      .replace(/[^a-zA-Z]/g,'').toLowerCase();
-    return !/(?:originalsemanticverdict|reviewedsubject|reviewedcandidate|reviewedtarget|reviewedcommit|reviewedtree|reviewedsourceblob|reviewedtestblob|evaluatedsubject|evaluatedcandidate|evaluatedtarget|evaluatedcommit|evaluatedtree|assessedsubject|assessedcandidate|assessedtarget|selectedsubject|selectedcandidate|selectedtarget|selectedcommit|selectedtree|subjectreviewed|candidatereviewed|targetreviewed|targetcommit|reviewtarget|frozenrequestcommit|frozenrequestblob|executionattempt)/.test(flat);
+    if (line==='') return true;
+    if (allowedSections.has(line)) return true;
+    if (!line.startsWith('- ') || !/^[\x20-\x7e]+$/.test(line)) return false;
+    // No Markdown markup, code, entities, escapes or ambiguous rendering.
+    if (/[\[\]\\<>&*\x60_~#|]/.test(line)) return false;
+    // Only raw HTTPS URL colons are permitted in evidence references.
+    const plain=line.replace(/https:\/\/[^\s]+/g,'');
+    if (plain.includes(':') || /\b(?:pass|fail|blocked)\b/i.test(plain)) return false;
+    // Unbound digests only belong to explicitly historical references.
+    if (/\b[a-f0-9]{40}\b/i.test(plain)
+      && !/^- Historical (?:unrelated )?/i.test(line)) return false;
+    return true;
   });
   expect(typeof report==='string' && typeof request==='string'
     && review && /^[a-f0-9]{40}$/.test(review.requestCommit)
@@ -174,13 +180,13 @@ function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
   expect(new Set([q.controlRef, q.acceptanceRef, q.phase2Ref, q.terminalRef]).size === 4,
     'DEVELOPER_AND_CONTROL_DECISIONS_NOT_DISTINCT');
   const selected=ownerDecision(api,q.controlRef);
-  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR007_FROZEN_INPUT')
+  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR008_FROZEN_INPUT')
     && selected.body.includes(candidate.commit) && selected.body.includes(candidate.tree)
     && selected.body.includes(candidate.sourceBlob) && selected.body.includes(candidate.testBlob)
     && selected.body.includes(String(candidate.ciRun)) && selected.body.includes(String(candidate.ciJob))
     && selected.body.includes(rev.requestCommit) && selected.body.includes(rev.requestBlob)
     && requestText.includes(String(candidate.ciRun)) && requestText.includes(String(candidate.ciJob)),
-    'CONTROL_SELECTED_FROZEN_IR007_INTERFACE_MISMATCH');
+    'CONTROL_SELECTED_FROZEN_IR008_INTERFACE_MISMATCH');
   const a = ownerDecision(api, q.acceptanceRef);
   const p = ownerDecision(api, q.phase2Ref);
   const t = ownerDecision(api, q.terminalRef);

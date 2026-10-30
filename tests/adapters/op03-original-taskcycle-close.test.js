@@ -13,8 +13,8 @@ const digest='a'.repeat(40),other='b'.repeat(40);
 const subj={commit:digest,tree:other,sourceBlob:'c'.repeat(40),testBlob:'d'.repeat(40),
   ciRun:40991197489,ciJob:123853756131};
 const rev={requestCommit:'1'.repeat(40),requestBlob:'2'.repeat(40)};
-const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR007';
-const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR007-ATTEMPT-001';
+const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR008';
+const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR008-ATTEMPT-001';
 const tick=String.fromCharCode(96);
 const input=[subj.commit,subj.tree,subj.sourceBlob,subj.testBlob,
   subj.ciRun,subj.ciJob,attempt].join(' ');
@@ -28,7 +28,7 @@ const canonical=[
   '**ExecutionAttempt:** '+tick+attempt+tick
 ];
 const pass=[reviewHeading,'','**ORIGINAL SEMANTIC VERDICT: PASS**','',
-  ...canonical,'','Review scope: original nine obligations; F007 limitations retained.'].join('\n');
+  ...canonical,'','- Review scope - original nine obligations; F007 limitations retained.'].join('\n');
 const commentRef='https://github.com/mauedgar/tecnotron-ai/issues/34#issuecomment-6519999999';
 
 test('original nine obligation IDs, source identity and existing schema are stable',()=>{
@@ -262,7 +262,7 @@ test('F006: headings and numbered lists cannot hide different reviewed candidate
 });
 
 test('F006: ordinary historical non-declarations remain compatible',()=>{
-  const r=pass+'\nHistorical references (not reviewed): '+[
+  const r=pass+'\n- Historical references not reviewed - '+[
     'f'.repeat(40),'e'.repeat(40)].join(' ');
   assert.doesNotThrow(()=>verifyOriginalReviewPass(r,input,subj,rev));
 });
@@ -275,10 +275,10 @@ test('F005: an ordered-list or heading contradictory verdict also rejects',()=>{
   }
 });
 
-test('F002: native terminal selection must name IR007 only, not IR006',()=>{
+test('F002: native terminal selection must name IR008 only, not IR007',()=>{
   const source=fs.readFileSync(require.resolve('../../scripts/op03-original-taskcycle-close'),'utf8');
-  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR007_FROZEN_INPUT'));
-  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR006_FROZEN_INPUT'),false);
+  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR008_FROZEN_INPUT'));
+  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR007_FROZEN_INPUT'),false);
 });
 
 
@@ -313,7 +313,7 @@ test('IR005-F009: decorated second FAIL verdicts fail closed',()=>{
 });
 
 test('IR005: canonical PASS and explicit historical nondeclarations remain valid',()=>{
-  assert.doesNotThrow(()=>verifyOriginalReviewPass(pass+'\nHistorical unrelated SHA: '+('f'.repeat(40)),input,subj,rev));
+  assert.doesNotThrow(()=>verifyOriginalReviewPass(pass+'\n- Historical unrelated SHA - '+('f'.repeat(40)),input,subj,rev));
 });
 
 
@@ -351,14 +351,13 @@ test('IR006-F011: alternate second FAIL declarations reject',()=>{
 });
 
 test('bounded narrative grammar accepts authentic PASS and historical prose',()=>{
-  const tick=String.fromCharCode(96);
   const narrative=[
-    '## 1. Evidence and limits',
-    '- Historical IR006 FAIL remains historical, not this review',
+    '## Evidence',
+    '- Historical IR007 result remains historical, not this review',
     '- Historical unrelated SHA '+('f'.repeat(40))+' was not reviewed',
-    '- **Audit** PASS with source path '+tick+'scripts/example.js'+tick,
-    '### AC01: PASS (bounded)',
-    'Source: https://github.com/mauedgar/tecnotron-ai/commit/'+subj.commit
+    '- Native audit evidence accepted',
+    '- AC01 - bounded technical observation',
+    '- Source - https://github.com/mauedgar/tecnotron-ai/commit/'+subj.commit
   ].join('\n');
   assert.doesNotThrow(()=>verifyOriginalReviewPass(pass+'\n'+narrative,input,subj,rev));
   const bounded=pass.replace('**ORIGINAL SEMANTIC VERDICT: PASS**',
@@ -379,4 +378,68 @@ test('body grammar rejects unsupported rendering and controls, even without clai
     assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
       /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,line);
   }
+});
+
+
+test('IR007 F012 - Unicode confusable subjects and other non-ASCII claims reject',()=>{
+  const wrong='f'.repeat(40);
+  for(const line of [
+    '**REVIEWED SUBJEC\u0422 COMMIT:** '+wrong,
+    '- Reviewed subjec\u0422 commit '+wrong,
+    '- \u0422arget digest '+wrong,
+    '- Alternative identit\u0443 '+wrong,
+    '- Confusable fullwidth \uff21BC',
+    '- Broken\u00a0space',
+    '- Cyrillic slash \u2044'
+  ])assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,line);
+});
+
+test('IR007 F013 - Unicode verdict variants and aliases reject',()=>{
+  for(const line of [
+    '**OR\u0406GINAL SEMANTIC VERDICT: FAIL**',
+    '**ORIGIN\u0410L SEMANTIC VERDICT: FAIL**',
+    '**FINAL SEMANTIC VERDICT: FAIL**',
+    '**FINAL RESULT: FAIL**',
+    '- Final result FAIL',
+    '- Other review outcome BLOCKED',
+    '- Selected status PASS',
+    '## Verdict',
+    '- Alternative SHA: '+('f'.repeat(40)),
+    '- Final result\u0406 FAIL'
+  ])assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,line);
+});
+
+test('closed narrative grammar prevents multiline declarations and rich rendering',()=>{
+  for(const body of [
+    '- Reviewed subject\n- Commit: '+('f'.repeat(40)),
+    '- Decisive\n- Final status FAIL',
+    '- Some plain evidence\nFINAL RESULT: FAIL',
+    '## FINAL SEMANTIC VERDICT',
+    '- **Important** source-bound evidence',
+    '- Evidence '+String.fromCharCode(96)+'git sha'+String.fromCharCode(96),
+    '- User \u200e invisible',
+    '- Link [here](https://github.com)',
+    '- Bare SHA '+('f'.repeat(40)),
+    '1. Numbered list: wrong',
+    'plain text',
+    '- A colon: somewhere',
+    '- Status FAILED \u202e'
+  ]){
+    assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+body,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,body);
+  }
+});
+
+test('closed grammar permits ASCII evidence, raw URLs and historical SHA',()=>{
+  const report=pass+'\n'+[
+    '## Findings',
+    '- IR007 historical review found defects F012 and F013',
+    '- Historical unrelated SHA '+('f'.repeat(40))+' was not reviewed',
+    '## Acceptance criteria',
+    '- AC01 - limited observation; AC05 - no ambiguity demonstrated',
+    '- Evidence - https://github.com/mauedgar/tecnotron-ai/actions/runs/41024229323'
+  ].join('\n');
+  assert.doesNotThrow(()=>verifyOriginalReviewPass(report,input,subj,rev));
 });
