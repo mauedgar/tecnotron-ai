@@ -13,8 +13,8 @@ const digest='a'.repeat(40),other='b'.repeat(40);
 const subj={commit:digest,tree:other,sourceBlob:'c'.repeat(40),testBlob:'d'.repeat(40),
   ciRun:40991197489,ciJob:123853756131};
 const rev={requestCommit:'1'.repeat(40),requestBlob:'2'.repeat(40)};
-const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR010';
-const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR010-ATTEMPT-001';
+const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR011';
+const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR011-ATTEMPT-001';
 const tick=String.fromCharCode(96);
 const input=[subj.commit,subj.tree,subj.sourceBlob,subj.testBlob,
   subj.ciRun,subj.ciJob,attempt].join(' ');
@@ -28,7 +28,8 @@ const canonical=[
   '**ExecutionAttempt:** '+tick+attempt+tick
 ];
 const pass=[reviewHeading,'','**ORIGINAL SEMANTIC VERDICT: PASS**','',
-  ...canonical,'','- Evidence TASK CONFIRMED'].join('\n');
+  ...canonical,'','- Evidence TASK CONFIRMED','## Acceptance criteria',
+  ...Array.from({length:8},(_,i)=>'- AC0'+(i+1)+' SATISFIED')].join('\n');
 const commentRef='https://github.com/mauedgar/tecnotron-ai/issues/34#issuecomment-6519999999';
 
 test('original nine obligation IDs, source identity and existing schema are stable',()=>{
@@ -274,10 +275,10 @@ test('F005: an ordered-list or heading contradictory verdict also rejects',()=>{
   }
 });
 
-test('F002: native terminal selection must name IR010 only, not IR009',()=>{
+test('F002: native terminal selection must name IR011 only, not IR010',()=>{
   const source=fs.readFileSync(require.resolve('../../scripts/op03-original-taskcycle-close'),'utf8');
-  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR010_FROZEN_INPUT'));
-  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR009_FROZEN_INPUT'),false);
+  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR011_FROZEN_INPUT'));
+  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR010_FROZEN_INPUT'),false);
 });
 
 
@@ -354,7 +355,6 @@ test('bounded narrative grammar accepts authentic PASS and historical typed evid
     '- Evidence CI CONFIRMED',
     '- Historical unrelated SHA '+('f'.repeat(40))+' was not reviewed',
     '- Evidence SOURCE CONFIRMED',
-    '- AC01 SATISFIED',
     '- Evidence URL - https://github.com/mauedgar/tecnotron-ai/commit/'+subj.commit
   ].join('\n');
   assert.doesNotThrow(()=>verifyOriginalReviewPass(pass+'\n'+narrative,input,subj,rev));
@@ -436,8 +436,6 @@ test('closed grammar permits scoped findings, bounded evidence and historical SH
     '- Finding F014 RESOLVED L118',
     '- Historical unrelated SHA '+('f'.repeat(40))+' was not reviewed',
     '## Acceptance criteria',
-    '- AC01 SATISFIED',
-    '- AC05 SATISFIED',
     '- Evidence URL - https://github.com/mauedgar/tecnotron-ai/actions/runs/'+subj.ciRun
   ].join('\n');
   assert.doesNotThrow(()=>verifyOriginalReviewPass(report,input,subj,rev));
@@ -493,7 +491,7 @@ test('fixed evidence codebook accepts real reviewer observations and limitations
     '## Scope','- Evidence SOURCE CONFIRMED','- Evidence TESTS CONFIRMED',
     '## Findings','- Finding F014 RESOLVED L118','- Finding F015 RESOLVED L122',
     '## Evidence','- Evidence F014 ATTACK_REJECTED','- Evidence F016 ATTACK_REJECTED',
-    '## Acceptance criteria','- AC01 SATISFIED','- AC05 SATISFIED','- AC08 SATISFIED',
+    '## Acceptance criteria',
     '## Limitations','- Limitation F007 CALLER_ASSERTED_NOT_SELF_AUTHENTICATING',
     '- Limitation A011 NOT_ATTESTED',
     '## Disposition','- Evidence REVIEW CONFIRMED',
@@ -529,7 +527,7 @@ test('positive bounded review can contain nonblocking findings and actual histor
   assert.doesNotThrow(()=>verifyOriginalReviewPass(pass+'\n'+[
     '## Findings','- Finding F017 ADVISORY L120',
     '## Evidence','- Evidence F017 ATTACK_REJECTED',
-    '## Acceptance criteria','- AC05 SATISFIED',
+    '## Acceptance criteria',
     '- Historical unrelated SHA '+('f'.repeat(40))+' was not reviewed'
   ].join('\n'),input,subj,rev));
 });
@@ -566,17 +564,67 @@ test('IR009 F018 every original mandatory unsatisfied AC rejects',()=>{
 
 test('bounded review may have honest partial AC but never unsatisfied AC',()=>{
   const bounded=pass.replace('**ORIGINAL SEMANTIC VERDICT: PASS**',
-    '**ORIGINAL SEMANTIC VERDICT: PASS (BOUNDED)**');
+    '**ORIGINAL SEMANTIC VERDICT: PASS (BOUNDED)**')
+    .replace('- AC02 SATISFIED','- AC02 PARTIAL')
+    .replace('- AC03 SATISFIED','- AC03 PARTIAL');
   const body=[
     '## Evidence','- Evidence SOURCE CONFIRMED',
     '## Findings','- Finding F014 RESOLVED L118',
     '- Evidence F014 ATTACK_REJECTED',
-    '## Acceptance criteria','- AC01 SATISFIED','- AC02 PARTIAL',
-    '- AC03 PARTIAL','- AC05 SATISFIED','- Evidence AC07 LIMITED',
     '## Limitations','- Limitation F007 CALLER_ASSERTED_NOT_SELF_AUTHENTICATING',
     '- Limitation A011 NOT_ATTESTED'
   ].join('\n');
   assert.doesNotThrow(()=>verifyOriginalReviewPass(bounded+'\n'+body,input,subj,rev));
-  assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+body,input,subj,rev),
+  assert.throws(()=>verifyOriginalReviewPass(
+    bounded.replace('PASS (BOUNDED)','PASS')+'\n'+body,input,subj,rev),
     /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+});
+
+
+test('IR010 F019 generic adverse status and conflicting duplicates must reject',()=>{
+  for(const line of [
+    '- Evidence CI UNVERIFIED','- Evidence SOURCE UNVERIFIED',
+    '- Evidence REVIEW REPRODUCED','- Evidence TASK REPRODUCED',
+    '- Evidence TESTS UNVERIFIED','- Evidence TRANSPORT UNVERIFIED',
+    '- Evidence SOT REPRODUCED','- Evidence PROVENANCE UNVERIFIED',
+    '- Evidence AC03 REPRODUCED',
+    '- Evidence CI CONFIRMED\n- Evidence CI UNVERIFIED',
+    '- Evidence SOURCE CONFIRMED\n- Evidence SOURCE UNVERIFIED',
+    '- Evidence SOURCE CONFIRMED\n- Evidence SOURCE CONFIRMED'
+  ])assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,line);
+});
+
+test('IR010 F020 requires all eight direct original AC outcomes',()=>{
+  for(let i=1;i<=8;i++){
+    const ac='- AC0'+i+' SATISFIED';
+    assert.throws(()=>verifyOriginalReviewPass(pass.replace(ac,''),input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,ac);
+    assert.throws(()=>verifyOriginalReviewPass(
+      pass.replace(ac,'- Evidence AC0'+i+' CONFIRMED'),input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,ac);
+    assert.throws(()=>verifyOriginalReviewPass(
+      pass.replace(ac,'- AC0'+i+' PARTIAL'),input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,ac);
+    const bounded=pass.replace(ac,'- AC0'+i+' PARTIAL')
+      .replace('**ORIGINAL SEMANTIC VERDICT: PASS**',
+        '**ORIGINAL SEMANTIC VERDICT: PASS (BOUNDED)**');
+    assert.doesNotThrow(()=>verifyOriginalReviewPass(bounded,input,subj,rev),ac);
+  }
+  assert.throws(()=>verifyOriginalReviewPass(
+    pass.slice(0,pass.indexOf('\n## Acceptance criteria')),input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+});
+
+test('IR010 consistent ordinary evidence and exact URLs remain accepted',()=>{
+  const report=pass+'\n'+[
+    '## Evidence','- Evidence SOURCE CONFIRMED','- Evidence CI CONFIRMED',
+    '- Evidence SOT UNCHANGED','- Evidence REVIEW CONFIRMED',
+    '- Evidence URL - https://github.com/mauedgar/tecnotron-ai/commit/'+subj.commit,
+    '## Findings','- Finding F019 RESOLVED L145',
+    '- Evidence F019 ATTACK_REJECTED',
+    '## Limitations','- Limitation F007 CALLER_ASSERTED_NOT_SELF_AUTHENTICATING',
+    '- Limitation A011 NOT_ATTESTED'
+  ].join('\n');
+  assert.doesNotThrow(()=>verifyOriginalReviewPass(report,input,subj,rev));
 });

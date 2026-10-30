@@ -73,8 +73,8 @@ function apiBlob(api,repo,ref,p,expected) {
   return b.toString('utf8');
 }
 const QUALIFIED_FACTS = new WeakSet();
-const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR010-20261030-001/';
-const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR010-ATTEMPT-001';
+const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR011-20261030-001/';
+const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR011-ATTEMPT-001';
 function exactIssueCommentId(ref) {
   const m = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/34#issuecomment-(\d+)$/.exec(ref || '');
   expect(m, 'INVALID_EXACT_DEVELOPER_DECISION_REF');
@@ -91,7 +91,7 @@ function ownerDecision(api, ref) {
 function verifyOriginalReviewPass(report, request, candidate, review=null) {
   // One top-level verdict only; quoted, indented and list-marked duplicates fail closed.
   const lines=String(report).replace(/\r\n/g,'\n').split('\n');
-  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR010';
+  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR011';
   const verdict=/^\*\*ORIGINAL SEMANTIC VERDICT: PASS(?: \(BOUNDED\))?\*\*$/;
   const tick=String.fromCharCode(96);
   const top=[
@@ -133,9 +133,10 @@ function verifyOriginalReviewPass(report, request, candidate, review=null) {
       candidate.testBlob,review?.requestCommit,review?.requestBlob].includes(h[1]);
     return false;
   };
-  // Positive verdicts must agree with every typed result. One status per
-  // finding, adversarial probe and original acceptance criterion.
+  // Positive verdicts are complete typed attestations, not a denial-list.
+  // Original AC01..08 must each be explicitly declared, with no contradictions.
   const seenFindings=new Set(), seenTests=new Set(), seenACs=new Set();
+  const seenGeneric=new Set(), declaredACs=new Set();
   const bounded=lines[2]==='**ORIGINAL SEMANTIC VERDICT: PASS (BOUNDED)**';
   const restrictedBody=lines.slice(12).every(line=>{
     if (!isEvidenceLine(line)) return false;
@@ -146,25 +147,36 @@ function verifyOriginalReviewPass(report, request, candidate, review=null) {
     }
     const e=/^- Evidence (F\d{3}) (\w+)$/.exec(line);
     if (e) {
-      // A reproduced hostile probe is incompatible with a positive review.
       if (['REPRODUCED','ATTACK_ACCEPTED','UNVERIFIED'].includes(e[2])
         || seenTests.has(e[1])) return false;
       seenTests.add(e[1]);
+    }
+    const generic=/^- Evidence (CI|SOURCE|TESTS|SOT|TASK|TRANSPORT|REVIEW|PROVENANCE) (\w+)$/.exec(line);
+    if (generic) {
+      if (seenGeneric.has(generic[1])) return false;
+      seenGeneric.add(generic[1]);
+      if (generic[1]==='PROVENANCE')
+        return generic[2]==='CONFIRMED' || (bounded && generic[2]==='LIMITED');
+      if (generic[1]==='SOT')
+        return generic[2]==='CONFIRMED' || generic[2]==='UNCHANGED';
+      return generic[2]==='CONFIRMED';
     }
     const ac=/^- AC(0[1-8]) (SATISFIED|PARTIAL|NOT_SATISFIED)$/.exec(line);
     if (ac) {
       if (seenACs.has(ac[1]) || ac[2]==='NOT_SATISFIED'
         || (ac[2]==='PARTIAL' && !bounded)) return false;
       seenACs.add(ac[1]);
+      declaredACs.add(ac[1]);
     }
-    const evidenceAC=/^- Evidence AC(0[1-8]) (\w+)$/.exec(line);
-    if (evidenceAC) {
-      if (seenACs.has(evidenceAC[1]) || evidenceAC[2]==='UNVERIFIED'
-        || (evidenceAC[2]==='LIMITED' && !bounded)) return false;
-      seenACs.add(evidenceAC[1]);
+    const acEvidence=/^- Evidence AC(0[1-8]) (\w+)$/.exec(line);
+    if (acEvidence) {
+      if (seenACs.has(acEvidence[1])
+        || (acEvidence[2]!=='CONFIRMED'
+          && !(bounded && acEvidence[2]==='LIMITED'))) return false;
+      seenACs.add(acEvidence[1]);
     }
     return true;
-  });
+  }) && declaredACs.size===8;
   expect(typeof report==='string' && typeof request==='string'
     && review && /^[a-f0-9]{40}$/.test(review.requestCommit)
     && /^[a-f0-9]{40}$/.test(review.requestBlob)
@@ -223,13 +235,13 @@ function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
   expect(new Set([q.controlRef, q.acceptanceRef, q.phase2Ref, q.terminalRef]).size === 4,
     'DEVELOPER_AND_CONTROL_DECISIONS_NOT_DISTINCT');
   const selected=ownerDecision(api,q.controlRef);
-  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR010_FROZEN_INPUT')
+  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR011_FROZEN_INPUT')
     && selected.body.includes(candidate.commit) && selected.body.includes(candidate.tree)
     && selected.body.includes(candidate.sourceBlob) && selected.body.includes(candidate.testBlob)
     && selected.body.includes(String(candidate.ciRun)) && selected.body.includes(String(candidate.ciJob))
     && selected.body.includes(rev.requestCommit) && selected.body.includes(rev.requestBlob)
     && requestText.includes(String(candidate.ciRun)) && requestText.includes(String(candidate.ciJob)),
-    'CONTROL_SELECTED_FROZEN_IR010_INTERFACE_MISMATCH');
+    'CONTROL_SELECTED_FROZEN_IR011_INTERFACE_MISMATCH');
   const a = ownerDecision(api, q.acceptanceRef);
   const p = ownerDecision(api, q.phase2Ref);
   const t = ownerDecision(api, q.terminalRef);
