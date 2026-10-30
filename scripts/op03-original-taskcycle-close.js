@@ -114,16 +114,23 @@ function verifyOriginalReviewPass(report, request, candidate, review=null) {
     if (line==='' || allowedSections.has(line)) return true;
     if (!/^[\x20-\x7e]+$/.test(line)) return false;
     // Typed evidence, scoped findings, original AC and fixed limitations.
-    if (/^- Finding F\d{3} (?:BLOCKER|MAJOR|ADVISORY|RESOLVED|NOT_REPRODUCED) L\d{1,5}$/.test(line)) return true;
-    if (/^- Evidence (?:F\d{3}|AC0[1-8]|CI|SOURCE|TESTS|SOT|TASK|TRANSPORT|REVIEW|PROVENANCE) (?:CONFIRMED|LIMITED|UNVERIFIED|REPRODUCED|ATTACK_REJECTED|ATTACK_ACCEPTED|UNCHANGED|HISTORICAL)$/.test(line)) return true;
-    if (/^- AC0[1-8] (?:SATISFIED|PARTIAL|NOT_SATISFIED)$/.test(line)) return true;
+    // A positive primary verdict cannot coexist with blocker claims or an
+    // admitted adversarial bypass in the machine-readable evidence body.
+    if (/^- Finding F\d{3} (?:ADVISORY|RESOLVED|NOT_REPRODUCED) L\d{1,5}$/.test(line)) return true;
+    if (/^- Evidence (?:F\d{3}|AC0[1-8]|CI|SOURCE|TESTS|SOT|TASK|TRANSPORT|REVIEW|PROVENANCE) (?:CONFIRMED|LIMITED|UNVERIFIED|REPRODUCED|ATTACK_REJECTED|UNCHANGED|HISTORICAL)$/.test(line))
+      return !/^- Evidence AC05 (?:UNVERIFIED|LIMITED)$/.test(line);
+    if (line==='- AC05 SATISFIED') return true;
+    if (/^- AC0[1-8] (?:SATISFIED|PARTIAL|NOT_SATISFIED)$/.test(line))
+      return !/^- AC05 /.test(line);
     if (/^- Limitation F007 CALLER_ASSERTED_NOT_SELF_AUTHENTICATING$/.test(line)) return true;
     if (/^- Limitation A011 NOT_ATTESTED$/.test(line)) return true;
     // Exact references, never arbitrary URLs with unbound foreign digests.
     if (Number.isSafeInteger(candidate.ciRun)
       && line==='- Evidence URL - https://github.com/'+PRODUCT+'/actions/runs/'+candidate.ciRun) return true;
     if (line==='- Evidence URL - https://github.com/'+PRODUCT+'/commit/'+candidate.commit) return true;
-    if (/^- Historical unrelated SHA [a-f0-9]{40} was not reviewed$/.test(line)) return true;
+    const h=/^- Historical unrelated SHA ([a-f0-9]{40}) was not reviewed$/.exec(line);
+    if (h) return ![candidate.commit,candidate.tree,candidate.sourceBlob,
+      candidate.testBlob,review?.requestCommit,review?.requestBlob].includes(h[1]);
     return false;
   };
   const restrictedBody=lines.slice(12).every(isEvidenceLine);

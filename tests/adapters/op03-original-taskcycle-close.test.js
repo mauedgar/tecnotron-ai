@@ -437,7 +437,7 @@ test('closed grammar permits scoped findings, bounded evidence and historical SH
     '- Historical unrelated SHA '+('f'.repeat(40))+' was not reviewed',
     '## Acceptance criteria',
     '- AC01 SATISFIED',
-    '- AC05 PARTIAL',
+    '- AC05 SATISFIED',
     '- Evidence URL - https://github.com/mauedgar/tecnotron-ai/actions/runs/'+subj.ciRun
   ].join('\n');
   assert.doesNotThrow(()=>verifyOriginalReviewPass(report,input,subj,rev));
@@ -493,11 +493,43 @@ test('fixed evidence codebook accepts real reviewer observations and limitations
     '## Scope','- Evidence SOURCE CONFIRMED','- Evidence TESTS CONFIRMED',
     '## Findings','- Finding F014 RESOLVED L118','- Finding F015 RESOLVED L122',
     '## Evidence','- Evidence F014 ATTACK_REJECTED','- Evidence F016 ATTACK_REJECTED',
-    '## Acceptance criteria','- AC01 SATISFIED','- AC05 PARTIAL','- AC08 NOT_SATISFIED',
+    '## Acceptance criteria','- AC01 SATISFIED','- AC05 SATISFIED','- AC08 NOT_SATISFIED',
     '## Limitations','- Limitation F007 CALLER_ASSERTED_NOT_SELF_AUTHENTICATING',
     '- Limitation A011 NOT_ATTESTED',
     '## Disposition','- Evidence REVIEW CONFIRMED',
     '- Evidence URL - https://github.com/mauedgar/tecnotron-ai/commit/'+subj.commit
   ].join('\n');
   assert.doesNotThrow(()=>verifyOriginalReviewPass(report,input,subj,rev));
+});
+
+
+test('positive review cannot coexist with typed blocker or accepted hostile probe',()=>{
+  for(const line of [
+    '- Finding F017 BLOCKER L120',
+    '- Finding F017 MAJOR L120',
+    '- Evidence F017 ATTACK_ACCEPTED',
+    '- Evidence AC05 UNVERIFIED',
+    '- Evidence AC05 LIMITED',
+    '- AC05 PARTIAL',
+    '- AC05 NOT_SATISFIED'
+  ])assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,line);
+});
+
+test('selected Git subject cannot be described as unrelated historical SHA',()=>{
+  for(const value of [
+    subj.commit,subj.tree,subj.sourceBlob,subj.testBlob,
+    rev.requestCommit,rev.requestBlob
+  ])assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+
+    '- Historical unrelated SHA '+value+' was not reviewed',input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,value);
+});
+
+test('positive bounded review can contain nonblocking findings and actual history',()=>{
+  assert.doesNotThrow(()=>verifyOriginalReviewPass(pass+'\n'+[
+    '## Findings','- Finding F017 ADVISORY L120',
+    '## Evidence','- Evidence F017 ATTACK_REJECTED',
+    '## Acceptance criteria','- AC05 SATISFIED',
+    '- Historical unrelated SHA '+('f'.repeat(40))+' was not reviewed'
+  ].join('\n'),input,subj,rev));
 });
