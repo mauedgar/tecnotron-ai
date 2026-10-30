@@ -159,11 +159,18 @@ function inspectNative(api,{terminalAcceptanceRef=null,terminalPhase2Ref=null}={
   const phase1=apiBlob(api,TRANSPORT,'1e164af9135bbfcbc960ccb658679760a5106099',
     'results/TECNOTRON-OP03-PHASE1-ATTEMPT006-TERMINAL-20261029-001/TECHNICAL_RETURN.md',
     '690f91f2363d8db53bc7134a34673266b828b0d7');
-  expect(phase1.includes('ATTEMPT-006') && phase1.includes('exit') && phase1.includes('PASS'),
-    'ORIGINAL_PHASE1_EFFECT_NOT_RECONCILED');
+  expect(phase1.includes('ExecutionAttempt_id=TECNOTRON-OP03-PHASE1-IMPLEMENT-NATIVE-ATTEMPT-006')
+    && /Native child \*\*exit 0\*\*, timeout \*\*false\*\*, exception null\./.test(phase1)
+    && /Original `FOCUSED\.txt`: \*\*12 PASS, 0 FAIL, 0 SKIP\*\*/.test(phase1)
+    && /Original `PROMOTION\.txt`: \*\*35 PASS, 0 FAIL, 0 SKIP\*\*/.test(phase1),
+    'ORIGINAL_PHASE1_TERMINAL_NOT_EXACT_PASS');
   const report=apiBlob(api,TRANSPORT,SUBJECT.reportCommit,
     'reviews/TECNOTRON-OP03-PR57-WEB_INLINE-IR005-20261029-001/ORIGINAL_REVIEW_RESULT.md',SUBJECT.reportBlob);
-  expect(/PASS/.test(report) && report.includes(SUBJECT.accepted),'INDEPENDENT_REVIEW_SUBJECT_OR_VERDICT_MISMATCH');
+  expect(/^\*\*Original independent semantic verdict: PASS \(BOUNDED\), no demonstrated BLOCKER\/MAJOR/m.test(report)
+    && report.includes('TECNOTRON-OP03-PR57-WEBINLINE-IR005-ATTEMPT-001')
+    && report.includes('exact commit `'+SUBJECT.accepted+'`')
+    && report.includes('tree `'+SUBJECT.acceptedTree+'`'),
+    'PR57_INDEPENDENT_REVIEW_DISPOSITION_NOT_EXACT_PASS');
   apiBlob(api,TRANSPORT,SUBJECT.interfaceCommit,
     'reviews/TECNOTRON-OP03-PR57-WEB_INLINE-IR005-20261029-001/IMMUTABLE_REVIEW_REQUEST.md',SUBJECT.interfaceBlob);
   const acceptance=api(apiPath(PRODUCT,'issues/comments/6512300519')).body;
