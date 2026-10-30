@@ -73,8 +73,8 @@ function apiBlob(api,repo,ref,p,expected) {
   return b.toString('utf8');
 }
 const QUALIFIED_FACTS = new WeakSet();
-const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR008-20261030-001/';
-const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR008-ATTEMPT-001';
+const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR009-20261030-001/';
+const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR009-ATTEMPT-001';
 function exactIssueCommentId(ref) {
   const m = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/34#issuecomment-(\d+)$/.exec(ref || '');
   expect(m, 'INVALID_EXACT_DEVELOPER_DECISION_REF');
@@ -91,7 +91,7 @@ function ownerDecision(api, ref) {
 function verifyOriginalReviewPass(report, request, candidate, review=null) {
   // One top-level verdict only; quoted, indented and list-marked duplicates fail closed.
   const lines=String(report).replace(/\r\n/g,'\n').split('\n');
-  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR008';
+  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR009';
   const verdict=/^\*\*ORIGINAL SEMANTIC VERDICT: PASS(?: \(BOUNDED\))?\*\*$/;
   const tick=String.fromCharCode(96);
   const top=[
@@ -103,25 +103,30 @@ function verifyOriginalReviewPass(report, request, candidate, review=null) {
     '**FROZEN REQUEST BLOB:** '+tick+review?.requestBlob+tick,
     '**ExecutionAttempt:** '+tick+REVIEW_ATTEMPT+tick
   ];
-  // Fail-closed inert narrative; only the exact header can assert authority.
+  // Fixed-domain evidence-only body; arbitrary natural-language assertions
+  // are NOT parsed as an authoritative subject or a second disposition.
+  // Deliberately reject unsupported text rather than extending a denylist.
   const allowedSections=new Set([
     '## Evidence','## Findings','## Limitations','## Acceptance criteria',
     '## Disposition','## Scope','## Validation'
   ]);
-  const restrictedBody=lines.slice(12).every(line=>{
-    if (line==='') return true;
-    if (allowedSections.has(line)) return true;
-    if (!line.startsWith('- ') || !/^[\x20-\x7e]+$/.test(line)) return false;
-    // No Markdown markup, code, entities, escapes or ambiguous rendering.
-    if (/[\[\]\\<>&*\x60_~#|]/.test(line)) return false;
-    // Only raw HTTPS URL colons are permitted in evidence references.
-    const plain=line.replace(/https:\/\/[^\s]+/g,'');
-    if (plain.includes(':') || /\b(?:pass|fail|blocked)\b/i.test(plain)) return false;
-    // Unbound digests only belong to explicitly historical references.
-    if (/\b[a-f0-9]{40}\b/i.test(plain)
-      && !/^- Historical (?:unrelated )?/i.test(line)) return false;
-    return true;
-  });
+  const isEvidenceLine=line=>{
+    if (line==='' || allowedSections.has(line)) return true;
+    if (!/^[\x20-\x7e]+$/.test(line)) return false;
+    // Typed evidence, scoped findings, original AC and fixed limitations.
+    if (/^- Finding F\d{3} (?:BLOCKER|MAJOR|ADVISORY|RESOLVED|NOT_REPRODUCED) L\d{1,5}$/.test(line)) return true;
+    if (/^- Evidence (?:F\d{3}|AC0[1-8]|CI|SOURCE|TESTS|SOT|TASK|TRANSPORT|REVIEW|PROVENANCE) (?:CONFIRMED|LIMITED|UNVERIFIED|REPRODUCED|ATTACK_REJECTED|ATTACK_ACCEPTED|UNCHANGED|HISTORICAL)$/.test(line)) return true;
+    if (/^- AC0[1-8] (?:SATISFIED|PARTIAL|NOT_SATISFIED)$/.test(line)) return true;
+    if (/^- Limitation F007 CALLER_ASSERTED_NOT_SELF_AUTHENTICATING$/.test(line)) return true;
+    if (/^- Limitation A011 NOT_ATTESTED$/.test(line)) return true;
+    // Exact references, never arbitrary URLs with unbound foreign digests.
+    if (Number.isSafeInteger(candidate.ciRun)
+      && line==='- Evidence URL - https://github.com/'+PRODUCT+'/actions/runs/'+candidate.ciRun) return true;
+    if (line==='- Evidence URL - https://github.com/'+PRODUCT+'/commit/'+candidate.commit) return true;
+    if (/^- Historical unrelated SHA [a-f0-9]{40} was not reviewed$/.test(line)) return true;
+    return false;
+  };
+  const restrictedBody=lines.slice(12).every(isEvidenceLine);
   expect(typeof report==='string' && typeof request==='string'
     && review && /^[a-f0-9]{40}$/.test(review.requestCommit)
     && /^[a-f0-9]{40}$/.test(review.requestBlob)
@@ -180,13 +185,13 @@ function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
   expect(new Set([q.controlRef, q.acceptanceRef, q.phase2Ref, q.terminalRef]).size === 4,
     'DEVELOPER_AND_CONTROL_DECISIONS_NOT_DISTINCT');
   const selected=ownerDecision(api,q.controlRef);
-  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR008_FROZEN_INPUT')
+  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR009_FROZEN_INPUT')
     && selected.body.includes(candidate.commit) && selected.body.includes(candidate.tree)
     && selected.body.includes(candidate.sourceBlob) && selected.body.includes(candidate.testBlob)
     && selected.body.includes(String(candidate.ciRun)) && selected.body.includes(String(candidate.ciJob))
     && selected.body.includes(rev.requestCommit) && selected.body.includes(rev.requestBlob)
     && requestText.includes(String(candidate.ciRun)) && requestText.includes(String(candidate.ciJob)),
-    'CONTROL_SELECTED_FROZEN_IR008_INTERFACE_MISMATCH');
+    'CONTROL_SELECTED_FROZEN_IR009_INTERFACE_MISMATCH');
   const a = ownerDecision(api, q.acceptanceRef);
   const p = ownerDecision(api, q.phase2Ref);
   const t = ownerDecision(api, q.terminalRef);
