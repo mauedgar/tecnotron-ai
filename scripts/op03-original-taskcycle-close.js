@@ -72,7 +72,39 @@ function apiBlob(api,repo,ref,p,expected) {
   expect(blobSha(b)===expected && v.sha===expected,'NATIVE_BLOB_INTEGRITY_MISMATCH');
   return b.toString('utf8');
 }
-function inspectNative(api) {
+function exactIssueCommentId(ref) {
+  const m=/^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/34#issuecomment-(\d+)$/.exec(ref||'');
+  expect(m && m[1] && m[1]!== '6512731481','TERMINAL_MAINTENANCE_AUTHORITY_NOT_CANDIDATE_SPECIFIC');
+  return m[1];
+}
+function verifyTerminalAdapterIntegration(api, currentHead, acceptanceRef, phase2Ref) {
+  if (currentHead===SUBJECT.merge) return {status:'NOT_YET_INTEGRATED',currentHead};
+  const pr=api(apiPath(PRODUCT,'pulls/58'));
+  expect(pr?.merged===true && pr.merge_commit_sha===currentHead
+    && typeof pr.head?.sha==='string','TERMINAL_ADAPTER_NOT_INTEGRATED');
+  const m=api(apiPath(PRODUCT,'git/commits/'+currentHead));
+  expect(m.tree?.sha && JSON.stringify(m.parents?.map(p=>p.sha))===
+    JSON.stringify([SUBJECT.merge,pr.head.sha]),'TERMINAL_ADAPTER_MERGE_PARENT_DRIFT');
+  const compare=api(apiPath(PRODUCT,'compare/'+SUBJECT.merge+'...'+currentHead));
+  expect(JSON.stringify(compare.files?.map(f=>f.filename).sort())===
+    JSON.stringify(['scripts/op03-original-taskcycle-close.js',
+      'tests/adapters/op03-original-taskcycle-close.test.js']),
+    'TERMINAL_ADAPTER_SCOPE_DRIFT');
+  const a=api(apiPath(PRODUCT,'issues/comments/'+exactIssueCommentId(acceptanceRef)));
+  const p=api(apiPath(PRODUCT,'issues/comments/'+exactIssueCommentId(phase2Ref)));
+  expect(a?.body?.includes('DEVELOPER_ACCEPTED_TERMINAL_COMPAT_EXACT_CANDIDATE') &&
+    a.body.includes(pr.head.sha) && a.body.includes(m.parents[1].sha),
+    'TERMINAL_ADAPTER_DEVELOPER_ACCEPTANCE_UNVERIFIED');
+  expect(p?.body?.includes('DEVELOPER_GRANTED_TERMINAL_COMPAT_PHASE2') &&
+    p.body.includes(pr.head.sha) && acceptanceRef!==phase2Ref,
+    'TERMINAL_ADAPTER_PHASE2_AUTHORITY_UNVERIFIED');
+  const localSource=blobSha(fs.readFileSync(__filename));
+  const native=api(apiPath(PRODUCT,'contents/scripts/op03-original-taskcycle-close.js?ref='+currentHead));
+  expect(native?.sha===localSource,'EXECUTED_TERMINAL_ADAPTER_SOURCE_DRIFT');
+  return {status:'QUALIFIED_MERGED',currentHead,prHead:pr.head.sha,tree:m.tree.sha,
+    authority_refs:[acceptanceRef,phase2Ref],native_script_blob:localSource};
+}
+function inspectNative(api,{terminalAcceptanceRef=null,terminalPhase2Ref=null}={}) {
   const mi=apiBlob(api,TRANSPORT,INITIAL_REF,INITIAL_DIR+'/manifest.json',INIT_BLOBS.manifest);
   const pi=apiBlob(api,TRANSPORT,INITIAL_REF,INITIAL_DIR+'/projection.json',INIT_BLOBS.projection);
   const manifest=JSON.parse(mi), initial=JSON.parse(pi);
@@ -92,7 +124,9 @@ function inspectNative(api) {
     && carrier.parents?.[0]?.sha===SUBJECT.sourceBase,'TASK_CARRIER_GIT_MISMATCH');
   apiBlob(api,PRODUCT,SUBJECT.carrier,'docs/tasks/TEC-TC-ULC-OP03-ACTIONS-EVIDENCE-CONSUMER-001/TASK.md',SUBJECT.carrierBlob);
   const branch=api(apiPath(PRODUCT,'branches/tools'));
-  expect(branch.commit?.sha===SUBJECT.merge,'CANONICAL_TOOLS_HEAD_DRIFT');
+  expect(typeof branch.commit?.sha==='string','CANONICAL_TOOLS_HEAD_UNAVAILABLE');
+  const adapter=verifyTerminalAdapterIntegration(api,branch.commit.sha,
+    terminalAcceptanceRef,terminalPhase2Ref);
   const merge=api(apiPath(PRODUCT,'git/commits/'+SUBJECT.merge));
   expect(merge.tree?.sha===SUBJECT.mergeTree
     && JSON.stringify(merge.parents?.map(p=>p.sha))===JSON.stringify([SUBJECT.pre,SUBJECT.accepted]),
@@ -147,8 +181,8 @@ function inspectNative(api) {
     && receipt.effect_reconciliation?.canonical_commit===SUBJECT.merge
     && receipt.effect_reconciliation?.unresolved_UNKNOWN_effects?.length===0,
     'PHASE2_EFFECT_RECONCILIATION_INCOMPLETE');
-  return {initial,manifest,source_identity:INITIAL_HASH,
-    authority_refs:[ACCEPT_REF,GRANT_REF],
+  return {initial,manifest,source_identity:INITIAL_HASH,adapter,
+    authority_refs:[ACCEPT_REF,GRANT_REF,...(adapter.authority_refs||[])],
     evidence_refs:[
       'https://github.com/mauedgar/tecnotron-ai/actions/runs/'+SUBJECT.originalRun,
       'https://github.com/mauedgar/tecnotron-ai/actions/runs/'+SUBJECT.ciRun,
@@ -221,9 +255,13 @@ function publishOnce(root,pkg) {
     return {status:'PASS',effect_state:'CONFIRMED',already_closed:false,location:finalDir,identity_sha256:pkg.identity_sha256};
   } finally { if(fs.existsSync(staging)) fs.rmSync(staging,{recursive:true,force:true}); }
 }
-function close({api=githubCLI,root,terminalAuthorityRef,commit=false}) {
+function close({api=githubCLI,root,terminalAuthorityRef,terminalAcceptanceRef=null,
+  terminalPhase2Ref=null,commit=false}) {
   try {
-    const facts=inspectNative(api); const pkg=buildPackage(facts,terminalAuthorityRef);
+    const facts=inspectNative(api,{terminalAcceptanceRef,terminalPhase2Ref});
+    if (commit) expect(facts.adapter.status==='QUALIFIED_MERGED',
+      'TERMINAL_ADAPTER_ACCEPTED_PHASE2_INTEGRATION_REQUIRED');
+    const pkg=buildPackage(facts,terminalAuthorityRef);
     if (!commit) return {status:'READY',effect_state:'NONE',identity_sha256:pkg.identity_sha256,
       original_taskcycle_id:ID,obligations:OBLIGATIONS.length};
     const receipt=publishOnce(root,pkg);
@@ -242,10 +280,13 @@ if(require.main===module) {
   const args=process.argv.slice(2);
   const root=args.includes('--output-root')?args[args.indexOf('--output-root')+1]:null;
   const authority=args.includes('--terminal-authority-ref')?args[args.indexOf('--terminal-authority-ref')+1]:null;
+  const acceptance=args.includes('--terminal-acceptance-ref')?args[args.indexOf('--terminal-acceptance-ref')+1]:null;
+  const phase2=args.includes('--terminal-phase2-ref')?args[args.indexOf('--terminal-phase2-ref')+1]:null;
   const commit=args.includes('--commit');
-  const result=close({root,terminalAuthorityRef:authority,commit});
+  const result=close({root,terminalAuthorityRef:authority,terminalAcceptanceRef:acceptance,
+    terminalPhase2Ref:phase2,commit});
   process.stdout.write(serialize(result));
   if(result.status==='BLOCKED') process.exitCode=2;
 }
 module.exports={close,inspectNative,buildPackage,publishOnce,blocked,SUBJECT,OBLIGATIONS,
-  SCHEMA,INITIAL_HASH,blobSha,sha256};
+  SCHEMA,INITIAL_HASH,blobSha,sha256,verifyTerminalAdapterIntegration};

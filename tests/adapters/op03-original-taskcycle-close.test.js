@@ -6,7 +6,7 @@ const os=require('node:os');
 const path=require('node:path');
 const {
   close,buildPackage,publishOnce,blocked,SUBJECT,OBLIGATIONS,SCHEMA,INITIAL_HASH,
-  sha256,blobSha,
+  sha256,blobSha,verifyTerminalAdapterIntegration,
 }=require('../../scripts/op03-original-taskcycle-close');
 
 function facts() {
@@ -104,4 +104,62 @@ test('blocking result does not masquerade as Product post-write UNKNOWN',()=>{
   assert.equal(p.status,'BLOCKED');
   assert.equal(p.effect_state,'NONE');
   assert.equal(p.terminal_disposition_ref,null);
+});
+
+test('pre-integration qualification is not terminal authority',()=>{
+  const r=verifyTerminalAdapterIntegration(()=>{throw Error('must not read provider');},
+    SUBJECT.merge,null,null);
+  assert.equal(r.status,'NOT_YET_INTEGRATED');
+});
+
+test('terminal bridge rejects a PR58 without genuine merge',()=>{
+  const api=()=>({merged:false});
+  assert.throws(()=>verifyTerminalAdapterIntegration(api,'a'.repeat(40),null,null),
+    /TERMINAL_ADAPTER_NOT_INTEGRATED/);
+});
+
+test('terminal bridge rejects changed merge parents even if PR58 says merged',()=>{
+  const newCommit='a'.repeat(40),prHead='b'.repeat(40);
+  const api=(endpoint)=>{
+    if(endpoint.endsWith('pulls/58'))return {merged:true,merge_commit_sha:newCommit,head:{sha:prHead}};
+    if(endpoint.endsWith('git/commits/'+newCommit))return {tree:{sha:'c'.repeat(40)},
+      parents:[{sha:'d'.repeat(40)},{sha:prHead}]};
+    throw Error('unexpected native call');
+  };
+  assert.throws(()=>verifyTerminalAdapterIntegration(api,newCommit,null,null),
+    /TERMINAL_ADAPTER_MERGE_PARENT_DRIFT/);
+});
+
+test('terminal bridge rejects missing separate candidate-specific Developer grants',()=>{
+  const newCommit='a'.repeat(40),prHead='b'.repeat(40);
+  const api=(endpoint)=>{
+    if(endpoint.endsWith('pulls/58'))return {merged:true,merge_commit_sha:newCommit,head:{sha:prHead}};
+    if(endpoint.endsWith('git/commits/'+newCommit))return {tree:{sha:'c'.repeat(40)},
+      parents:[{sha:SUBJECT.merge},{sha:prHead}]};
+    if(endpoint.includes('compare/'))return {files:[
+      {filename:'scripts/op03-original-taskcycle-close.js'},
+      {filename:'tests/adapters/op03-original-taskcycle-close.test.js'}]};
+    throw Error('should block before user grant acquisition');
+  };
+  assert.throws(()=>verifyTerminalAdapterIntegration(api,newCommit,null,null),
+    /TERMINAL_MAINTENANCE_AUTHORITY_NOT_CANDIDATE_SPECIFIC/);
+});
+
+test('even an authentic PR58 merge cannot reuse one authority comment for both decisions',()=>{
+  const newCommit='a'.repeat(40),prHead='b'.repeat(40);
+  const authority='https://github.com/mauedgar/tecnotron-ai/issues/34#issuecomment-6519999999';
+  const api=(endpoint)=>{
+    if(endpoint.endsWith('pulls/58'))return {merged:true,merge_commit_sha:newCommit,head:{sha:prHead}};
+    if(endpoint.endsWith('git/commits/'+newCommit))return {tree:{sha:'c'.repeat(40)},
+      parents:[{sha:SUBJECT.merge},{sha:prHead}]};
+    if(endpoint.includes('compare/'))return {files:[
+      {filename:'scripts/op03-original-taskcycle-close.js'},
+      {filename:'tests/adapters/op03-original-taskcycle-close.test.js'}]};
+    if(endpoint.endsWith('issues/comments/6519999999'))return {
+      body:'DEVELOPER_ACCEPTED_TERMINAL_COMPAT_EXACT_CANDIDATE '+
+        'DEVELOPER_GRANTED_TERMINAL_COMPAT_PHASE2 '+prHead};
+    throw Error('unexpected');
+  };
+  assert.throws(()=>verifyTerminalAdapterIntegration(api,newCommit,authority,authority),
+    /TERMINAL_ADAPTER_PHASE2_AUTHORITY_UNVERIFIED/);
 });
