@@ -13,8 +13,8 @@ const digest='a'.repeat(40),other='b'.repeat(40);
 const subj={commit:digest,tree:other,sourceBlob:'c'.repeat(40),testBlob:'d'.repeat(40),
   ciRun:40991197489,ciJob:123853756131};
 const rev={requestCommit:'1'.repeat(40),requestBlob:'2'.repeat(40)};
-const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR009';
-const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR009-ATTEMPT-001';
+const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR010';
+const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR010-ATTEMPT-001';
 const tick=String.fromCharCode(96);
 const input=[subj.commit,subj.tree,subj.sourceBlob,subj.testBlob,
   subj.ciRun,subj.ciJob,attempt].join(' ');
@@ -274,10 +274,10 @@ test('F005: an ordered-list or heading contradictory verdict also rejects',()=>{
   }
 });
 
-test('F002: native terminal selection must name IR009 only, not IR008',()=>{
+test('F002: native terminal selection must name IR010 only, not IR009',()=>{
   const source=fs.readFileSync(require.resolve('../../scripts/op03-original-taskcycle-close'),'utf8');
-  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR009_FROZEN_INPUT'));
-  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR008_FROZEN_INPUT'),false);
+  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR010_FROZEN_INPUT'));
+  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR009_FROZEN_INPUT'),false);
 });
 
 
@@ -493,7 +493,7 @@ test('fixed evidence codebook accepts real reviewer observations and limitations
     '## Scope','- Evidence SOURCE CONFIRMED','- Evidence TESTS CONFIRMED',
     '## Findings','- Finding F014 RESOLVED L118','- Finding F015 RESOLVED L122',
     '## Evidence','- Evidence F014 ATTACK_REJECTED','- Evidence F016 ATTACK_REJECTED',
-    '## Acceptance criteria','- AC01 SATISFIED','- AC05 SATISFIED','- AC08 NOT_SATISFIED',
+    '## Acceptance criteria','- AC01 SATISFIED','- AC05 SATISFIED','- AC08 SATISFIED',
     '## Limitations','- Limitation F007 CALLER_ASSERTED_NOT_SELF_AUTHENTICATING',
     '- Limitation A011 NOT_ATTESTED',
     '## Disposition','- Evidence REVIEW CONFIRMED',
@@ -532,4 +532,51 @@ test('positive bounded review can contain nonblocking findings and actual histor
     '## Acceptance criteria','- AC05 SATISFIED',
     '- Historical unrelated SHA '+('f'.repeat(40))+' was not reviewed'
   ].join('\n'),input,subj,rev));
+});
+
+
+test('IR009 F017 contradictory findings or probes reject positive verdict',()=>{
+  for(const body of [
+    '- Finding F014 NOT_REPRODUCED L120\n- Evidence F014 REPRODUCED',
+    '- Finding F014 RESOLVED L120\n- Finding F014 NOT_REPRODUCED L121',
+    '- Finding F014 ADVISORY L120\n- Finding F014 ADVISORY L121',
+    '- Evidence F014 ATTACK_REJECTED\n- Evidence F014 REPRODUCED',
+    '- Evidence F014 ATTACK_REJECTED\n- Evidence F014 ATTACK_REJECTED',
+    '- Evidence F014 REPRODUCED',
+    '- Evidence F014 UNVERIFIED'
+  ])assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+body,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,body);
+});
+
+test('IR009 F018 every original mandatory unsatisfied AC rejects',()=>{
+  for(let i=1;i<=8;i++){
+    const id='AC'+String(i).padStart(2,'0');
+    for(const body of [
+      '- '+id+' NOT_SATISFIED',
+      '- Evidence '+id+' UNVERIFIED',
+      '- '+id+' SATISFIED\n- '+id+' NOT_SATISFIED',
+      '- '+id+' SATISFIED\n- '+id+' SATISFIED',
+      '- Evidence '+id+' CONFIRMED\n- '+id+' NOT_SATISFIED',
+      '- '+id+' PARTIAL',
+      '- Evidence '+id+' LIMITED'
+    ])assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+body,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,body);
+  }
+});
+
+test('bounded review may have honest partial AC but never unsatisfied AC',()=>{
+  const bounded=pass.replace('**ORIGINAL SEMANTIC VERDICT: PASS**',
+    '**ORIGINAL SEMANTIC VERDICT: PASS (BOUNDED)**');
+  const body=[
+    '## Evidence','- Evidence SOURCE CONFIRMED',
+    '## Findings','- Finding F014 RESOLVED L118',
+    '- Evidence F014 ATTACK_REJECTED',
+    '## Acceptance criteria','- AC01 SATISFIED','- AC02 PARTIAL',
+    '- AC03 PARTIAL','- AC05 SATISFIED','- Evidence AC07 LIMITED',
+    '## Limitations','- Limitation F007 CALLER_ASSERTED_NOT_SELF_AUTHENTICATING',
+    '- Limitation A011 NOT_ATTESTED'
+  ].join('\n');
+  assert.doesNotThrow(()=>verifyOriginalReviewPass(bounded+'\n'+body,input,subj,rev));
+  assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+body,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
 });
