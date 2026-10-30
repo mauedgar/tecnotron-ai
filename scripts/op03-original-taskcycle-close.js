@@ -73,8 +73,8 @@ function apiBlob(api,repo,ref,p,expected) {
   return b.toString('utf8');
 }
 const QUALIFIED_FACTS = new WeakSet();
-const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR002-20261030-001/';
-const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR002-ATTEMPT-001';
+const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR003-20261030-001/';
+const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR003-ATTEMPT-001';
 function exactIssueCommentId(ref) {
   const m = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/34#issuecomment-(\d+)$/.exec(ref || '');
   expect(m, 'INVALID_EXACT_DEVELOPER_DECISION_REF');
@@ -88,13 +88,21 @@ function ownerDecision(api, ref) {
     'COMPETENT_DEVELOPER_DECISION_PROVENANCE_MISSING');
   return x;
 }
-function verifyOriginalReviewPass(report, request, q) {
-  const m = /^\*\*ORIGINAL SEMANTIC VERDICT:\s*(PASS(?: \([A-Z _-]+\))?|FAIL|BLOCKED)\b[^\n]*\*\*/m.exec(report);
-  expect(m && m[1].startsWith('PASS') && report.includes(REVIEW_ATTEMPT)
-    && report.includes(q.commit) && report.includes(q.tree)
-    && request.includes(q.commit) && request.includes(q.tree)
-    && request.includes(q.sourceBlob) && request.includes(q.testBlob),
-    'PR58_EXACT_INDEPENDENT_REVIEW_NOT_PASS');
+function verifyOriginalReviewPass(report, request, candidate, review=null) {
+  const lines=String(report).replace(/\r\n/g,'\n').split('\n');
+  const marker=/^\*\*ORIGINAL SEMANTIC VERDICT: (PASS(?: \(BOUNDED\))?|FAIL|BLOCKED)\*\*$/;
+  const all=lines.filter(line=>/^\*\*ORIGINAL SEMANTIC VERDICT:/.test(line));
+  expect(lines[0]==='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR003'
+    && lines[1]==='' && marker.test(lines[2]) && lines[2].startsWith('**ORIGINAL SEMANTIC VERDICT: PASS')
+    && all.length===1 && report.includes(REVIEW_ATTEMPT)
+    && report.includes(candidate.commit) && report.includes(candidate.tree)
+    && report.includes(candidate.sourceBlob) && report.includes(candidate.testBlob)
+    && request.includes(candidate.commit) && request.includes(candidate.tree)
+    && request.includes(candidate.sourceBlob) && request.includes(candidate.testBlob)
+    && (!review || (
+      report.includes(review.requestCommit) && report.includes(review.requestBlob)
+    )),
+    'PR58_EXACT_UNIQUE_INDEPENDENT_REVIEW_NOT_PASS');
 }
 function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
   if (currentHead === SUBJECT.merge) return { status: 'NOT_YET_INTEGRATED', currentHead };
@@ -103,9 +111,9 @@ function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
   const sha = v => typeof v === 'string' && /^[a-f0-9]{40}$/.test(v);
   expect(candidate && rev && sha(candidate.commit) && sha(candidate.tree)
     && sha(candidate.sourceBlob) && sha(candidate.testBlob)
-    && Number.isSafeInteger(candidate.ciRun) && candidate.ciRun > 0
+    && Number.isSafeInteger(candidate.ciRun) && candidate.ciRun > 0 && Number.isSafeInteger(candidate.ciJob) && candidate.ciJob > 0
     && sha(rev.commit) && sha(rev.blob) && sha(rev.requestCommit) && sha(rev.requestBlob)
-    && q.acceptanceRef && q.phase2Ref && q.terminalRef,
+    && q.controlRef && q.acceptanceRef && q.phase2Ref && q.terminalRef,
     'EXACT_ACCEPTED_REVIEWED_SUBJECT_REQUIRED');
   const pr = api(apiPath(PRODUCT, 'pulls/58'));
   expect(pr?.merged === true && pr.merge_commit_sha === currentHead
@@ -132,20 +140,28 @@ function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
   const jobs = api(apiPath(PRODUCT, 'actions/runs/' + candidate.ciRun + '/jobs'));
   expect(ci.head_sha === candidate.commit && ci.run_attempt === 1
     && ci.status === 'completed' && ci.conclusion === 'success'
-    && jobs.jobs?.some(j => j.conclusion === 'success'
+    && jobs.jobs?.some(j => j.id === candidate.ciJob && j.conclusion === 'success'
       && j.steps?.some(st => st.name === 'Run repository test suite' && st.conclusion === 'success')),
     'PR58_EXACT_NATIVE_CI_NOT_PASS');
   const reviewText = apiBlob(api, TRANSPORT, rev.commit,
     REVIEW_DIR + 'ORIGINAL_REVIEW_RESULT.md', rev.blob);
   const requestText = apiBlob(api, TRANSPORT, rev.requestCommit,
     REVIEW_DIR + 'IMMUTABLE_REVIEW_REQUEST.md', rev.requestBlob);
-  verifyOriginalReviewPass(reviewText, requestText, candidate);
-  expect(new Set([q.acceptanceRef, q.phase2Ref, q.terminalRef]).size === 3,
-    'DEVELOPER_DECISIONS_NOT_DISTINCT');
+  verifyOriginalReviewPass(reviewText, requestText, candidate, rev);
+  expect(new Set([q.controlRef, q.acceptanceRef, q.phase2Ref, q.terminalRef]).size === 4,
+    'DEVELOPER_AND_CONTROL_DECISIONS_NOT_DISTINCT');
+  const selected=ownerDecision(api,q.controlRef);
+  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR003_FROZEN_INPUT')
+    && selected.body.includes(candidate.commit) && selected.body.includes(candidate.tree)
+    && selected.body.includes(candidate.sourceBlob) && selected.body.includes(candidate.testBlob)
+    && selected.body.includes(String(candidate.ciRun)) && selected.body.includes(String(candidate.ciJob))
+    && selected.body.includes(rev.requestCommit) && selected.body.includes(rev.requestBlob)
+    && requestText.includes(String(candidate.ciRun)) && requestText.includes(String(candidate.ciJob)),
+    'CONTROL_SELECTED_FROZEN_IR003_INTERFACE_MISMATCH');
   const a = ownerDecision(api, q.acceptanceRef);
   const p = ownerDecision(api, q.phase2Ref);
   const t = ownerDecision(api, q.terminalRef);
-  expect(a.created_at < p.created_at && p.created_at < t.created_at
+  expect(selected.created_at < a.created_at && a.created_at < p.created_at && p.created_at < t.created_at
     && a.body.includes('DEVELOPER_ACCEPTED_TERMINAL_COMPAT_EXACT_CANDIDATE')
     && /^>\s*Acepto el candidato de cierre OP03 PR #58/m.test(a.body)
     && p.body.includes('DEVELOPER_GRANTED_TERMINAL_COMPAT_PHASE2')
@@ -153,13 +169,17 @@ function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
     && t.body.includes('DEVELOPER_AUTHORIZED_ORIGINAL_OP03_LOGICAL_CLOSE')
     && /^>\s*Autorizo el cierre lógico de la TaskCycle original OP03/m.test(t.body)
     && a.body.includes(candidate.commit) && a.body.includes(candidate.tree)
-    && a.body.includes(rev.blob) && p.body.includes(candidate.commit)
+    && a.body.includes(rev.blob) && a.body.includes(rev.commit)
+    && a.body.includes(rev.requestCommit) && a.body.includes(rev.requestBlob)
+    && a.body.includes(q.controlRef) && p.body.includes(candidate.commit)
     && p.body.includes(candidate.tree) && p.body.includes(q.acceptanceRef)
     && t.body.includes(currentHead) && t.body.includes(candidate.commit)
-    && t.body.includes(q.phase2Ref) && t.body.includes(rev.blob),
+    && t.body.includes(q.phase2Ref) && t.body.includes(rev.blob)
+    && t.body.includes(rev.commit) && t.body.includes(q.controlRef),
     'DEVELOPER_DIRECT_DECISIONS_NOT_SOURCE_BOUND');
   return {status: 'QUALIFIED_MERGED', currentHead, prHead: candidate.commit,
     tree: merge.tree.sha, authority_refs: [q.acceptanceRef, q.phase2Ref, q.terminalRef],
+    review_selection_ref:q.controlRef,
     native_script_blob: candidate.sourceBlob,
     independent_review_ref: 'https://github.com/' + TRANSPORT + '/blob/' + rev.commit
       + '/' + REVIEW_DIR + 'ORIGINAL_REVIEW_RESULT.md',
@@ -264,7 +284,8 @@ function inspectNative(api,{qualification=null}={}) {
 }
 function buildPackage(facts,terminalAuthorityRef) {
   expect(QUALIFIED_FACTS.has(facts) && facts.adapter?.status==='QUALIFIED_MERGED'
-    && terminalAuthorityRef===facts.adapter.authority_refs[2],
+    && terminalAuthorityRef===facts.adapter.authority_refs[2] &&
+    typeof facts.adapter.review_selection_ref==='string',
     'COMPETENT_TERMINAL_AUTHORITY_AND_SOURCE_RECEIPTS_REQUIRED');
   const p=facts.initial;
   const perObligation = {
@@ -397,6 +418,8 @@ function publishOnce(root,pkg) {
 }
 function close({api=githubCLI,root,terminalAuthorityRef,qualification=null,commit=false}) {
   try {
+    if(commit) expect(require.main===module && api===githubCLI,
+      'NATIVE_CLI_PROVIDER_AND_TERMINAL_ENTRYPOINT_REQUIRED');
     const facts=inspectNative(api,{qualification});
     if (!commit) return {status:'READY',effect_state:'NONE',
       original_taskcycle_id:ID,obligations:OBLIGATIONS.length};
@@ -424,6 +447,8 @@ if(require.main===module) {
   process.stdout.write(serialize(result));
   if(result.status==='BLOCKED') process.exitCode=2;
 }
-module.exports={close,inspectNative,buildPackage,publishOnce,blocked,SUBJECT,OBLIGATIONS,
-  SCHEMA,INITIAL_HASH,blobSha,sha256,verifyTerminalAdapterIntegration,verifyOriginalReviewPass,
+// Exports are read-only/testable functions only. Package construction and terminal
+// publication are private to the authenticated native CLI execution path.
+module.exports={close,blocked,SUBJECT,OBLIGATIONS,SCHEMA,INITIAL_HASH,
+  blobSha,sha256,verifyTerminalAdapterIntegration,verifyOriginalReviewPass,
   ownerDecision,safeExistingDirectory,safeTerminalFiles};
