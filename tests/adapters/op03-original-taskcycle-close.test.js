@@ -13,13 +13,22 @@ const digest='a'.repeat(40),other='b'.repeat(40);
 const subj={commit:digest,tree:other,sourceBlob:'c'.repeat(40),testBlob:'d'.repeat(40),
   ciRun:40991197489,ciJob:123853756131};
 const rev={requestCommit:'1'.repeat(40),requestBlob:'2'.repeat(40)};
-const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR003';
-const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR003-ATTEMPT-001';
+const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR004';
+const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR004-ATTEMPT-001';
+const tick=String.fromCharCode(96);
 const input=[subj.commit,subj.tree,subj.sourceBlob,subj.testBlob,
-  subj.ciRun,subj.ciJob].join(' ');
+  subj.ciRun,subj.ciJob,attempt].join(' ');
+const canonical=[
+  '**REVIEWED SUBJECT COMMIT:** '+tick+subj.commit+tick,
+  '**REVIEWED SUBJECT TREE:** '+tick+subj.tree+tick,
+  '**REVIEWED SOURCE BLOB:** '+tick+subj.sourceBlob+tick,
+  '**REVIEWED TEST BLOB:** '+tick+subj.testBlob+tick,
+  '**FROZEN REQUEST COMMIT:** '+tick+rev.requestCommit+tick,
+  '**FROZEN REQUEST BLOB:** '+tick+rev.requestBlob+tick,
+  '**ExecutionAttempt:** '+tick+attempt+tick
+];
 const pass=[reviewHeading,'','**ORIGINAL SEMANTIC VERDICT: PASS**','',
-  attempt,subj.commit,subj.tree,subj.sourceBlob,subj.testBlob,rev.requestCommit,
-  rev.requestBlob].join('\n');
+  ...canonical,'','Review scope: original nine obligations; F007 limitations retained.'].join('\n');
 const commentRef='https://github.com/mauedgar/tecnotron-ai/issues/34#issuecomment-6519999999';
 
 test('original nine obligation IDs, source identity and existing schema are stable',()=>{
@@ -90,41 +99,90 @@ test('PR58 must be genuinely merged before any next gate',()=>{
     /PR58_EXACT_MERGE_MISSING/);
 });
 
-test('F005: correct unique verdict at exact header is accepted',()=>{
+test('F005: a unique PASS with authoritative contiguous subject fields qualifies',()=>{
   assert.doesNotThrow(()=>verifyOriginalReviewPass(pass,input,subj,rev));
 });
 
-test('F005: historical PASS followed by actual FAIL is rejected',()=>{
+test('F005: historical PASS followed by a second bare FAIL is rejected',()=>{
+  const r=pass+'\n**ORIGINAL SEMANTIC VERDICT: FAIL**';
+  assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+});
+
+test('F005: a quoted contradictory FAIL is rejected',()=>{
+  const r=pass+'\n> **ORIGINAL SEMANTIC VERDICT: FAIL**';
+  assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+});
+
+test('F005: indented and tab-indented contradictory FAIL both reject',()=>{
+  for(const prefix of ['  ','\t','  > ',' - ']){
+    assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+prefix+
+      '**ORIGINAL SEMANTIC VERDICT: FAIL**',input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+  }
+});
+
+test('F005: a primary FAIL cannot be rescued by PASS anywhere in history',()=>{
+  const r=pass.replace('**ORIGINAL SEMANTIC VERDICT: PASS**',
+    '**ORIGINAL SEMANTIC VERDICT: FAIL**')+'\nHistorical verdict was PASS';
+  assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+});
+
+test('F005: a displaced PASS, wrong heading or second PASS fails',()=>{
+  for(const r of [pass.replace(reviewHeading,'# Other review'),
+    pass.replace('\n\n**ORIGINAL SEMANTIC VERDICT: PASS**','\n**ORIGINAL SEMANTIC VERDICT: PASS**'),
+    pass+'\n> **ORIGINAL SEMANTIC VERDICT: PASS**']){
+    assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+  }
+});
+
+test('F006: a PASS about a different candidate cannot rely on historical mentions',()=>{
+  const wrong='f'.repeat(40),wrongTree='e'.repeat(40);
+  const r=pass.replace(canonical[0],
+    '**REVIEWED SUBJECT COMMIT:** '+tick+wrong+tick)
+    .replace(canonical[1],'**REVIEWED SUBJECT TREE:** '+tick+wrongTree+tick)
+    +'\nHistorical frozen references (not reviewed): '+[...canonical].join(' ');
+  assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+});
+
+test('F006: a competing reviewed-candidate declaration invalidates PASS',()=>{
+  const r=pass+'\nReviewed candidate commit: '+('f'.repeat(40))+
+    '\nReviewed tree: '+('e'.repeat(40));
+  assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+});
+
+test('F006: moving authoritative subject into history cannot qualify',()=>{
   const r=[reviewHeading,'','**ORIGINAL SEMANTIC VERDICT: PASS**','',
-    '**ORIGINAL SEMANTIC VERDICT: FAIL**',pass].join('\n');
+    'Historical references: '+canonical.join(' '),'',...canonical].join('\n');
   assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
-    /PR58_EXACT_UNIQUE_INDEPENDENT_REVIEW_NOT_PASS/);
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
 });
 
-test('F005: original FAIL mentioning historical PASS is rejected',()=>{
-  const r=[reviewHeading,'','**ORIGINAL SEMANTIC VERDICT: FAIL**','',
-    'Historical run: PASS',attempt,subj.commit,subj.tree,subj.sourceBlob,
-    subj.testBlob,rev.requestCommit,rev.requestBlob].join('\n');
+test('F006: a duplicate authoritative subject field is rejected',()=>{
+  const r=pass+'\n> '+canonical[0];
   assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
-    /PR58_EXACT_UNIQUE_INDEPENDENT_REVIEW_NOT_PASS/);
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
 });
 
-test('F005: displaced verdict and false heading are rejected',()=>{
-  const r=['# Unrelated review','','**ORIGINAL SEMANTIC VERDICT: PASS**',
-    pass].join('\n');
+test('F002: absent selected frozen request reference cannot be reintroduced by history',()=>{
+  const r=pass.replace(canonical[5],
+    '**FROZEN REQUEST BLOB:** '+tick+('f'.repeat(40))+tick)
+    +'\nHistorical '+canonical[5];
   assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
-    /PR58_EXACT_UNIQUE_INDEPENDENT_REVIEW_NOT_PASS/);
+    /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
 });
 
-test('F002: review with omitted Control-selected request reference is rejected',()=>{
-  const r=pass.replace(rev.requestBlob,'missing source reference');
-  assert.throws(()=>verifyOriginalReviewPass(r,input,subj,rev),
-    /PR58_EXACT_UNIQUE_INDEPENDENT_REVIEW_NOT_PASS/);
-});
-
-test('F002: source blob missing from frozen interface is rejected',()=>{
-  assert.throws(()=>verifyOriginalReviewPass(pass,input.replace(subj.sourceBlob,'missing'),subj,rev),
-    /PR58_EXACT_UNIQUE_INDEPENDENT_REVIEW_NOT_PASS/);
+test('F002: request missing exact source blob or fixed reviewer attempt rejects',()=>{
+  for(const bad of [input.replace(subj.sourceBlob,'missing'),
+    input.replace(attempt,'old reviewer')]){
+    assert.throws(()=>verifyOriginalReviewPass(pass,bad,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/);
+  }
 });
 
 test('F003: native owner metadata rejects foreign author',()=>{

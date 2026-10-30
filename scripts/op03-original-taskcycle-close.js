@@ -73,8 +73,8 @@ function apiBlob(api,repo,ref,p,expected) {
   return b.toString('utf8');
 }
 const QUALIFIED_FACTS = new WeakSet();
-const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR003-20261030-001/';
-const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR003-ATTEMPT-001';
+const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR004-20261030-001/';
+const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR004-ATTEMPT-001';
 function exactIssueCommentId(ref) {
   const m = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/34#issuecomment-(\d+)$/.exec(ref || '');
   expect(m, 'INVALID_EXACT_DEVELOPER_DECISION_REF');
@@ -89,20 +89,40 @@ function ownerDecision(api, ref) {
   return x;
 }
 function verifyOriginalReviewPass(report, request, candidate, review=null) {
+  // One top-level verdict only; quoted, indented and list-marked duplicates fail closed.
   const lines=String(report).replace(/\r\n/g,'\n').split('\n');
-  const marker=/^\*\*ORIGINAL SEMANTIC VERDICT: (PASS(?: \(BOUNDED\))?|FAIL|BLOCKED)\*\*$/;
-  const all=lines.filter(line=>/^\*\*ORIGINAL SEMANTIC VERDICT:/.test(line));
-  expect(lines[0]==='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR003'
-    && lines[1]==='' && marker.test(lines[2]) && lines[2].startsWith('**ORIGINAL SEMANTIC VERDICT: PASS')
-    && all.length===1 && report.includes(REVIEW_ATTEMPT)
-    && report.includes(candidate.commit) && report.includes(candidate.tree)
-    && report.includes(candidate.sourceBlob) && report.includes(candidate.testBlob)
+  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR004';
+  const verdict=/^\*\*ORIGINAL SEMANTIC VERDICT: PASS(?: \(BOUNDED\))?\*\*$/;
+  const tick=String.fromCharCode(96);
+  const top=[
+    '**REVIEWED SUBJECT COMMIT:** '+tick+candidate.commit+tick,
+    '**REVIEWED SUBJECT TREE:** '+tick+candidate.tree+tick,
+    '**REVIEWED SOURCE BLOB:** '+tick+candidate.sourceBlob+tick,
+    '**REVIEWED TEST BLOB:** '+tick+candidate.testBlob+tick,
+    '**FROZEN REQUEST COMMIT:** '+tick+review?.requestCommit+tick,
+    '**FROZEN REQUEST BLOB:** '+tick+review?.requestBlob+tick,
+    '**ExecutionAttempt:** '+tick+REVIEW_ATTEMPT+tick
+  ];
+  const normalized=line=>String(line).replace(/^\s*(?:(?:>\s*)|(?:[-*+]\s+))*/,'').trim();
+  const claims=lines.map(normalized).filter(line =>
+    /ORIGINAL\s+SEMANTIC\s+VERDICT\s*:/i.test(line));
+  const subjectClaims=lines.map(normalized).filter(line=>
+    /^(?:\*\*)?(?:REVIEWED SUBJECT COMMIT|REVIEWED SUBJECT TREE|REVIEWED SOURCE BLOB|REVIEWED TEST BLOB|FROZEN REQUEST COMMIT|FROZEN REQUEST BLOB|ExecutionAttempt)\s*:/i.test(line));
+  const conflictingClaims=lines.map(normalized).some(line=>
+    /^(?:\*\*)?(?:Reviewed (?:candidate|subject) commit|Reviewed tree|Evaluated (?:candidate|subject) commit|Evaluated tree)\s*:/i.test(line));
+  expect(typeof report==='string' && typeof request==='string'
+    && review && /^[a-f0-9]{40}$/.test(review.requestCommit)
+    && /^[a-f0-9]{40}$/.test(review.requestBlob)
+    && lines[0]===heading && lines[1]==='' && verdict.test(lines[2])
+    && lines[3]==='' && top.every((line,i)=>lines[i+4]===line)
+    && lines[11]==='' && claims.length===1 && claims[0]===lines[2]
+    && subjectClaims.length===top.length
+    && subjectClaims.every((line,i)=>line===top[i])
+    && !conflictingClaims
     && request.includes(candidate.commit) && request.includes(candidate.tree)
     && request.includes(candidate.sourceBlob) && request.includes(candidate.testBlob)
-    && (!review || (
-      report.includes(review.requestCommit) && report.includes(review.requestBlob)
-    )),
-    'PR58_EXACT_UNIQUE_INDEPENDENT_REVIEW_NOT_PASS');
+    && request.includes(REVIEW_ATTEMPT),
+    'PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS');
 }
 function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
   if (currentHead === SUBJECT.merge) return { status: 'NOT_YET_INTEGRATED', currentHead };
