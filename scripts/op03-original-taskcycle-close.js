@@ -425,4 +425,5 @@ if(require.main===module) {
   if(result.status==='BLOCKED') process.exitCode=2;
 }
 module.exports={close,inspectNative,buildPackage,publishOnce,blocked,SUBJECT,OBLIGATIONS,
-  SCHEMA,INITIAL_HASH,blobSha,sha256,verifyTerminalAdapterIntegration,verifyOriginalReviewPass};
+  SCHEMA,INITIAL_HASH,blobSha,sha256,verifyTerminalAdapterIntegration,verifyOriginalReviewPass,
+  ownerDecision,safeExistingDirectory,safeTerminalFiles};
