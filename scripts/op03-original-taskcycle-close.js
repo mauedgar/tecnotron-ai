@@ -73,8 +73,8 @@ function apiBlob(api,repo,ref,p,expected) {
   return b.toString('utf8');
 }
 const QUALIFIED_FACTS = new WeakSet();
-const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR006-20261030-001/';
-const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR006-ATTEMPT-001';
+const REVIEW_DIR = 'reviews/TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR007-20261030-001/';
+const REVIEW_ATTEMPT = 'TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR007-ATTEMPT-001';
 function exactIssueCommentId(ref) {
   const m = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/34#issuecomment-(\d+)$/.exec(ref || '');
   expect(m, 'INVALID_EXACT_DEVELOPER_DECISION_REF');
@@ -91,7 +91,7 @@ function ownerDecision(api, ref) {
 function verifyOriginalReviewPass(report, request, candidate, review=null) {
   // One top-level verdict only; quoted, indented and list-marked duplicates fail closed.
   const lines=String(report).replace(/\r\n/g,'\n').split('\n');
-  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR006';
+  const heading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR007';
   const verdict=/^\*\*ORIGINAL SEMANTIC VERDICT: PASS(?: \(BOUNDED\))?\*\*$/;
   const tick=String.fromCharCode(96);
   const top=[
@@ -103,30 +103,25 @@ function verifyOriginalReviewPass(report, request, candidate, review=null) {
     '**FROZEN REQUEST BLOB:** '+tick+review?.requestBlob+tick,
     '**ExecutionAttempt:** '+tick+REVIEW_ATTEMPT+tick
   ];
-  // Strip presentation-only Markdown without changing the canonical top-level header.
-  // Fail closed on any extra visible declaration, including task-list and bold-label forms.
-  const normalized=line=>String(line).replace(
-    /^\s*(?:(?:>\s*)|(?:#{1,6}\s+)|(?:[-*+]\s+)|(?:[0-9]+[.)]\s+)|(?:\[[ xX]\]\s+))*/,'').trim();
-  const visible=line=>normalized(line).replace(/[`*_~]/g,'').trim();
-  const semanticLines=lines.map(visible);
-  const topVisible=top.map(visible);
-  const claims=semanticLines.filter(line =>
-    /ORIGINAL\s+SEMANTIC\s+VERDICT\s*:/i.test(line));
-  const canonicalClaim=/^(?:REVIEWED SUBJECT COMMIT|REVIEWED SUBJECT TREE|REVIEWED SOURCE BLOB|REVIEWED TEST BLOB|FROZEN REQUEST COMMIT|FROZEN REQUEST BLOB|ExecutionAttempt)\s*:/i;
-  const subjectClaims=semanticLines.filter(line=>canonicalClaim.test(line));
-  // Alternate reviewed/evaluated/selected declarations are not harmless history.
-  const competingClaim=/^(?:(?:(?:Reviewed|Evaluated|Assessed|Selected)\s+(?:(?:subject|candidate|target)\s+)?(?:commit|tree|source blob|test blob))|(?:Reviewed|Evaluated|Assessed|Selected)\s+(?:subject|candidate|target)|(?:Subject|Candidate|Target)\s+(?:reviewed|evaluated|selected)|(?:Target|Review target)\s+(?:commit|tree)|Reviewed tree|Evaluated tree)\s*:/i;
-  const conflictingClaims=semanticLines.slice(12).some(line=>
-    canonicalClaim.test(line)||competingClaim.test(line));
+  // Closed report grammar: exact canonical lines 1-12; narrative is inert.
+  // Markdown rendering features outside the supported subset fail closed.
+  const restrictedBody=lines.slice(12).every(line=>{
+    // Links/references, HTML, escapes, entities, blockquotes and invisible
+    // direction controls can mask rendered declarations: reject the line.
+    if (/[\[\]\\<>&\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(line)) return false;
+    // Permit prose, headings, ordinary lists, emphasis and inline code.
+    // But no second declaration vocabulary anywhere in the narrative.
+    const flat=String(line).normalize('NFKC')
+      .replace(/^\s*(?:(?:#{1,6}\s+)|(?:[-*+]\s+)|(?:[0-9]+[.)]\s+))*/,'')
+      .replace(/[^a-zA-Z]/g,'').toLowerCase();
+    return !/(?:originalsemanticverdict|reviewedsubject|reviewedcandidate|reviewedtarget|reviewedcommit|reviewedtree|reviewedsourceblob|reviewedtestblob|evaluatedsubject|evaluatedcandidate|evaluatedtarget|evaluatedcommit|evaluatedtree|assessedsubject|assessedcandidate|assessedtarget|selectedsubject|selectedcandidate|selectedtarget|selectedcommit|selectedtree|subjectreviewed|candidatereviewed|targetreviewed|targetcommit|reviewtarget|frozenrequestcommit|frozenrequestblob|executionattempt)/.test(flat);
+  });
   expect(typeof report==='string' && typeof request==='string'
     && review && /^[a-f0-9]{40}$/.test(review.requestCommit)
     && /^[a-f0-9]{40}$/.test(review.requestBlob)
     && lines[0]===heading && lines[1]==='' && verdict.test(lines[2])
     && lines[3]==='' && top.every((line,i)=>lines[i+4]===line)
-    && lines[11]==='' && claims.length===1 && claims[0]===visible(lines[2])
-    && subjectClaims.length===top.length
-    && subjectClaims.every((line,i)=>line===topVisible[i])
-    && !conflictingClaims
+    && lines[11]==='' && restrictedBody
     && request.includes(candidate.commit) && request.includes(candidate.tree)
     && request.includes(candidate.sourceBlob) && request.includes(candidate.testBlob)
     && request.includes(REVIEW_ATTEMPT),
@@ -179,13 +174,13 @@ function verifyTerminalAdapterIntegration(api, currentHead, qualification) {
   expect(new Set([q.controlRef, q.acceptanceRef, q.phase2Ref, q.terminalRef]).size === 4,
     'DEVELOPER_AND_CONTROL_DECISIONS_NOT_DISTINCT');
   const selected=ownerDecision(api,q.controlRef);
-  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR006_FROZEN_INPUT')
+  expect(selected.body.includes('CONTROL_SELECTED_PR58_IR007_FROZEN_INPUT')
     && selected.body.includes(candidate.commit) && selected.body.includes(candidate.tree)
     && selected.body.includes(candidate.sourceBlob) && selected.body.includes(candidate.testBlob)
     && selected.body.includes(String(candidate.ciRun)) && selected.body.includes(String(candidate.ciJob))
     && selected.body.includes(rev.requestCommit) && selected.body.includes(rev.requestBlob)
     && requestText.includes(String(candidate.ciRun)) && requestText.includes(String(candidate.ciJob)),
-    'CONTROL_SELECTED_FROZEN_IR006_INTERFACE_MISMATCH');
+    'CONTROL_SELECTED_FROZEN_IR007_INTERFACE_MISMATCH');
   const a = ownerDecision(api, q.acceptanceRef);
   const p = ownerDecision(api, q.phase2Ref);
   const t = ownerDecision(api, q.terminalRef);

@@ -13,8 +13,8 @@ const digest='a'.repeat(40),other='b'.repeat(40);
 const subj={commit:digest,tree:other,sourceBlob:'c'.repeat(40),testBlob:'d'.repeat(40),
   ciRun:40991197489,ciJob:123853756131};
 const rev={requestCommit:'1'.repeat(40),requestBlob:'2'.repeat(40)};
-const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR006';
-const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR006-ATTEMPT-001';
+const reviewHeading='# TECNOTRON #34 — OP03 / PR #58 — WEB_INLINE Independent Review IR007';
+const attempt='TECNOTRON-OP03-PR58-TERMINAL-COMPAT-WEBINLINE-IR007-ATTEMPT-001';
 const tick=String.fromCharCode(96);
 const input=[subj.commit,subj.tree,subj.sourceBlob,subj.testBlob,
   subj.ciRun,subj.ciJob,attempt].join(' ');
@@ -275,10 +275,10 @@ test('F005: an ordered-list or heading contradictory verdict also rejects',()=>{
   }
 });
 
-test('F002: native terminal selection must name IR006 only, not IR005',()=>{
+test('F002: native terminal selection must name IR007 only, not IR006',()=>{
   const source=fs.readFileSync(require.resolve('../../scripts/op03-original-taskcycle-close'),'utf8');
-  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR006_FROZEN_INPUT'));
-  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR005_FROZEN_INPUT'),false);
+  assert.ok(source.includes('CONTROL_SELECTED_PR58_IR007_FROZEN_INPUT'));
+  assert.equal(source.includes('CONTROL_SELECTED_PR58_IR006_FROZEN_INPUT'),false);
 });
 
 
@@ -314,4 +314,69 @@ test('IR005-F009: decorated second FAIL verdicts fail closed',()=>{
 
 test('IR005: canonical PASS and explicit historical nondeclarations remain valid',()=>{
   assert.doesNotThrow(()=>verifyOriginalReviewPass(pass+'\nHistorical unrelated SHA: '+('f'.repeat(40)),input,subj,rev));
+});
+
+
+test('IR006-F010: competing identity via Markdown, HTML or escapes rejects',()=>{
+  const wrong='f'.repeat(40);
+  for(const line of [
+    '**[Reviewed subject](https://example.com)**: '+wrong,
+    '**Reviewed subject**\\: '+wrong,
+    '<strong>Reviewed subject</strong>: '+wrong,
+    '[REVIEWED SUBJECT COMMIT](https://example.com): '+wrong,
+    '- [ ] **REVIEWED SUBJECT COMMIT:** '+wrong,
+    '### Selected target: '+wrong,
+    'History: [Reviewed subject](https://example.com): '+wrong,
+    '&& Reviewed subject: '+wrong,
+    '**Re**viewed subject: '+wrong
+  ]){
+    assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,line);
+  }
+});
+
+test('IR006-F011: alternate second FAIL declarations reject',()=>{
+  for(const line of [
+    '**[ORIGINAL SEMANTIC VERDICT](https://example.com)**: FAIL',
+    '**ORIGINAL SEMANTIC VERDICT**\\: FAIL',
+    '<strong>ORIGINAL SEMANTIC VERDICT</strong>: FAIL',
+    '- [x] **ORIGINAL SEMANTIC VERDICT:** FAIL',
+    '### ORIGINAL SEMANTIC VERDICT: FAIL',
+    '**ORIG**INAL SEMANTIC VERDICT: FAIL',
+    'ORIG\u200bINAL SEMANTIC VERDICT: FAIL'
+  ]){
+    assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,line);
+  }
+});
+
+test('bounded narrative grammar accepts authentic PASS and historical prose',()=>{
+  const tick=String.fromCharCode(96);
+  const narrative=[
+    '## 1. Evidence and limits',
+    '- Historical IR006 FAIL remains historical, not this review',
+    '- Historical unrelated SHA '+('f'.repeat(40))+' was not reviewed',
+    '- **Audit** PASS with source path '+tick+'scripts/example.js'+tick,
+    '### AC01: PASS (bounded)',
+    'Source: https://github.com/mauedgar/tecnotron-ai/commit/'+subj.commit
+  ].join('\n');
+  assert.doesNotThrow(()=>verifyOriginalReviewPass(pass+'\n'+narrative,input,subj,rev));
+  const bounded=pass.replace('**ORIGINAL SEMANTIC VERDICT: PASS**',
+    '**ORIGINAL SEMANTIC VERDICT: PASS (BOUNDED)**');
+  assert.doesNotThrow(()=>verifyOriginalReviewPass(bounded+'\n'+narrative,input,subj,rev));
+});
+
+test('body grammar rejects unsupported rendering and controls, even without claims',()=>{
+  for(const line of [
+    '## [Documentation](https://example.com)',
+    '<div>Test result</div>',
+    '- [ ] reviewer checkbox',
+    'Windows \\ path not in supported report grammar',
+    'HTML entity &#58; rendered punctuation',
+    '> quoted narrative',
+    'zero\u200bwidth'
+  ]){
+    assert.throws(()=>verifyOriginalReviewPass(pass+'\n'+line,input,subj,rev),
+      /PR58_EXACT_UNAMBIGUOUS_REVIEW_SUBJECT_OR_VERDICT_NOT_PASS/,line);
+  }
 });
