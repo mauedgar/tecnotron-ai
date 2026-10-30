@@ -105,6 +105,11 @@ class GitHubAdapter {
     return { status: 'UNKNOWN', reason: 'POST_EFFECT_CORRESPONDENCE_UNVERIFIED', effect_state: 'UNKNOWN', receipt };
   }
 
+  /** Observación nativa read-only del run de Actions; nunca usa el cliente ni escribe. */
+  observeActionsRunEvidence(observations, expected) {
+    return observeNativeActionsRunEvidence(observations, expected);
+  }
+
 }
 
 /** Read-only correlation: Issue open is not a GitHub Projects Backlog observation. */
@@ -141,4 +146,290 @@ function evaluateOperationalReady({ issueObservation, projectObservation, decisi
   return { status: 'ELIGIBLE', issueUrl: issueObservation.issueUrl, authorityRef: decision.authorityRef, projectId: projectObservation.projectId, projectItemId: projectObservation.projectItemId, statusFieldId: projectObservation.statusFieldId, statusOptionId: projectObservation.statusOptionId };
 }
 
-module.exports = { GitHubAdapter, GitHubAdapterError, taskReference, issuePatch, observePromotedIssue, evaluateOperationalReady };
+/* OP03 — normalized, bounded read-only GitHub Actions evidence.
+   Caller-supplied provider observations are NOT self-authenticating.
+   No Product Operation/ExecutionAttempt/owner/authority can be inferred here. */
+const ACTIONS_EVENTS = ['pull_request'];
+const ACTIONS_STATUSES = ['completed', 'in_progress'];
+const ACTIONS_CONCLUSIONS = ['success', 'failure', 'cancelled'];
+const SHA_RE = /^[0-9a-f]{40}$/;
+const UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+const STAGES = ['audit', 'typecheck', 'tests', 'contracts'];
+const STAGE_FIELDS = ['kind', 'step_number', 'name', 'status', 'conclusion', 'source_url'];
+// Scoped to the selected real native job profile; caller assertions still require native receipt.
+const SELECTED_WORKFLOW = 'Tecnotron native Node validation';
+const SELECTED_NATIVE_SOURCE = Object.freeze({
+  repository: 'mauedgar/tecnotron-ai',
+  run_id: '40082522885',
+  run_attempt: '1',
+  job_id: '120838820954',
+  checkout_commit: '2169c2144ee05116d735743df66eec01e6e57bf4',
+  checkout_tree: 'a44b9dedbed04d16437bad94085f29e6bc38c0d0',
+});
+const SELECTED_STAGE_PROFILE = Object.freeze({
+  audit: { step_number: 6, name: 'Audit resolved dependencies (moderate severity and above)' },
+  typecheck: { step_number: 7, name: 'Typecheck' },
+  tests: { step_number: 8, name: 'Run repository test suite' },
+  contracts: { step_number: 9, name: 'Validate portable contract package' },
+});
+const VALIDATION_FIELDS = ['total', 'pass', 'skip', 'fail', 'source_url'];
+const PROVIDER_FIELDS = [
+  'repository', 'url', 'run_id', 'run_attempt', 'job_id', 'workflow', 'event',
+  'status', 'conclusion', 'checkout_commit', 'checkout_tree', 'observed_at',
+  'run_started_at', 'native_updated_at', 'stages', 'validation', 'reported_validation',
+];
+const EXPECTED_FIELDS = [
+  'repository', 'runId', 'runAttempt', 'jobId', 'event', 'checkoutCommit',
+  'checkoutTree', 'observationCutoff', 'operationRef', 'executionAttemptRef',
+  'ownerRef', 'authorityRef',
+];
+
+function blockedNative(reason, extra = {}) {
+  // These effects describe this pure, read-only observation, NEVER a Product effect.
+  return { status: 'BLOCKED', reason, product_effect: 'NOT_EVALUATED',
+    observation_effect_state: 'NONE', ...extra };
+}
+function nativeId(value) {
+  // No implicit rounding of identifiers beyond Number.MAX_SAFE_INTEGER.
+  if (typeof value === 'number') return Number.isSafeInteger(value) && value > 0 ? String(value) : null;
+  return typeof value === 'string' && /^[1-9][0-9]*$/.test(value) ? value : null;
+}
+function isSelectedNativeRun(runId) {
+  // One selected genuine run; source fields must be checked, never used to disable checks.
+  // A different run is structural-only and NOT authenticated by this normalizer.
+  return nativeId(runId) === SELECTED_NATIVE_SOURCE.run_id;
+}
+function selectedNativeRecordError(record) {
+  if (!isSelectedNativeRun(record.run_id)) return null;
+  if (record.repository !== SELECTED_NATIVE_SOURCE.repository ||
+      nativeId(record.run_attempt) !== SELECTED_NATIVE_SOURCE.run_attempt ||
+      nativeId(record.job_id) !== SELECTED_NATIVE_SOURCE.job_id ||
+      record.checkout_commit !== SELECTED_NATIVE_SOURCE.checkout_commit ||
+      record.checkout_tree !== SELECTED_NATIVE_SOURCE.checkout_tree) {
+    return 'SELECTED_RUN_SOURCE_MISMATCH';
+  }
+  if (record.workflow !== SELECTED_WORKFLOW) return 'SELECTED_RUN_WORKFLOW_MISMATCH';
+  return null;
+}
+function utcSecond(value) {
+  return typeof value === 'string' && UTC_RE.test(value) &&
+    Number.isFinite(Date.parse(value)) &&
+    new Date(Date.parse(value)).toISOString() === value.replace(/Z$/, '.000Z');
+}
+function nativeJobUrl(record) {
+  return 'https://github.com/' + record.repository + '/actions/runs/' +
+    nativeId(record.run_id) + '/job/' + nativeId(record.job_id);
+}
+function nativeStagesError(record) {
+  const stages = record.stages;
+  if (!Array.isArray(stages) || stages.length !== STAGES.length) return 'STAGE_RESULTS_INCOMPLETE';
+  const names = new Set();
+  const numbers = new Set();
+  for (const stage of stages) {
+    if (!stage || typeof stage !== 'object' || Array.isArray(stage) ||
+        Object.keys(stage).some((k) => !STAGE_FIELDS.includes(k)) ||
+        STAGE_FIELDS.some((k) => !Object.hasOwn(stage, k))) return 'INVALID_NATIVE_STAGE';
+    if (!STAGES.includes(stage.kind) || names.has(stage.kind)) return 'INVALID_NATIVE_STAGE_IDENTITY';
+    names.add(stage.kind);
+    if (!Number.isSafeInteger(stage.step_number) || stage.step_number < 1 ||
+        numbers.has(stage.step_number)) return 'INVALID_NATIVE_STAGE_NUMBER';
+    numbers.add(stage.step_number);
+    const expected = isSelectedNativeRun(record.run_id) ? SELECTED_STAGE_PROFILE[stage.kind] : null;
+    if (expected && (stage.step_number !== expected.step_number || stage.name !== expected.name)) {
+      return 'SELECTED_WORKFLOW_STAGE_MISMATCH';
+    }
+    if (typeof stage.name !== 'string' || !stage.name.trim() ||
+        stage.status !== 'completed' ||
+        !['success', 'failure', 'cancelled', 'skipped'].includes(stage.conclusion) ||
+        stage.source_url !== nativeJobUrl(record)) return 'INVALID_NATIVE_STAGE_RESULT';
+  }
+  return STAGES.every((k) => names.has(k)) ? null : 'STAGE_RESULTS_INCOMPLETE';
+}
+function nativeValidationError(record) {
+  const value = record.validation;
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).some((k) => !VALIDATION_FIELDS.includes(k)) ||
+      VALIDATION_FIELDS.some((k) => !Object.hasOwn(value, k))) return 'VALIDATION_OUTCOME_INCOMPLETE';
+  if (['total', 'pass', 'skip', 'fail'].some((k) => !Number.isSafeInteger(value[k]) || value[k] < 0) ||
+      value.total !== value.pass + value.skip + value.fail ||
+      value.source_url !== nativeJobUrl(record)) return 'INVALID_VALIDATION_OUTCOME';
+  const summaryStatus = ['audit', 'typecheck', 'contracts'].every((kind) =>
+    record.stages.find((stage) => stage.kind === kind)?.conclusion === 'success') ? 'PASS' : 'FAIL';
+  const summary = value.pass + ' PASS, ' + value.skip + ' SKIP, ' + value.fail +
+    ' FAIL; audit/typecheck/contracts ' + summaryStatus;
+  return record.reported_validation === summary ? null : 'VALIDATION_SUMMARY_MISMATCH';
+}
+function validateNativeRecord(record) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return 'MALFORMED_OBSERVATION_RECORD';
+  const unknown = Object.keys(record).find((key) => !PROVIDER_FIELDS.includes(key));
+  if (unknown) return 'UNSUPPORTED_PROVIDER_FIELD:' + unknown;
+  for (const key of PROVIDER_FIELDS.filter((k) =>
+    !['conclusion', 'native_updated_at', 'stages', 'validation', 'reported_validation'].includes(k))) {
+    if (!Object.hasOwn(record, key) || record[key] === undefined ||
+        record[key] === null || record[key] === '') return 'MISSING_REQUIRED_OBSERVATION_FIELD:' + key;
+  }
+  for (const key of ['run_id', 'run_attempt', 'job_id']) {
+    if (!nativeId(record[key])) return 'INVALID_NATIVE_IDENTITY:' + key;
+  }
+  if (record.url !== 'https://github.com/' + record.repository +
+      '/actions/runs/' + nativeId(record.run_id)) return 'PROVIDER_URL_IDENTITY_MISMATCH';
+  if (!ACTIONS_EVENTS.includes(record.event)) return 'UNSUPPORTED_EVENT';
+  if (typeof record.workflow !== 'string' || !record.workflow.trim()) return 'MISSING_WORKFLOW_IDENTITY';
+  const selectedError = selectedNativeRecordError(record);
+  if (selectedError) return selectedError;
+  if (!SHA_RE.test(String(record.checkout_commit)) || !SHA_RE.test(String(record.checkout_tree))) {
+    return 'INVALID_SOURCE_CHECKOUT_SUBJECT';
+  }
+  if (!utcSecond(record.run_started_at) || !utcSecond(record.observed_at)) return 'OBSERVATION_TIMESTAMP_INVALID';
+  if (record.observed_at < record.run_started_at) return 'OBSERVATION_BEFORE_RUN_START';
+  if (!ACTIONS_STATUSES.includes(record.status)) return 'UNSUPPORTED_PROVIDER_STATUS';
+  if (record.status === 'completed') {
+    if (!utcSecond(record.native_updated_at) ||
+        record.native_updated_at < record.run_started_at ||
+        record.observed_at < record.native_updated_at) return 'TERMINAL_OBSERVATION_BEFORE_NATIVE_UPDATE';
+    const stageError = nativeStagesError(record);
+    if (stageError) return stageError;
+    const validationError = nativeValidationError(record);
+    if (validationError) return validationError;
+    if (!ACTIONS_CONCLUSIONS.includes(record.conclusion)) return 'UNSUPPORTED_PROVIDER_CONCLUSION';
+    if (record.conclusion === 'success' &&
+        (record.stages.some((s) => s.conclusion !== 'success') || record.validation.fail !== 0)) {
+      return 'PROVIDER_STAGE_CONCLUSION_CONFLICT';
+    }
+  } else if (record.conclusion != null) {
+    return 'UNSUPPORTED_PROVIDER_CONCLUSION';
+  } else if (record.native_updated_at != null || record.stages != null ||
+             record.validation != null || record.reported_validation != null) {
+    return 'NONTERMINAL_WITH_TERMINAL_PROOF';
+  }
+  return null;
+}
+function validateNativeExpectation(expected) {
+  if (!expected || typeof expected !== 'object' || Array.isArray(expected)) {
+    return 'OBSERVER_EXPECTATION_MISSING';
+  }
+  const unknown = Object.keys(expected).find((key) => !EXPECTED_FIELDS.includes(key));
+  if (unknown) return 'UNSUPPORTED_OBSERVER_REQUEST_FIELD:' + unknown;
+  for (const key of ['repository', 'runId', 'runAttempt', 'jobId', 'event',
+    'checkoutCommit', 'checkoutTree', 'observationCutoff']) {
+    if (expected[key] == null || expected[key] === '') return 'OBSERVER_EXPECTATION_MISSING:' + key;
+  }
+  for (const key of ['runId', 'runAttempt', 'jobId']) {
+    if (!nativeId(expected[key])) return 'INVALID_NATIVE_IDENTITY:expected.' + key;
+  }
+  if (!utcSecond(expected.observationCutoff)) return 'OBSERVATION_CUTOFF_INVALID';
+  if (!SHA_RE.test(String(expected.checkoutCommit)) ||
+      !SHA_RE.test(String(expected.checkoutTree))) return 'EXPECTED_SOURCE_SUBJECT_INVALID';
+  if (isSelectedNativeRun(expected.runId) &&
+      (expected.repository !== SELECTED_NATIVE_SOURCE.repository ||
+       nativeId(expected.runAttempt) !== SELECTED_NATIVE_SOURCE.run_attempt ||
+       nativeId(expected.jobId) !== SELECTED_NATIVE_SOURCE.job_id ||
+       expected.checkoutCommit !== SELECTED_NATIVE_SOURCE.checkout_commit ||
+       expected.checkoutTree !== SELECTED_NATIVE_SOURCE.checkout_tree)) {
+    return 'SELECTED_EXPECTED_SOURCE_MISMATCH';
+  }
+  return null;
+}
+function fingerprintNative(record) {
+  // Fixed-field ordering, IDs normalized to canonical strings, stages unordered.
+  return JSON.stringify(PROVIDER_FIELDS.map((field) => {
+    const value = record[field];
+    if (['run_id', 'run_attempt', 'job_id'].includes(field)) return nativeId(value);
+    if (field === 'stages' && Array.isArray(value)) {
+      return [...value].sort((a, b) => a.kind.localeCompare(b.kind))
+        .map((stage) => STAGE_FIELDS.map((key) => stage[key]));
+    }
+    if (field === 'validation' && value) return VALIDATION_FIELDS.map((key) => value[key]);
+    return value == null ? null : value;
+  }));
+}
+
+/** Pure read-only normalization. All Product bindings remain UNVERIFIED. */
+function observeNativeActionsRunEvidence(observations, expected) {
+  const expectationError = validateNativeExpectation(expected);
+  if (expectationError) return blockedNative(expectationError);
+  if (!Array.isArray(observations) || observations.length === 0) {
+    return blockedNative('OBSERVATION_COLLECTION_INVALID');
+  }
+  for (let i = 0; i < observations.length; i++) {
+    const error = validateNativeRecord(observations[i]);
+    if (error) return blockedNative(error, { offending_record: i });
+  }
+  const original = observations[0];
+  const fingerprint = fingerprintNative(original);
+  for (let i = 1; i < observations.length; i++) {
+    const record = observations[i];
+    if (['run_id', 'run_attempt', 'job_id'].some((key) =>
+      nativeId(record[key]) !== nativeId(original[key]))) {
+      return blockedNative('INCOHERENT_OBSERVATION_IDENTITY', { offending_record: i });
+    }
+    if (fingerprintNative(record) !== fingerprint) {
+      return blockedNative('CONFLICTING_DUPLICATE_OBSERVATION', { offending_record: i });
+    }
+  }
+  const identity = {
+    repository: [original.repository, expected.repository],
+    run_id: [nativeId(original.run_id), nativeId(expected.runId)],
+    run_attempt: [nativeId(original.run_attempt), nativeId(expected.runAttempt)],
+    job_id: [nativeId(original.job_id), nativeId(expected.jobId)],
+    event: [original.event, expected.event],
+    checkout_commit: [original.checkout_commit, expected.checkoutCommit],
+    checkout_tree: [original.checkout_tree, expected.checkoutTree],
+  };
+  const mismatch = Object.entries(identity).find(([, values]) => values[0] !== values[1]);
+  if (mismatch) return blockedNative(
+    ['checkout_commit', 'checkout_tree'].includes(mismatch[0])
+      ? 'SOURCE_COMMIT_OR_TREE_MISMATCH' : 'NATIVE_IDENTITY_MISMATCH',
+    { expected_field: mismatch[0] }
+  );
+  if (original.observed_at > expected.observationCutoff) {
+    return blockedNative('OBSERVATION_EXCEEDS_CUTOFF');
+  }
+  const product_bindings = {
+    operation: expected.operationRef === undefined ? 'UNVERIFIED' :
+      { ref: expected.operationRef, verification: 'UNVERIFIED' },
+    execution_attempt: expected.executionAttemptRef === undefined ? 'UNVERIFIED' :
+      { ref: expected.executionAttemptRef, verification: 'UNVERIFIED' },
+    owner: expected.ownerRef === undefined ? 'UNVERIFIED' :
+      { ref: expected.ownerRef, verification: 'UNVERIFIED' },
+    authority: expected.authorityRef === undefined ? 'UNVERIFIED' :
+      { ref: expected.authorityRef, verification: 'UNVERIFIED' },
+  };
+  const normalized = {
+    repository: original.repository,
+    actions_run_url: original.url,
+    job_url: nativeJobUrl(original),
+    run_id: nativeId(original.run_id),
+    run_attempt: nativeId(original.run_attempt),
+    job_id: nativeId(original.job_id),
+    workflow: original.workflow,
+    event: original.event,
+    checkout_commit: original.checkout_commit,
+    checkout_tree: original.checkout_tree,
+    run_started_at: original.run_started_at,
+    native_updated_at: original.native_updated_at || null,
+    observed_at: original.observed_at,
+    observation_cutoff: expected.observationCutoff,
+    stages: original.stages ? original.stages.map((s) => ({ ...s })) : null,
+    validation: original.validation ? { ...original.validation } : null,
+    provenance: 'CALLER_ASSERTED_NOT_SELF_AUTHENTICATING',
+  };
+  const result = {
+    provider: 'GITHUB_ACTIONS', normalized, duplicates_seen: observations.length,
+    product_bindings, product_effect: 'NOT_EVALUATED',
+    observation_effect_state: 'NONE',
+    provider_result: {
+      status: original.status, conclusion: original.conclusion || null,
+      reported_validation: original.reported_validation || null,
+    },
+  };
+  if (original.status !== 'completed') {
+    return { ...result, status: 'UNKNOWN',
+      reason: 'PROVIDER_RESULT_NOT_TERMINAL_NO_BLIND_RETRY', retries_attempted: 0 };
+  }
+  // PASS denotes evidence normalization ONLY. Provider conclusion may be failure/cancelled.
+  return { ...result, status: 'PASS',
+    pass_semantics: 'EVIDENCE_NORMALIZATION_ONLY_NOT_PRODUCT_ACCEPTANCE' };
+}
+module.exports = { GitHubAdapter, GitHubAdapterError, taskReference, issuePatch,
+  observePromotedIssue, evaluateOperationalReady, observeNativeActionsRunEvidence };
