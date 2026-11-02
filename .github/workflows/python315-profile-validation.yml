@@ -14,17 +14,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - name: Capture exact candidate identity and source constraints
         shell: bash
         run: |
           set -euo pipefail
-          git rev-parse HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$(git rev-parse HEAD^{tree})"
+          test "$(git rev-parse HEAD:python/profiles/py315/uv.lock)" = "107e03a6ea2053efeccd9089dc0e235bb95707ff"
           test "$(git rev-parse HEAD:docs/proposals/python-3.15-runtime-baseline-candidate.md)" = '60d1eb85fbed2e8eab38239993d92363904d2bca'
           test "$(cat python/profiles/py315/.python-version)" = '3.15.2'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         with:
           python-version: '3.15.2'
       - name: Install pinned uv
@@ -37,13 +39,15 @@ jobs:
           set -euo pipefail
           python --version
           python -c 'import sys; assert sys.version_info[:3]==(3,15,2),sys.version'
-          uv lock
+          test "$(git hash-object uv.lock)" = '107e03a6ea2053efeccd9089dc0e235bb95707ff'
           uv lock --check
           uv sync --locked --no-dev
           uv run --locked python smoke.py
+          test "$(git hash-object uv.lock)" = '107e03a6ea2053efeccd9089dc0e235bb95707ff'
+          test -z "$(git status --porcelain -- uv.lock)"
       - name: Upload provider-generated uv lock, exact receipt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: py315-stdlib-profile-${{ matrix.os }}
           path: |
