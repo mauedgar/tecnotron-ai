@@ -23,7 +23,7 @@ El Developer seleccionó el 2 de noviembre de 2026 considerar **Python 3.15.x** 
 
 - Para *nuevos componentes Python* que no dependan de runtimes históricamente congelados: usar `3.15.2` como objetivo de implementación, tests y CI desde la primera iteración, con `uv` por entorno/workspace y `pyproject.toml` + `uv.lock` cuando existan dependencias.
 - Anclar intérprete real en `.python-version` por **componente**, no imponerlo al nivel raíz de Tecnotron: el núcleo de Tecnotron es actualmente **Node 22/TypeScript**, y la carpeta legacy `python/requirements.txt` utiliza C-extensions y paquetes específicos de Windows. Evitar mutar el Python global y evitar compartir `.venv` entre Product/Control/ejecución.
-- Declarar `requires-python = \">=3.15,<3.16\"` solo en componentes nuevos que realmente se validaron como Python-3.15-only; no ampliar falsamente dependencias existentes. Para herramientas reutilizables multi-runtime definir rangos basados en la matriz testada, no en la preferencia estratégica.
+- Declarar `requires-python = ">=3.15,<3.16"` solo en componentes nuevos que realmente se validaron como Python-3.15-only; no ampliar falsamente dependencias existentes. Para herramientas reutilizables multi-runtime definir rangos basados en la matriz testada, no en la preferencia estratégica.
 - Preferir código del lenguaje/stdlib cuando simplifique responsabilidades concretas y medir impacto antes de adoptar `lazy import`, `frozendict`, `sentinel`, Tachyon o la ABI `abi3t`. La ABI de extensiones free-threaded, el JIT experimental y el intérprete sin GIL son pistas separadas opt-in, no el default Product.
 - Reutilizar las operaciones ya existentes de CI, Git y Review, no crear otra capa/orquestador o scheduler de entornos.
 
