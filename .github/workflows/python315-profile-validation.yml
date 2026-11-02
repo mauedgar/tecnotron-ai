@@ -22,7 +22,10 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse 'HEAD^{tree}')" = "$(git rev-parse HEAD^{tree})"
+          test "$(git rev-parse HEAD^)" = '906ef52f8eea2e209009df9a14a9563359653200'
+          test "$(git cat-file -t 'HEAD^{tree}')" = tree
+          git rev-parse 'HEAD^{tree}'
+          test "$(git diff --name-only HEAD^ HEAD | sort)" = "$(printf '%s\n' '.github/workflows/python315-profile-validation.yml' 'docs/proposals/python-3.15-runtime-baseline-candidate.md' 'python/profiles/py315/smoke.py' | sort)"
           test "$(git rev-parse HEAD:python/profiles/py315/uv.lock)" = "107e03a6ea2053efeccd9089dc0e235bb95707ff"
           test "$(git rev-parse HEAD:docs/proposals/python-3.15-runtime-baseline-candidate.md)" = '60d1eb85fbed2e8eab38239993d92363904d2bca'
           test "$(cat python/profiles/py315/.python-version)" = '3.15.2'
@@ -38,18 +41,19 @@ jobs:
         run: |
           set -euo pipefail
           python --version
-          python -c 'import sys; assert sys.version_info[:3]==(3,15,2),sys.version'
+          python -c 'import sys; sys.version_info[:3] == (3,15,2) or sys.exit("INVALID_RUNTIME: "+sys.version)'
           test "$(git hash-object uv.lock)" = '107e03a6ea2053efeccd9089dc0e235bb95707ff'
           uv lock --check
           uv sync --locked --no-dev
           uv run --locked python smoke.py
+          uv run --locked python -O smoke.py
           test "$(git hash-object uv.lock)" = '107e03a6ea2053efeccd9089dc0e235bb95707ff'
           test -z "$(git status --porcelain -- uv.lock)"
-      - name: Upload provider-generated uv lock, exact receipt
+      - name: Upload unchanged committed uv lock, required evidence
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: py315-stdlib-profile-${{ matrix.os }}
           path: |
             python/profiles/py315/uv.lock
-          if-no-files-found: warn
+          if-no-files-found: error

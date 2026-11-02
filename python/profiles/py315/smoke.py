@@ -6,16 +6,22 @@ lazy import xml.etree.ElementTree as et
 
 
 def run() -> dict[str, object]:
-    assert sys.version_info[:3] == (3, 15, 2), sys.version
+    if sys.version_info[:3] != (3, 15, 2):
+        raise RuntimeError("unexpected Python runtime: " + sys.version)
     # Newly requested module remains unresolved until first reference.
-    assert 'xml.etree.ElementTree' not in sys.modules
+    if 'xml.etree.ElementTree' in sys.modules:
+        raise RuntimeError("lazy import eagerly loaded ElementTree")
     node = et.fromstring('<status ok="1"/>')
-    assert node.tag == 'status'
-    assert 'xml.etree.ElementTree' in sys.modules
+    if node.tag != 'status':
+        raise RuntimeError("invalid parsed element")
+    if 'xml.etree.ElementTree' not in sys.modules:
+        raise RuntimeError("lazy import did not resolve ElementTree")
     sample = json.loads('{"runtime":"3.15.2","ok":true}')
     immutable = frozendict(sample)
-    assert immutable["ok"] is True
-    assert immutable["runtime"] == "3.15.2"
+    if immutable["ok"] is not True:
+        raise RuntimeError("frozen value mismatch")
+    if immutable["runtime"] != "3.15.2":
+        raise RuntimeError("frozen runtime mismatch")
     try:
         immutable["runtime"] = "tampered"
     except TypeError:
