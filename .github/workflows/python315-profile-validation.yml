@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          fetch-depth: 2
       - name: Capture exact candidate identity and source constraints
         shell: bash
         run: |
@@ -27,7 +28,8 @@ jobs:
           git rev-parse 'HEAD^{tree}'
           test "$(git diff --name-only HEAD^ HEAD | sort)" = "$(printf '%s\n' '.github/workflows/python315-profile-validation.yml' 'docs/proposals/python-3.15-runtime-baseline-candidate.md' 'python/profiles/py315/smoke.py' | sort)"
           test "$(git rev-parse HEAD:python/profiles/py315/uv.lock)" = "107e03a6ea2053efeccd9089dc0e235bb95707ff"
-          test "$(git rev-parse HEAD:docs/proposals/python-3.15-runtime-baseline-candidate.md)" = '60d1eb85fbed2e8eab38239993d92363904d2bca'
+          test "$(git rev-parse HEAD^:docs/proposals/python-3.15-runtime-baseline-candidate.md)" = '60d1eb85fbed2e8eab38239993d92363904d2bca'
+          grep -F 'requires-python = ">=3.15,<3.16"' docs/proposals/python-3.15-runtime-baseline-candidate.md
           test "$(cat python/profiles/py315/.python-version)" = '3.15.2'
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         with:
