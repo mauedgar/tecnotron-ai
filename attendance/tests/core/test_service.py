@@ -502,6 +502,54 @@ class CoreTests(unittest.TestCase):
                     with closing(sqlite3.connect(path)) as conn:
                         self.assertEqual(conn.execute('PRAGMA user_version').fetchone()[0],1)
 
+    def test_v0_sqliteX_table_not_treated_as_internal_schema(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = str(Path(folder) / 'unknown.sqlite')
+            with closing(sqlite3.connect(path)) as conn:
+                conn.execute('CREATE TABLE sqliteX (value TEXT)')
+                conn.commit()
+            self.must_fail('STORAGE_ERROR', lambda _: AttendanceService(path), None)
+            with closing(sqlite3.connect(path)) as conn:
+                self.assertEqual(conn.execute('PRAGMA user_version').fetchone()[0], 0)
+                self.assertIsNotNone(conn.execute(
+                    "SELECT name FROM sqlite_master WHERE name='sqliteX'").fetchone())
+
+    def test_v1_v2_sqliteX_objects_rejected_without_mutation(self):
+        for version in (1, 2):
+            for object_type, extra_sql in (
+                ('table', 'CREATE TABLE sqliteX (value TEXT)'),
+                ('index', 'CREATE INDEX sqliteX ON sessions(subject_id)'),
+                ('trigger', 'CREATE TRIGGER sqliteX BEFORE INSERT ON sessions '
+                            'BEGIN SELECT RAISE(IGNORE); END')
+            ):
+                with self.subTest(version=version, object_type=object_type):
+                    with tempfile.TemporaryDirectory() as folder:
+                        path = str(Path(folder) / 'schema.sqlite')
+                        AttendanceService(path)
+                        with closing(sqlite3.connect(path)) as conn:
+                            if version == 1:
+                                conn.execute('DROP TABLE v1_provenance')
+                                conn.execute('PRAGMA user_version=1')
+                            conn.execute(extra_sql)
+                            conn.commit()
+                        self.must_fail('STORAGE_ERROR',
+                                       lambda _: AttendanceService(path), None)
+                        with closing(sqlite3.connect(path)) as conn:
+                            self.assertEqual(conn.execute('PRAGMA user_version').fetchone()[0], version)
+                            self.assertIsNotNone(conn.execute(
+                                "SELECT name FROM sqlite_master WHERE name='sqliteX'").fetchone())
+
+    def test_v2_operation_signature_corruption_is_storage_error(self):
+        self.s.checkIn(self.inp(request_id='req1'))
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute('UPDATE requests SET payload=? WHERE request_id=?',
+                         (json.dumps({'operation':'checkOut','occurred_at':T0},
+                                     sort_keys=True,separators=(',',':')), 'req1'))
+            conn.commit()
+        self.must_fail('STORAGE_ERROR', self.s.checkIn, self.inp(request_id='req1'))
+        with closing(sqlite3.connect(self.db)) as conn:
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM sessions').fetchone()[0], 1)
+
     def test_v2_altered_partial_index_rejected(self):
         self.s.checkIn(self.inp())
         with closing(sqlite3.connect(self.db)) as conn:

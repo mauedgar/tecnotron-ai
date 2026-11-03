@@ -46,7 +46,7 @@ class SQLiteAttendanceStore:
                     raise AttendanceError('STORAGE_ERROR', 'unsupported future SQLite schema version')
                 if version == 0:
                     if conn.execute("SELECT 1 FROM sqlite_master WHERE type IN ('table','view','trigger','index') "
-                                    "AND name NOT LIKE 'sqlite_%' LIMIT 1").fetchone() is not None:
+                                    "AND substr(name,1,7) <> 'sqlite_' LIMIT 1").fetchone() is not None:
                         raise AttendanceError('STORAGE_ERROR','unknown unversioned nonempty SQLite file')
                 if version == 1:
                     verify_original_v1_schema(conn)
@@ -187,7 +187,9 @@ class SQLiteAttendanceStore:
                         identical=previous['payload']==signature
                     else:
                         raise AttendanceError('STORAGE_ERROR','unsupported signature version')
-                    if previous['operation']!=operation or previous_sig.get('operation')!=operation:
+                    if previous['operation'] != previous_sig.get('operation'):
+                        raise AttendanceError('STORAGE_ERROR','corrupt stored request operation')
+                    if previous['operation'] != operation:
                         raise AttendanceError('REQUEST_CONFLICT','request_id reused across operations')
                     if not identical:
                         raise AttendanceError('REQUEST_CONFLICT','request_id used for different arguments')

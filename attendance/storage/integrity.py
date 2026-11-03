@@ -92,7 +92,7 @@ def verify_original_v1_schema(conn, version=1):
     elif version != 1:
         _reject('unsupported compatibility schema')
     records = conn.execute("SELECT name,type,sql FROM sqlite_master "
-                           "WHERE name NOT LIKE 'sqlite_%'").fetchall()
+                           "WHERE substr(name,1,7) <> 'sqlite_'").fetchall()
     by_name = {row['name']:row for row in records}
     if set(by_name)!=set(expected) or any(by_name[k]['type']!=kind
                                          for k,kind in expected.items()):
