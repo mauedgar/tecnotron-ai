@@ -45,6 +45,7 @@ and its original meaning remain preserved.
 | Source | Responsibility |
 | --- | --- |
 | [Current State](current-state.md) | Current Product position, evidence cutoff and unresolved gates. |
+| [Python Runtime Policy](python-runtime-policy.md) | Canonical default CPython 3.15.2 for new Tecnotron Python components, verified profile and consumer-specific exceptions; does not retroactively migrate legacy or frozen TaskCycles. |
 | [State Kernel V0](state-kernel-v0/README.md) | Implementation documentation/provenance for the current filesystem Kernel; not the final architectural disposition. |
 | [Capability Map](capability-map.md) | Derived implementation/ownership projection; never a second authority source. |
 
