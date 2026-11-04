@@ -1,0 +1,88 @@
+"""H6 Attendance operator CLI. Does not import SQLite or modify schema."""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from typing import Callable
+
+
+# Public error descriptions are fixed by code, not derived from exception text.
+# An exception message can include database paths, caller data or unexpected PII.
+_PUBLIC_MESSAGES = {
+    'INVALID_ARGUMENT': 'invalid operation arguments',
+    'ALREADY_OPEN': 'attendance session already open',
+    'NO_OPEN_SESSION': 'no open attendance session',
+    'NON_MONOTONIC_TIME': 'timestamp is not strictly increasing',
+    'REQUEST_CONFLICT': 'request identifier conflicts with an existing request',
+    'NOT_FOUND': 'attendance subject not found',
+    'STORAGE_ERROR': 'storage operation failed',
+}
+
+
+class StructuredArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise ValueError(message)
+
+
+def build_parser():
+    parser = StructuredArgumentParser(prog='attendance')
+    parser.add_argument('--db', required=True, help='Path to isolated Attendance SQLite database')
+    sub = parser.add_subparsers(dest='action', required=True)
+    for name in ('check-in', 'check-out'):
+        s = sub.add_parser(name)
+        s.add_argument('--subject-id', required=True)
+        s.add_argument('--occurred-at', required=True)
+        s.add_argument('--request-id')
+    state = sub.add_parser('state')
+    state.add_argument('--subject-id', required=True)
+    ls = sub.add_parser('list')
+    ls.add_argument('--subject-id', required=True)
+    ls.add_argument('--from', dest='from_time', required=True)
+    ls.add_argument('--to', dest='to_time', required=True)
+    return parser
+
+
+def main(argv=None, *, service_factory: Callable | None = None, out=None, err=None):
+    out = sys.stdout if out is None else out
+    err = sys.stderr if err is None else err
+    try:
+        args = build_parser().parse_args(argv)
+    except SystemExit as exc:
+        # Explicit --help succeeds and remains human-readable; failures use JSON.
+        return int(exc.code)
+    except ValueError as exc:
+        print(json.dumps({'ok': False, 'error': {'code': 'INVALID_ARGUMENT', 'message': 'invalid command arguments'}}, sort_keys=True), file=err)
+        return 1
+    try:
+        if service_factory is None:
+            # Late dependency resolution: isolated operator tests use a mock.
+            from attendance.core.service import AttendanceService
+            service_factory = AttendanceService
+        service = service_factory(args.db)
+        if args.action in ('check-in', 'check-out'):
+            payload = {'subject_id': args.subject_id, 'occurred_at': args.occurred_at}
+            if args.request_id is not None:
+                payload['request_id'] = args.request_id
+            method = service.checkIn if args.action == 'check-in' else service.checkOut
+            result = method(payload)
+        elif args.action == 'state':
+            result = service.getState({'subject_id': args.subject_id})
+        else:
+            result = service.listSessions({'subject_id': args.subject_id, 'from': args.from_time, 'to': args.to_time})
+        print(json.dumps({'ok': True, 'data': result}, sort_keys=True), file=out)
+        return 0
+    except Exception as exc:
+        code = getattr(exc, 'code', None)
+        if not isinstance(code, str) or code not in {
+                'INVALID_ARGUMENT', 'ALREADY_OPEN', 'NO_OPEN_SESSION',
+                'NON_MONOTONIC_TIME', 'REQUEST_CONFLICT', 'NOT_FOUND', 'STORAGE_ERROR'}:
+            code = 'STORAGE_ERROR'
+        # Never reflect arbitrary exception strings into public JSON.
+        message = _PUBLIC_MESSAGES[code]
+        print(json.dumps({'ok': False, 'error': {'code': code, 'message': message}}, sort_keys=True), file=err)
+        return 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
