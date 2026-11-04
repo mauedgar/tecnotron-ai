@@ -12,6 +12,8 @@ const {
 const {
   createTaskCycleEffectReconciliationCapability,
   consumeTaskCycleEffectReconciliation,
+  changedPathsWithinScope,
+  subjectPathsWithinFrozenScope,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-effect-reconciliation');
 
 function initializationRequest() {
@@ -61,13 +63,14 @@ function subject() {
   };
 }
 
-function fixture() {
+function fixture({ writeScope = null, changedPaths = null } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tc-effect-reconcile-'));
   const initializationRoot = path.join(root, 'initialization');
   const reconciliationRoot = path.join(root, 'reconciliation');
   fs.mkdirSync(initializationRoot);
   fs.mkdirSync(reconciliationRoot);
   const r = initializationRequest();
+  if (writeScope !== null) r.write_scope = [...writeScope];
   const initialized = createTaskCycleInitializationCapability({ root: initializationRoot })
     .initializeTaskCycle({
       request: r,
@@ -88,7 +91,7 @@ function fixture() {
         id: 'implementation',
         semantic_status: 'COMPLETED_BEFORE_LIFECYCLE_INITIALIZATION',
       },
-      subject: subject(),
+      subject: { ...subject(), changed_paths: changedPaths === null ? subject().changed_paths : [...changedPaths] },
       authority_refs: ['DEVELOPER-AUTHORIZE-PHASE1-EFFECT-RECONCILIATION'],
       evidence_refs: ['GIT:8cac265a378c86e1b32523c45dae531b024cb82f'],
       next_gate: 'PROMOTION_GRADE_VALIDATION',
@@ -269,4 +272,163 @@ test('fresh process consumes the exact reconciled projection only with external 
       expected_identity_sha256: `sha256:${'0'.repeat(64)}`,
     }), /EFFECT_RECONCILIATION_IDENTITY_MISMATCH/);
   } finally { f.cleanup(); }
+});
+
+
+const FROZEN_H6_SCOPE = Object.freeze([
+  'attendance/core/**',
+  'attendance/storage/**',
+  'attendance/tests/core/**',
+]);
+const REAL_H6_PHASE1_PATHS = Object.freeze([
+  'attendance/core/__init__.py',
+  'attendance/core/service.py',
+  'attendance/storage/__init__.py',
+  'attendance/storage/integrity.py',
+  'attendance/storage/legacy_v1.py',
+  'attendance/storage/sqlite_store.py',
+  'attendance/tests/core/test_service.py',
+]);
+
+test('frozen H6 glob scope reconciles seven concrete Domain paths without rewriting initialization', () => {
+  const f = fixture({ writeScope: FROZEN_H6_SCOPE, changedPaths: REAL_H6_PHASE1_PATHS });
+  try {
+    const cap = createTaskCycleEffectReconciliationCapability({ root: f.reconciliationRoot });
+    const result = cap.reconcileCompletedObligation({
+      request: f.request, observed: { subject: structuredClone(f.request.subject) },
+    });
+    assert.equal(result.status, 'PASS');
+    assert.equal(result.effect_state, 'CONFIRMED');
+    const proof = consumeTaskCycleEffectReconciliation({
+      location: result.portable_projection.location_or_ref,
+      expected_identity_sha256: result.portable_projection.identity_sha256,
+    });
+    assert.deepEqual(proof.projection.exact_inputs.write_scope, [...FROZEN_H6_SCOPE]);
+    assert.deepEqual(proof.projection.reconciled_effect.subject.changed_paths, [...REAL_H6_PHASE1_PATHS]);
+    assert.equal(cap.reconcileCompletedObligation({
+      request: f.request, observed: { subject: structuredClone(f.request.subject) },
+    }).already_reconciled, true);
+  } finally { f.cleanup(); }
+});
+
+test('glob scope rejects out-of-scope, traversal, malformed and spoofed Git changed paths', () => {
+  const f = fixture({ writeScope: FROZEN_H6_SCOPE, changedPaths: REAL_H6_PHASE1_PATHS });
+  try {
+    const invalid = [
+      'attendance/corex/escape.py',
+      'attendance/test/core/escape.py',
+      'attendance/tests/corex/escape.py',
+      'attendance/core/../operator/cli.py',
+      'attendance/core/./service.py',
+      'attendance/core//service.py',
+      'attendance/core/',
+      '/attendance/core/service.py',
+      'attendance/core\\service.py',
+      'attendance/core/service.py\nchanged',
+      'attendance/core/evil\0path.py',
+      'attendance/core/**',
+      'attendance/core/?',
+      'attendance/core/[a].py',
+      'attendance/operator/cli.py',
+      'docs/tasks/extra.md',
+    ];
+    const cap = createTaskCycleEffectReconciliationCapability({ root: f.reconciliationRoot });
+    for (const bad of invalid) {
+      const request = structuredClone(f.request);
+      request.subject.changed_paths = [...REAL_H6_PHASE1_PATHS, bad];
+      const result = cap.reconcileCompletedObligation({
+        request, observed: { subject: structuredClone(request.subject) },
+      });
+      assert.equal(result.status, 'BLOCKED', bad);
+      assert.equal(result.effect_state, 'NONE', bad);
+      assert.equal(result.reason, 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER', bad);
+    }
+    assert.deepEqual(fs.readdirSync(f.reconciliationRoot), []);
+  } finally { f.cleanup(); }
+});
+
+test('unsupported wildcard grammars and scope traversal fail closed', () => {
+  const invalid = [
+    ['attendance/**/core'],
+    ['attendance/core/*'],
+    ['attendance/co?e/**'],
+    ['../attendance/core/**'],
+    ['attendance/core//**'],
+    ['attendance/core/../storage/**'],
+    ['attendance/core/**/**'],
+    ['attendance/core\\**'],
+    ['/**'],
+  ];
+  for (const writeScope of invalid) {
+    const f = fixture({ writeScope, changedPaths: REAL_H6_PHASE1_PATHS });
+    try {
+      const result = createTaskCycleEffectReconciliationCapability({ root: f.reconciliationRoot })
+        .reconcileCompletedObligation({
+          request: f.request, observed: { subject: structuredClone(f.request.subject) },
+        });
+      assert.equal(result.status, 'BLOCKED', writeScope.join(','));
+      assert.equal(result.reason, 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
+      assert.deepEqual(fs.readdirSync(f.reconciliationRoot), []);
+    } finally { f.cleanup(); }
+  }
+});
+
+test('literal-only legacy write scope still requires the exact complete path set', () => {
+  const f = fixture();
+  try {
+    const request = structuredClone(f.request);
+    request.subject.changed_paths = ['docs/current-state.md'];
+    const result = createTaskCycleEffectReconciliationCapability({ root: f.reconciliationRoot })
+      .reconcileCompletedObligation({
+        request, observed: { subject: structuredClone(request.subject) },
+      });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
+    assert.deepEqual(fs.readdirSync(f.reconciliationRoot), []);
+  } finally { f.cleanup(); }
+});
+
+test('mixed literal and glob scope preserves mandatory literal requirement', () => {
+  const writeScope = ['docs/current-state.md', 'attendance/core/**'];
+  const f = fixture({ writeScope, changedPaths: ['attendance/core/service.py'] });
+  try {
+    const cap = createTaskCycleEffectReconciliationCapability({ root: f.reconciliationRoot });
+    let result = cap.reconcileCompletedObligation({
+      request: f.request, observed: { subject: structuredClone(f.request.subject) },
+    });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
+    assert.deepEqual(fs.readdirSync(f.reconciliationRoot), []);
+  } finally { f.cleanup(); }
+});
+
+
+test('positive mixed frozen glob and mandatory literal set qualifies concrete merge paths', () => {
+  const domainTask = 'docs/tasks/TEC-TC-ULC-OP05-H6-ATTENDANCE-DOMAIN-001/TASK.md';
+  const parentTask = 'docs/tasks/TEC-TC-ULC-OP05-H6-ATTENDANCE-PARENT-001/TASK.md';
+  const operatorTask = 'docs/tasks/TEC-TC-ULC-OP05-H6-ATTENDANCE-OPERATOR-001/TASK.md';
+  const allowed = [...FROZEN_H6_SCOPE, domainTask, parentTask, operatorTask];
+  const mergedPaths = [...REAL_H6_PHASE1_PATHS, domainTask, parentTask, operatorTask];
+  assert.equal(subjectPathsWithinFrozenScope(mergedPaths, allowed), true);
+  assert.equal(changedPathsWithinScope(mergedPaths, allowed), true);
+  assert.equal(subjectPathsWithinFrozenScope(mergedPaths.filter(x => x !== parentTask), allowed), false);
+  assert.equal(subjectPathsWithinFrozenScope([...mergedPaths, 'attendance/other/file.py'], allowed), false);
+  assert.equal(changedPathsWithinScope(['attendance/storage/sqlite_store.py'], allowed), true);
+  assert.equal(changedPathsWithinScope(['attendance/operator/cli.py'], allowed), false);
+});
+
+test('exact path duplicates cannot qualify in source, scope or observed merge', () => {
+  const domainTask = 'docs/tasks/TEC-TC-ULC-OP05-H6-ATTENDANCE-DOMAIN-001/TASK.md';
+  assert.equal(subjectPathsWithinFrozenScope(
+    [...REAL_H6_PHASE1_PATHS, 'attendance/core/service.py'], FROZEN_H6_SCOPE,
+  ), false);
+  assert.equal(changedPathsWithinScope(
+    ['attendance/core/service.py', 'attendance/core/service.py'], FROZEN_H6_SCOPE,
+  ), false);
+  assert.equal(subjectPathsWithinFrozenScope(
+    REAL_H6_PHASE1_PATHS, [...FROZEN_H6_SCOPE, 'attendance/core/**'],
+  ), false);
+  assert.equal(changedPathsWithinScope(
+    ['attendance/core/service.py'], [domainTask, domainTask],
+  ), false);
 });

@@ -43,6 +43,55 @@ function unique(left, right) {
   return [...new Set([...(left || []), ...(right || [])])];
 }
 
+// A frozen write_scope is an allowlist, not a second list of actual Git paths.
+// Keep the historical exact-path contract unchanged. If a frozen scope uses
+// trailing /**, accept only concrete safe repository-relative paths under that
+// literal directory prefix. Other wildcard grammars fail closed; no glob
+// expansion, filesystem lookup or arbitrary regex is performed.
+function canonicalGitPath(value) {
+  return typeof value === 'string' && value.length > 0
+    && !/[\\\0\r\n]/.test(value)
+    && value.split('/').every((part) => part !== '' && part !== '.' && part !== '..'
+      && !/[*?\[\]]/.test(part));
+}
+
+function frozenScopeRules(scope) {
+  if (!strings(scope, true)) return null;
+  const patterns = scope.map((entry) => {
+    if (entry.endsWith('/**') && entry.indexOf('*') === entry.length - 2
+        && canonicalGitPath(entry.slice(0, -3))) {
+      return { prefix: entry.slice(0, -3), subtree: true };
+    }
+    return canonicalGitPath(entry) ? { prefix: entry, subtree: false } : null;
+  });
+  return patterns.some((entry) => entry === null) ? null : patterns;
+}
+
+function matchedByRule(filename, entry) {
+  return entry.subtree ? filename.startsWith(entry.prefix + '/') : filename === entry.prefix;
+}
+
+// Subset check is for individual observed Git edges and an integrated Git diff.
+// The caller must independently attest the complete exact Git path list.
+function changedPathsWithinScope(changedPaths, scope) {
+  const patterns = frozenScopeRules(scope);
+  return patterns !== null && strings(changedPaths, true)
+    && changedPaths.every(canonicalGitPath)
+    && changedPaths.every((filename) => patterns.some((entry) => matchedByRule(filename, entry)));
+}
+
+function subjectPathsWithinFrozenScope(changedPaths, scope) {
+  if (!strings(changedPaths, true) || !strings(scope, true)) return false;
+  if (scope.every((entry) => !entry.includes('*'))) {
+    // Existing fixed-path TaskCycles continue requiring the *entire* exact set.
+    return sameStringSet(changedPaths, scope);
+  }
+  const patterns = frozenScopeRules(scope);
+  return patterns !== null && changedPathsWithinScope(changedPaths, scope)
+    // Keep any literal entries mandatory even in a mixed literal/glob policy.
+    && patterns.every((entry) => entry.subtree || changedPaths.includes(entry.prefix));
+}
+
 function validateRequest(r) {
   if (!r || typeof r !== 'object') return 'RECONCILIATION_REQUEST_INVALID';
   if (!r.taskcycle || !strings([r.taskcycle.id, r.taskcycle.responsibility], true)) return 'TASKCYCLE_IDENTITY_INVALID';
@@ -198,7 +247,7 @@ function createTaskCycleEffectReconciliationCapability({ root }) {
       if (request.subject.repository !== exactInputs.Product_baseline.repository
           || request.subject.branch !== exactInputs.TASK_carrier.branch
           || request.subject.parent !== exactInputs.TASK_carrier.commit
-          || !sameStringSet(request.subject.changed_paths, exactInputs.write_scope)) {
+          || !subjectPathsWithinFrozenScope(request.subject.changed_paths, exactInputs.write_scope)) {
         return terminal(request, 'BLOCKED', 'NONE', 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
       }
 
@@ -300,4 +349,6 @@ module.exports = {
   validateTaskCycleEffectReconciliationRequest: validateRequest,
   createTaskCycleEffectReconciliationCapability,
   consumeTaskCycleEffectReconciliation,
+  changedPathsWithinScope,
+  subjectPathsWithinFrozenScope,
 };

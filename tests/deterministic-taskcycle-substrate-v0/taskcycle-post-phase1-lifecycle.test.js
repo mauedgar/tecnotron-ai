@@ -15,6 +15,7 @@ const {
 const {
   createTaskCyclePostPhase1LifecycleCapability,
   consumeTaskCyclePostPhase1Lifecycle,
+  scopeCorrespondsForMerge,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle');
 
 const S = {
@@ -1274,4 +1275,25 @@ test('exact PR43 rejected add/remove pair is the only historically exceptional r
   input.request.taskcycle.id='OTHER_TASKCYCLE';
   r=qualifyMergeTopology(input,{git});
   assert.equal(r.reason,'REPAIR_LINEAGE_SCOPE_VIOLATION');
+});
+
+
+test('glob merge close allows preexisting unchanged TASK while qualifying only the real diff', () => {
+  const scope = ['attendance/core/**', 'attendance/storage/**', 'attendance/tests/core/**'];
+  const task = 'docs/tasks/TEC-TC-ULC-OP05-H6-ATTENDANCE-DOMAIN-001/TASK.md';
+  const candidatePaths = ['attendance/core/service.py', 'attendance/storage/sqlite_store.py'];
+  // TASK exists at pre_tools. Git correctly reports no edit to the TASK path.
+  const realMergedDiff = [...candidatePaths];
+  assert.equal(scopeCorrespondsForMerge(candidatePaths, realMergedDiff, scope, task), true);
+  assert.equal(scopeCorrespondsForMerge(candidatePaths, [...realMergedDiff, 'attendance/operator/cli.py'], scope, task), false);
+  assert.equal(scopeCorrespondsForMerge(candidatePaths, [...realMergedDiff, 'docs/tasks/SIBLING/TASK.md'], scope, task), false);
+  assert.equal(scopeCorrespondsForMerge([...candidatePaths, 'attendance/core/../operator/cli.py'], realMergedDiff, scope, task), false);
+});
+
+test('literal-only post-Phase1 merge keeps legacy exact subject and TASK set semantics', () => {
+  const scope = ['docs/current-state.md', 'docs/implementation-roadmap.md'];
+  const task = 'docs/tasks/TC-1/TASK.md';
+  assert.equal(scopeCorrespondsForMerge(scope, [...scope, task], scope, task), true);
+  assert.equal(scopeCorrespondsForMerge(scope, scope, scope, task), false);
+  assert.equal(scopeCorrespondsForMerge([scope[0]], [...scope, task], scope, task), false);
 });
