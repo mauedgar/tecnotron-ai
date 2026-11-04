@@ -12,6 +12,8 @@ const {
 const {
   createTaskCycleEffectReconciliationCapability,
   consumeTaskCycleEffectReconciliation,
+  changedPathsWithinScope,
+  subjectPathsWithinFrozenScope,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-effect-reconciliation');
 
 function initializationRequest() {
@@ -398,4 +400,35 @@ test('mixed literal and glob scope preserves mandatory literal requirement', () 
     assert.equal(result.reason, 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
     assert.deepEqual(fs.readdirSync(f.reconciliationRoot), []);
   } finally { f.cleanup(); }
+});
+
+
+test('positive mixed frozen glob and mandatory literal set qualifies concrete merge paths', () => {
+  const domainTask = 'docs/tasks/TEC-TC-ULC-OP05-H6-ATTENDANCE-DOMAIN-001/TASK.md';
+  const parentTask = 'docs/tasks/TEC-TC-ULC-OP05-H6-ATTENDANCE-PARENT-001/TASK.md';
+  const operatorTask = 'docs/tasks/TEC-TC-ULC-OP05-H6-ATTENDANCE-OPERATOR-001/TASK.md';
+  const allowed = [...FROZEN_H6_SCOPE, domainTask, parentTask, operatorTask];
+  const mergedPaths = [...REAL_H6_PHASE1_PATHS, domainTask, parentTask, operatorTask];
+  assert.equal(subjectPathsWithinFrozenScope(mergedPaths, allowed), true);
+  assert.equal(changedPathsWithinScope(mergedPaths, allowed), true);
+  assert.equal(subjectPathsWithinFrozenScope(mergedPaths.filter(x => x !== parentTask), allowed), false);
+  assert.equal(subjectPathsWithinFrozenScope([...mergedPaths, 'attendance/other/file.py'], allowed), false);
+  assert.equal(changedPathsWithinScope(['attendance/storage/sqlite_store.py'], allowed), true);
+  assert.equal(changedPathsWithinScope(['attendance/operator/cli.py'], allowed), false);
+});
+
+test('exact path duplicates cannot qualify in source, scope or observed merge', () => {
+  const domainTask = 'docs/tasks/TEC-TC-ULC-OP05-H6-ATTENDANCE-DOMAIN-001/TASK.md';
+  assert.equal(subjectPathsWithinFrozenScope(
+    [...REAL_H6_PHASE1_PATHS, 'attendance/core/service.py'], FROZEN_H6_SCOPE,
+  ), false);
+  assert.equal(changedPathsWithinScope(
+    ['attendance/core/service.py', 'attendance/core/service.py'], FROZEN_H6_SCOPE,
+  ), false);
+  assert.equal(subjectPathsWithinFrozenScope(
+    REAL_H6_PHASE1_PATHS, [...FROZEN_H6_SCOPE, 'attendance/core/**'],
+  ), false);
+  assert.equal(changedPathsWithinScope(
+    ['attendance/core/service.py'], [domainTask, domainTask],
+  ), false);
 });
