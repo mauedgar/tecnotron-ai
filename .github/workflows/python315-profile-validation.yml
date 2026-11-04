@@ -1,0 +1,65 @@
+name: Tecnotron Python315 profile candidate validation
+on:
+  push:
+    branches:
+      - candidate/python315-runtime-baseline-20261102-001
+permissions:
+  contents: read
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Capture exact candidate identity and source constraints
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor '906ef52f8eea2e209009df9a14a9563359653200' HEAD
+          expected_tree="$(gh api "repos/${GITHUB_REPOSITORY}/git/commits/${GITHUB_SHA}" --jq '.tree.sha')"
+          test -n "$expected_tree"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$expected_tree"
+          printf 'GIT_TREE_PROVIDER_CONFIRMED=%s\n' "$expected_tree"
+          test "$(git diff --name-only 906ef52f8eea2e209009df9a14a9563359653200 HEAD | sort)" = "$(printf '%s\n' '.github/workflows/python315-profile-validation.yml' 'docs/proposals/python-3.15-runtime-baseline-candidate.md' 'python/profiles/py315/smoke.py' | sort)"
+          test "$(git rev-parse HEAD:python/profiles/py315/uv.lock)" = "107e03a6ea2053efeccd9089dc0e235bb95707ff"
+          test "$(git rev-parse 906ef52f8eea2e209009df9a14a9563359653200:docs/proposals/python-3.15-runtime-baseline-candidate.md)" = '60d1eb85fbed2e8eab38239993d92363904d2bca'
+          grep -F 'requires-python = ">=3.15,<3.16"' docs/proposals/python-3.15-runtime-baseline-candidate.md
+          test "$(cat python/profiles/py315/.python-version)" = '3.15.2'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.15.2'
+      - name: Install pinned uv
+        shell: bash
+        run: python -m pip install uv==0.13.6
+      - name: Resolve original lock with actual Python315 and run isolated stdlib profile
+        shell: bash
+        working-directory: python/profiles/py315
+        run: |
+          set -euo pipefail
+          python --version
+          python -c 'import sys; sys.version_info[:3] == (3,15,2) or sys.exit("INVALID_RUNTIME: "+sys.version)'
+          test "$(git hash-object uv.lock)" = '107e03a6ea2053efeccd9089dc0e235bb95707ff'
+          uv lock --check
+          uv sync --locked --no-dev
+          uv run --locked python smoke.py
+          uv run --locked python -O smoke.py
+          test "$(git hash-object uv.lock)" = '107e03a6ea2053efeccd9089dc0e235bb95707ff'
+          test -z "$(git status --porcelain -- uv.lock)"
+      - name: Upload unchanged committed uv lock, required evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: py315-stdlib-profile-${{ matrix.os }}
+          path: |
+            python/profiles/py315/uv.lock
+          if-no-files-found: error
