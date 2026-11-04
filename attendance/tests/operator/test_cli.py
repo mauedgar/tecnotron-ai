@@ -6,9 +6,9 @@ from attendance.operator.cli import main
 
 
 class MockError(Exception):
-    def __init__(self, code):
+    def __init__(self, code, message=None):
         self.code = code
-        super().__init__(code)
+        super().__init__(message if message is not None else code)
 
 
 class MockService:
@@ -16,11 +16,12 @@ class MockService:
         self.path = path
         self.calls = []
         self.error = None
+        self.error_message = None
 
     def perform(self, op, payload):
         self.calls.append((op, payload))
         if self.error:
-            raise MockError(self.error)
+            raise MockError(self.error, self.error_message)
         return {'op':op,'payload':payload}
 
     def checkIn(self, p): return self.perform('checkIn',p)
@@ -125,6 +126,37 @@ class OperatorTests(unittest.TestCase):
                 self.assertEqual(result['error']['code'], 'STORAGE_ERROR')
                 self.assertEqual(result['error']['message'], 'storage operation failed')
                 self.assertNotIn('INTERNAL_DEMO_SECRET', self.err.getvalue())
+
+
+    def test_known_typed_errors_never_reflect_sensitive_exception_details(self):
+        secret = 'SENSITIVE_CUSTOMER_VALUE_NOT_FOR_JSON'
+        codes = ('INVALID_ARGUMENT', 'ALREADY_OPEN', 'NO_OPEN_SESSION',
+                 'NON_MONOTONIC_TIME', 'REQUEST_CONFLICT', 'NOT_FOUND',
+                 'STORAGE_ERROR', 'UNEXPECTED_INTERNAL_ERROR')
+        for code in codes:
+            with self.subTest(code=code):
+                self.out, self.err = io.StringIO(), io.StringIO()
+                self.service.error = code
+                self.service.error_message = secret
+                status, response = self.run_cli('state', '--subject-id', 's1')
+                self.assertEqual(status, 1)
+                self.assertFalse(response['ok'])
+                self.assertEqual(response['error']['code'],
+                                 code if code in codes[:-1] else 'STORAGE_ERROR')
+                self.assertNotIn(secret, self.err.getvalue())
+                self.assertNotIn(secret, response['error']['message'])
+                self.assertFalse(self.out.getvalue())
+        self.service.error_message = None
+
+    def test_parser_does_not_echo_sensitive_unknown_command(self):
+        secret = 'SENSITIVE_ARGUMENT_NOT_FOR_JSON'
+        status = main(['--db','mock.sqlite',secret],
+                      service_factory=lambda p:self.service,
+                      out=self.out,err=self.err)
+        self.assertEqual(status,1)
+        output=json.loads(self.err.getvalue())
+        self.assertEqual(output['error']['code'],'INVALID_ARGUMENT')
+        self.assertNotIn(secret, self.err.getvalue())
 
 
 if __name__ == '__main__':
