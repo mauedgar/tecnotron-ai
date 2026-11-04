@@ -6,6 +6,7 @@
 // TaskCycle request. The returned observation is not a Product grant.
 const path = require('node:path');
 const { createGitCliAdapter } = require('../operational-spine-v0/git-execution-qualification');
+const { changedPathsWithinScope } = require('./taskcycle-effect-reconciliation');
 
 // Constrain the inherited adapter at this read-only consumer boundary. The
 // shared operational adapter is intentionally unchanged: other Recipes may
@@ -181,7 +182,8 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
       if(!same(observed.parents,[lineage[i-1]]))
         return {status:'BLOCKED',reason:'REPAIR_LINEAGE_EDGE_INVALID'};
       const diff=paths(git,root,lineage[i-1],lineage[i]);
-      const unexpected=diff.filter(x=>![...scope.write_scope,...scope.authorized_added_paths].includes(x));
+      const edgeScope=[...scope.write_scope,...scope.authorized_added_paths];
+      const unexpected=diff.filter(x=>!changedPathsWithinScope([x],edgeScope));
       if(unexpected.length && !(unexpected.length===1
           && isExactPR43RejectedTransientPair({
             git,root,request,originalTaskCycleId,phase1,lineage,index:i,diff:unexpected,
@@ -190,7 +192,7 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
     }
     const integrated=paths(git,root,p2.pre_tools,m.commit);
     const authorized=sorted([...scope.write_scope,...scope.authorized_added_paths,scope.task_path]);
-    if(!same(integrated,sorted(m.changed_paths)) || integrated.some(x=>!authorized.includes(x)))
+    if(!same(integrated,sorted(m.changed_paths)) || !changedPathsWithinScope(integrated,authorized))
       return {status:'BLOCKED',reason:'REAL_MERGE_DIFF_SCOPE_MISMATCH'};
     // Git merge-tree --write-tree writes objects; closure verifies immutable commit
     // objects, while Control authenticates the original native combined-tree receipt.
