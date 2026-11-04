@@ -5,6 +5,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const {
   consumeTaskCycleEffectReconciliation,
+  subjectPathsWithinFrozenScope,
 } = require('./taskcycle-effect-reconciliation');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
 const { qualifyMergeTopology } = require('./taskcycle-close-evidence-qualification');
@@ -360,8 +361,8 @@ function validateSource(request, source, resolved = null) {
     const allowed = [...effective, original.TASK_carrier.path].sort();
     if (c.provenance.task_carrier_commit !== original.TASK_carrier.commit
         || c.provenance.task_carrier_path !== original.TASK_carrier.path
-        || !exact([...c.changed_paths].sort(), effective)
-        || !exact([...m.changed_paths].sort(), allowed)
+        || !subjectPathsWithinFrozenScope(c.changed_paths, effective)
+        || !subjectPathsWithinFrozenScope(m.changed_paths, allowed)
         || m.candidate_lineage[0] !== p.reconciled_effect.subject.commit
         || c.parent !== m.candidate_lineage[m.candidate_lineage.length - 2]) {
       return 'MERGE_CANDIDATE_OR_SCOPE_PROVENANCE_MISMATCH';
