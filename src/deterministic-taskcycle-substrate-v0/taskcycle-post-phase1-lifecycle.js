@@ -5,7 +5,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const {
   consumeTaskCycleEffectReconciliation,
-  subjectPathsWithinFrozenScope,
+  changedPathsWithinScope,
 } = require('./taskcycle-effect-reconciliation');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
 const { qualifyMergeTopology } = require('./taskcycle-close-evidence-qualification');
@@ -134,6 +134,20 @@ function verifySourceInitialization(request, source) {
   } catch { return 'ORIGINAL_INITIALIZATION_ACQUISITION_FAILED'; }
   return null;
 }
+// The original immutable path policy may be directory globs. For a scoped
+// policy, real Git diffs must be subsets of the allowed paths: an original TASK
+// already present in tools need not be modified by this merge. Legacy policies
+// made of literal paths keep the exact set requirement unchanged.
+function scopeCorrespondsForMerge(candidatePaths, mergePaths, effectiveScope, taskPath) {
+  const allowed = [...effectiveScope, taskPath];
+  if (effectiveScope.some((entry) => entry.includes('*'))) {
+    return changedPathsWithinScope(candidatePaths, effectiveScope)
+      && changedPathsWithinScope(mergePaths, allowed);
+  }
+  return exact([...candidatePaths].sort(), [...effectiveScope].sort())
+    && exact([...mergePaths].sort(), [...allowed].sort());
+}
+
 function qualifiedMergeObservation(request, source, surface, resolved) {
   if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return {error:null,verified:null};
   // surface is supplied by Product Control at capability construction, never
@@ -358,11 +372,10 @@ function validateSource(request, source, resolved = null) {
     const effective = resolved?.effective_write_scope;
     if (!Array.isArray(effective) || !repositoryRelativePaths(effective))
       return 'QUALIFIED_EFFECTIVE_SCOPE_REQUIRED';
-    const allowed = [...effective, original.TASK_carrier.path].sort();
     if (c.provenance.task_carrier_commit !== original.TASK_carrier.commit
         || c.provenance.task_carrier_path !== original.TASK_carrier.path
-        || !subjectPathsWithinFrozenScope(c.changed_paths, effective)
-        || !subjectPathsWithinFrozenScope(m.changed_paths, allowed)
+        || !scopeCorrespondsForMerge(c.changed_paths, m.changed_paths,
+          effective, original.TASK_carrier.path)
         || m.candidate_lineage[0] !== p.reconciled_effect.subject.commit
         || c.parent !== m.candidate_lineage[m.candidate_lineage.length - 2]) {
       return 'MERGE_CANDIDATE_OR_SCOPE_PROVENANCE_MISMATCH';
@@ -655,4 +668,5 @@ module.exports = {
   validateTaskCyclePostPhase1LifecycleRequest: validateRequest,
   createTaskCyclePostPhase1LifecycleCapability,
   consumeTaskCyclePostPhase1Lifecycle,
+  scopeCorrespondsForMerge,
 };
