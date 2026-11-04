@@ -7,6 +7,19 @@ import sys
 from typing import Callable
 
 
+# Public error descriptions are fixed by code, not derived from exception text.
+# An exception message can include database paths, caller data or unexpected PII.
+_PUBLIC_MESSAGES = {
+    'INVALID_ARGUMENT': 'invalid operation arguments',
+    'ALREADY_OPEN': 'attendance session already open',
+    'NO_OPEN_SESSION': 'no open attendance session',
+    'NON_MONOTONIC_TIME': 'timestamp is not strictly increasing',
+    'REQUEST_CONFLICT': 'request identifier conflicts with an existing request',
+    'NOT_FOUND': 'attendance subject not found',
+    'STORAGE_ERROR': 'storage operation failed',
+}
+
+
 class StructuredArgumentParser(argparse.ArgumentParser):
     def error(self, message):
         raise ValueError(message)
@@ -39,7 +52,7 @@ def main(argv=None, *, service_factory: Callable | None = None, out=None, err=No
         # Explicit --help succeeds and remains human-readable; failures use JSON.
         return int(exc.code)
     except ValueError as exc:
-        print(json.dumps({'ok': False, 'error': {'code': 'INVALID_ARGUMENT', 'message': str(exc)}}, sort_keys=True), file=err)
+        print(json.dumps({'ok': False, 'error': {'code': 'INVALID_ARGUMENT', 'message': 'invalid command arguments'}}, sort_keys=True), file=err)
         return 1
     try:
         if service_factory is None:
@@ -65,8 +78,8 @@ def main(argv=None, *, service_factory: Callable | None = None, out=None, err=No
                 'INVALID_ARGUMENT', 'ALREADY_OPEN', 'NO_OPEN_SESSION',
                 'NON_MONOTONIC_TIME', 'REQUEST_CONFLICT', 'NOT_FOUND', 'STORAGE_ERROR'}:
             code = 'STORAGE_ERROR'
-        # Do not leak internal database/runtime exception messages through the CLI.
-        message = 'storage operation failed' if code == 'STORAGE_ERROR' else str(exc)
+        # Never reflect arbitrary exception strings into public JSON.
+        message = _PUBLIC_MESSAGES[code]
         print(json.dumps({'ok': False, 'error': {'code': code, 'message': message}}, sort_keys=True), file=err)
         return 1
 
