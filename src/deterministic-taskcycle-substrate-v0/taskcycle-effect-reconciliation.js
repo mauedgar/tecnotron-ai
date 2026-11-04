@@ -55,13 +55,8 @@ function canonicalGitPath(value) {
       && !/[*?\[\]]/.test(part));
 }
 
-function subjectPathsWithinFrozenScope(changedPaths, scope) {
-  if (!strings(changedPaths, true) || !strings(scope, true)) return false;
-  if (scope.every((entry) => !entry.includes('*'))) {
-    // Existing fixed-path TaskCycles continue requiring the *entire* exact set.
-    return sameStringSet(changedPaths, scope);
-  }
-  if (!changedPaths.every(canonicalGitPath)) return false;
+function frozenScopeRules(scope) {
+  if (!strings(scope, true)) return null;
   const patterns = scope.map((entry) => {
     if (entry.endsWith('/**') && entry.indexOf('*') === entry.length - 2
         && canonicalGitPath(entry.slice(0, -3))) {
@@ -69,12 +64,32 @@ function subjectPathsWithinFrozenScope(changedPaths, scope) {
     }
     return canonicalGitPath(entry) ? { prefix: entry, subtree: false } : null;
   });
-  if (patterns.some((entry) => entry === null)) return false;
-  // Keep any literal entries mandatory even in a mixed literal/glob policy.
-  if (patterns.some((entry) => !entry.subtree && !changedPaths.includes(entry.prefix))) return false;
-  return changedPaths.every((filename) => patterns.some((entry) => (
-    entry.subtree ? filename.startsWith(entry.prefix + '/') : filename === entry.prefix
-  )));
+  return patterns.some((entry) => entry === null) ? null : patterns;
+}
+
+function matchedByRule(filename, entry) {
+  return entry.subtree ? filename.startsWith(entry.prefix + '/') : filename === entry.prefix;
+}
+
+// Subset check is for individual observed Git edges and an integrated Git diff.
+// The caller must independently attest the complete exact Git path list.
+function changedPathsWithinScope(changedPaths, scope) {
+  const patterns = frozenScopeRules(scope);
+  return patterns !== null && strings(changedPaths, true)
+    && changedPaths.every(canonicalGitPath)
+    && changedPaths.every((filename) => patterns.some((entry) => matchedByRule(filename, entry)));
+}
+
+function subjectPathsWithinFrozenScope(changedPaths, scope) {
+  if (!strings(changedPaths, true) || !strings(scope, true)) return false;
+  if (scope.every((entry) => !entry.includes('*'))) {
+    // Existing fixed-path TaskCycles continue requiring the *entire* exact set.
+    return sameStringSet(changedPaths, scope);
+  }
+  const patterns = frozenScopeRules(scope);
+  return patterns !== null && changedPathsWithinScope(changedPaths, scope)
+    // Keep any literal entries mandatory even in a mixed literal/glob policy.
+    && patterns.every((entry) => entry.subtree || changedPaths.includes(entry.prefix));
 }
 
 function validateRequest(r) {
@@ -334,4 +349,6 @@ module.exports = {
   validateTaskCycleEffectReconciliationRequest: validateRequest,
   createTaskCycleEffectReconciliationCapability,
   consumeTaskCycleEffectReconciliation,
+  changedPathsWithinScope,
+  subjectPathsWithinFrozenScope,
 };
