@@ -373,3 +373,13 @@ test('Control proof must bind the actual frozen subject, TASK and execution atte
     assert.equal(qualify(c).status, 'PASS');
   } finally { c.cleanup(); }
 });
+
+test('even an injected Git adapter cannot bypass a modified executable', () => {
+  const c = context();
+  try {
+    fs.writeFileSync(c.qualifiedGitSurface.gitExecutablePath, 'tampered-after-Control-pin\n');
+    const result = qualify(c);
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'FORK_GIT_EVIDENCE_UNAVAILABLE');
+  } finally { c.cleanup(); }
+});
