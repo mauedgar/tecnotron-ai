@@ -5,6 +5,7 @@
 // A mismatched branch remains blocked unless Product Control supplies a trusted
 // local checkout AND actual Git objects plus a current remote branch observation.
 const fs = require('node:fs');
+const { createHash } = require('node:crypto');
 const path = require('node:path');
 const { createGitCliAdapter } = require('../operational-spine-v0/git-execution-qualification');
 
@@ -21,14 +22,31 @@ const safePath = v => typeof v === 'string' && !/[\\\r\n\0]/.test(v)
   && !v.startsWith('/') && v.split('/').every(x => x && x !== '.' && x !== '..');
 const fail = reason => ({ status: 'BLOCKED', reason });
 
-function createReadOnlySourceGit() {
-  return createGitCliAdapter({ env: {
-    ...process.env,
+function createReadOnlySourceGit(executable) {
+  // Strip inherited Git/credential/network control variables before spawning.
+  const env = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (/^(GIT_|SSH_|GCM_|HTTP_PROXY$|HTTPS_PROXY$|ALL_PROXY$|NO_PROXY$)/i.test(key))
+      continue;
+    env[key] = value;
+  }
+  return createGitCliAdapter({ command: executable, env: {
+    ...env,
     GIT_NO_LAZY_FETCH: '1',
     GIT_OPTIONAL_LOCKS: '0',
     GIT_TERMINAL_PROMPT: '0',
     GIT_PROTOCOL_FROM_USER: '0',
   } });
+}
+
+function qualifiedGitExecutable(surface) {
+  const binary = surface.gitExecutablePath;
+  const stat = fs.lstatSync(binary);
+  if (!stat.isFile() || stat.isSymbolicLink() || fs.realpathSync(binary) !== binary)
+    throw Error('GIT_BINARY_PATH_UNQUALIFIED');
+  const observed = 'sha256:' + createHash('sha256').update(fs.readFileSync(binary)).digest('hex');
+  if (observed !== surface.gitExecutableSha256) throw Error('GIT_BINARY_IDENTITY_MISMATCH');
+  return binary;
 }
 
 function read(git, root, args, { nul = false, allowExitOne = false } = {}) {
@@ -67,9 +85,7 @@ function exactPaths(raw) {
   return entries.sort();
 }
 
-function qualifyForkedPhase1Branch({
-  request, originalInputs, qualifiedGitSurface, git = createReadOnlySourceGit(),
-}) {
+function prepareForkedPhase1Branch({ request, originalInputs, qualifiedGitSurface }) {
   const subject = request?.subject;
   const original = originalInputs?.TASK_carrier;
   const surface = qualifiedGitSurface;
@@ -87,13 +103,42 @@ function qualifyForkedPhase1Branch({
       || !['https://github.com/' + subject.repository,
         'https://github.com/' + subject.repository + '.git'].includes(surface.remoteUrl)
       || !nonempty(surface.repositoryPath) || !path.isAbsolute(surface.repositoryPath)
+      || !nonempty(surface.gitExecutablePath) || !path.isAbsolute(surface.gitExecutablePath)
+      || !/^sha256:[a-f0-9]{64}$/.test(surface.gitExecutableSha256 || '')
       || !Array.isArray(subject.changed_paths) || subject.changed_paths.length < 1
       || subject.changed_paths.some(x => !safePath(x))
       || new Set(subject.changed_paths).size !== subject.changed_paths.length) {
     return fail('FORK_BRANCH_BINDING_UNQUALIFIED');
   }
 
+  // Frozen, deterministic identity. A moving remote head is runtime evidence,
+  // never part of the original effect manifest or exact duplicate identity.
+  return {
+    status: 'PASS',
+    immutable: {
+      method: 'CONTROL_BOUND_READ_ONLY_GIT_CURRENT_BRANCH_ANCESTRY',
+      subject_branch: subject.branch,
+      remote_ref: 'refs/heads/' + subject.branch,
+      immutable_phase1_commit: subject.commit,
+      immutable_phase1_tree: subject.tree,
+      original_task_commit: original.commit,
+      actual_changed_paths: [...subject.changed_paths].sort(),
+      qualification_receipt_ref: surface.qualification_receipt_ref,
+      Product_authority: 'NONE',
+    },
+  };
+}
+
+function qualifyForkedPhase1Branch({
+  request, originalInputs, qualifiedGitSurface, git = null,
+}) {
+  const bound = prepareForkedPhase1Branch({ request, originalInputs, qualifiedGitSurface });
+  if (bound.status !== 'PASS') return bound;
+  const subject = request.subject;
+  const original = originalInputs.TASK_carrier;
+  const surface = qualifiedGitSurface;
   try {
+    if (!git) git = createReadOnlySourceGit(qualifiedGitExecutable(surface));
     const root = path.resolve(surface.repositoryPath);
     if (!fs.statSync(root).isDirectory() || fs.realpathSync(root) !== root
         || read(git, root, ['rev-parse', '--show-toplevel']).value !== root) {
@@ -105,6 +150,12 @@ function qualifyForkedPhase1Branch({
       '^url\\..*\\.(insteadOf|pushInsteadOf)$'], { allowExitOne: true });
     if (rewrites.exit !== 1 || rewrites.value !== '' || rewrites.stderr !== '')
       return fail('FORK_GIT_URL_REWRITE_UNSAFE');
+    const credentialOverrides = read(git, root, ['config', '--local', '--get-regexp',
+      '^(http\\..*\\.extraheader|credential\\..*|remote\\.origin\\.uploadpack)$'],
+      { allowExitOne: true });
+    if (credentialOverrides.exit !== 1 || credentialOverrides.value !== ''
+        || credentialOverrides.stderr !== '')
+      return fail('FORK_GIT_LOCAL_CREDENTIAL_OR_TRANSPORT_OVERRIDE');
 
     const tip = oneCommit(git, root, subject.commit);
     if (tip.tree !== subject.tree || tip.parents.length !== 1
@@ -135,22 +186,11 @@ function qualifyForkedPhase1Branch({
     oneCommit(git, root, pair[0]);
     return {
       status: 'PASS',
-      verified: {
-        method: 'CONTROL_BOUND_READ_ONLY_GIT_CURRENT_BRANCH_ANCESTRY',
-        subject_branch: subject.branch,
-        remote_ref: remoteRef,
-        remote_head: pair[0],
-        immutable_phase1_commit: subject.commit,
-        immutable_phase1_tree: subject.tree,
-        original_task_commit: original.commit,
-        actual_changed_paths: observedPaths,
-        qualification_receipt_ref: surface.qualification_receipt_ref,
-        Product_authority: 'NONE',
-      },
+      verified: { ...bound.immutable, remote_head: pair[0] },
     };
   } catch {
     return fail('FORK_GIT_EVIDENCE_UNAVAILABLE');
   }
 }
 
-module.exports = { createReadOnlySourceGit, qualifyForkedPhase1Branch };
+module.exports = { createReadOnlySourceGit, prepareForkedPhase1Branch, qualifyForkedPhase1Branch };
