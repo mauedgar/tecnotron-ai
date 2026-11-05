@@ -27,6 +27,10 @@ const SOURCE_BLOBS = [
   '8b32f6b9a149ef5b240c7e31f42dc05f92e457e1',
   'd9bc7baefcc933c0ea8b7c23eb63f0bff84ca7c8',
 ];
+// Test-only historical source bytes: never a second Product SOT or live navigation.
+const FROZEN_SOT_FIXTURE = path.resolve(
+  __dirname, '../fixtures/ulc-op02/SOURCE_OF_TRUTH.518fb736.freeze.txt',
+);
 function gitBlobSha(content) {
   const bytes = Buffer.from(content, 'utf8');
   return createHash('sha1').update('blob ' + bytes.length + '\0').update(bytes).digest('hex');
@@ -154,7 +158,7 @@ function repositoryMaterializer() {
     evidence: REQUIREMENTS.map(({ evidence_id, path: p }) => ({
       evidence_id,
       path: p,
-      content: fs.readFileSync(path.join(ROOT, p), 'utf8'),
+      content: fs.readFileSync(p === SCOPE[0] ? FROZEN_SOT_FIXTURE : path.join(ROOT, p), 'utf8'),
     })),
   };
 }
@@ -169,6 +173,16 @@ test('ULC-OP02 actor explorer consumes exact Product SOT/Task/context via existi
   assert.equal(result.semantic_action_sufficiency, 'NOT_EVALUATED_BY_DETERMINISTIC_PACKAGER');
   assert.equal(result.independent_model_context, 'NOT_ESTABLISHED_BY_NODE_FIXTURE');
   assert.equal(result.Product_authority_created, false);
+});
+
+test('ULC-OP02 frozen SOT is historical exact bytes and rejects changed evidence', () => {
+  const frozen = fs.readFileSync(FROZEN_SOT_FIXTURE, 'utf8');
+  assert.equal(gitBlobSha(frozen), SOURCE_BLOBS[0]);
+  const drifted = repositoryMaterializer();
+  drifted.evidence[0] = { ...drifted.evidence[0], content: frozen + 'changed' };
+  const result = consumeExplorer(caller(), () => drifted);
+  assert.equal(result.gate, 'BLOCKED');
+  assert.equal(result.reason, 'DELIVERED_EVIDENCE_NOT_EXACT_SOURCE');
 });
 
 test('ULC-OP02 refuses missing Developer grant without invoking the materializer', () => {
