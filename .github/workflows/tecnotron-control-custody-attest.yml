@@ -151,9 +151,12 @@ jobs:
           jq -e --arg issue "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35" \
             '.user.id == 54420195 and .user.login == "mauedgar" and
              .issue_url == $issue and .author_association == "OWNER" and
-             .created_at == .updated_at and (.body | type == "string")' \
+             .created_at == .updated_at and (.body | type == "string" and length <= 8192)' \
             custody/observed-comment.json > /dev/null
-          jq -er '.body' custody/observed-comment.json > custody/grant.json
+          # Canonical evidence bytes are the UTF-8 encoding of the GitHub API
+          # decoded comment body, with NO newline inserted by jq.
+          jq -j '.body' custody/observed-comment.json > custody/grant.json
+          test "$(wc -c < custody/grant.json)" -le 8192 || { echo "GRANT_TOO_LARGE" >&2; exit 1; }
           jq -e --arg grant_id "$GRANT_ID" '
             ((keys | sort) == ([
               "schema", "repository", "taskcycle_id", "subject_commit",
@@ -197,7 +200,10 @@ jobs:
                 and .created_at == .updated_at and .id < $grant
                 and (.body | type == "string" and length <= 8192)
               ' "custody/observed-$item-comment.json" > /dev/null
-            jq -er '.body' "custody/observed-$item-comment.json" > "custody/$item.json"
+            jq -j '.body' "custody/observed-$item-comment.json" > "custody/$item.json"
+            test "$(wc -c < "custody/$item.json")" -le 8192 || {
+              echo "AUTHORITY_OR_QUALIFICATION_TOO_LARGE" >&2; exit 1;
+            }
           done
           jq -ne --slurpfile g custody/grant.json --slurpfile d custody/decision.json \
             --slurpfile q custody/qualification.json '
@@ -258,6 +264,9 @@ jobs:
               .base_commit.sha == $subject and (.status == "ahead" or .status == "identical")
             ' > /dev/null
           control_ref="https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-$GRANT_ID"
+          # Both hashes are of the exact GitHub API decoded UTF-8 BODY bytes.
+          # They bind the historical Developer decision and native receipt to
+          # the signed manifest; future edits/revocations do NOT renew grants.
           decision_digest="$(sha256sum custody/decision.json | cut -d' ' -f1)"
           qualification_digest="$(sha256sum custody/qualification.json | cut -d' ' -f1)"
           jq -cS --arg control_ref "$control_ref" \
@@ -286,6 +295,8 @@ jobs:
           test "$(wc -c < custody/comment-pages.jsonl)" -le 6291456 || {
             echo "ISSUER_COMMENT_INVENTORY_TOO_LARGE" >&2; exit 1;
           }
+          jq -s -e 'length > 0 and all(.[]; type == "array"
+            and all(.[]; .id | type == "number"))' custody/comment-pages.jsonl > /dev/null
           jq -s -e --arg attempt "$attempt" --argjson grant "$GRANT_ID" '
             [.[][] | select((.body | type) == "string") |
               {id, parsed:(.body | fromjson? // {})} |
@@ -298,6 +309,9 @@ jobs:
           test "$(wc -c < custody/run-pages.jsonl)" -le 6291456 || {
             echo "ISSUER_RUN_INVENTORY_TOO_LARGE" >&2; exit 1;
           }
+          jq -s -e 'length > 0 and all(.[]; type == "object"
+            and (.workflow_runs | type == "array")
+            and (.total_count | type == "number"))' custody/run-pages.jsonl > /dev/null
           jq -s -e --arg run "$GITHUB_RUN_ID" --arg title "TECNOTRON-CUSTODY-GRANT-$GRANT_ID" '
             [.[] | .workflow_runs[] | select(.display_title == $title)] |
             length == 1 and .[0].id == ($run | tonumber) and .[0].run_attempt == 1
@@ -356,7 +370,9 @@ jobs:
           jq -n --arg run "$GITHUB_RUN_ID" --arg sha "$GITHUB_SHA" \
             '{schema:"tecnotron-control-git-custody-signature-receipt/v1",
               provider_run_id:$run, signer_commit:$sha,
-              attestation:"VERIFIED", Product_effect:"NONE",
+              attestation:"VERIFIED", comment_body_bytes:"GITHUB_API_BODY_DECODED_UTF8_NO_ADDED_NEWLINE",
+              qualification_source:"NATIVE_GITHUB_CI_EXACT_SUBJECT_AND_GIT_OBJECTS",
+              Product_effect:"NONE",
               Product_acceptance:false, Phase2:false, lifecycle_close:false}' \
             > custody/receipt.json
 
