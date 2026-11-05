@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
-const { prepareForkedPhase1Branch, qualifyForkedPhase1Branch } = require('./taskcycle-phase1-branch-qualification');
+const { prepareForkedPhase1Branch, qualifyControlGitSource, qualifyForkedPhase1Branch } = require('./taskcycle-phase1-branch-qualification');
 const { reconcilePinnedEffect } = require('./taskcycle-pinned-effect-io');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-effect-reconciliation/v0';
@@ -261,7 +261,7 @@ function pass(request, finalRoot, pkg, already_reconciled = false, reason = null
   };
 }
 
-function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurface = null }) {
+function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurface = null, resolveControlGitSource = null }) {
   const base = path.resolve(root);
   return {
     reconcileCompletedObligation({ request, observed }) {
@@ -310,6 +310,12 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
         if (bound.status !== 'PASS') {
           return terminal(request, 'BLOCKED', 'NONE', bound.reason);
         }
+        // Require separately Control-verified source before idempotent readback.
+        const custody = qualifyControlGitSource({
+          request, originalInputs: exactInputs, qualifiedGitSurface, resolveControlGitSource,
+        });
+        if (custody.status !== 'PASS')
+          return terminal(request, 'BLOCKED', 'NONE', custody.reason);
         // This is stable shape validation, NOT live Git qualification.
         // The latter is mandatory before first publication, but cannot
         // invalidate an already exact immutable reconciliation on branch move.
@@ -343,7 +349,7 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
           pkg,
           qualifyFirstWrite: () => {
             const qualified = qualifyForkedPhase1Branch({
-              request, originalInputs: exactInputs, qualifiedGitSurface,
+              request, originalInputs: exactInputs, qualifiedGitSurface, resolveControlGitSource,
             });
             if (qualified.status !== 'PASS') return qualified;
             const { remote_head: _observationOnly, ...immutable } = qualified.verified;
