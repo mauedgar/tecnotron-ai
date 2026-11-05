@@ -579,6 +579,7 @@ test('GitHub Control signer requires authenticated manual dispatch on the exact 
     verificationResult: {
       signature: { certificate: {
         sourceRepositoryIdentifier: '1339077141',
+        sourceRepositoryOwnerIdentifier: '54420195',
         githubWorkflowRepository: policy.repository,
         sourceRepositoryURI: 'https://github.com/' + policy.repository,
         githubWorkflowSHA: signer,
@@ -586,6 +587,7 @@ test('GitHub Control signer requires authenticated manual dispatch on the exact 
         sourceRepositoryRef: policy.sourceRef,
         githubWorkflowRef: policy.sourceRef,
         githubWorkflowTrigger: 'workflow_dispatch',
+        buildTrigger: 'workflow_dispatch',
         runnerEnvironment: 'github-hosted',
         issuer: 'https://token.actions.githubusercontent.com',
         subjectAlternativeName: 'https://github.com/' + policy.signerWorkflow + '@' + policy.sourceRef,
@@ -596,6 +598,8 @@ test('GitHub Control signer requires authenticated manual dispatch on the exact 
   assert.equal(matchesCertificate(entry, policy, digest), true);
   for (const [field, value] of [
     ['sourceRepositoryIdentifier', '0'],
+    ['sourceRepositoryOwnerIdentifier', '0'],
+    ['buildTrigger', 'push'],
     ['githubWorkflowSHA', 'c'.repeat(40)],
     ['buildSignerDigest', 'c'.repeat(40)],
     ['sourceRepositoryRef', 'refs/heads/experiment/untrusted'],
