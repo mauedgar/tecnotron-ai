@@ -5,6 +5,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
 const { prepareForkedPhase1Branch, qualifyForkedPhase1Branch } = require('./taskcycle-phase1-branch-qualification');
+const { reconcilePinnedEffect } = require('./taskcycle-pinned-effect-io');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-effect-reconciliation/v0';
 const MANIFEST_SCHEMA = 'deterministic-taskcycle-effect-reconciliation-manifest/v0';
@@ -328,6 +329,33 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
       const pkg = packageFor(request, initialization, branchProvenance);
       const finalRoot = path.join(base, safeId(request.taskcycle.id), safeId(request.obligation.id));
       const parentRoot = path.dirname(finalRoot);
+
+      // The fork branch is security-sensitive: an exact existing package
+      // is accepted before live Git only if an independently anchored inode
+      // (not a mutable pathname) holds its bytes. The first publication still
+      // requires real Git qualification. On hosts without descriptor-relative
+      // filesystem operations, forked publication fails closed.
+      if (forked) {
+        const pinned = reconcilePinnedEffect({
+          root: base,
+          taskName: safeId(request.taskcycle.id),
+          obligationName: safeId(request.obligation.id),
+          pkg,
+          qualifyFirstWrite: () => {
+            const qualified = qualifyForkedPhase1Branch({
+              request, originalInputs: exactInputs, qualifiedGitSurface,
+            });
+            if (qualified.status !== 'PASS') return qualified;
+            const { remote_head: _observationOnly, ...immutable } = qualified.verified;
+            return exact(immutable, branchProvenance)
+              ? { status: 'PASS' }
+              : { status: 'BLOCKED', reason: 'FORK_IMMUTABLE_PROVENANCE_MISMATCH' };
+          },
+        });
+        if (pinned.kind === 'EXACT') return pass(request, finalRoot, pkg, true, 'ALREADY_RECONCILED_EXACT');
+        if (pinned.kind === 'CREATED') return pass(request, finalRoot, pkg);
+        return terminal(request, 'BLOCKED', pinned.effect_state, pinned.reason);
+      }
 
       const initialFinalState = outputDirectoryState(base, finalRoot);
       if (initialFinalState === 'UNSAFE') {
