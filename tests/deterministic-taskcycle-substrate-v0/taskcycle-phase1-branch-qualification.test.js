@@ -7,7 +7,9 @@ const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const {
-  qualifyControlGitSource, qualifyForkedPhase1Branch,
+  qualifyControlGitSource,
+  qualifyForkedPhase1Branch: qualifyProductFork,
+  __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1Branch,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
 
 const TASK = 'add3f2525b3b711ce4e396a2e5ce2864f3ceef10';
@@ -474,5 +476,58 @@ test('reentrant Control resolver cannot mutate the already-frozen candidate and 
     assert.equal(result.status, 'PASS', result.reason);
     assert.deepEqual(result.verified.actual_changed_paths, [FILE]);
     assert.equal(result.verified.original_task_commit, TASK);
+  } finally { c.cleanup(); }
+});
+
+test('Product qualifier cannot accept any caller-supplied simulated Git adapter', () => {
+  const c = context();
+  try {
+    const input = {
+      request: c.request, originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => structuredClone(c.controlVerifiedGitSource),
+    };
+    assert.equal(qualifyProductFork({ ...input, git: fakeGit(c) }).reason,
+      'FORK_GIT_ADAPTER_INJECTION_FORBIDDEN');
+    assert.equal(qualifyProductFork({
+      ...input, git: { run: () => { throw Error('must never run'); } },
+    }).reason, 'FORK_GIT_ADAPTER_INJECTION_FORBIDDEN');
+  } finally { c.cleanup(); }
+});
+
+test('pinned native Git binary rejects another-UID-writable bytes and replacement directory', { skip: process.platform !== 'linux' }, () => {
+  const c = context();
+  try {
+    const nativeArgs = {
+      request: c.request, originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => structuredClone(c.controlVerifiedGitSource),
+    };
+    // Test seam reads fake Git only after the same native binary gate.
+    const observe = () => qualifyForkedPhase1Branch({ ...nativeArgs, git: fakeGit(c) });
+    assert.equal(observe().status, 'PASS');
+    fs.chmodSync(c.qualifiedGitSurface.gitExecutablePath, 0o666);
+    assert.equal(observe().reason, 'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    fs.chmodSync(c.qualifiedGitSurface.gitExecutablePath, 0o600);
+    assert.equal(observe().status, 'PASS');
+    fs.chmodSync(c.root, 0o777);
+    assert.equal(observe().reason, 'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    fs.chmodSync(c.root, 0o700);
+    assert.equal(observe().status, 'PASS');
+  } finally { c.cleanup(); }
+});
+
+test('Product fork qualifier fails closed on non-Linux or unavailable native Git', () => {
+  const c = context();
+  try {
+    const result = qualifyProductFork({
+      request: c.request, originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => structuredClone(c.controlVerifiedGitSource),
+    });
+    // The fixture is explicitly not an executable Git implementation. No
+    // Product native qualifier can ever PASS based on its mocked observations.
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'FORK_GIT_EVIDENCE_UNAVAILABLE');
   } finally { c.cleanup(); }
 });
