@@ -455,7 +455,7 @@ test('forked Phase1 cannot publish from a static Control binding without actual 
     }).reconcileCompletedObligation({request:req,observed:{subject:structuredClone(req.subject)}});
     assert.equal(result.status,'BLOCKED');
     assert.equal(result.effect_state,'NONE');
-    assert.equal(result.reason,'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    assert.equal(result.reason,'FORK_CONTROL_CUSTODY_UNVERIFIED');
     assert.deepEqual(fs.readdirSync(f.reconciliationRoot),[],
       'failed actual Git preflight must not even create a reconciliation staging directory');
   }finally{f.cleanup();}
