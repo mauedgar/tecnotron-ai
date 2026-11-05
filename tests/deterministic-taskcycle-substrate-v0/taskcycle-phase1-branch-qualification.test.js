@@ -432,3 +432,47 @@ test('accessor-backed or unserializable custody proof fails closed', () => {
     }).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
   } finally { c.cleanup(); }
 });
+
+test('reentrant Control resolver cannot mutate the prevalidated Git surface', () => {
+  const c = context();
+  try {
+    const result = qualifyForkedPhase1Branch({
+      request: c.request,
+      originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => {
+        // A mutable closure still holds the original caller-controlled object.
+        c.qualifiedGitSurface.remoteUrl = 'https://attacker.example/repository.git';
+        c.qualifiedGitSurface.qualification_receipt_ref = 'CONTROL:FORGED';
+        return {
+          ...c.controlVerifiedGitSource,
+          remoteUrl: c.qualifiedGitSurface.remoteUrl,
+          qualification_receipt_ref: c.qualifiedGitSurface.qualification_receipt_ref,
+        };
+      },
+      git: fakeGit(c),
+    });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'FORK_CONTROL_CUSTODY_MISMATCH');
+  } finally { c.cleanup(); }
+});
+
+test('reentrant Control resolver cannot mutate the already-frozen candidate and TASK', () => {
+  const c = context();
+  try {
+    const result = qualifyForkedPhase1Branch({
+      request: c.request,
+      originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => {
+        c.request.subject.changed_paths = ['attendance/operator/attacker.py'];
+        c.originalInputs.TASK_carrier.commit = 'f'.repeat(40);
+        return structuredClone(c.controlVerifiedGitSource);
+      },
+      git: fakeGit(c),
+    });
+    assert.equal(result.status, 'PASS', result.reason);
+    assert.deepEqual(result.verified.actual_changed_paths, [FILE]);
+    assert.equal(result.verified.original_task_commit, TASK);
+  } finally { c.cleanup(); }
+});
