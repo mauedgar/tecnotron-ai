@@ -1,0 +1,100 @@
+name: Tecnotron custody signer qualification (NONPRODUCT)
+# Synthetic attestation only. It MUST NOT issue a Product Control grant.
+# The signer on this experiment branch is NOT a Product-qualified issuer.
+on:
+  push:
+    branches:
+      - experiment/tecnotron-a01-github-attestation-20261105-001
+    paths:
+      - .github/workflows/tecnotron-control-custody-attest.yml
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  synthetic-attestation:
+    if: >-
+      ${{ github.repository == 'mauedgar/tecnotron-ai' && github.repository_id == '1339077141' && github.event_name == 'push' && github.ref == 'refs/heads/experiment/tecnotron-a01-github-attestation-20261105-001' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Prepare fixed NONPRODUCT fixture and check caller identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "mauedgar/tecnotron-ai"
+          test "$GITHUB_REPOSITORY_ID" = "1339077141"
+          test "$GITHUB_REF" = "refs/heads/experiment/tecnotron-a01-github-attestation-20261105-001"
+          mkdir -p qualification
+          cat > qualification/manifest.json <<'FIXTURE'
+          {"schema":"tecnotron-github-custody-signer-qualification/v1","fixture":"TS-GITHUB-CUSTODY-QUAL-001","Product_authority":"NONE","Product_effect":"NONE","kind":"NONPRODUCT_SYNTHETIC"}
+          FIXTURE
+          sha256sum qualification/manifest.json | tee qualification/input-sha256.txt
+
+      - name: Sign fixed synthetic artifact (no Product grant)
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # official actions/attest v4 resolved immutable SHA
+        with:
+          subject-path: qualification/manifest.json
+
+      - name: Verify signer, source, timestamp and negative mutations
+        shell: bash
+        env:
+          ATTEST_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          test -s "$ATTEST_BUNDLE"
+          gh --version
+          verify=(
+            --repo "mauedgar/tecnotron-ai"
+            --bundle "$ATTEST_BUNDLE"
+            --signer-workflow "mauedgar/tecnotron-ai/.github/workflows/tecnotron-control-custody-attest.yml"
+            --signer-digest "$GITHUB_SHA"
+            --source-ref "$GITHUB_REF"
+            --cert-oidc-issuer "https://token.actions.githubusercontent.com"
+            --deny-self-hosted-runners
+            --format json
+          )
+          gh attestation verify qualification/manifest.json "${verify[@]}" > qualification/verified.json
+          jq -e 'type == "array" and length > 0 and all(.[]; .verificationResult.signature.certificate != null)' qualification/verified.json >/dev/null
+          echo "ATTESTATION_POSITIVE=PASS"
+          # One mismatched identity at a time: every case must be rejected.
+          if gh attestation verify qualification/manifest.json "${verify[@]}" --signer-workflow "mauedgar/tecnotron-ai/.github/workflows/evil.yml" >/dev/null 2>&1; then
+            echo "NEGATIVE_SIGNER_UNEXPECTED_PASS" >&2; exit 1
+          fi
+          echo "ATTESTATION_NEGATIVE_SIGNER=REJECTED"
+          if gh attestation verify qualification/manifest.json "${verify[@]}" --source-ref refs/heads/main >/dev/null 2>&1; then
+            echo "NEGATIVE_SOURCE_REF_UNEXPECTED_PASS" >&2; exit 1
+          fi
+          echo "ATTESTATION_NEGATIVE_SOURCE_REF=REJECTED"
+          if gh attestation verify qualification/manifest.json "${verify[@]}" --signer-digest 0000000000000000000000000000000000000000 >/dev/null 2>&1; then
+            echo "NEGATIVE_SIGNER_DIGEST_UNEXPECTED_PASS" >&2; exit 1
+          fi
+          echo "ATTESTATION_NEGATIVE_SIGNER_DIGEST=REJECTED"
+          cp qualification/manifest.json qualification/tampered.json
+          printf '\nTAMPERED' >> qualification/tampered.json
+          if gh attestation verify qualification/tampered.json "${verify[@]}" >/dev/null 2>&1; then
+            echo "NEGATIVE_TAMPER_UNEXPECTED_PASS" >&2; exit 1
+          fi
+          echo "ATTESTATION_NEGATIVE_TAMPER=REJECTED"
+          jq -n --arg sha "$GITHUB_SHA" --arg ref "$GITHUB_REF" --arg run "$GITHUB_RUN_ID" \
+            '{schema:"tecnotron-github-custody-signer-qualification-receipt/v1", Product_authority:"NONE", Product_effect:"NONE", candidate_sha:$sha, source_ref:$ref, provider_run_id:$run, positive:"PASS", wrong_signer:"REJECTED", wrong_ref:"REJECTED", wrong_digest:"REJECTED", tamper:"REJECTED"}' \
+            > qualification/receipt.json
+          cat qualification/receipt.json
+
+      - name: Upload original qualification evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # official upload-artifact v4 resolved immutable SHA
+        with:
+          name: tecnotron-control-custody-nonproduct-qualification
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            qualification/manifest.json
+            qualification/input-sha256.txt
+            qualification/verified.json
+            qualification/receipt.json
+            ${{ steps.attest.outputs.bundle-path }}
