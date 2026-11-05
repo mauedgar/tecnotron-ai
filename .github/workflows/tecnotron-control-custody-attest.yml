@@ -155,17 +155,25 @@ jobs:
               and (.workflow_runs | type == "array")
               and (.total_count | type == "number"))
             and any(.[]; any(.workflow_runs[]; .head_sha == $sha))
+            and ([.[] | .workflow_runs[].id] | length) == .[0].total_count
+            and ([.[] | .workflow_runs[].id] | unique | length) == .[0].total_count
           ' qualification/run-pages.jsonl > /dev/null
           gh api --paginate "repos/mauedgar/tecnotron-ai/issues/35/comments?per_page=100" \
             > qualification/comment-pages.jsonl
-          jq -s -e 'length > 0 and all(.[]; type == "array"
-            and all(.[]; .id | type == "number"))' \
-            qualification/comment-pages.jsonl > /dev/null
+          gh api "repos/mauedgar/tecnotron-ai/issues/35" > qualification/issue-count.json
+          expected_comments="$(jq -er '.comments | select(type == "number" and . >= 0)' qualification/issue-count.json)"
+          jq -s -e --argjson expected "$expected_comments" '
+            length > 0 and all(.[]; type == "array"
+              and all(.[]; .id | type == "number"))
+            and ([.[][] | .id] | length) == $expected
+            and ([.[][] | .id] | unique | length) == $expected
+          ' qualification/comment-pages.jsonl > /dev/null
           # Read-only qualification; log counts only, not potentially private
           # grant/comment bodies or API inventory objects in artifacts.
           echo "GITHUB_ATTESTATION_INVENTORY_CONTRACT=PASS"
           echo "GITHUB_RUNS_PAGINATION_CONTRACT=PASS"
           echo "GITHUB_COMMENTS_PAGINATION_CONTRACT=PASS"
+          echo "GITHUB_REMOTE_INVENTORY_COMPLETENESS=PASS"
 
       - name: Upload original qualification evidence
         if: ${{ always() }}
@@ -368,8 +376,14 @@ jobs:
           test "$(wc -c < custody/comment-pages.jsonl)" -le 6291456 || {
             echo "ISSUER_COMMENT_INVENTORY_TOO_LARGE" >&2; exit 1;
           }
-          jq -s -e 'length > 0 and all(.[]; type == "array"
-            and all(.[]; .id | type == "number"))' custody/comment-pages.jsonl > /dev/null
+          gh api "repos/mauedgar/tecnotron-ai/issues/35" > custody/issue-count.json
+          expected_comments="$(jq -er '.comments | select(type == "number" and . >= 0)' custody/issue-count.json)"
+          jq -s -e --argjson expected "$expected_comments" '
+            length > 0 and all(.[]; type == "array"
+              and all(.[]; .id | type == "number"))
+            and ([.[][] | .id] | length) == $expected
+            and ([.[][] | .id] | unique | length) == $expected
+          ' custody/comment-pages.jsonl > /dev/null
           jq -s -e --arg attempt "$attempt" --argjson grant "$GRANT_ID" '
             [.[][] | select((.body | type) == "string") |
               {id, parsed:(.body | fromjson? // {})} |
@@ -382,9 +396,13 @@ jobs:
           test "$(wc -c < custody/run-pages.jsonl)" -le 6291456 || {
             echo "ISSUER_RUN_INVENTORY_TOO_LARGE" >&2; exit 1;
           }
-          jq -s -e 'length > 0 and all(.[]; type == "object"
-            and (.workflow_runs | type == "array")
-            and (.total_count | type == "number"))' custody/run-pages.jsonl > /dev/null
+          jq -s -e '
+            length > 0 and all(.[]; type == "object"
+              and (.workflow_runs | type == "array")
+              and (.total_count | type == "number"))
+            and ([.[] | .workflow_runs[].id] | length) == .[0].total_count
+            and ([.[] | .workflow_runs[].id] | unique | length) == .[0].total_count
+          ' custody/run-pages.jsonl > /dev/null
           jq -s -e --arg run "$GITHUB_RUN_ID" --arg title "TECNOTRON-CUSTODY-ATTEMPT-$attempt" '
             [.[] | .workflow_runs[] | select(.display_title == $title)] |
             length == 1 and .[0].id == ($run | tonumber) and .[0].run_attempt == 1
@@ -442,6 +460,7 @@ jobs:
           done
           echo "GITHUB_DEVELOPER_GRANT_AUTHENTICATED=PASS"
           echo "GITHUB_CONTROL_UNIQUE_ATTEMPT=PASS"
+          echo "GITHUB_REMOTE_INVENTORY_COMPLETENESS=PASS"
 
       - name: Attest only the verified exact Control grant
         id: issue
