@@ -277,3 +277,22 @@ test('pinning Git executable is required and hostile local credential config is 
       'FORK_GIT_LOCAL_CREDENTIAL_OR_TRANSPORT_OVERRIDE');
   }finally{c.cleanup();}
 });
+
+
+test('Git source rejects local includes, transport proxy and protocol overrides', () => {
+  const c = context();
+  try {
+    const key = 'config --local --get-regexp ^(include\\.|includeIf\\.|http\\.|core\\.(sshCommand|fsmonitor)$|remote\\.origin\\.proxy$|protocol\\.)';
+    for (const value of [
+      'include.path /tmp/untrusted-config',
+      'http.proxy http://untrusted-proxy',
+      'protocol.ext.allow always',
+    ]) {
+      const result = qualify(c, { [key]: {
+        stdout: value + '\n', exit_code: 0, stderr: '', error_code: null,
+        timed_out: false, signal: null,
+      } });
+      assert.equal(result.reason, 'FORK_GIT_LOCAL_TRANSPORT_CONFIGURATION_UNSAFE', value);
+    }
+  } finally { c.cleanup(); }
+});

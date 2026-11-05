@@ -24,11 +24,11 @@ const fail = reason => ({ status: 'BLOCKED', reason });
 
 function createReadOnlySourceGit(executable) {
   // Strip inherited Git/credential/network control variables before spawning.
+  // Only carry process variables necessary for a local Git subprocess.
+  // Never inherit arbitrary library loaders, Git config, proxies or hooks.
   const env = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (/^(GIT_|SSH_|GCM_|HTTP_PROXY$|HTTPS_PROXY$|ALL_PROXY$|NO_PROXY$)/i.test(key))
-      continue;
-    env[key] = value;
+  for (const key of ['PATH', 'PATHEXT', 'SYSTEMROOT', 'WINDIR', 'TMPDIR', 'TMP', 'TEMP']) {
+    if (typeof process.env[key] === 'string') env[key] = process.env[key];
   }
   return createGitCliAdapter({ command: executable, env: {
     ...env,
@@ -36,6 +36,8 @@ function createReadOnlySourceGit(executable) {
     GIT_OPTIONAL_LOCKS: '0',
     GIT_TERMINAL_PROMPT: '0',
     GIT_PROTOCOL_FROM_USER: '0',
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_CONFIG_GLOBAL: process.platform === 'win32' ? 'NUL' : '/dev/null',
   } });
 }
 
@@ -156,6 +158,14 @@ function qualifyForkedPhase1Branch({
     if (credentialOverrides.exit !== 1 || credentialOverrides.value !== ''
         || credentialOverrides.stderr !== '')
       return fail('FORK_GIT_LOCAL_CREDENTIAL_OR_TRANSPORT_OVERRIDE');
+    // Local includes/HTTP/protocol overrides can redirect remote reads even
+    // when global/system config and inherited environment were isolated.
+    const unsafeLocalConfig = read(git, root, ['config', '--local', '--get-regexp',
+      '^(include\\.|includeIf\\.|http\\.|core\\.(sshCommand|fsmonitor)$|remote\\.origin\\.proxy$|protocol\\.)'],
+      { allowExitOne: true });
+    if (unsafeLocalConfig.exit !== 1 || unsafeLocalConfig.value !== ''
+        || unsafeLocalConfig.stderr !== '')
+      return fail('FORK_GIT_LOCAL_TRANSPORT_CONFIGURATION_UNSAFE');
 
     const tip = oneCommit(git, root, subject.commit);
     if (tip.tree !== subject.tree || tip.parents.length !== 1
