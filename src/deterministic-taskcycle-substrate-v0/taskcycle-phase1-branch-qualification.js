@@ -193,6 +193,29 @@ function trustedGitHubCli() {
   return binary;
 }
 
+// Compare native certificate claims, never unsigned workflow descriptions or
+// GitHub artifact predicate fields. The real issuer MUST be a Developer-initiated
+// manual dispatch on the pinned main signer commit, not a push/PR test workflow.
+// The cryptographic signature itself is verified separately by gh.
+function controlCertificateMatches(entry, policy, digest) {
+  const cert = entry?.verificationResult?.signature?.certificate;
+  const subjects = entry?.verificationResult?.statement?.subject;
+  if (!cert || !Array.isArray(subjects)) return false;
+  const expectedUri = 'https://github.com/' + policy.signerWorkflow + '@' + policy.sourceRef;
+  return String(cert.sourceRepositoryIdentifier) === policy.repositoryId
+    && cert.githubWorkflowRepository === policy.repository
+    && cert.sourceRepositoryURI === 'https://github.com/' + policy.repository
+    && cert.githubWorkflowSHA === policy.signerDigest
+    && cert.buildSignerDigest === policy.signerDigest
+    && cert.sourceRepositoryRef === policy.sourceRef
+    && cert.githubWorkflowRef === policy.sourceRef
+    && cert.githubWorkflowTrigger === 'workflow_dispatch'
+    && cert.runnerEnvironment === 'github-hosted'
+    && cert.issuer === 'https://token.actions.githubusercontent.com'
+    && cert.subjectAlternativeName === expectedUri
+    && subjects.some((subject) => subject?.digest?.sha256 === digest);
+}
+
 function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
   // GitHub's certificate authenticates WORKFLOW provenance, not Developer
   // acceptance/Phase2. A workflow on an unprotected ref or an arbitrary
@@ -249,13 +272,9 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
         GH_NO_UPDATE_NOTIFIER: '1', LANG: 'C', LC_ALL: 'C' },
     });
     const verified = JSON.parse(output);
-    if (!Array.isArray(verified) || !verified.some((entry) => {
-      const cert = entry?.verificationResult?.signature?.certificate;
-      const statement = entry?.verificationResult?.statement;
-      return cert && String(cert.sourceRepositoryIdentifier) === GITHUB_CONTROL_ISSUER.repositoryId
-        && statement?.subject?.some((subject) =>
-          subject?.digest?.sha256 === expectedManifestDigest);
-    })) return fail('FORK_CONTROL_GITHUB_CERTIFICATE_MISMATCH');
+    if (!Array.isArray(verified) || !verified.some((entry) =>
+      controlCertificateMatches(entry, GITHUB_CONTROL_ISSUER, expectedManifestDigest)))
+      return fail('FORK_CONTROL_GITHUB_CERTIFICATE_MISMATCH');
     const stable = createHash('sha256').update(fs.readFileSync(manifestPath)).digest('hex');
     if (stable !== expectedManifestDigest)
       return fail('FORK_CONTROL_ATTESTATION_INPUT_RACED');
@@ -450,6 +469,7 @@ function qualifyForkedPhase1BranchWithTestAdapter({
 module.exports = {
   createReadOnlySourceGit, prepareForkedPhase1Branch, snapshotControlInput,
   qualifyControlGitSource, qualifyForkedPhase1Branch, authenticateGitHubControlIssuer,
+  __testOnlyControlCertificateMatches: controlCertificateMatches,
   // Pure unit-test seam; callers must never substitute its observations for
   // Product's qualified native entrypoint.
   __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1BranchWithTestAdapter,
