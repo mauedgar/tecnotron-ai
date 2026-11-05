@@ -462,6 +462,46 @@ test('forked Phase1 cannot publish from a static Control binding without actual 
 });
 
 
+test('forked effect cannot reconcile a caller-supplied Control assertion without a qualified Github signer', () => {
+  const f = fixture();
+  try {
+    const req = structuredClone(f.request);
+    req.subject.branch = 'task/forked-independent-phase1';
+    const original = initializationRequest().TASK_carrier;
+    const surface = {
+      binding: 'CONTROL_QUALIFIED_GIT',
+      taskcycle_id: req.taskcycle.id,
+      subject_branch: req.subject.branch,
+      original_task_branch: original.branch,
+      qualification_receipt_ref: 'CONTROL:SOURCE:TEST',
+      repositoryPath: f.root,
+      remoteUrl: 'https://github.com/mauedgar/tecnotron-ai.git',
+      gitExecutablePath: path.join(f.root, 'test-git'),
+      gitExecutableSha256: 'sha256:' + 'a'.repeat(64),
+      githubControlIssuer: { status: 'VERIFIED', signerDigest: 'f'.repeat(40) },
+    };
+    const proof = {
+      ...surface,
+      status: 'CONTROL_VERIFIED_SOURCE',
+      subject_commit: req.subject.commit,
+      subject_tree: req.subject.tree,
+      original_task_commit: original.commit,
+      source_code_commit: 'a'.repeat(40),
+      execution_attempt_id: 'UNTRUSTED-CLAIMED-ATTEMPT',
+      control_resolution_ref: 'CONTROL:UNTRUSTED-LABEL',
+    };
+    const result = createTaskCycleEffectReconciliationCapability({
+      root: f.reconciliationRoot,
+      qualifiedGitSurface: surface,
+      resolveControlGitSource: () => structuredClone(proof),
+    }).reconcileCompletedObligation({ request: req, observed: { subject: structuredClone(req.subject) } });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'FORK_CONTROL_GITHUB_SIGNER_NOT_QUALIFIED');
+    assert.equal(result.effect_state, 'NONE');
+    assert.deepEqual(fs.readdirSync(f.reconciliationRoot), []);
+  } finally { f.cleanup(); }
+});
+
 test('preexisting byte-exact effect behind a symlink cannot claim exact idempotence', (t) => {
   const f = fixture();
   try {
