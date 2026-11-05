@@ -8,6 +8,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const {
   qualifyControlGitSource, authenticateGitHubControlIssuer,
+  __testOnlyControlCertificateMatches: matchesCertificate,
   qualifyForkedPhase1Branch: qualifyProductFork,
   __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1Branch,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
@@ -562,4 +563,53 @@ test('GitHub signer is mandatory: forged Control source and caller policy cannot
     });
     assert.deepEqual(independentIssuer, native);
   } finally { c.cleanup(); }
+});
+
+test('GitHub Control signer requires authenticated manual dispatch on the exact pinned main workflow', () => {
+  const signer = 'a'.repeat(40);
+  const digest = 'b'.repeat(64);
+  const policy = {
+    repository: 'mauedgar/tecnotron-ai',
+    repositoryId: '1339077141',
+    signerWorkflow: 'mauedgar/tecnotron-ai/.github/workflows/tecnotron-control-custody-attest.yml',
+    sourceRef: 'refs/heads/main',
+    signerDigest: signer,
+  };
+  const entry = {
+    verificationResult: {
+      signature: { certificate: {
+        sourceRepositoryIdentifier: '1339077141',
+        githubWorkflowRepository: policy.repository,
+        sourceRepositoryURI: 'https://github.com/' + policy.repository,
+        githubWorkflowSHA: signer,
+        buildSignerDigest: signer,
+        sourceRepositoryRef: policy.sourceRef,
+        githubWorkflowRef: policy.sourceRef,
+        githubWorkflowTrigger: 'workflow_dispatch',
+        runnerEnvironment: 'github-hosted',
+        issuer: 'https://token.actions.githubusercontent.com',
+        subjectAlternativeName: 'https://github.com/' + policy.signerWorkflow + '@' + policy.sourceRef,
+      }},
+      statement: { subject: [{ name: 'manifest.json', digest: { sha256: digest } }] },
+    },
+  };
+  assert.equal(matchesCertificate(entry, policy, digest), true);
+  for (const [field, value] of [
+    ['sourceRepositoryIdentifier', '0'],
+    ['githubWorkflowSHA', 'c'.repeat(40)],
+    ['buildSignerDigest', 'c'.repeat(40)],
+    ['sourceRepositoryRef', 'refs/heads/experiment/untrusted'],
+    ['githubWorkflowTrigger', 'push'],
+    ['runnerEnvironment', 'self-hosted'],
+    ['issuer', 'https://attacker.invalid'],
+    ['subjectAlternativeName', 'https://github.com/attacker/repo/workflow@refs/heads/main'],
+  ]) {
+    const forged = structuredClone(entry);
+    forged.verificationResult.signature.certificate[field] = value;
+    assert.equal(matchesCertificate(forged, policy, digest), false, field);
+  }
+  assert.equal(matchesCertificate(entry, policy, 'c'.repeat(64)), false,
+    'signed subject digest is immutable');
+  assert.equal(matchesCertificate({ verificationResult: { statement: entry.verificationResult.statement } },
+    policy, digest), false, 'missing certificate fails closed');
 });
