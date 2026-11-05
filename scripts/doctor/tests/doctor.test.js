@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { parseVersion, firstLine, resolveWindowsExtension } = require('../lib/exec');
-const { TOOLS } = require('../lib/index');
+const { TOOLS, repoPackagerPythonPath, probeRepoPackager } = require('../lib/index');
 
 test('parseVersion extracts semver from known tool outputs', () => {
   assert.strictEqual(parseVersion('v22.18.0\n'), '22.18.0');
@@ -27,6 +27,52 @@ test('TOOLS covers the required toolchain contract', () => {
   const ids = TOOLS.map((t) => t.id);
   for (const required of ['node', 'npm', 'python', 'git', 'gh', 'openspec', 'repomix', 'opencode']) {
     assert.ok(ids.includes(required), `missing ${required}`);
+  }
+});
+
+test('repo-packager discovery interpreter path is platform-specific, not a global Python fallback', () => {
+  assert.strictEqual(
+    repoPackagerPythonPath('C:\\TS\\repos\\tecnotron-ai', 'win32'),
+    'C:\\TS\\repos\\tecnotron-ai\\python\\.venv_tools\\Scripts\\python.exe',
+  );
+  assert.strictEqual(
+    repoPackagerPythonPath('/home/tsops/workspaces/tecnotron-ai', 'linux'),
+    '/home/tsops/workspaces/tecnotron-ai/python/.venv_tools/bin/python',
+  );
+  assert.strictEqual(
+    repoPackagerPythonPath('/opt/tecnotron-ai', 'darwin'),
+    '/opt/tecnotron-ai/python/.venv_tools/bin/python',
+  );
+});
+
+test('repo-packager discovery uses native roots, including UNC and WSL mounts', () => {
+  const uncRoot = String.raw`\\server\share\tecnotron-ai`;
+  assert.strictEqual(
+    repoPackagerPythonPath(uncRoot, 'win32'),
+    String.raw`\\server\share\tecnotron-ai\python\.venv_tools\Scripts\python.exe`,
+  );
+  assert.strictEqual(
+    repoPackagerPythonPath('/mnt/c/tecnotron-ai', 'linux'),
+    '/mnt/c/tecnotron-ai/python/.venv_tools/bin/python',
+  );
+  const nativeRoot = process.platform === 'win32' ? String.raw`C:\TS\tecnotron-ai` : '/opt/tecnotron-ai';
+  assert.strictEqual(repoPackagerPythonPath(nativeRoot), repoPackagerPythonPath(nativeRoot, process.platform));
+});
+test('repo-packager optional probe remains fail-closed without script or local interpreter', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'doctor-optional-venv-'));
+  try {
+    const missingScript = await probeRepoPackager({ aiCoreRoot: root });
+    assert.strictEqual(missingScript.available, false);
+    assert.strictEqual(missingScript.reason, 'SKILL_SCRIPT_MISSING');
+    const scriptDir = path.join(root, '.opencode', 'skills', 'repo-packager', 'scripts');
+    fs.mkdirSync(scriptDir, { recursive: true });
+    fs.writeFileSync(path.join(scriptDir, 'pack.py'), '# inert fixture\n');
+    const missingVenv = await probeRepoPackager({ aiCoreRoot: root });
+    assert.strictEqual(missingVenv.available, false);
+    assert.strictEqual(missingVenv.status, 'UNREACHABLE');
+    assert.strictEqual(missingVenv.reason, 'VENV_TOOLS_MISSING');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
