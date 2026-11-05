@@ -15,6 +15,15 @@ on:
         type: string
         required: true
 
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('TECNOTRON-CUSTODY-GRANT-{0}', inputs.grant_comment_id) || 'TECNOTRON-CUSTODY-NONPRODUCT-SYNTHETIC' }}
+
+# A single source of signed evidence: serialized across every dispatch and push.
+# Pending executions queue; they NEVER cancel an earlier attempt.
+concurrency:
+  group: tecnotron-control-custody-all
+  cancel-in-progress: false
+  queue: max
+
 permissions:
   contents: read
   id-token: write
@@ -118,6 +127,7 @@ jobs:
     permissions:
       contents: read
       issues: read
+      actions: read
       id-token: write
       attestations: write
       artifact-metadata: write
@@ -183,8 +193,46 @@ jobs:
           cmp -s custody/observed-comment.json custody/after-comment.json || {
             echo "GRANT_COMMENT_CHANGED_DURING_AUTHENTICATION" >&2; exit 1;
           }
-          echo "GITHUB_DEVELOPER_GRANT_AUTHENTICATED=PASS"
+          # Same logical ExecutionAttempt cannot be signed under two owner
+          # comments, and one grant cannot be issued twice. The job's global
+          # GitHub Actions concurrency lock serializes the check and signature.
+          test "$GITHUB_RUN_ATTEMPT" = "1" || {
+            echo "ISSUER_ATTEMPT_REPLAY_BLOCKED" >&2; exit 1;
+          }
+          attempt="$(jq -er '.execution_attempt_id' custody/grant.json)"
+          gh api --paginate "repos/mauedgar/tecnotron-ai/issues/35/comments?per_page=100" > custody/comment-pages.jsonl
+          test "$(wc -c < custody/comment-pages.jsonl)" -le 6291456 || {
+            echo "ISSUER_COMMENT_INVENTORY_TOO_LARGE" >&2; exit 1;
+          }
+          jq -s -e --arg attempt "$attempt" --argjson grant "$GRANT_ID" '
+            [.[][] | select((.body | type) == "string") |
+              {id, parsed:(.body | fromjson? // {})} |
+              select(.parsed.schema == "tecnotron-control-git-custody-grant/v1"
+                and .parsed.execution_attempt_id == $attempt) | .id] |
+            length == 1 and .[0] == $grant
+          ' custody/comment-pages.jsonl > /dev/null
+          gh api --paginate "repos/mauedgar/tecnotron-ai/actions/workflows/tecnotron-control-custody-attest.yml/runs?event=workflow_dispatch&per_page=100" > custody/run-pages.jsonl
+          test "$(wc -c < custody/run-pages.jsonl)" -le 6291456 || {
+            echo "ISSUER_RUN_INVENTORY_TOO_LARGE" >&2; exit 1;
+          }
+          jq -s -e --arg run "$GITHUB_RUN_ID" --arg title "TECNOTRON-CUSTODY-GRANT-$GRANT_ID" '
+            [.[] | .workflow_runs[] | select(.display_title == $title)] |
+            length == 1 and .[0].id == ($run | tonumber) and .[0].run_attempt == 1
+          ' custody/run-pages.jsonl > /dev/null
+          # The GitHub repository attestation index is authoritative about
+          # already-signed manifest bytes; all API failures fail CLOSED.
           sha256sum custody/manifest.json | tee custody/manifest.sha256
+          signed_digest="$(cut -d' ' -f1 custody/manifest.sha256)"
+          gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$signed_digest" > custody/prior-attestations.json
+          jq -e '.attestations | type == "array" and length == 0' custody/prior-attestations.json >/dev/null
+          # Historical snapshot only. A changed or revoked comment requires
+          # a distinct, authenticated Control decision; no silent renewal.
+          gh api "repos/mauedgar/tecnotron-ai/issues/comments/$GRANT_ID" > custody/last-comment.json
+          cmp -s custody/observed-comment.json custody/last-comment.json || {
+            echo "GRANT_DRIFT_BEFORE_SIGNATURE" >&2; exit 1;
+          }
+          echo "GITHUB_DEVELOPER_GRANT_AUTHENTICATED=PASS"
+          echo "GITHUB_CONTROL_UNIQUE_ATTEMPT=PASS"
 
       - name: Attest only the verified exact Control grant
         id: issue
@@ -230,8 +278,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           path: |
-            custody/observed-comment.json
-            custody/grant.json
             custody/manifest.json
             custody/manifest.sha256
             custody/verified.json
