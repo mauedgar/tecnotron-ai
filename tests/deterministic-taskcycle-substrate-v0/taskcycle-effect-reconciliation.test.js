@@ -432,3 +432,31 @@ test('exact path duplicates cannot qualify in source, scope or observed merge', 
     ['attendance/core/service.py'], [domainTask, domainTask],
   ), false);
 });
+
+
+test('forked Phase1 cannot publish from a static Control binding without actual qualified Git', () => {
+  const f=fixture();
+  try{
+    const req=structuredClone(f.request);
+    req.subject.branch='task/forked-independent-phase1';
+    const surface={
+      binding:'CONTROL_QUALIFIED_GIT',
+      taskcycle_id:req.taskcycle.id,
+      subject_branch:req.subject.branch,
+      original_task_branch:initializationRequest().TASK_carrier.branch,
+      qualification_receipt_ref:'CONTROL:SOURCE:UNIT-TEST',
+      repositoryPath:f.root,
+      remoteUrl:'https://github.com/mauedgar/tecnotron-ai.git',
+      gitExecutablePath:path.join(f.root,'nonexistent-pinned-git'),
+      gitExecutableSha256:'sha256:'+'a'.repeat(64),
+    };
+    const result=createTaskCycleEffectReconciliationCapability({
+      root:f.reconciliationRoot,qualifiedGitSurface:surface,
+    }).reconcileCompletedObligation({request:req,observed:{subject:structuredClone(req.subject)}});
+    assert.equal(result.status,'BLOCKED');
+    assert.equal(result.effect_state,'NONE');
+    assert.equal(result.reason,'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    assert.deepEqual(fs.readdirSync(f.reconciliationRoot),[],
+      'failed actual Git preflight must not even create a reconciliation staging directory');
+  }finally{f.cleanup();}
+});
