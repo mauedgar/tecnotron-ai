@@ -58,18 +58,37 @@ function qualifiedGitExecutable(surface) {
  * the request or any untrusted worker. This routine verifies correspondence,
  * not the issuer's authority. Control must authenticate the resolver itself.
  */
+
+function snapshotControlInput(request, originalInputs, qualifiedGitSurface) {
+  try {
+    return {
+      status: 'PASS',
+      request: structuredClone(request),
+      originalInputs: structuredClone(originalInputs),
+      qualifiedGitSurface: structuredClone(qualifiedGitSurface),
+    };
+  } catch {
+    return fail('FORK_CONTROL_CUSTODY_UNAVAILABLE');
+  }
+}
+
 function qualifyControlGitSource({ request, originalInputs, qualifiedGitSurface, resolveControlGitSource }) {
   if (typeof resolveControlGitSource !== 'function')
     return fail('FORK_CONTROL_CUSTODY_UNVERIFIED');
+  const snapshot = snapshotControlInput(request, originalInputs, qualifiedGitSurface);
+  if (snapshot.status !== 'PASS') return snapshot;
+  const stableRequest = snapshot.request;
+  const stableInputs = snapshot.originalInputs;
+  const stableSurface = snapshot.qualifiedGitSurface;
   let proof;
   try {
     // Clone once at the boundary: a caller-held, accessor-backed or mutable
     // resolver object must not change underneath executable/checkout checks.
     // This only stabilizes the observation; it does NOT authenticate its issuer.
     proof = structuredClone(resolveControlGitSource({
-      taskcycle_id: request.taskcycle.id,
-      subject: structuredClone(request.subject),
-      original_task_carrier: structuredClone(originalInputs.TASK_carrier),
+      taskcycle_id: stableRequest.taskcycle.id,
+      subject: structuredClone(stableRequest.subject),
+      original_task_carrier: structuredClone(stableInputs.TASK_carrier),
     }));
   } catch {
     return fail('FORK_CONTROL_CUSTODY_UNAVAILABLE');
@@ -79,17 +98,17 @@ function qualifyControlGitSource({ request, originalInputs, qualifiedGitSurface,
       || !nonempty(proof.execution_attempt_id)
       || !nonempty(proof.control_resolution_ref)
       || !sha(proof.source_code_commit)
-      || proof.taskcycle_id !== request.taskcycle.id
-      || proof.subject_commit !== request.subject.commit
-      || proof.subject_tree !== request.subject.tree
-      || proof.original_task_commit !== originalInputs.TASK_carrier.commit)
+      || proof.taskcycle_id !== stableRequest.taskcycle.id
+      || proof.subject_commit !== stableRequest.subject.commit
+      || proof.subject_tree !== stableRequest.subject.tree
+      || proof.original_task_commit !== stableInputs.TASK_carrier.commit)
     return fail('FORK_CONTROL_CUSTODY_UNVERIFIED');
   for (const key of [
     'binding', 'taskcycle_id', 'subject_branch', 'original_task_branch',
     'repositoryPath', 'remoteUrl', 'qualification_receipt_ref',
     'gitExecutablePath', 'gitExecutableSha256',
   ]) {
-    if (proof[key] !== qualifiedGitSurface[key])
+    if (proof[key] !== stableSurface[key])
       return fail('FORK_CONTROL_CUSTODY_MISMATCH');
   }
   return { status: 'PASS', surface: proof };
@@ -178,14 +197,22 @@ function prepareForkedPhase1Branch({ request, originalInputs, qualifiedGitSurfac
 function qualifyForkedPhase1Branch({
   request, originalInputs, qualifiedGitSurface, resolveControlGitSource = null, git = null,
 }) {
-  const bound = prepareForkedPhase1Branch({ request, originalInputs, qualifiedGitSurface });
+  const snapshot = snapshotControlInput(request, originalInputs, qualifiedGitSurface);
+  if (snapshot.status !== 'PASS') return snapshot;
+  const stableRequest = snapshot.request;
+  const stableInputs = snapshot.originalInputs;
+  const stableSurface = snapshot.qualifiedGitSurface;
+  const bound = prepareForkedPhase1Branch({
+    request: stableRequest, originalInputs: stableInputs, qualifiedGitSurface: stableSurface,
+  });
   if (bound.status !== 'PASS') return bound;
   const custody = qualifyControlGitSource({
-    request, originalInputs, qualifiedGitSurface, resolveControlGitSource,
+    request: stableRequest, originalInputs: stableInputs,
+    qualifiedGitSurface: stableSurface, resolveControlGitSource,
   });
   if (custody.status !== 'PASS') return custody;
-  const subject = request.subject;
-  const original = originalInputs.TASK_carrier;
+  const subject = stableRequest.subject;
+  const original = stableInputs.TASK_carrier;
   const surface = custody.surface;
   try {
     // An injected Git adapter (used by isolated tests) must never bypass
@@ -255,4 +282,4 @@ function qualifyForkedPhase1Branch({
   }
 }
 
-module.exports = { createReadOnlySourceGit, prepareForkedPhase1Branch, qualifyControlGitSource, qualifyForkedPhase1Branch };
+module.exports = { createReadOnlySourceGit, prepareForkedPhase1Branch, snapshotControlInput, qualifyControlGitSource, qualifyForkedPhase1Branch };
