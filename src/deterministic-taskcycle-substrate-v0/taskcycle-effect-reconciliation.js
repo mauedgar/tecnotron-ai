@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
-const { prepareForkedPhase1Branch, snapshotControlInput, qualifyControlGitSource, qualifyForkedPhase1Branch } = require('./taskcycle-phase1-branch-qualification');
+const { prepareForkedPhase1Branch, snapshotControlInput, qualifyControlGitSource, qualifyForkedPhase1Branch, authenticateGitHubControlIssuer } = require('./taskcycle-phase1-branch-qualification');
 const { reconcilePinnedEffect } = require('./taskcycle-pinned-effect-io');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-effect-reconciliation/v0';
@@ -331,6 +331,14 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
         });
         if (custody.status !== 'PASS')
           return terminal(request, 'BLOCKED', 'NONE', custody.reason);
+        // A cryptographically verified trusted GitHub Control workflow is a
+        // separate mandatory issuer gate, even for an existing exact effect.
+        // Caller status, resolver function or mere Git commit cannot supply it.
+        const issuer = authenticateGitHubControlIssuer({
+          request, originalInputs: exactInputs, proof: custody.surface,
+        });
+        if (issuer.status !== 'PASS')
+          return terminal(request, 'BLOCKED', 'NONE', issuer.reason);
         // This is stable shape validation, NOT live Git qualification.
         // The latter is mandatory before first publication, but cannot
         // invalidate an already exact immutable reconciliation on branch move.
