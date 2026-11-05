@@ -222,8 +222,14 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 65536
         || !bundle.isFile() || bundle.isSymbolicLink() || bundle.size > 1048576)
       return fail('FORK_CONTROL_ATTESTATION_INPUT_UNSAFE');
-    if (!exactObject(JSON.parse(fs.readFileSync(manifestPath, 'utf8')), expected))
+    const expectedManifestBytes = fs.readFileSync(manifestPath);
+    if (!exactObject(JSON.parse(expectedManifestBytes.toString('utf8')), expected))
       return fail('FORK_CONTROL_ATTESTATION_SUBJECT_MISMATCH');
+    // Compare the *original* exact input digest with the GitHub-verified
+    // subject and the post-verification bytes, not a fresh mutable read in
+    // each comparison. Never allow an attacker to swap manifests mid-check.
+    const expectedManifestDigest = createHash('sha256')
+      .update(expectedManifestBytes).digest('hex');
     const binary = trustedGitHubCli();
     const args = [
       'attestation', 'verify', manifestPath,
@@ -247,9 +253,12 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
       const cert = entry?.verificationResult?.signature?.certificate;
       const statement = entry?.verificationResult?.statement;
       return cert && String(cert.sourceRepositoryIdentifier) === GITHUB_CONTROL_ISSUER.repositoryId
-        && statement?.subject?.some((subject) => subject?.digest?.sha256 ===
-          createHash('sha256').update(fs.readFileSync(manifestPath)).digest('hex'));
+        && statement?.subject?.some((subject) =>
+          subject?.digest?.sha256 === expectedManifestDigest);
     })) return fail('FORK_CONTROL_GITHUB_CERTIFICATE_MISMATCH');
+    const stable = createHash('sha256').update(fs.readFileSync(manifestPath)).digest('hex');
+    if (stable !== expectedManifestDigest)
+      return fail('FORK_CONTROL_ATTESTATION_INPUT_RACED');
     return { status: 'PASS' };
   } catch {
     return fail('FORK_CONTROL_GITHUB_ATTESTATION_UNVERIFIED');
