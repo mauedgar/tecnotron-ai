@@ -517,7 +517,7 @@ test('pinned native Git binary rejects another-UID-writable bytes and replacemen
   } finally { c.cleanup(); }
 });
 
-test('Product fork qualifier fails closed on non-Linux or unavailable native Git', () => {
+test('Product fork qualifier fails closed before native Git when Github signer is unqualified', () => {
   const c = context();
   try {
     const result = qualifyProductFork({
@@ -528,7 +528,7 @@ test('Product fork qualifier fails closed on non-Linux or unavailable native Git
     // The fixture is explicitly not an executable Git implementation. No
     // Product native qualifier can ever PASS based on its mocked observations.
     assert.equal(result.status, 'BLOCKED');
-    assert.equal(result.reason, 'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    assert.equal(result.reason, 'FORK_CONTROL_GITHUB_SIGNER_NOT_QUALIFIED');
   } finally { c.cleanup(); }
 });
 
