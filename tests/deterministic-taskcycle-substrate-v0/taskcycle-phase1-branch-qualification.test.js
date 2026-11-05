@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const {
-  qualifyControlGitSource,
+  qualifyControlGitSource, authenticateGitHubControlIssuer,
   qualifyForkedPhase1Branch: qualifyProductFork,
   __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1Branch,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
@@ -529,5 +529,37 @@ test('Product fork qualifier fails closed on non-Linux or unavailable native Git
     // Product native qualifier can ever PASS based on its mocked observations.
     assert.equal(result.status, 'BLOCKED');
     assert.equal(result.reason, 'FORK_GIT_EVIDENCE_UNAVAILABLE');
+  } finally { c.cleanup(); }
+});
+
+test('GitHub signer is mandatory: forged Control source and caller policy cannot authenticate issuer', () => {
+  const c = context();
+  try {
+    const supplied = {
+      request: c.request,
+      originalInputs: c.originalInputs,
+      qualifiedGitSurface: {
+        ...c.qualifiedGitSurface,
+        // A worker cannot choose a different signer or pretend certification.
+        githubControlIssuer: {
+          status: 'VERIFIED', signerDigest: 'f'.repeat(40),
+          signerWorkflow: 'attacker/forged/.github/workflows/sign.yml',
+        },
+      },
+      resolveControlGitSource: () => structuredClone({
+        ...c.controlVerifiedGitSource,
+        githubAttestationManifestPath: path.join(c.root, 'fake-manifest.json'),
+        githubAttestationBundlePath: path.join(c.root, 'fake-bundle.json'),
+      }),
+    };
+    const native = qualifyProductFork(supplied);
+    assert.deepEqual(native, {
+      status: 'BLOCKED', reason: 'FORK_CONTROL_GITHUB_SIGNER_NOT_QUALIFIED',
+    });
+    const independentIssuer = authenticateGitHubControlIssuer({
+      request: c.request, originalInputs: c.originalInputs,
+      proof: c.controlVerifiedGitSource,
+    });
+    assert.deepEqual(independentIssuer, native);
   } finally { c.cleanup(); }
 });
