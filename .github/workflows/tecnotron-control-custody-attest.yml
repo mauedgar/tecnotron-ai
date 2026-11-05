@@ -154,21 +154,83 @@ jobs:
              .created_at == .updated_at and (.body | type == "string")' \
             custody/observed-comment.json > /dev/null
           jq -er '.body' custody/observed-comment.json > custody/grant.json
-          jq -e '
+          jq -e --arg grant_id "$GRANT_ID" '
             ((keys | sort) == ([
               "schema", "repository", "taskcycle_id", "subject_commit",
               "subject_tree", "original_task_commit", "source_code_commit",
-              "execution_attempt_id", "qualification_receipt_ref"
+              "execution_attempt_id", "qualification_receipt_ref",
+              "decision_comment_id", "qualification_comment_id",
+              "responsibility", "operation", "subject_branch",
+              "original_task_branch", "changed_paths", "Product_effect"
             ] | sort)) and
-            .schema == "tecnotron-control-git-custody-grant/v1" and
+            .schema == "tecnotron-control-git-custody-grant/v2" and
             .repository == "mauedgar/tecnotron-ai" and
-            (.taskcycle_id | type == "string" and test("^TASKCYCLE-[A-Za-z0-9_.-]+$")) and
+            .taskcycle_id == "TASKCYCLE-TECNOTRON-ULC-OP05-H6-ATTENDANCE-OPERATOR-001" and
+            .responsibility == "H6_OPERATOR_PHASE1_GIT_CUSTODY" and
+            .operation == "SIGN_GIT_SOURCE_CUSTODY_EVIDENCE_ONLY" and
+            .Product_effect == "NONE" and
+            .subject_branch == "task/tecnotron-h6-operator-20261104-001" and
+            .original_task_branch == "task/tecnotron-h6-attendance-parent-children-20261102-001" and
+            .changed_paths == ["attendance/operator/cli.py"] and
+            (.decision_comment_id | type == "number" and . > 0) and
+            (.qualification_comment_id | type == "number" and . > 0) and
+            .decision_comment_id != .qualification_comment_id and
+            .decision_comment_id != ($grant_id | tonumber) and
+            .qualification_comment_id != ($grant_id | tonumber) and
             (.execution_attempt_id | type == "string" and test("^[A-Za-z0-9_.:-]{10,160}$")) and
             ([.subject_commit,.subject_tree,.original_task_commit,.source_code_commit] |
               all(.[]; type == "string" and test("^[a-f0-9]{40}$"))) and
             (.qualification_receipt_ref | type == "string" and
              startswith("https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-"))
           ' custody/grant.json > /dev/null
+          # Reobservation of TWO prior GitHub-authenticated, unedited Owner
+          # comments. A syntactically valid grant alone is never competence.
+          decision_id="$(jq -er '.decision_comment_id' custody/grant.json)"
+          qualification_id="$(jq -er '.qualification_comment_id' custody/grant.json)"
+          gh api "repos/mauedgar/tecnotron-ai/issues/comments/$decision_id" > custody/observed-decision-comment.json
+          gh api "repos/mauedgar/tecnotron-ai/issues/comments/$qualification_id" > custody/observed-qualification-comment.json
+          for item in decision qualification; do
+            jq -e --arg issue "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35" \
+              --argjson grant "$GRANT_ID" '
+                .user.id == 54420195 and .user.login == "mauedgar"
+                and .issue_url == $issue and .author_association == "OWNER"
+                and .created_at == .updated_at and .id < $grant
+                and (.body | type == "string" and length <= 8192)
+              ' "custody/observed-$item-comment.json" > /dev/null
+            jq -er '.body' "custody/observed-$item-comment.json" > "custody/$item.json"
+          done
+          jq -ne --slurpfile g custody/grant.json --slurpfile d custody/decision.json \
+            --slurpfile q custody/qualification.json '
+            ($g[0] | .) as $grant | ($d[0] | .) as $decision |
+            ($q[0] | .) as $qualification |
+            ([ "repository", "taskcycle_id", "subject_commit", "subject_tree",
+               "original_task_commit", "source_code_commit", "execution_attempt_id" ] |
+               all(.[]; $decision[.] == $grant[.] and $qualification[.] == $grant[.]))
+            and $decision.schema == "tecnotron-control-git-custody-decision/v1"
+            and $decision.status == "GRANTED"
+            and $decision.responsibility == $grant.responsibility
+            and $decision.operation == $grant.operation
+            and $decision.changed_paths == $grant.changed_paths
+            and $decision.Product_effect == "NONE"
+            and $qualification.schema == "tecnotron-control-git-source-qualification/v1"
+            and $qualification.status == "PASS"
+            and $qualification.Product_effect == "NONE"
+            and ($qualification.provider_run_id | type == "number" and . > 0)
+            and $grant.qualification_receipt_ref ==
+                ("https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-" +
+                  ($grant.qualification_comment_id | tostring))
+          ' > /dev/null
+          run_id="$(jq -er '.provider_run_id' custody/qualification.json)"
+          gh api "repos/mauedgar/tecnotron-ai/actions/runs/$run_id" > custody/qualification-run.json
+          jq -e --arg subject "$(jq -er '.subject_commit' custody/grant.json)" '
+            .repository.id == 1339077141
+            and .path == ".github/workflows/native-validation.yml"
+            and .event == "pull_request"
+            and .status == "completed" and .conclusion == "success"
+            and .run_attempt == 1 and .head_sha == $subject
+          ' custody/qualification-run.json > /dev/null
+          # Qualification means a provider-native CI run of this exact source,
+          # not merely a requester's PASS label.
           subject="$(jq -er '.subject_commit' custody/grant.json)"
           expected_tree="$(jq -er '.subject_tree' custody/grant.json)"
           expected_parent="$(jq -er '.original_task_commit' custody/grant.json)"
@@ -181,12 +243,32 @@ jobs:
             jq -e --arg source "$source" '.object.sha == $source' > /dev/null
           gh api "repos/mauedgar/tecnotron-ai/git/commits/$expected_parent" |
             jq -e --arg sha "$expected_parent" '.sha == $sha' > /dev/null
+          # Source qualification is checked independently of the comment and
+          # verified CI result: exact one-parent Git edge and exact path scope.
+          gh api "repos/mauedgar/tecnotron-ai/compare/$expected_parent...$subject" > custody/source-edge.json
+          jq -e --arg subject "$subject" --arg parent "$expected_parent" '
+            .status == "ahead" and .total_commits == 1
+            and .base_commit.sha == $parent and .commits[0].sha == $subject
+            and ([.files[].filename] == ["attendance/operator/cli.py"])
+          ' custody/source-edge.json > /dev/null
+          gh api "repos/mauedgar/tecnotron-ai/git/ref/heads/task/tecnotron-h6-operator-20261104-001" > custody/subject-remote.json
+          remote_head="$(jq -er '.object.sha' custody/subject-remote.json)"
+          gh api "repos/mauedgar/tecnotron-ai/compare/$subject...$remote_head" |
+            jq -e --arg subject "$subject" '
+              .base_commit.sha == $subject and (.status == "ahead" or .status == "identical")
+            ' > /dev/null
           control_ref="https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-$GRANT_ID"
+          decision_digest="$(sha256sum custody/decision.json | cut -d' ' -f1)"
+          qualification_digest="$(sha256sum custody/qualification.json | cut -d' ' -f1)"
           jq -cS --arg control_ref "$control_ref" \
+            --arg decision_digest "$decision_digest" \
+            --arg qualification_digest "$qualification_digest" \
             '{schema:"tecnotron-control-git-custody/v1",
               repository, taskcycle_id, subject_commit, subject_tree,
               original_task_commit, source_code_commit, execution_attempt_id,
-              control_resolution_ref:$control_ref, qualification_receipt_ref}' \
+              control_resolution_ref:$control_ref, qualification_receipt_ref,
+              control_decision_sha256:$decision_digest,
+              source_qualification_sha256:$qualification_digest}' \
             custody/grant.json > custody/manifest.json
           # Refuse an edited/replaced Developer grant during signing.
           gh api "repos/mauedgar/tecnotron-ai/issues/comments/$GRANT_ID" > custody/after-comment.json
@@ -207,7 +289,8 @@ jobs:
           jq -s -e --arg attempt "$attempt" --argjson grant "$GRANT_ID" '
             [.[][] | select((.body | type) == "string") |
               {id, parsed:(.body | fromjson? // {})} |
-              select(.parsed.schema == "tecnotron-control-git-custody-grant/v1"
+              select((.parsed.schema == "tecnotron-control-git-custody-grant/v1" or
+                   .parsed.schema == "tecnotron-control-git-custody-grant/v2")
                 and .parsed.execution_attempt_id == $attempt) | .id] |
             length == 1 and .[0] == $grant
           ' custody/comment-pages.jsonl > /dev/null
@@ -227,10 +310,17 @@ jobs:
           jq -e '.attestations | type == "array" and length == 0' custody/prior-attestations.json >/dev/null
           # Historical snapshot only. A changed or revoked comment requires
           # a distinct, authenticated Control decision; no silent renewal.
-          gh api "repos/mauedgar/tecnotron-ai/issues/comments/$GRANT_ID" > custody/last-comment.json
-          cmp -s custody/observed-comment.json custody/last-comment.json || {
-            echo "GRANT_DRIFT_BEFORE_SIGNATURE" >&2; exit 1;
-          }
+          for item in grant decision qualification; do
+            case "$item" in
+              grant) id="$GRANT_ID"; original="custody/observed-comment.json" ;;
+              decision) id="$decision_id"; original="custody/observed-decision-comment.json" ;;
+              qualification) id="$qualification_id"; original="custody/observed-qualification-comment.json" ;;
+            esac
+            gh api "repos/mauedgar/tecnotron-ai/issues/comments/$id" > "custody/last-$item-comment.json"
+            cmp -s "$original" "custody/last-$item-comment.json" || {
+              echo "CONTROL_GRANT_OR_EVIDENCE_DRIFT_BEFORE_SIGNATURE" >&2; exit 1;
+            }
+          done
           echo "GITHUB_DEVELOPER_GRANT_AUTHENTICATED=PASS"
           echo "GITHUB_CONTROL_UNIQUE_ATTEMPT=PASS"
 
