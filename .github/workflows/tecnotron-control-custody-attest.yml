@@ -119,6 +119,14 @@ jobs:
             > qualification/attestation-inventory.json
           jq -e '.attestations | type == "array" and length >= 1' \
             qualification/attestation-inventory.json > /dev/null
+          # Probe the absence case against the native provider: the first real
+          # grant must distinguish a verified empty inventory from 404/error.
+          absent="0000000000000000000000000000000000000000000000000000000000000000"
+          gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$absent" \
+            > qualification/attestation-absent.json
+          jq -e '.attestations | type == "array" and length == 0' \
+            qualification/attestation-absent.json > /dev/null
+          echo "GITHUB_ATTESTATION_EMPTY_INDEX_CONTRACT=PASS"
           gh api --paginate "repos/mauedgar/tecnotron-ai/actions/workflows/tecnotron-control-custody-attest.yml/runs?event=push&per_page=100" \
             > qualification/run-pages.jsonl
           jq -s -e --arg sha "$GITHUB_SHA" '
