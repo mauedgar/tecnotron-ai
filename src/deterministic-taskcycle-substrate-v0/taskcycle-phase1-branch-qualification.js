@@ -41,13 +41,52 @@ function createReadOnlySourceGit(executable) {
   } });
 }
 
+// A one-time hash cannot prevent substitution between check and exec on a
+// writable path. Fork qualification therefore runs only on a Linux filesystem
+// where another UID cannot replace any directory entry or mutate Git bytes.
+// Same-UID peers and root are OUTSIDE this operating profile's trust boundary;
+// this is not authentication of a Product Control issuer.
 function qualifiedGitExecutable(surface) {
+  if (process.platform !== 'linux' || typeof process.getuid !== 'function')
+    throw Error('GIT_BINARY_TRUSTED_FILESYSTEM_UNAVAILABLE');
   const binary = surface.gitExecutablePath;
-  const stat = fs.lstatSync(binary);
-  if (!stat.isFile() || stat.isSymbolicLink() || fs.realpathSync(binary) !== binary)
+  if (!path.isAbsolute(binary) || path.normalize(binary) !== binary)
     throw Error('GIT_BINARY_PATH_UNQUALIFIED');
-  const observed = 'sha256:' + createHash('sha256').update(fs.readFileSync(binary)).digest('hex');
-  if (observed !== surface.gitExecutableSha256) throw Error('GIT_BINARY_IDENTITY_MISMATCH');
+  const uid = process.getuid();
+  const root = path.parse(binary).root;
+  let parent = fs.lstatSync(root);
+  if (!parent.isDirectory() || parent.isSymbolicLink()
+      || (parent.uid !== uid && parent.uid !== 0))
+    throw Error('GIT_BINARY_ANCESTOR_UNTRUSTED');
+  let at = root;
+  for (const segment of binary.slice(root.length).split(path.sep)) {
+    if (!segment || segment === '.' || segment === '..')
+      throw Error('GIT_BINARY_PATH_UNQUALIFIED');
+    at = path.join(at, segment);
+    const child = fs.lstatSync(at);
+    if (child.isSymbolicLink() || (child.uid !== uid && child.uid !== 0)
+        || ((parent.mode & 0o022) !== 0
+            && ((parent.mode & 0o1000) === 0 || child.uid !== uid)))
+      throw Error('GIT_BINARY_PATH_UNTRUSTED');
+    parent = child;
+  }
+  if (!parent.isFile() || parent.nlink !== 1 || (parent.mode & 0o022) !== 0
+      || fs.realpathSync(binary) !== binary)
+    throw Error('GIT_BINARY_PATH_UNQUALIFIED');
+  const fd = fs.openSync(binary, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+  try {
+    const before = fs.fstatSync(fd);
+    if (!before.isFile() || before.nlink !== 1 || before.dev !== parent.dev
+        || before.ino !== parent.ino || (before.mode & 0o022) !== 0)
+      throw Error('GIT_BINARY_CHANGED_BEFORE_HASH');
+    const observed = 'sha256:' + createHash('sha256').update(fs.readFileSync(fd)).digest('hex');
+    const after = fs.fstatSync(fd);
+    if (after.dev !== before.dev || after.ino !== before.ino
+        || after.size !== before.size || after.mtimeMs !== before.mtimeMs)
+      throw Error('GIT_BINARY_CHANGED_DURING_HASH');
+    if (observed !== surface.gitExecutableSha256)
+      throw Error('GIT_BINARY_IDENTITY_MISMATCH');
+  } finally { fs.closeSync(fd); }
   return binary;
 }
 
@@ -194,7 +233,14 @@ function prepareForkedPhase1Branch({ request, originalInputs, qualifiedGitSurfac
   };
 }
 
-function qualifyForkedPhase1Branch({
+// Product entrypoint: never accept an injected Git adapter as proof of a live
+// source. The deterministic fake-adapter helper below is for unit evidence
+// only and is NOT used by taskcycle-effect-reconciliation.
+function qualifyForkedPhase1Branch(input) {
+  if (input?.git != null) return fail('FORK_GIT_ADAPTER_INJECTION_FORBIDDEN');
+  return qualifyForkedPhase1BranchWithTestAdapter(input);
+}
+function qualifyForkedPhase1BranchWithTestAdapter({
   request, originalInputs, qualifiedGitSurface, resolveControlGitSource = null, git = null,
 }) {
   const snapshot = snapshotControlInput(request, originalInputs, qualifiedGitSurface);
@@ -282,4 +328,10 @@ function qualifyForkedPhase1Branch({
   }
 }
 
-module.exports = { createReadOnlySourceGit, prepareForkedPhase1Branch, snapshotControlInput, qualifyControlGitSource, qualifyForkedPhase1Branch };
+module.exports = {
+  createReadOnlySourceGit, prepareForkedPhase1Branch, snapshotControlInput,
+  qualifyControlGitSource, qualifyForkedPhase1Branch,
+  // Pure unit-test seam; callers must never substitute its observations for
+  // Product's qualified native entrypoint.
+  __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1BranchWithTestAdapter,
+};
