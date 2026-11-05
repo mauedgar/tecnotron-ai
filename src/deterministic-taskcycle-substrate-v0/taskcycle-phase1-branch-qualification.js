@@ -204,12 +204,14 @@ function controlCertificateMatches(entry, policy, digest) {
   const expectedUri = 'https://github.com/' + policy.signerWorkflow + '@' + policy.sourceRef;
   return String(cert.sourceRepositoryIdentifier) === policy.repositoryId
     && cert.githubWorkflowRepository === policy.repository
+    && String(cert.sourceRepositoryOwnerIdentifier) === '54420195'
     && cert.sourceRepositoryURI === 'https://github.com/' + policy.repository
     && cert.githubWorkflowSHA === policy.signerDigest
     && cert.buildSignerDigest === policy.signerDigest
     && cert.sourceRepositoryRef === policy.sourceRef
     && cert.githubWorkflowRef === policy.sourceRef
     && cert.githubWorkflowTrigger === 'workflow_dispatch'
+    && cert.buildTrigger === 'workflow_dispatch'
     && cert.runnerEnvironment === 'github-hosted'
     && cert.issuer === 'https://token.actions.githubusercontent.com'
     && cert.subjectAlternativeName === expectedUri
@@ -224,6 +226,9 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
     return fail('FORK_CONTROL_GITHUB_SIGNER_NOT_QUALIFIED');
   const manifestPath = proof?.githubAttestationManifestPath;
   const bundlePath = proof?.githubAttestationBundlePath;
+  if (!/^[a-f0-9]{64}$/.test(proof?.control_decision_sha256 || '')
+      || !/^[a-f0-9]{64}$/.test(proof?.source_qualification_sha256 || ''))
+    return fail('FORK_CONTROL_AUTHORITY_DIGEST_UNVERIFIED');
   if (!nonempty(manifestPath) || !path.isAbsolute(manifestPath)
       || !nonempty(bundlePath) || !path.isAbsolute(bundlePath))
     return fail('FORK_CONTROL_ATTESTATION_INPUT_UNAVAILABLE');
@@ -239,6 +244,8 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
       execution_attempt_id: proof.execution_attempt_id,
       control_resolution_ref: proof.control_resolution_ref,
       qualification_receipt_ref: proof.qualification_receipt_ref,
+      control_decision_sha256: proof.control_decision_sha256,
+      source_qualification_sha256: proof.source_qualification_sha256,
     };
     const stat = fs.lstatSync(manifestPath);
     const bundle = fs.lstatSync(bundlePath);
