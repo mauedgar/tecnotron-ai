@@ -97,9 +97,17 @@ async function probeTool(tool) {
   };
 }
 
+// Discovery-only legacy venv probe; it neither selects an official runtime nor installs dependencies.
+function repoPackagerPythonPath(aiCoreRoot, platform = process.platform) {
+  if (platform === 'win32') {
+    return path.win32.join(aiCoreRoot, 'python', '.venv_tools', 'Scripts', 'python.exe');
+  }
+  return path.posix.join(aiCoreRoot, 'python', '.venv_tools', 'bin', 'python');
+}
+
 async function probeRepoPackager(resolution) {
   const aiCoreRoot = resolution.aiCoreRoot;
-  const venvPython = path.join(aiCoreRoot, 'python', '.venv_tools', 'Scripts', 'python.exe');
+  const venvPython = repoPackagerPythonPath(aiCoreRoot);
   const packScript = path.join(aiCoreRoot, '.opencode', 'skills', 'repo-packager', 'scripts', 'pack.py');
   const scriptExists = exists(packScript);
   const venvExists = exists(venvPython);
@@ -219,4 +227,4 @@ function summarize(results) {
   return { available, unavailable, unreachable, total: results.length };
 }
 
-module.exports = { collect, summarize, TOOLS };
+module.exports = { collect, summarize, TOOLS, repoPackagerPythonPath, probeRepoPackager };
