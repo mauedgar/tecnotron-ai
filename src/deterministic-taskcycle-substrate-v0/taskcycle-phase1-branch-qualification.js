@@ -84,7 +84,8 @@ function qualifyForkedPhase1Branch({
       || !sha(subject.commit) || !sha(subject.tree) || !sha(subject.parent)
       || subject.parent !== original.commit || !sha(original.commit)
       || request?.subject?.repository !== originalInputs?.Product_baseline?.repository
-      || surface.remoteUrl !== 'https://github.com/' + subject.repository + '.git'
+      || !['https://github.com/' + subject.repository,
+        'https://github.com/' + subject.repository + '.git'].includes(surface.remoteUrl)
       || !nonempty(surface.repositoryPath) || !path.isAbsolute(surface.repositoryPath)
       || !Array.isArray(subject.changed_paths) || subject.changed_paths.length < 1
       || subject.changed_paths.some(x => !safePath(x))
