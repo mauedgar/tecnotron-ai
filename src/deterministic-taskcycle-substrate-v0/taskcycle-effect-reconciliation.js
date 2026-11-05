@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
+const { qualifyForkedPhase1Branch } = require('./taskcycle-phase1-branch-qualification');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-effect-reconciliation/v0';
 const MANIFEST_SCHEMA = 'deterministic-taskcycle-effect-reconciliation-manifest/v0';
@@ -125,7 +126,7 @@ function terminal(r, status, effect_state, reason) {
   };
 }
 
-function projectionFor(request, initialization) {
+function projectionFor(request, initialization, branchProvenance = null) {
   const obligations = initialization.projection.pending_obligations.map((entry) => (
     entry.id === request.obligation.id
       ? { ...entry, status: 'SATISFIED' }
@@ -149,6 +150,7 @@ function projectionFor(request, initialization) {
       preserved: true,
       replayed: false,
       mutation_during_reconciliation: 'NONE',
+      ...(branchProvenance ? { branch_provenance: branchProvenance } : {}),
     },
     semantics: {
       creates_authority: false,
@@ -159,8 +161,8 @@ function projectionFor(request, initialization) {
   };
 }
 
-function packageFor(request, initialization) {
-  const projection = projectionFor(request, initialization);
+function packageFor(request, initialization, branchProvenance = null) {
+  const projection = projectionFor(request, initialization, branchProvenance);
   const projectionText = stableJson(projection);
   const manifest = {
     schema: MANIFEST_SCHEMA,
@@ -215,7 +217,7 @@ function pass(request, finalRoot, pkg, already_reconciled = false, reason = null
   };
 }
 
-function createTaskCycleEffectReconciliationCapability({ root }) {
+function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurface = null }) {
   const base = path.resolve(root);
   return {
     reconcileCompletedObligation({ request, observed }) {
@@ -245,10 +247,25 @@ function createTaskCycleEffectReconciliationCapability({ root }) {
 
       const exactInputs = initialization.projection.exact_inputs;
       if (request.subject.repository !== exactInputs.Product_baseline.repository
-          || request.subject.branch !== exactInputs.TASK_carrier.branch
           || request.subject.parent !== exactInputs.TASK_carrier.commit
           || !subjectPathsWithinFrozenScope(request.subject.changed_paths, exactInputs.write_scope)) {
         return terminal(request, 'BLOCKED', 'NONE', 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
+      }
+      // Default behavior is unchanged. A different truthful child branch can
+      // be qualified only by a Control-bound, independently checked Git source.
+      // No caller-supplied request proof is sufficient for a branch exception.
+      let branchProvenance = null;
+      if (request.subject.branch !== exactInputs.TASK_carrier.branch) {
+        if (!qualifiedGitSurface) {
+          return terminal(request, 'BLOCKED', 'NONE', 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
+        }
+        const qualified = qualifyForkedPhase1Branch({
+          request, originalInputs: exactInputs, qualifiedGitSurface,
+        });
+        if (qualified.status !== 'PASS') {
+          return terminal(request, 'BLOCKED', 'NONE', qualified.reason);
+        }
+        branchProvenance = qualified.verified;
       }
 
       if (!observed || !exact(request.subject, observed.subject)) {
@@ -263,7 +280,7 @@ function createTaskCycleEffectReconciliationCapability({ root }) {
         return terminal(request, 'FAILED', 'NONE', 'RECONCILIATION_ROOT_INVALID');
       }
 
-      const pkg = packageFor(request, initialization);
+      const pkg = packageFor(request, initialization, branchProvenance);
       const finalRoot = path.join(base, safeId(request.taskcycle.id), safeId(request.obligation.id));
       const parentRoot = path.dirname(finalRoot);
       fs.mkdirSync(parentRoot, { recursive: true });
