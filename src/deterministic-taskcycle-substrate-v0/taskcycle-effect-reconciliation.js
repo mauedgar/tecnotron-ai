@@ -349,7 +349,11 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
           pkg,
           qualifyFirstWrite: () => {
             const qualified = qualifyForkedPhase1Branch({
-              request, originalInputs: exactInputs, qualifiedGitSurface, resolveControlGitSource,
+              // Freeze one Control observation for both the early custody gate
+              // and subsequent first-write Git qualification. The independent
+              // resolver is not invoked twice with potentially conflicting receipts.
+              request, originalInputs: exactInputs, qualifiedGitSurface,
+              resolveControlGitSource: () => custody.surface,
             });
             if (qualified.status !== 'PASS') return qualified;
             const { remote_head: _observationOnly, ...immutable } = qualified.verified;
