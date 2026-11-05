@@ -184,7 +184,11 @@ function qualifyForkedPhase1Branch({
   const original = originalInputs.TASK_carrier;
   const surface = custody.surface;
   try {
-    if (!git) git = createReadOnlySourceGit(qualifiedGitExecutable(surface));
+    // An injected Git adapter (used by isolated tests) must never bypass
+    // executable identity validation. The actual runtime still requires
+    // independently authenticated Control custody before invocation.
+    const executable = qualifiedGitExecutable(surface);
+    if (!git) git = createReadOnlySourceGit(executable);
     const root = path.resolve(surface.repositoryPath);
     if (!fs.statSync(root).isDirectory() || fs.realpathSync(root) !== root
         || read(git, root, ['rev-parse', '--show-toplevel']).value !== root) {
