@@ -105,6 +105,39 @@ jobs:
             > qualification/receipt.json
           cat qualification/receipt.json
 
+      # Native GitHub API contract test, read-only and NONPRODUCT. Observe the
+      # same endpoints and jq shapes the gated manual signer relies on, without
+      # supplying or authenticating any Product grant.
+      - name: Validate GitHub attestation and run inventory read contracts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha="$(cut -d' ' -f1 qualification/input-sha256.txt)"
+          gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$sha" \
+            > qualification/attestation-inventory.json
+          jq -e '.attestations | type == "array" and length >= 1' \
+            qualification/attestation-inventory.json > /dev/null
+          gh api --paginate "repos/mauedgar/tecnotron-ai/actions/workflows/tecnotron-control-custody-attest.yml/runs?event=push&per_page=100" \
+            > qualification/run-pages.jsonl
+          jq -s -e --arg sha "$GITHUB_SHA" '
+            length > 0 and all(.[]; type == "object"
+              and (.workflow_runs | type == "array")
+              and (.total_count | type == "number"))
+            and any(.[]; any(.workflow_runs[]; .head_sha == $sha))
+          ' qualification/run-pages.jsonl > /dev/null
+          gh api --paginate "repos/mauedgar/tecnotron-ai/issues/35/comments?per_page=100" \
+            > qualification/comment-pages.jsonl
+          jq -s -e 'length > 0 and all(.[]; type == "array"
+            and all(.[]; .id | type == "number"))' \
+            qualification/comment-pages.jsonl > /dev/null
+          # Read-only qualification; log counts only, not potentially private
+          # grant/comment bodies or API inventory objects in artifacts.
+          echo "GITHUB_ATTESTATION_INVENTORY_CONTRACT=PASS"
+          echo "GITHUB_RUNS_PAGINATION_CONTRACT=PASS"
+          echo "GITHUB_COMMENTS_PAGINATION_CONTRACT=PASS"
+
       - name: Upload original qualification evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # official upload-artifact v4 resolved immutable SHA
