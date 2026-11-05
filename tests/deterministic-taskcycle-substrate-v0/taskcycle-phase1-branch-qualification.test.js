@@ -9,6 +9,7 @@ const { createHash } = require('node:crypto');
 const {
   qualifyControlGitSource, authenticateGitHubControlIssuer,
   __testOnlyControlCertificateMatches: matchesCertificate,
+  __testOnlyReadStableAttestationFile: readStableAttestationFile,
   qualifyForkedPhase1Branch: qualifyProductFork,
   __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1Branch,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
@@ -617,3 +618,21 @@ test('GitHub Control signer requires authenticated manual dispatch on the exact 
   assert.equal(matchesCertificate({ verificationResult: { statement: entry.verificationResult.statement } },
     policy, digest), false, 'missing certificate fails closed');
 });
+
+test('native attestation input acquisition is fd-bound and rejects symlinks, mutable modes and oversize files',
+  { skip: process.platform !== 'linux' }, () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'h6-attest-file-'));
+    try {
+      const real = path.join(dir, 'manifest.json');
+      const link = path.join(dir, 'manifest-link.json');
+      fs.writeFileSync(real, Buffer.from('{"id":"control"}\n'), { flag:'wx', mode:0o600 });
+      fs.symlinkSync(real, link);
+      assert.equal(readStableAttestationFile(real, 65536).toString('utf8'), '{"id":"control"}\n');
+      assert.throws(() => readStableAttestationFile(link, 65536));
+      fs.chmodSync(real, 0o666);
+      assert.throws(() => readStableAttestationFile(real, 65536));
+      fs.chmodSync(real, 0o600);
+      assert.throws(() => readStableAttestationFile(real, 3));
+      assert.equal(readStableAttestationFile(real, 65536).toString('utf8'), '{"id":"control"}\n');
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  });
