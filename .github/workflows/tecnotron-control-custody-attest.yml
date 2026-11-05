@@ -175,6 +175,42 @@ jobs:
           echo "GITHUB_COMMENTS_PAGINATION_CONTRACT=PASS"
           echo "GITHUB_REMOTE_INVENTORY_COMPLETENESS=PASS"
 
+      # Positive native host and repository canary qualification only:
+      # no Product grant, no protected-main dispatch or lifecycle effect.
+      - name: Qualify Linux gh custody and retained canary (NONPRODUCT)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = "Linux"
+          test -x /usr/bin/gh
+          # Match the Product verifier's native root-owned, non-symlink,
+          # non-group/world-writable ancestry and single-link binary policy.
+          python3 - <<'PY'
+          import os, stat
+          for directory in ('/', '/usr', '/usr/bin'):
+              st = os.lstat(directory)
+              assert stat.S_ISDIR(st.st_mode) and not stat.S_ISLNK(st.st_mode)
+              assert st.st_uid == 0 and (st.st_mode & 0o022) == 0
+          target = '/usr/bin/gh'
+          st = os.lstat(target)
+          assert stat.S_ISREG(st.st_mode) and not stat.S_ISLNK(st.st_mode)
+          assert st.st_uid == 0 and st.st_nlink == 1
+          assert (st.st_mode & 0o022) == 0 and os.path.realpath(target) == target
+          print('GITHUB_LINUX_GH_CUSTODY=PASS')
+          PY
+          /usr/bin/gh --version | head -1
+          # Check the historical positive canary is still retrievable and
+          # unmistakably belongs to this repository. Its disappearance BLOCKS.
+          canary="8ce88040f3eaea4f431b17b0f51ec137bbc7a0d40c91c106210157c9c608e4f4"
+          gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$canary" \
+            > qualification/canary-inventory.json
+          jq -e '.attestations | type == "array" and length >= 1
+            and all(.[]; .repository_id == 1339077141)' \
+            qualification/canary-inventory.json >/dev/null
+          echo "GITHUB_ATTESTATION_CANARY_RETAINED=PASS"
+
       - name: Upload original qualification evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # official upload-artifact v4 resolved immutable SHA
