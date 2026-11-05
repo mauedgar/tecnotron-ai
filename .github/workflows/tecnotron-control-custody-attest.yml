@@ -14,8 +14,12 @@ on:
         description: 'Exact Developer Control grant comment ID in Tecnotron issue 35'
         type: string
         required: true
+      execution_attempt_id:
+        description: 'Original immutable ExecutionAttempt, must equal Developer grant'
+        type: string
+        required: true
 
-run-name: ${{ github.event_name == 'workflow_dispatch' && format('TECNOTRON-CUSTODY-GRANT-{0}', inputs.grant_comment_id) || 'TECNOTRON-CUSTODY-NONPRODUCT-SYNTHETIC' }}
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('TECNOTRON-CUSTODY-ATTEMPT-{0}', inputs.execution_attempt_id) || 'TECNOTRON-CUSTODY-NONPRODUCT-SYNTHETIC' }}
 
 # A single source of signed evidence: serialized across every dispatch and push.
 # Pending executions queue; they NEVER cancel an earlier attempt.
@@ -137,6 +141,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GRANT_ID: ${{ inputs.grant_comment_id }}
+          DISPATCH_ATTEMPT: ${{ inputs.execution_attempt_id }}
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = "mauedgar/tecnotron-ai"
@@ -146,6 +151,9 @@ jobs:
           test "$GITHUB_TRIGGERING_ACTOR" = "mauedgar"
           test "$GITHUB_REF" = "refs/heads/main"
           [[ "$GRANT_ID" =~ ^[1-9][0-9]{5,19}$ ]] || { echo "GRANT_ID_INVALID" >&2; exit 1; }
+          [[ "$DISPATCH_ATTEMPT" =~ ^[A-Za-z0-9_.:-]{10,160}$ ]] || {
+            echo "DISPATCH_EXECUTION_ATTEMPT_INVALID" >&2; exit 1;
+          }
           mkdir -p custody
           gh api "repos/mauedgar/tecnotron-ai/issues/comments/$GRANT_ID" > custody/observed-comment.json
           jq -e --arg issue "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35" \
@@ -237,6 +245,9 @@ jobs:
           ' custody/qualification-run.json > /dev/null
           # Qualification means a provider-native CI run of this exact source,
           # not merely a requester's PASS label.
+          test "$(jq -er '.execution_attempt_id' custody/grant.json)" = "$DISPATCH_ATTEMPT" || {
+            echo "DISPATCH_ATTEMPT_NOT_COMPETENTLY_GRANTED" >&2; exit 1;
+          }
           subject="$(jq -er '.subject_commit' custody/grant.json)"
           expected_tree="$(jq -er '.subject_tree' custody/grant.json)"
           expected_parent="$(jq -er '.original_task_commit' custody/grant.json)"
@@ -312,7 +323,7 @@ jobs:
           jq -s -e 'length > 0 and all(.[]; type == "object"
             and (.workflow_runs | type == "array")
             and (.total_count | type == "number"))' custody/run-pages.jsonl > /dev/null
-          jq -s -e --arg run "$GITHUB_RUN_ID" --arg title "TECNOTRON-CUSTODY-GRANT-$GRANT_ID" '
+          jq -s -e --arg run "$GITHUB_RUN_ID" --arg title "TECNOTRON-CUSTODY-ATTEMPT-$attempt" '
             [.[] | .workflow_runs[] | select(.display_title == $title)] |
             length == 1 and .[0].id == ($run | tonumber) and .[0].run_attempt == 1
           ' custody/run-pages.jsonl > /dev/null
