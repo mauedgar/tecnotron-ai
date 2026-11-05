@@ -5,6 +5,7 @@
 // A mismatched branch remains blocked unless Product Control supplies a trusted
 // local checkout AND actual Git objects plus a current remote branch observation.
 const fs = require('node:fs');
+const os = require('node:os');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
@@ -218,6 +219,31 @@ function controlCertificateMatches(entry, policy, digest) {
     && subjects.some((subject) => subject?.digest?.sha256 === digest);
 }
 
+// Acquire one immutable snapshot per input and verify the file descriptor
+// is the same non-symlink regular inode seen before open. The external gh
+// verifier never sees a worker-supplied mutable pathname.
+function readStableAttestationFile(filename, maxBytes) {
+  if (process.platform !== 'linux') throw Error('ATTESTATION_FILE_HOST_UNSUPPORTED');
+  const before = fs.lstatSync(filename);
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1
+      || before.size > maxBytes || (before.mode & 0o022) !== 0)
+    throw Error('ATTESTATION_INPUT_PATH_UNSAFE');
+  const fd = fs.openSync(filename, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+  try {
+    const first = fs.fstatSync(fd);
+    if (!first.isFile() || first.nlink !== 1 || first.size > maxBytes
+        || first.ino !== before.ino || first.dev !== before.dev
+        || (first.mode & 0o022) !== 0) throw Error('ATTESTATION_INPUT_CHANGED');
+    const contents = fs.readFileSync(fd);
+    const last = fs.fstatSync(fd);
+    if (last.ino !== first.ino || last.dev !== first.dev
+        || last.size !== first.size || last.mtimeMs !== first.mtimeMs
+        || last.ctimeMs !== first.ctimeMs || contents.length !== first.size)
+      throw Error('ATTESTATION_INPUT_CHANGED');
+    return contents;
+  } finally { fs.closeSync(fd); }
+}
+
 function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
   // GitHub's certificate authenticates WORKFLOW provenance, not Developer
   // acceptance/Phase2. A workflow on an unprotected ref or an arbitrary
@@ -232,6 +258,7 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
   if (!nonempty(manifestPath) || !path.isAbsolute(manifestPath)
       || !nonempty(bundlePath) || !path.isAbsolute(bundlePath))
     return fail('FORK_CONTROL_ATTESTATION_INPUT_UNAVAILABLE');
+  let isolatedDirectory = null;
   try {
     const expected = {
       schema: 'tecnotron-control-git-custody/v1',
@@ -247,24 +274,28 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
       control_decision_sha256: proof.control_decision_sha256,
       source_qualification_sha256: proof.source_qualification_sha256,
     };
-    const stat = fs.lstatSync(manifestPath);
-    const bundle = fs.lstatSync(bundlePath);
-    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 65536
-        || !bundle.isFile() || bundle.isSymbolicLink() || bundle.size > 1048576)
-      return fail('FORK_CONTROL_ATTESTATION_INPUT_UNSAFE');
-    const expectedManifestBytes = fs.readFileSync(manifestPath);
+    const expectedManifestBytes = readStableAttestationFile(manifestPath, 65536);
+    const expectedBundleBytes = readStableAttestationFile(bundlePath, 1048576);
     if (!exactObject(JSON.parse(expectedManifestBytes.toString('utf8')), expected))
       return fail('FORK_CONTROL_ATTESTATION_SUBJECT_MISMATCH');
-    // Compare the *original* exact input digest with the GitHub-verified
-    // subject and the post-verification bytes, not a fresh mutable read in
-    // each comparison. Never allow an attacker to swap manifests mid-check.
     const expectedManifestDigest = createHash('sha256')
       .update(expectedManifestBytes).digest('hex');
+    const expectedBundleDigest = createHash('sha256')
+      .update(expectedBundleBytes).digest('hex');
     const binary = trustedGitHubCli();
+    // A newly created private directory isolates both sources from caller
+    // path substitution while the native verifier reads their exact bytes.
+    // Same-UID/root mutation remains outside the declared host trust model.
+    isolatedDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'tecnotron-control-attest-'));
+    fs.chmodSync(isolatedDirectory, 0o700);
+    const isolatedManifest = path.join(isolatedDirectory, 'manifest.json');
+    const isolatedBundle = path.join(isolatedDirectory, 'bundle.json');
+    fs.writeFileSync(isolatedManifest, expectedManifestBytes, { flag: 'wx', mode: 0o400 });
+    fs.writeFileSync(isolatedBundle, expectedBundleBytes, { flag: 'wx', mode: 0o400 });
     const args = [
-      'attestation', 'verify', manifestPath,
+      'attestation', 'verify', isolatedManifest,
       '--repo', GITHUB_CONTROL_ISSUER.repository,
-      '--bundle', bundlePath,
+      '--bundle', isolatedBundle,
       '--signer-workflow', GITHUB_CONTROL_ISSUER.signerWorkflow,
       '--signer-digest', GITHUB_CONTROL_ISSUER.signerDigest,
       '--source-ref', GITHUB_CONTROL_ISSUER.sourceRef,
@@ -282,12 +313,20 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
     if (!Array.isArray(verified) || !verified.some((entry) =>
       controlCertificateMatches(entry, GITHUB_CONTROL_ISSUER, expectedManifestDigest)))
       return fail('FORK_CONTROL_GITHUB_CERTIFICATE_MISMATCH');
-    const stable = createHash('sha256').update(fs.readFileSync(manifestPath)).digest('hex');
-    if (stable !== expectedManifestDigest)
+    const stableManifest = createHash('sha256')
+      .update(readStableAttestationFile(isolatedManifest, 65536)).digest('hex');
+    const stableBundle = createHash('sha256')
+      .update(readStableAttestationFile(isolatedBundle, 1048576)).digest('hex');
+    if (stableManifest !== expectedManifestDigest || stableBundle !== expectedBundleDigest)
       return fail('FORK_CONTROL_ATTESTATION_INPUT_RACED');
     return { status: 'PASS' };
   } catch {
     return fail('FORK_CONTROL_GITHUB_ATTESTATION_UNVERIFIED');
+  } finally {
+    if (isolatedDirectory) {
+      try { fs.rmSync(isolatedDirectory, { recursive: true, force: true }); }
+      catch { /* private staging cleanup is best-effort; no Product effect */ }
+    }
   }
 }
 
@@ -477,6 +516,7 @@ module.exports = {
   createReadOnlySourceGit, prepareForkedPhase1Branch, snapshotControlInput,
   qualifyControlGitSource, qualifyForkedPhase1Branch, authenticateGitHubControlIssuer,
   __testOnlyControlCertificateMatches: controlCertificateMatches,
+  __testOnlyReadStableAttestationFile: readStableAttestationFile,
   // Pure unit-test seam; callers must never substitute its observations for
   // Product's qualified native entrypoint.
   __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1BranchWithTestAdapter,
