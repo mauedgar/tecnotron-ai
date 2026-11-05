@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
-const { qualifyForkedPhase1Branch } = require('./taskcycle-phase1-branch-qualification');
+const { prepareForkedPhase1Branch, qualifyForkedPhase1Branch } = require('./taskcycle-phase1-branch-qualification');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-effect-reconciliation/v0';
 const MANIFEST_SCHEMA = 'deterministic-taskcycle-effect-reconciliation-manifest/v0';
@@ -255,17 +255,21 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
       // be qualified only by a Control-bound, independently checked Git source.
       // No caller-supplied request proof is sufficient for a branch exception.
       let branchProvenance = null;
-      if (request.subject.branch !== exactInputs.TASK_carrier.branch) {
+      const forked = request.subject.branch !== exactInputs.TASK_carrier.branch;
+      if (forked) {
         if (!qualifiedGitSurface) {
           return terminal(request, 'BLOCKED', 'NONE', 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
         }
-        const qualified = qualifyForkedPhase1Branch({
+        const bound = prepareForkedPhase1Branch({
           request, originalInputs: exactInputs, qualifiedGitSurface,
         });
-        if (qualified.status !== 'PASS') {
-          return terminal(request, 'BLOCKED', 'NONE', qualified.reason);
+        if (bound.status !== 'PASS') {
+          return terminal(request, 'BLOCKED', 'NONE', bound.reason);
         }
-        branchProvenance = qualified.verified;
+        // This is stable shape validation, NOT live Git qualification.
+        // The latter is mandatory before first publication, but cannot
+        // invalidate an already exact immutable reconciliation on branch move.
+        branchProvenance = bound.immutable;
       }
 
       if (!observed || !exact(request.subject, observed.subject)) {
@@ -283,7 +287,6 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
       const pkg = packageFor(request, initialization, branchProvenance);
       const finalRoot = path.join(base, safeId(request.taskcycle.id), safeId(request.obligation.id));
       const parentRoot = path.dirname(finalRoot);
-      fs.mkdirSync(parentRoot, { recursive: true });
 
       if (fs.existsSync(finalRoot)) {
         const state = inspect(finalRoot, pkg);
@@ -293,8 +296,25 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
           : 'EFFECT_RECONCILIATION_PROJECTION_AMBIGUOUS');
       }
 
+      // Never let a caller's static binding alone create a new effect.
+      // Qualify original source objects and current remote ancestry now,
+      // only after exact existing state has been checked for idempotence.
+      if (forked) {
+        const qualified = qualifyForkedPhase1Branch({
+          request, originalInputs: exactInputs, qualifiedGitSurface,
+        });
+        if (qualified.status !== 'PASS') {
+          return terminal(request, 'BLOCKED', 'NONE', qualified.reason);
+        }
+        const { remote_head: _observationOnly, ...stable } = qualified.verified;
+        if (!exact(stable, branchProvenance)) {
+          return terminal(request, 'BLOCKED', 'NONE', 'FORK_IMMUTABLE_PROVENANCE_MISMATCH');
+        }
+      }
+
       let staging = null;
       try {
+        fs.mkdirSync(parentRoot, { recursive: true });
         staging = fs.mkdtempSync(path.join(parentRoot, `.${safeId(request.obligation.id)}.staging-`));
         fs.writeFileSync(path.join(staging, 'projection.json'), pkg.projectionText, { flag: 'wx' });
         fs.writeFileSync(path.join(staging, 'manifest.json'), pkg.manifestText, { flag: 'wx' });
