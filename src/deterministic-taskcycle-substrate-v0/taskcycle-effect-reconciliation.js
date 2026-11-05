@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
+const { prepareForkedPhase1Branch, qualifyForkedPhase1Branch } = require('./taskcycle-phase1-branch-qualification');
+const { reconcilePinnedEffect } = require('./taskcycle-pinned-effect-io');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-effect-reconciliation/v0';
 const MANIFEST_SCHEMA = 'deterministic-taskcycle-effect-reconciliation-manifest/v0';
@@ -125,7 +127,7 @@ function terminal(r, status, effect_state, reason) {
   };
 }
 
-function projectionFor(request, initialization) {
+function projectionFor(request, initialization, branchProvenance = null) {
   const obligations = initialization.projection.pending_obligations.map((entry) => (
     entry.id === request.obligation.id
       ? { ...entry, status: 'SATISFIED' }
@@ -149,6 +151,7 @@ function projectionFor(request, initialization) {
       preserved: true,
       replayed: false,
       mutation_during_reconciliation: 'NONE',
+      ...(branchProvenance ? { branch_provenance: branchProvenance } : {}),
     },
     semantics: {
       creates_authority: false,
@@ -159,8 +162,8 @@ function projectionFor(request, initialization) {
   };
 }
 
-function packageFor(request, initialization) {
-  const projection = projectionFor(request, initialization);
+function packageFor(request, initialization, branchProvenance = null) {
+  const projection = projectionFor(request, initialization, branchProvenance);
   const projectionText = stableJson(projection);
   const manifest = {
     schema: MANIFEST_SCHEMA,
@@ -180,19 +183,62 @@ function packageFor(request, initialization) {
   return { projection, projectionText, manifest, manifestText, identity: sha256(manifestText) };
 }
 
-function inspect(root, pkg) {
+
+function samePhysicalPath(left, right) {
+  const a = path.resolve(left);
+  const b = path.resolve(right);
+  return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+// The reconciliation root and every output ancestor must be real directories.
+// An exact package behind a symlink is not a trusted prior publication.
+function outputDirectoryState(base, target) {
+  const relative = path.relative(base, target);
+  if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) return 'UNSAFE';
+  const absolute = path.resolve(target);
+  const volumeRoot = path.parse(absolute).root;
+  const segments = path.relative(volumeRoot, absolute).split(path.sep).filter(Boolean);
+  let current = volumeRoot;
+  for (const segment of [null, ...segments]) {
+    if (segment !== null) current = path.join(current, segment);
+    let stat;
+    try { stat = fs.lstatSync(current); }
+    catch (error) { return error?.code === 'ENOENT' ? 'MISSING' : 'UNSAFE'; }
+    if (!stat.isDirectory() || stat.isSymbolicLink()) return 'UNSAFE';
+    try { if (!samePhysicalPath(fs.realpathSync(current), current)) return 'UNSAFE'; }
+    catch { return 'UNSAFE'; }
+  }
+  return 'SAFE';
+}
+function directoryIdentity(root) {
+  const stat = fs.lstatSync(root);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw Error('UNSAFE_DIRECTORY');
+  return [stat.dev, stat.ino, stat.mtimeMs].join(':');
+}
+function exactRegularFile(file) {
+  const fd = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
   try {
+    const before = fs.fstatSync(fd);
+    if (!before.isFile() || before.nlink !== 1) throw Error('UNSAFE_EFFECT_FILE');
+    const content = fs.readFileSync(fd, 'utf8');
+    const after = fs.fstatSync(fd);
+    if (before.dev !== after.dev || before.ino !== after.ino ||
+        before.size !== after.size || before.mtimeMs !== after.mtimeMs) throw Error('RACING_EFFECT_FILE');
+    return content;
+  } finally { fs.closeSync(fd); }
+}
+
+function inspect(root, pkg, base) {
+  try {
+    if (outputDirectoryState(base, root) !== 'SAFE') return 'UNKNOWN';
+    const before = directoryIdentity(root);
     const entries = fs.readdirSync(root).sort();
     if (entries.length !== FILES.length || entries.some((x, i) => x !== FILES[i])) return 'UNKNOWN';
     const manifest = path.join(root, 'manifest.json');
     const projection = path.join(root, 'projection.json');
-    for (const file of [manifest, projection]) {
-      const stat = fs.lstatSync(file);
-      if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) return 'UNKNOWN';
-    }
-    const exactBytes = fs.readFileSync(manifest, 'utf8') === pkg.manifestText
-      && fs.readFileSync(projection, 'utf8') === pkg.projectionText;
-    return exactBytes ? 'EXACT' : 'CONFLICT';
+    const manifestBytes = exactRegularFile(manifest);
+    const projectionBytes = exactRegularFile(projection);
+    if (outputDirectoryState(base, root) !== 'SAFE' || before !== directoryIdentity(root)) return 'UNKNOWN';
+    return manifestBytes === pkg.manifestText && projectionBytes === pkg.projectionText ? 'EXACT' : 'CONFLICT';
   } catch {
     return 'UNKNOWN';
   }
@@ -215,7 +261,7 @@ function pass(request, finalRoot, pkg, already_reconciled = false, reason = null
   };
 }
 
-function createTaskCycleEffectReconciliationCapability({ root }) {
+function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurface = null }) {
   const base = path.resolve(root);
   return {
     reconcileCompletedObligation({ request, observed }) {
@@ -245,53 +291,133 @@ function createTaskCycleEffectReconciliationCapability({ root }) {
 
       const exactInputs = initialization.projection.exact_inputs;
       if (request.subject.repository !== exactInputs.Product_baseline.repository
-          || request.subject.branch !== exactInputs.TASK_carrier.branch
           || request.subject.parent !== exactInputs.TASK_carrier.commit
           || !subjectPathsWithinFrozenScope(request.subject.changed_paths, exactInputs.write_scope)) {
         return terminal(request, 'BLOCKED', 'NONE', 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
+      }
+      // Default behavior is unchanged. A different truthful child branch can
+      // be qualified only by a Control-bound, independently checked Git source.
+      // No caller-supplied request proof is sufficient for a branch exception.
+      let branchProvenance = null;
+      const forked = request.subject.branch !== exactInputs.TASK_carrier.branch;
+      if (forked) {
+        if (!qualifiedGitSurface) {
+          return terminal(request, 'BLOCKED', 'NONE', 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
+        }
+        const bound = prepareForkedPhase1Branch({
+          request, originalInputs: exactInputs, qualifiedGitSurface,
+        });
+        if (bound.status !== 'PASS') {
+          return terminal(request, 'BLOCKED', 'NONE', bound.reason);
+        }
+        // This is stable shape validation, NOT live Git qualification.
+        // The latter is mandatory before first publication, but cannot
+        // invalidate an already exact immutable reconciliation on branch move.
+        branchProvenance = bound.immutable;
       }
 
       if (!observed || !exact(request.subject, observed.subject)) {
         return terminal(request, 'BLOCKED', 'NONE', 'SUBJECT_OBSERVATION_MISMATCH');
       }
 
-      let baseStat;
-      try { baseStat = fs.lstatSync(base); } catch {
-        return terminal(request, 'FAILED', 'NONE', 'RECONCILIATION_ROOT_UNAVAILABLE');
-      }
-      if (!baseStat.isDirectory() || baseStat.isSymbolicLink()) {
-        return terminal(request, 'FAILED', 'NONE', 'RECONCILIATION_ROOT_INVALID');
+      const baseState = outputDirectoryState(base, base);
+      if (baseState !== 'SAFE') {
+        return terminal(request, 'FAILED', 'NONE', baseState === 'MISSING'
+          ? 'RECONCILIATION_ROOT_UNAVAILABLE' : 'RECONCILIATION_ROOT_INVALID');
       }
 
-      const pkg = packageFor(request, initialization);
+      const pkg = packageFor(request, initialization, branchProvenance);
       const finalRoot = path.join(base, safeId(request.taskcycle.id), safeId(request.obligation.id));
       const parentRoot = path.dirname(finalRoot);
-      fs.mkdirSync(parentRoot, { recursive: true });
 
-      if (fs.existsSync(finalRoot)) {
-        const state = inspect(finalRoot, pkg);
+      // The fork branch is security-sensitive: an exact existing package
+      // is accepted before live Git only if an independently anchored inode
+      // (not a mutable pathname) holds its bytes. The first publication still
+      // requires real Git qualification. On hosts without descriptor-relative
+      // filesystem operations, forked publication fails closed.
+      if (forked) {
+        const pinned = reconcilePinnedEffect({
+          root: base,
+          taskName: safeId(request.taskcycle.id),
+          obligationName: safeId(request.obligation.id),
+          pkg,
+          qualifyFirstWrite: () => {
+            const qualified = qualifyForkedPhase1Branch({
+              request, originalInputs: exactInputs, qualifiedGitSurface,
+            });
+            if (qualified.status !== 'PASS') return qualified;
+            const { remote_head: _observationOnly, ...immutable } = qualified.verified;
+            return exact(immutable, branchProvenance)
+              ? { status: 'PASS' }
+              : { status: 'BLOCKED', reason: 'FORK_IMMUTABLE_PROVENANCE_MISMATCH' };
+          },
+        });
+        if (pinned.kind === 'EXACT') return pass(request, finalRoot, pkg, true, 'ALREADY_RECONCILED_EXACT');
+        if (pinned.kind === 'CREATED') return pass(request, finalRoot, pkg);
+        return terminal(request, 'BLOCKED', pinned.effect_state, pinned.reason);
+      }
+
+      const initialFinalState = outputDirectoryState(base, finalRoot);
+      if (initialFinalState === 'UNSAFE') {
+        return terminal(request, 'BLOCKED', 'NONE', 'RECONCILIATION_PATH_UNSAFE');
+      }
+      if (initialFinalState === 'SAFE') {
+        const state = inspect(finalRoot, pkg, base);
         if (state === 'EXACT') return pass(request, finalRoot, pkg, true, 'ALREADY_RECONCILED_EXACT');
         return terminal(request, 'BLOCKED', state === 'CONFLICT' ? 'NONE' : 'UNKNOWN', state === 'CONFLICT'
           ? 'TASKCYCLE_EFFECT_RECONCILIATION_IDENTITY_CONFLICT'
           : 'EFFECT_RECONCILIATION_PROJECTION_AMBIGUOUS');
       }
 
+      // Never let a caller's static binding alone create a new effect.
+      // Qualify original source objects and current remote ancestry now,
+      // only after exact existing state has been checked for idempotence.
+      if (forked) {
+        const qualified = qualifyForkedPhase1Branch({
+          request, originalInputs: exactInputs, qualifiedGitSurface,
+        });
+        if (qualified.status !== 'PASS') {
+          return terminal(request, 'BLOCKED', 'NONE', qualified.reason);
+        }
+        const { remote_head: _observationOnly, ...stable } = qualified.verified;
+        if (!exact(stable, branchProvenance)) {
+          return terminal(request, 'BLOCKED', 'NONE', 'FORK_IMMUTABLE_PROVENANCE_MISMATCH');
+        }
+      }
+
       let staging = null;
       try {
+        if (outputDirectoryState(base, parentRoot) === 'UNSAFE') {
+          return terminal(request, 'BLOCKED', 'NONE', 'RECONCILIATION_PATH_UNSAFE');
+        }
+        fs.mkdirSync(parentRoot, { recursive: true });
+        if (outputDirectoryState(base, parentRoot) !== 'SAFE'
+            || outputDirectoryState(base, finalRoot) !== 'MISSING') {
+          return terminal(request, 'BLOCKED', 'UNKNOWN', 'EFFECT_RECONCILIATION_PATH_RACE');
+        }
         staging = fs.mkdtempSync(path.join(parentRoot, `.${safeId(request.obligation.id)}.staging-`));
         fs.writeFileSync(path.join(staging, 'projection.json'), pkg.projectionText, { flag: 'wx' });
         fs.writeFileSync(path.join(staging, 'manifest.json'), pkg.manifestText, { flag: 'wx' });
-        if (inspect(staging, pkg) !== 'EXACT') {
+        if (outputDirectoryState(base, staging) !== 'SAFE'
+            || inspect(staging, pkg, base) !== 'EXACT') {
           return terminal(request, 'FAILED', 'NONE', 'STAGED_EFFECT_RECONCILIATION_INVALID');
+        }
+        if (outputDirectoryState(base, parentRoot) !== 'SAFE'
+            || outputDirectoryState(base, finalRoot) !== 'MISSING') {
+          return terminal(request, 'BLOCKED', 'UNKNOWN', 'EFFECT_RECONCILIATION_PATH_RACE');
         }
         fs.renameSync(staging, finalRoot);
         staging = null;
-        return inspect(finalRoot, pkg) === 'EXACT'
+        return inspect(finalRoot, pkg, base) === 'EXACT'
           ? pass(request, finalRoot, pkg)
           : terminal(request, 'BLOCKED', 'UNKNOWN', 'EFFECT_RECONCILIATION_PUBLISH_UNKNOWN');
       } catch (error) {
-        if (fs.existsSync(finalRoot)) {
-          const state = inspect(finalRoot, pkg);
+        const finalState = outputDirectoryState(base, finalRoot);
+        if (finalState === 'UNSAFE') {
+          return terminal(request, 'BLOCKED', 'UNKNOWN', 'EFFECT_RECONCILIATION_PATH_RACE');
+        }
+        if (finalState === 'SAFE') {
+          const state = inspect(finalRoot, pkg, base);
           if (state === 'EXACT') return pass(request, finalRoot, pkg, true, 'PUBLISH_RACE_RECONCILED_EXACT');
           if (state === 'CONFLICT') {
             return terminal(request, 'BLOCKED', 'NONE', 'TASKCYCLE_EFFECT_RECONCILIATION_IDENTITY_CONFLICT');

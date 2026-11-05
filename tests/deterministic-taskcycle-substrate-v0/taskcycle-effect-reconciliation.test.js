@@ -432,3 +432,99 @@ test('exact path duplicates cannot qualify in source, scope or observed merge', 
     ['attendance/core/service.py'], [domainTask, domainTask],
   ), false);
 });
+
+
+test('forked Phase1 cannot publish from a static Control binding without actual qualified Git', () => {
+  const f=fixture();
+  try{
+    const req=structuredClone(f.request);
+    req.subject.branch='task/forked-independent-phase1';
+    const surface={
+      binding:'CONTROL_QUALIFIED_GIT',
+      taskcycle_id:req.taskcycle.id,
+      subject_branch:req.subject.branch,
+      original_task_branch:initializationRequest().TASK_carrier.branch,
+      qualification_receipt_ref:'CONTROL:SOURCE:UNIT-TEST',
+      repositoryPath:f.root,
+      remoteUrl:'https://github.com/mauedgar/tecnotron-ai.git',
+      gitExecutablePath:path.join(f.root,'nonexistent-pinned-git'),
+      gitExecutableSha256:'sha256:'+'a'.repeat(64),
+    };
+    const result=createTaskCycleEffectReconciliationCapability({
+      root:f.reconciliationRoot,qualifiedGitSurface:surface,
+    }).reconcileCompletedObligation({request:req,observed:{subject:structuredClone(req.subject)}});
+    assert.equal(result.status,'BLOCKED');
+    assert.equal(result.effect_state,'NONE');
+    assert.equal(result.reason,'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    assert.deepEqual(fs.readdirSync(f.reconciliationRoot),[],
+      'failed actual Git preflight must not even create a reconciliation staging directory');
+  }finally{f.cleanup();}
+});
+
+
+test('preexisting byte-exact effect behind a symlink cannot claim exact idempotence', (t) => {
+  const f = fixture();
+  try {
+    const cap = createTaskCycleEffectReconciliationCapability({ root: f.reconciliationRoot });
+    const first = cap.reconcileCompletedObligation({
+      request: f.request, observed: { subject: subject() },
+    });
+    assert.equal(first.status, 'PASS');
+    const finalRoot = first.portable_projection.location_or_ref;
+    const outside = path.join(f.root, 'outside-exact-effect');
+    fs.renameSync(finalRoot, outside);
+    try { fs.symlinkSync(outside, finalRoot, process.platform === 'win32' ? 'junction' : 'dir'); }
+    catch (error) {
+      if (['EPERM', 'EACCES', 'ENOSYS'].includes(error.code)) { t.skip('links unavailable'); return; }
+      throw error;
+    }
+    const replay = cap.reconcileCompletedObligation({
+      request: f.request, observed: { subject: subject() },
+    });
+    assert.equal(replay.status, 'BLOCKED');
+    assert.equal(replay.effect_state, 'NONE');
+    assert.equal(replay.already_reconciled, false);
+    assert.equal(replay.reason, 'RECONCILIATION_PATH_UNSAFE');
+    assert.equal(fs.existsSync(path.join(outside, 'manifest.json')), true);
+  } finally { f.cleanup(); }
+});
+
+test('symlinked parent cannot redirect materialization outside reconciliation root', (t) => {
+  const f = fixture();
+  try {
+    const parent = path.join(f.reconciliationRoot, f.request.taskcycle.id);
+    const outside = path.join(f.root, 'outside-parent');
+    fs.mkdirSync(outside);
+    try { fs.symlinkSync(outside, parent, process.platform === 'win32' ? 'junction' : 'dir'); }
+    catch (error) {
+      if (['EPERM', 'EACCES', 'ENOSYS'].includes(error.code)) { t.skip('links unavailable'); return; }
+      throw error;
+    }
+    const result = createTaskCycleEffectReconciliationCapability({ root: f.reconciliationRoot })
+      .reconcileCompletedObligation({ request: f.request, observed: { subject: subject() } });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.effect_state, 'NONE');
+    assert.equal(result.reason, 'RECONCILIATION_PATH_UNSAFE');
+    assert.deepEqual(fs.readdirSync(outside), []);
+  } finally { f.cleanup(); }
+});
+
+test('dangling symlink at final output cannot be used as an empty publication slot', (t) => {
+  const f = fixture();
+  try {
+    const parent = path.join(f.reconciliationRoot, f.request.taskcycle.id);
+    fs.mkdirSync(parent);
+    const finalRoot = path.join(parent, f.request.obligation.id);
+    const nonexistent = path.join(f.root, 'nonexistent-target');
+    try { fs.symlinkSync(nonexistent, finalRoot, process.platform === 'win32' ? 'junction' : 'dir'); }
+    catch (error) {
+      if (['EPERM', 'EACCES', 'ENOSYS'].includes(error.code)) { t.skip('links unavailable'); return; }
+      throw error;
+    }
+    const result = createTaskCycleEffectReconciliationCapability({ root: f.reconciliationRoot })
+      .reconcileCompletedObligation({ request: f.request, observed: { subject: subject() } });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'RECONCILIATION_PATH_UNSAFE');
+    assert.equal(fs.existsSync(nonexistent), false);
+  } finally { f.cleanup(); }
+});
