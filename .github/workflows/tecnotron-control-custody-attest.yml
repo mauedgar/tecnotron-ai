@@ -128,8 +128,10 @@ jobs:
               qualification/attestation-absent.json > /dev/null
             echo "GITHUB_ATTESTATION_EMPTY_INDEX_CONTRACT=PASS_200_EMPTY"
           else
-            grep -qxF 'gh: Not Found (HTTP 404)' qualification/attestation-absent-error.txt
-            test ! -s qualification/attestation-absent.json
+            grep -qF '(HTTP 404)' qualification/attestation-absent-error.txt
+            if test -s qualification/attestation-absent.json; then
+              jq -e '.message == "Not Found"' qualification/attestation-absent.json > /dev/null
+            fi
             echo "GITHUB_ATTESTATION_EMPTY_INDEX_CONTRACT=PASS_404_NOT_FOUND"
           fi
           gh api --paginate "repos/mauedgar/tecnotron-ai/actions/workflows/tecnotron-control-custody-attest.yml/runs?event=push&per_page=100" \
@@ -389,8 +391,10 @@ jobs:
                 > custody/prior-attestations.json 2> custody/attestation-lookup-error.txt; then
             jq -e '.attestations | type == "array" and length == 0' custody/prior-attestations.json >/dev/null
           else
-            grep -qxF 'gh: Not Found (HTTP 404)' custody/attestation-lookup-error.txt
-            test ! -s custody/prior-attestations.json
+            grep -qF '(HTTP 404)' custody/attestation-lookup-error.txt
+            if test -s custody/prior-attestations.json; then
+              jq -e '.message == "Not Found"' custody/prior-attestations.json > /dev/null
+            fi
             echo "GITHUB_FIRST_ATTESTATION_NATIVE_404_VERIFIED=PASS"
           fi
           # Historical snapshot only. A changed or revoked comment requires
