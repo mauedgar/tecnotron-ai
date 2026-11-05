@@ -619,6 +619,46 @@ test('GitHub Control signer requires authenticated manual dispatch on the exact 
     policy, digest), false, 'missing certificate fails closed');
 });
 
+test('verified GitHub CLI native certificate keeps workflowRef as ref and SAN as full workflow identity', () => {
+  // Immutable original provider provenance: GitHub run 42106631053, SHA
+  // dea57a3c39688fc9679ceca8cbc75ffbcd80efec, original artifact
+  // 13453090203, ZIP digest sha256:bdb66f87582371e3dee74de7c8ef30cda833bdde98dd4fe131d2180899ba7158.
+  // This is the actual gh attestation verify JSON certificate projection for a
+  // NONPRODUCT push fixture, not a simulated successful Product dispatch.
+  const signer = 'dea57a3c39688fc9679ceca8cbc75ffbcd80efec';
+  const sourceRef = 'refs/heads/experiment/tecnotron-a01-github-attestation-20261105-001';
+  const workflow = 'mauedgar/tecnotron-ai/.github/workflows/tecnotron-control-custody-attest.yml';
+  const digest = '8ce88040f3eaea4f431b17b0f51ec137bbc7a0d40c91c106210157c9c608e4f4';
+  const cert = {
+    sourceRepositoryIdentifier: '1339077141',
+    sourceRepositoryOwnerIdentifier: '54420195',
+    githubWorkflowRepository: 'mauedgar/tecnotron-ai',
+    sourceRepositoryURI: 'https://github.com/mauedgar/tecnotron-ai',
+    githubWorkflowSHA: signer,
+    buildSignerDigest: signer,
+    sourceRepositoryRef: sourceRef,
+    githubWorkflowRef: sourceRef,
+    githubWorkflowTrigger: 'push',
+    buildTrigger: 'push',
+    runnerEnvironment: 'github-hosted',
+    issuer: 'https://token.actions.githubusercontent.com',
+    subjectAlternativeName: 'https://github.com/' + workflow + '@' + sourceRef,
+  };
+  assert.equal(cert.githubWorkflowRef, sourceRef);
+  assert.notEqual(cert.githubWorkflowRef, cert.subjectAlternativeName);
+  assert.equal(cert.subjectAlternativeName,
+    'https://github.com/' + workflow + '@' + sourceRef);
+  // The real attestation is valid as a synthetic push, and MUST be rejected
+  // as a competent manually dispatched Product Control issuer.
+  const entry = { verificationResult: {
+    signature: { certificate: cert },
+    statement: { subject: [{ name: 'manifest.json', digest: { sha256: digest } }] },
+  }};
+  const policy = { repository: 'mauedgar/tecnotron-ai', repositoryId: '1339077141',
+    signerWorkflow: workflow, sourceRef, signerDigest: signer };
+  assert.equal(matchesCertificate(entry, policy, digest), false);
+});
+
 test('native attestation input acquisition is fd-bound and rejects symlinks, mutable modes and oversize files',
   { skip: process.platform !== 'linux' }, () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'h6-attest-file-'));
