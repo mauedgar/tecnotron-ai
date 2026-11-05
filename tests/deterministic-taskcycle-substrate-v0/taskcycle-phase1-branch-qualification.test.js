@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { createHash } = require('node:crypto');
 const {
   qualifyForkedPhase1Branch,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
@@ -22,6 +23,9 @@ const FILE = 'attendance/operator/cli.py';
 
 function context() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'h6-branch-qualification-'));
+  const binary = path.join(root, 'trusted-git');
+  fs.writeFileSync(binary, 'test-only-no-execution\n', {flag:'wx'});
+  const binaryHash = 'sha256:'+createHash('sha256').update(fs.readFileSync(binary)).digest('hex');
   return {
     root,
     request: {
@@ -44,6 +48,8 @@ function context() {
       repositoryPath: root,
       remoteUrl: REMOTE,
       qualification_receipt_ref: 'https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-6641648462',
+      gitExecutablePath: binary,
+      gitExecutableSha256: binaryHash,
     },
     cleanup: () => fs.rmSync(root, {recursive:true,force:true}),
   };
@@ -72,6 +78,8 @@ function fakeGit(c, overrides = {}) {
       if (key === 'rev-parse --show-toplevel') return result(c.root + '\n');
       if (key === 'config --local --get remote.origin.url') return result(REMOTE + '\n');
       if (key === 'config --get-regexp ^url\\..*\\.(insteadOf|pushInsteadOf)$')
+        return result('', 1);
+      if (cmd[0] === 'config' && cmd[1] === '--local' && cmd[2] === '--get-regexp')
         return result('', 1);
       if (cmd[0] === 'rev-parse' && cmd[1]?.endsWith('^{commit}')) {
         return result(cmd[1].slice(0, -9) + '\n');
@@ -210,4 +218,62 @@ test('rejects missing, forged or non-descendant remote child branch evidence', (
     assert.equal(qualify(c,{['merge-base --is-ancestor '+TIP+' '+BRANCH_HEAD]:r('',1)})
       .reason,'FORK_PHASE1_NOT_IN_REMOTE_BRANCH_ANCESTRY');
   } finally { c.cleanup(); }
+});
+
+test('immutable proof does not absorb mutable remote head or branch deletion', () => {
+  const c=context();
+  try {
+    const {prepareForkedPhase1Branch}=require(
+      '../../src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
+    const bound={request:c.request,originalInputs:c.originalInputs,
+      qualifiedGitSurface:c.qualifiedGitSurface};
+    const staticProof=prepareForkedPhase1Branch(bound);
+    assert.equal(staticProof.status,'PASS');
+    assert.equal(Object.hasOwn(staticProof.immutable,'remote_head'),false);
+    const first=qualify(c);
+    assert.equal(first.status,'PASS',first.reason);
+    const {remote_head:headA,...identityA}=first.verified;
+    assert.equal(headA,BRANCH_HEAD);
+    assert.deepEqual(identityA,staticProof.immutable);
+    const remoteHead='d'.repeat(40);
+    const remoteKey='ls-remote --heads '+REMOTE+' refs/heads/'+BRANCH;
+    const newRemote={
+      stdout:remoteHead+'\trefs/heads/'+BRANCH+'\n',
+      exit_code:0,stderr:'',error_code:null,timed_out:false,signal:null,
+    };
+    const newCommit={
+      stdout:'tree '+BRANCH_TREE+'\nparent '+BRANCH_HEAD+'\n\nadvanced',
+      exit_code:0,stderr:'',error_code:null,timed_out:false,signal:null,
+    };
+    const later=qualify(c,{[remoteKey]:newRemote,['cat-file -p '+remoteHead]:newCommit});
+    assert.equal(later.status,'PASS',later.reason);
+    const {remote_head:headB,...identityB}=later.verified;
+    assert.equal(headB,remoteHead);
+    assert.deepEqual(identityB,staticProof.immutable);
+    const missing=qualify(c,{[remoteKey]:{...newRemote,stdout:''}});
+    assert.equal(missing.reason,'FORK_REMOTE_BRANCH_UNVERIFIED');
+    assert.deepEqual(prepareForkedPhase1Branch(bound).immutable,staticProof.immutable);
+  }finally{c.cleanup();}
+});
+
+test('pinning Git executable is required and hostile local credential config is blocked', () => {
+  const c=context();
+  try{
+    const {prepareForkedPhase1Branch}=require(
+      '../../src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
+    const bound={request:c.request,originalInputs:c.originalInputs,
+      qualifiedGitSurface:c.qualifiedGitSurface};
+    const validHash=c.qualifiedGitSurface.gitExecutableSha256;
+    c.qualifiedGitSurface.gitExecutableSha256='invalid';
+    assert.equal(prepareForkedPhase1Branch(bound).reason,'FORK_BRANCH_BINDING_UNQUALIFIED');
+    c.qualifiedGitSurface.gitExecutableSha256='sha256:'+'a'.repeat(64);
+    assert.equal(prepareForkedPhase1Branch(bound).status,'PASS');
+    assert.equal(qualifyForkedPhase1Branch(bound).reason,'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    c.qualifiedGitSurface.gitExecutableSha256=validHash;
+    const key='config --local --get-regexp ^(http\\..*\\.extraheader|credential\\..*|remote\\.origin\\.uploadpack)$';
+    const injected={stdout:'http.https://github.com/.extraheader SENSITIVE\n',
+      exit_code:0,stderr:'',error_code:null,timed_out:false,signal:null};
+    assert.equal(qualify(c,{[key]:injected}).reason,
+      'FORK_GIT_LOCAL_CREDENTIAL_OR_TRANSPORT_OVERRIDE');
+  }finally{c.cleanup();}
 });
