@@ -122,11 +122,16 @@ jobs:
           # Probe the absence case against the native provider: the first real
           # grant must distinguish a verified empty inventory from 404/error.
           absent="0000000000000000000000000000000000000000000000000000000000000000"
-          gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$absent" \
-            > qualification/attestation-absent.json
-          jq -e '.attestations | type == "array" and length == 0' \
-            qualification/attestation-absent.json > /dev/null
-          echo "GITHUB_ATTESTATION_EMPTY_INDEX_CONTRACT=PASS"
+          if gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$absent" \
+              > qualification/attestation-absent.json 2> qualification/attestation-absent-error.txt; then
+            jq -e '.attestations | type == "array" and length == 0' \
+              qualification/attestation-absent.json > /dev/null
+            echo "GITHUB_ATTESTATION_EMPTY_INDEX_CONTRACT=PASS_200_EMPTY"
+          else
+            grep -qxF 'gh: Not Found (HTTP 404)' qualification/attestation-absent-error.txt
+            test ! -s qualification/attestation-absent.json
+            echo "GITHUB_ATTESTATION_EMPTY_INDEX_CONTRACT=PASS_404_NOT_FOUND"
+          fi
           gh api --paginate "repos/mauedgar/tecnotron-ai/actions/workflows/tecnotron-control-custody-attest.yml/runs?event=push&per_page=100" \
             > qualification/run-pages.jsonl
           jq -s -e --arg sha "$GITHUB_SHA" '
@@ -372,8 +377,22 @@ jobs:
           # already-signed manifest bytes; all API failures fail CLOSED.
           sha256sum custody/manifest.json | tee custody/manifest.sha256
           signed_digest="$(cut -d' ' -f1 custody/manifest.sha256)"
-          gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$signed_digest" > custody/prior-attestations.json
-          jq -e '.attestations | type == "array" and length == 0' custody/prior-attestations.json >/dev/null
+          # Native gh API returns HTTP 404 for an unsigned digest. Never
+          # treat a network, permission or malformed API failure as absence.
+          # First require proof of access to a repository attestation that is
+          # known to exist and has been independently verified NONPRODUCT.
+          known_sha="8ce88040f3eaea4f431b17b0f51ec137bbc7a0d40c91c106210157c9c608e4f4"
+          gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$known_sha" > custody/repository-attestation-canary.json
+          jq -e '.attestations | type == "array" and length >= 1 and
+            all(.[]; .repository_id == 1339077141)' custody/repository-attestation-canary.json >/dev/null
+          if gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$signed_digest" \
+                > custody/prior-attestations.json 2> custody/attestation-lookup-error.txt; then
+            jq -e '.attestations | type == "array" and length == 0' custody/prior-attestations.json >/dev/null
+          else
+            grep -qxF 'gh: Not Found (HTTP 404)' custody/attestation-lookup-error.txt
+            test ! -s custody/prior-attestations.json
+            echo "GITHUB_FIRST_ATTESTATION_NATIVE_404_VERIFIED=PASS"
+          fi
           # Historical snapshot only. A changed or revoked comment requires
           # a distinct, authenticated Control decision; no silent renewal.
           for item in grant decision qualification; do
