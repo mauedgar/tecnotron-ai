@@ -51,6 +51,46 @@ function qualifiedGitExecutable(surface) {
   return binary;
 }
 
+
+/**
+ * Caller assertions do not authenticate Control custody. The resolver must
+ * originate from the competent Control composition root, independently of
+ * the request or any untrusted worker. This routine verifies correspondence,
+ * not the issuer's authority. Control must authenticate the resolver itself.
+ */
+function qualifyControlGitSource({ request, originalInputs, qualifiedGitSurface, resolveControlGitSource }) {
+  if (typeof resolveControlGitSource !== 'function')
+    return fail('FORK_CONTROL_CUSTODY_UNVERIFIED');
+  let proof;
+  try {
+    proof = resolveControlGitSource({
+      taskcycle_id: request.taskcycle.id,
+      subject: structuredClone(request.subject),
+      original_task_carrier: structuredClone(originalInputs.TASK_carrier),
+    });
+  } catch {
+    return fail('FORK_CONTROL_CUSTODY_UNAVAILABLE');
+  }
+  if (!proof || proof.status !== 'CONTROL_VERIFIED_SOURCE'
+      || !nonempty(proof.execution_attempt_id)
+      || !nonempty(proof.control_resolution_ref)
+      || !sha(proof.source_code_commit)
+      || proof.taskcycle_id !== request.taskcycle.id
+      || proof.subject_commit !== request.subject.commit
+      || proof.subject_tree !== request.subject.tree
+      || proof.original_task_commit !== originalInputs.TASK_carrier.commit)
+    return fail('FORK_CONTROL_CUSTODY_UNVERIFIED');
+  for (const key of [
+    'binding', 'taskcycle_id', 'subject_branch', 'original_task_branch',
+    'repositoryPath', 'remoteUrl', 'qualification_receipt_ref',
+    'gitExecutablePath', 'gitExecutableSha256',
+  ]) {
+    if (proof[key] !== qualifiedGitSurface[key])
+      return fail('FORK_CONTROL_CUSTODY_MISMATCH');
+  }
+  return { status: 'PASS', surface: proof };
+}
+
 function read(git, root, args, { nul = false, allowExitOne = false } = {}) {
   const v = git.run(root, [...GIT_PREFIX, ...args], { timeoutMs: 30000 });
   if (v.error_code || v.timed_out || v.signal
@@ -132,13 +172,17 @@ function prepareForkedPhase1Branch({ request, originalInputs, qualifiedGitSurfac
 }
 
 function qualifyForkedPhase1Branch({
-  request, originalInputs, qualifiedGitSurface, git = null,
+  request, originalInputs, qualifiedGitSurface, resolveControlGitSource = null, git = null,
 }) {
   const bound = prepareForkedPhase1Branch({ request, originalInputs, qualifiedGitSurface });
   if (bound.status !== 'PASS') return bound;
+  const custody = qualifyControlGitSource({
+    request, originalInputs, qualifiedGitSurface, resolveControlGitSource,
+  });
+  if (custody.status !== 'PASS') return custody;
   const subject = request.subject;
   const original = originalInputs.TASK_carrier;
-  const surface = qualifiedGitSurface;
+  const surface = custody.surface;
   try {
     if (!git) git = createReadOnlySourceGit(qualifiedGitExecutable(surface));
     const root = path.resolve(surface.repositoryPath);
@@ -203,4 +247,4 @@ function qualifyForkedPhase1Branch({
   }
 }
 
-module.exports = { createReadOnlySourceGit, prepareForkedPhase1Branch, qualifyForkedPhase1Branch };
+module.exports = { createReadOnlySourceGit, prepareForkedPhase1Branch, qualifyControlGitSource, qualifyForkedPhase1Branch };
