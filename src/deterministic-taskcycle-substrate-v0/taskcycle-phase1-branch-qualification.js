@@ -63,15 +63,19 @@ function qualifyControlGitSource({ request, originalInputs, qualifiedGitSurface,
     return fail('FORK_CONTROL_CUSTODY_UNVERIFIED');
   let proof;
   try {
-    proof = resolveControlGitSource({
+    // Clone once at the boundary: a caller-held, accessor-backed or mutable
+    // resolver object must not change underneath executable/checkout checks.
+    // This only stabilizes the observation; it does NOT authenticate its issuer.
+    proof = structuredClone(resolveControlGitSource({
       taskcycle_id: request.taskcycle.id,
       subject: structuredClone(request.subject),
       original_task_carrier: structuredClone(originalInputs.TASK_carrier),
-    });
+    }));
   } catch {
     return fail('FORK_CONTROL_CUSTODY_UNAVAILABLE');
   }
-  if (!proof || proof.status !== 'CONTROL_VERIFIED_SOURCE'
+  if (!proof || typeof proof !== 'object' || Array.isArray(proof)
+      || proof.status !== 'CONTROL_VERIFIED_SOURCE'
       || !nonempty(proof.execution_attempt_id)
       || !nonempty(proof.control_resolution_ref)
       || !sha(proof.source_code_commit)
