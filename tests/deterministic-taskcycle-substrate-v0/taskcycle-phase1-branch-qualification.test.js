@@ -114,6 +114,23 @@ test('qualifies truthful child branch with real-object shaped read-only Git obse
   } finally { c.cleanup(); }
 });
 
+test('accepts only the other exact official GitHub HTTPS origin form', () => {
+  const c = context();
+  try {
+    const withoutGitSuffix = REMOTE.slice(0, -4);
+    c.qualifiedGitSurface.remoteUrl = withoutGitSuffix;
+    const r = (stdout) => ({
+      stdout, exit_code: 0, stderr: '', error_code: null, timed_out: false, signal: null,
+    });
+    const alternate = qualify(c, {
+      'config --local --get remote.origin.url': r(withoutGitSuffix + '\n'),
+    });
+    assert.equal(alternate.status, 'PASS', alternate.reason);
+    c.qualifiedGitSurface.remoteUrl = 'http://github.com/mauedgar/tecnotron-ai';
+    assert.equal(qualify(c).reason, 'FORK_BRANCH_BINDING_UNQUALIFIED');
+  } finally { c.cleanup(); }
+});
+
 test('requires Control-bound source; refuses caller-only asserted branch provenance', () => {
   const c = context();
   try {
