@@ -103,3 +103,51 @@ test('Linux: dangling final symlink remains a blocking identity mismatch', { ski
     assert.notEqual(v.reason, null);
   } finally { f.clean(); }
 });
+
+test('Linux: non-sticky writable ancestor is refused before qualification or writes', { skip: process.platform !== 'linux' }, () => {
+  const f = fixture();
+  try {
+    fs.chmodSync(f.tmp, 0o777);
+    let gitInvoked = false;
+    const v = run(f.root, () => {
+      gitInvoked = true;
+      return { status: 'PASS' };
+    });
+    assert.equal(v.kind, 'BLOCKED', JSON.stringify(v));
+    assert.match(v.reason, /ANCESTOR_RENAME_UNSAFE/);
+    assert.equal(v.effect_state, 'NONE');
+    assert.equal(gitInvoked, false);
+    assert.deepEqual(fs.readdirSync(f.root), []);
+  } finally { f.clean(); }
+});
+
+test('Linux: sticky writable ancestor only permits an entry owned by trusted UID', { skip: process.platform !== 'linux' }, () => {
+  const f = fixture();
+  try {
+    fs.chmodSync(f.tmp, 0o1777);
+    const v = run(f.root);
+    assert.equal(v.kind, 'CREATED', JSON.stringify(v));
+    const published = path.join(f.root, 'TASKCYCLE-FORK-001', 'implementation');
+    assert.equal(fs.readFileSync(path.join(published, 'manifest.json'), 'utf8'), pkg.manifestText);
+    const exact = run(f.root, () => { throw Error('DO_NOT_REQUALIFY_EXACT'); });
+    assert.equal(exact.kind, 'EXACT');
+    assert.equal(fs.realpathSync(published), published);
+  } finally { f.clean(); }
+});
+
+test('Linux: ancestor safety applies to an existing exact package before replay', { skip: process.platform !== 'linux' }, () => {
+  const f = fixture();
+  try {
+    assert.equal(run(f.root).kind, 'CREATED');
+    fs.chmodSync(f.tmp, 0o777);
+    let qualificationInvoked = false;
+    const v = run(f.root, () => {
+      qualificationInvoked = true;
+      return { status: 'PASS' };
+    });
+    assert.equal(v.kind, 'BLOCKED');
+    assert.match(v.reason, /ANCESTOR_RENAME_UNSAFE/);
+    assert.equal(v.effect_state, 'NONE');
+    assert.equal(qualificationInvoked, false);
+  } finally { f.clean(); }
+});

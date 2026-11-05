@@ -4,7 +4,9 @@
 // /proc/self/fd/<n>/child resolves through the OPEN directory inode, not the
 // original mutable pathname. Non-Linux hosts fail closed for forked effects.
 // This assumes the operator's effective UID is trusted; a hostile process with
-// the same UID (or root) is outside the filesystem trust boundary.
+// the same UID (or root) is outside the filesystem trust boundary. This requires
+// ordinary Linux DAC/sticky semantics and a trusted mounted namespace; host ACL,
+// arbitrary mount reconfiguration, or hostile root are not claimed safe.
 const fs = require('node:fs');
 const path = require('node:path');
 const flags = fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW;
@@ -26,6 +28,18 @@ function openDirectory(target) {
   }
   return fd;
 }
+// A pinned inode does not make its public pathname durable if a different
+// UID can rename an ancestor. Linux DAC protects an entry if its parent
+// denies group/other writes, or if the parent has sticky-bit rename protection
+// and the entry belongs to this UID (or root). Root/same-UID processes remain
+// explicitly outside this filesystem threat model.
+function trustedOwner(stat, uid) { return stat.uid === uid || stat.uid === 0; }
+function protectedEntry(parent, child, uid) {
+  if (!trustedOwner(parent, uid) || !trustedOwner(child, uid))
+    throw Error('ANCESTOR_OWNER_UNTRUSTED');
+  if ((parent.mode & 0o022) !== 0 && (parent.mode & 0o1000) === 0)
+    throw Error('ANCESTOR_RENAME_UNSAFE');
+}
 function absoluteRoot(root) {
   let fd = null;
   try {
@@ -34,14 +48,27 @@ function absoluteRoot(root) {
     const absolute = path.resolve(root);
     if (!path.isAbsolute(absolute) || absolute.indexOf('\0') >= 0) throw Error('UNSAFE_ROOT');
     fd = openDirectory(path.parse(absolute).root);
+    const uid = process.getuid();
+    let parentStat = fs.fstatSync(fd);
+    if (!trustedOwner(parentStat, uid)) throw Error('ROOT_ANCESTOR_OWNER_UNTRUSTED');
     for (const component of absolute.slice(path.parse(absolute).root.length).split(path.sep).filter(Boolean)) {
       if (!safeComponent(component)) throw Error('UNSAFE_ROOT_COMPONENT');
-      const child = openDirectory(proc(fd, component));
+      const child = openChild(fd, component);
+      if (child === null) throw Error('ROOT_COMPONENT_MISSING');
+      try {
+        const childStat = fs.fstatSync(child);
+        protectedEntry(parentStat, childStat, uid);
+        parentStat = childStat;
+      } catch (error) {
+        fs.closeSync(child);
+        throw error;
+      }
       fs.closeSync(fd);
       fd = child;
     }
     const stat = fs.fstatSync(fd);
-    // Other UIDs may read, but must never be able to replace the operator's root.
+    // All ancestor entries have been checked for rename permissions. Other UIDs
+    // may read, but cannot replace the operator's root under Linux DAC.
     if (stat.uid !== process.getuid() || (stat.mode & 0o022) !== 0) throw Error('ROOT_NOT_PRIVATE');
     const visible = fs.lstatSync(absolute);
     if (!visible.isDirectory() || visible.isSymbolicLink() || !sameObject(visible, stat))
