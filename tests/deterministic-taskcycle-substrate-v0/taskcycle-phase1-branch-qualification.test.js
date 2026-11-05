@@ -51,6 +51,24 @@ function context() {
       gitExecutablePath: binary,
       gitExecutableSha256: binaryHash,
     },
+    controlVerifiedGitSource: {
+      status: 'CONTROL_VERIFIED_SOURCE',
+      binding: 'CONTROL_QUALIFIED_GIT',
+      taskcycle_id: TASKCYCLE,
+      subject_branch: BRANCH,
+      original_task_branch: ORIGINAL,
+      repositoryPath: root,
+      remoteUrl: REMOTE,
+      qualification_receipt_ref: 'https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-6641648462',
+      gitExecutablePath: binary,
+      gitExecutableSha256: binaryHash,
+      subject_commit: TIP,
+      subject_tree: TREE,
+      original_task_commit: TASK,
+      source_code_commit: '92f890ad57dac67d16a90235c6ec7deadc119daf',
+      execution_attempt_id: 'TEST-CONTROL-BOUND-ATTEMPT-1',
+      control_resolution_ref: 'TEST:EXTERNAL_CONTROL_RESOLUTION',
+    },
     cleanup: () => fs.rmSync(root, {recursive:true,force:true}),
   };
 }
@@ -104,6 +122,7 @@ function qualify(c, overrides = {}) {
     request: c.request,
     originalInputs: c.originalInputs,
     qualifiedGitSurface: c.qualifiedGitSurface,
+    resolveControlGitSource: () => structuredClone(c.controlVerifiedGitSource),
     git: fakeGit(c, overrides),
   });
 }
@@ -127,6 +146,7 @@ test('accepts only the other exact official GitHub HTTPS origin form', () => {
   try {
     const withoutGitSuffix = REMOTE.slice(0, -4);
     c.qualifiedGitSurface.remoteUrl = withoutGitSuffix;
+    c.controlVerifiedGitSource.remoteUrl = withoutGitSuffix;
     const r = (stdout) => ({
       stdout, exit_code: 0, stderr: '', error_code: null, timed_out: false, signal: null,
     });
@@ -268,7 +288,12 @@ test('pinning Git executable is required and hostile local credential config is 
     assert.equal(prepareForkedPhase1Branch(bound).reason,'FORK_BRANCH_BINDING_UNQUALIFIED');
     c.qualifiedGitSurface.gitExecutableSha256='sha256:'+'a'.repeat(64);
     assert.equal(prepareForkedPhase1Branch(bound).status,'PASS');
-    assert.equal(qualifyForkedPhase1Branch(bound).reason,'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    assert.equal(qualify(c).reason,'FORK_CONTROL_CUSTODY_MISMATCH');
+    c.controlVerifiedGitSource.gitExecutableSha256='sha256:'+'a'.repeat(64);
+    assert.equal(qualifyForkedPhase1Branch({
+      ...bound, resolveControlGitSource: () => structuredClone(c.controlVerifiedGitSource),
+    }).reason,'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    c.controlVerifiedGitSource.gitExecutableSha256=validHash;
     c.qualifiedGitSurface.gitExecutableSha256=validHash;
     const key='config --local --get-regexp ^(http\\..*\\.extraheader|credential\\..*|remote\\.origin\\.uploadpack)$';
     const injected={stdout:'http.https://github.com/.extraheader SENSITIVE\n',
@@ -294,5 +319,57 @@ test('Git source rejects local includes, transport proxy and protocol overrides'
       } });
       assert.equal(result.reason, 'FORK_GIT_LOCAL_TRANSPORT_CONFIGURATION_UNSAFE', value);
     }
+  } finally { c.cleanup(); }
+});
+
+test('untrusted caller label alone never qualifies fork provenance', () => {
+  const c = context();
+  try {
+    const input = { request: c.request, originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface, git: fakeGit(c) };
+    assert.equal(qualifyForkedPhase1Branch(input).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
+    assert.equal(qualifyForkedPhase1Branch({
+      ...input, resolveControlGitSource: () => { throw Error('unavailable'); },
+    }).reason, 'FORK_CONTROL_CUSTODY_UNAVAILABLE');
+    assert.equal(qualify(c).status, 'PASS');
+    assert.deepEqual(qualify(c), qualify(c), 'same Control-bound evidence is deterministic');
+  } finally { c.cleanup(); }
+});
+
+test('binary, checkout and receipt substitutions cannot override Control source', () => {
+  const c = context();
+  try {
+    const attackerRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'h6-fake-checkout-'));
+    try {
+      const binary = path.join(attackerRoot, 'substituted-git');
+      fs.writeFileSync(binary, 'attacker-selected-bytes\n');
+      c.qualifiedGitSurface.gitExecutablePath = binary;
+      c.qualifiedGitSurface.gitExecutableSha256 = 'sha256:' +
+        createHash('sha256').update(fs.readFileSync(binary)).digest('hex');
+      assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_MISMATCH');
+      c.qualifiedGitSurface.gitExecutablePath = c.controlVerifiedGitSource.gitExecutablePath;
+      c.qualifiedGitSurface.gitExecutableSha256 = c.controlVerifiedGitSource.gitExecutableSha256;
+      c.qualifiedGitSurface.repositoryPath = attackerRoot;
+      assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_MISMATCH');
+      c.qualifiedGitSurface.repositoryPath = c.root;
+      c.qualifiedGitSurface.qualification_receipt_ref = 'CONTROL:COUNTERFEIT';
+      assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_MISMATCH');
+    } finally { fs.rmSync(attackerRoot, { recursive: true, force: true }); }
+  } finally { c.cleanup(); }
+});
+
+test('Control proof must bind the actual frozen subject, TASK and execution attempt', () => {
+  const c = context();
+  try {
+    c.request.subject.commit = 'f'.repeat(40);
+    assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
+    c.request.subject.commit = TIP;
+    c.controlVerifiedGitSource.original_task_commit = 'f'.repeat(40);
+    assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
+    c.controlVerifiedGitSource.original_task_commit = TASK;
+    c.controlVerifiedGitSource.execution_attempt_id = '';
+    assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
+    c.controlVerifiedGitSource.execution_attempt_id = 'TEST-CONTROL-BOUND-ATTEMPT-1';
+    assert.equal(qualify(c).status, 'PASS');
   } finally { c.cleanup(); }
 });
