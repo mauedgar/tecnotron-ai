@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const {
-  qualifyForkedPhase1Branch,
+  qualifyControlGitSource, qualifyForkedPhase1Branch,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
 
 const TASK = 'add3f2525b3b711ce4e396a2e5ce2864f3ceef10';
@@ -381,5 +381,54 @@ test('even an injected Git adapter cannot bypass a modified executable', () => {
     const result = qualify(c);
     assert.equal(result.status, 'BLOCKED');
     assert.equal(result.reason, 'FORK_GIT_EVIDENCE_UNAVAILABLE');
+  } finally { c.cleanup(); }
+});
+
+test('Control custody resolver is snapshotted once and cannot mutate proof after qualification', () => {
+  const c = context();
+  try {
+    const supplied = structuredClone(c.controlVerifiedGitSource);
+    let calls = 0;
+    const qualified = qualifyControlGitSource({
+      request: c.request,
+      originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => { calls += 1; return supplied; },
+    });
+    assert.equal(qualified.status, 'PASS');
+    assert.equal(calls, 1);
+    supplied.gitExecutablePath = path.join(c.root, 'attacker-executable');
+    supplied.gitExecutableSha256 = 'sha256:'+'f'.repeat(64);
+    supplied.repositoryPath = path.join(c.root, 'different-repository');
+    assert.equal(qualified.surface.gitExecutablePath, c.qualifiedGitSurface.gitExecutablePath);
+    assert.equal(qualified.surface.gitExecutableSha256, c.qualifiedGitSurface.gitExecutableSha256);
+    assert.equal(qualified.surface.repositoryPath, c.root);
+  } finally { c.cleanup(); }
+});
+
+test('accessor-backed or unserializable custody proof fails closed', () => {
+  const c = context();
+  try {
+    const input = {
+      request: c.request,
+      originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+    };
+    const accessor = structuredClone(c.controlVerifiedGitSource);
+    Object.defineProperty(accessor, 'gitExecutablePath', {
+      enumerable: true,
+      get() { throw new Error('untrusted getter'); },
+    });
+    assert.equal(qualifyControlGitSource({
+      ...input, resolveControlGitSource: () => accessor,
+    }).reason, 'FORK_CONTROL_CUSTODY_UNAVAILABLE');
+    assert.equal(qualifyControlGitSource({
+      ...input, resolveControlGitSource: () => ({
+        ...c.controlVerifiedGitSource, unsuspected_function: () => 1,
+      }),
+    }).reason, 'FORK_CONTROL_CUSTODY_UNAVAILABLE');
+    assert.equal(qualifyControlGitSource({
+      ...input, resolveControlGitSource: () => 'CONTROL_VERIFIED_SOURCE',
+    }).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
   } finally { c.cleanup(); }
 });
