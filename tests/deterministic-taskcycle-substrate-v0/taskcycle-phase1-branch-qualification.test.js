@@ -170,14 +170,14 @@ test('checks actual commit tree, parent and full NUL path diff, not requester as
   const c = context();
   try {
     const r=(stdout)=>({stdout,exit_code:0,stderr:'',error_code:null,timed_out:false,signal:null});
-    assert.equal(qualify(c,{'cat-file -p '+TIP:r('tree '+TREE+'\nparent '+'a'.repeat(40)+'\n\nwrong')})
+    assert.equal(qualify(c,{['cat-file -p '+TIP]:r('tree '+TREE+'\nparent '+'a'.repeat(40)+'\n\nwrong')})
       .reason,'FORK_PHASE1_GIT_EDGE_MISMATCH');
-    assert.equal(qualify(c,{'cat-file -p '+TIP:r('tree '+'a'.repeat(40)+'\nparent '+TASK+'\n\nwrong')})
+    assert.equal(qualify(c,{['cat-file -p '+TIP]:r('tree '+'a'.repeat(40)+'\nparent '+TASK+'\n\nwrong')})
       .reason,'FORK_PHASE1_GIT_EDGE_MISMATCH');
     c.request.subject.changed_paths = [FILE,'src/hidden.js'];
     assert.equal(qualify(c).reason,'FORK_GIT_DIFF_MISMATCH');
     c.request.subject.changed_paths = [FILE];
-    assert.equal(qualify(c,{'diff --name-only --no-renames -z '+TASK+' '+TIP+' --':r('src/other.js\0')})
+    assert.equal(qualify(c,{['diff --name-only --no-renames -z '+TASK+' '+TIP+' --']:r('src/other.js\0')})
       .reason,'FORK_GIT_DIFF_MISMATCH');
   } finally { c.cleanup(); }
 });
