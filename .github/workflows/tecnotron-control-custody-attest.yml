@@ -122,18 +122,32 @@ jobs:
           # Probe the absence case against the native provider: the first real
           # grant must distinguish a verified empty inventory from 404/error.
           absent="0000000000000000000000000000000000000000000000000000000000000000"
-          if gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$absent" \
-              > qualification/attestation-absent.json 2> qualification/attestation-absent-error.txt; then
-            jq -e '.attestations | type == "array" and length == 0' \
-              qualification/attestation-absent.json > /dev/null
-            echo "GITHUB_ATTESTATION_EMPTY_INDEX_CONTRACT=PASS_200_EMPTY"
-          else
-            grep -qF '(HTTP 404)' qualification/attestation-absent-error.txt
-            if test -s qualification/attestation-absent.json; then
-              jq -e '.message == "Not Found"' qualification/attestation-absent.json > /dev/null
-            fi
-            echo "GITHUB_ATTESTATION_EMPTY_INDEX_CONTRACT=PASS_404_NOT_FOUND"
-          fi
+          # Observe the actual HTTP status instead of parsing gh CLI stderr.
+          # A 404 only means absence after the independent positive canary.
+          # Any transport error, malformed body, denied status or size breach
+          # remains fail-closed (including transient provider failures).
+          http_status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+            --proto '=https' \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --output qualification/attestation-absent.json --write-out '%{http_code}' \
+            "https://api.github.com/repos/mauedgar/tecnotron-ai/attestations/sha256:$absent")" || {
+            echo "GITHUB_ATTESTATION_LOOKUP_TRANSPORT_FAILURE" >&2; exit 1;
+          }
+          test "$(wc -c < qualification/attestation-absent.json)" -le 262144 || {
+            echo "GITHUB_ATTESTATION_LOOKUP_RESPONSE_TOO_LARGE" >&2; exit 1;
+          }
+          case "$http_status" in
+            200)
+              jq -e '.attestations | type == "array" and length == 0' qualification/attestation-absent.json >/dev/null
+              echo "GITHUB_ATTESTATION_ABSENCE=200_EMPTY" ;;
+            404)
+              jq -e '.message == "Not Found"' qualification/attestation-absent.json >/dev/null
+              echo "GITHUB_ATTESTATION_ABSENCE=404_VERIFIED" ;;
+            *)
+              echo "GITHUB_ATTESTATION_LOOKUP_UNEXPECTED_HTTP_STATUS" >&2; exit 1 ;;
+          esac
           gh api --paginate "repos/mauedgar/tecnotron-ai/actions/workflows/tecnotron-control-custody-attest.yml/runs?event=push&per_page=100" \
             > qualification/run-pages.jsonl
           jq -s -e --arg sha "$GITHUB_SHA" '
@@ -387,16 +401,32 @@ jobs:
           gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$known_sha" > custody/repository-attestation-canary.json
           jq -e '.attestations | type == "array" and length >= 1 and
             all(.[]; .repository_id == 1339077141)' custody/repository-attestation-canary.json >/dev/null
-          if gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$signed_digest" \
-                > custody/prior-attestations.json 2> custody/attestation-lookup-error.txt; then
-            jq -e '.attestations | type == "array" and length == 0' custody/prior-attestations.json >/dev/null
-          else
-            grep -qF '(HTTP 404)' custody/attestation-lookup-error.txt
-            if test -s custody/prior-attestations.json; then
-              jq -e '.message == "Not Found"' custody/prior-attestations.json > /dev/null
-            fi
-            echo "GITHUB_FIRST_ATTESTATION_NATIVE_404_VERIFIED=PASS"
-          fi
+          # Observe the actual HTTP status instead of parsing gh CLI stderr.
+          # A 404 only means absence after the independent positive canary.
+          # Any transport error, malformed body, denied status or size breach
+          # remains fail-closed (including transient provider failures).
+          http_status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+            --proto '=https' \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --output custody/prior-attestations.json --write-out '%{http_code}' \
+            "https://api.github.com/repos/mauedgar/tecnotron-ai/attestations/sha256:$signed_digest")" || {
+            echo "GITHUB_ATTESTATION_LOOKUP_TRANSPORT_FAILURE" >&2; exit 1;
+          }
+          test "$(wc -c < custody/prior-attestations.json)" -le 262144 || {
+            echo "GITHUB_ATTESTATION_LOOKUP_RESPONSE_TOO_LARGE" >&2; exit 1;
+          }
+          case "$http_status" in
+            200)
+              jq -e '.attestations | type == "array" and length == 0' custody/prior-attestations.json >/dev/null
+              echo "GITHUB_ATTESTATION_ABSENCE=200_EMPTY" ;;
+            404)
+              jq -e '.message == "Not Found"' custody/prior-attestations.json >/dev/null
+              echo "GITHUB_ATTESTATION_ABSENCE=404_VERIFIED" ;;
+            *)
+              echo "GITHUB_ATTESTATION_LOOKUP_UNEXPECTED_HTTP_STATUS" >&2; exit 1 ;;
+          esac
           # Historical snapshot only. A changed or revoked comment requires
           # a distinct, authenticated Control decision; no silent renewal.
           for item in grant decision qualification; do
