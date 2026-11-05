@@ -8,6 +8,13 @@ on:
     paths:
       - .github/workflows/tecnotron-control-custody-attest.yml
 
+  workflow_dispatch:
+    inputs:
+      grant_comment_id:
+        description: 'Exact Developer Control grant comment ID in Tecnotron issue 35'
+        type: string
+        required: true
+
 permissions:
   contents: read
   id-token: write
@@ -98,3 +105,135 @@ jobs:
             qualification/verified.json
             qualification/receipt.json
             ${{ steps.attest.outputs.bundle-path }}
+
+  # Product-provenance evidence only, not TaskCycle mutation, Phase2 or merge.
+  # This job is unreachable until the workflow has been competently integrated
+  # into default main AND the exact main signer commit is separately pinned
+  # by the Product verifier. Never accept dispatch payload as its own grant.
+  signed-control-custody:
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository_id == '1339077141' && github.actor_id == '54420195' && github.actor == 'mauedgar' && github.triggering_actor == 'mauedgar' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Independently authenticate immutable issue-35 Developer grant
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GRANT_ID: ${{ inputs.grant_comment_id }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "mauedgar/tecnotron-ai"
+          test "$GITHUB_REPOSITORY_ID" = "1339077141"
+          test "$GITHUB_ACTOR_ID" = "54420195"
+          test "$GITHUB_ACTOR" = "mauedgar"
+          test "$GITHUB_TRIGGERING_ACTOR" = "mauedgar"
+          test "$GITHUB_REF" = "refs/heads/main"
+          [[ "$GRANT_ID" =~ ^[1-9][0-9]{5,19}$ ]] || { echo "GRANT_ID_INVALID" >&2; exit 1; }
+          mkdir -p custody
+          gh api "repos/mauedgar/tecnotron-ai/issues/comments/$GRANT_ID" > custody/observed-comment.json
+          jq -e --arg issue "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35" \
+            '.user.id == 54420195 and .user.login == "mauedgar" and
+             .issue_url == $issue and .author_association == "OWNER" and
+             .created_at == .updated_at and (.body | type == "string")' \
+            custody/observed-comment.json > /dev/null
+          jq -er '.body' custody/observed-comment.json > custody/grant.json
+          jq -e '
+            ((keys | sort) == ([
+              "schema", "repository", "taskcycle_id", "subject_commit",
+              "subject_tree", "original_task_commit", "source_code_commit",
+              "execution_attempt_id", "qualification_receipt_ref"
+            ] | sort)) and
+            .schema == "tecnotron-control-git-custody-grant/v1" and
+            .repository == "mauedgar/tecnotron-ai" and
+            (.taskcycle_id | type == "string" and test("^TASKCYCLE-[A-Za-z0-9_.-]+$")) and
+            (.execution_attempt_id | type == "string" and test("^[A-Za-z0-9_.:-]{10,160}$")) and
+            ([.subject_commit,.subject_tree,.original_task_commit,.source_code_commit] |
+              all(.[]; type == "string" and test("^[a-f0-9]{40}$"))) and
+            (.qualification_receipt_ref | type == "string" and
+             startswith("https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-"))
+          ' custody/grant.json > /dev/null
+          subject="$(jq -er '.subject_commit' custody/grant.json)"
+          expected_tree="$(jq -er '.subject_tree' custody/grant.json)"
+          expected_parent="$(jq -er '.original_task_commit' custody/grant.json)"
+          source="$(jq -er '.source_code_commit' custody/grant.json)"
+          gh api "repos/mauedgar/tecnotron-ai/git/commits/$subject" > custody/subject-object.json
+          jq -e --arg tree "$expected_tree" --arg parent "$expected_parent" \
+            '.tree.sha == $tree and (.parents | length == 1 and .[0].sha == $parent)' \
+            custody/subject-object.json > /dev/null
+          gh api "repos/mauedgar/tecnotron-ai/git/ref/heads/tools" |
+            jq -e --arg source "$source" '.object.sha == $source' > /dev/null
+          gh api "repos/mauedgar/tecnotron-ai/git/commits/$expected_parent" |
+            jq -e --arg sha "$expected_parent" '.sha == $sha' > /dev/null
+          control_ref="https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-$GRANT_ID"
+          jq -cS --arg control_ref "$control_ref" \
+            '{schema:"tecnotron-control-git-custody/v1",
+              repository, taskcycle_id, subject_commit, subject_tree,
+              original_task_commit, source_code_commit, execution_attempt_id,
+              control_resolution_ref:$control_ref, qualification_receipt_ref}' \
+            custody/grant.json > custody/manifest.json
+          # Refuse an edited/replaced Developer grant during signing.
+          gh api "repos/mauedgar/tecnotron-ai/issues/comments/$GRANT_ID" > custody/after-comment.json
+          cmp -s custody/observed-comment.json custody/after-comment.json || {
+            echo "GRANT_COMMENT_CHANGED_DURING_AUTHENTICATION" >&2; exit 1;
+          }
+          echo "GITHUB_DEVELOPER_GRANT_AUTHENTICATED=PASS"
+          sha256sum custody/manifest.json | tee custody/manifest.sha256
+
+      - name: Attest only the verified exact Control grant
+        id: issue
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: custody/manifest.json
+
+      - name: Verify original signed subject, main source and workflow issuer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ATTEST_BUNDLE: ${{ steps.issue.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          test -s "$ATTEST_BUNDLE"
+          gh attestation verify custody/manifest.json \
+            --repo mauedgar/tecnotron-ai \
+            --bundle "$ATTEST_BUNDLE" \
+            --signer-workflow mauedgar/tecnotron-ai/.github/workflows/tecnotron-control-custody-attest.yml \
+            --signer-digest "$GITHUB_SHA" \
+            --source-ref refs/heads/main \
+            --cert-oidc-issuer https://token.actions.githubusercontent.com \
+            --deny-self-hosted-runners \
+            --format json > custody/verified.json
+          jq -e 'type == "array" and length > 0 and
+            all(.[]; .verificationResult.signature.certificate.githubWorkflowTrigger == "workflow_dispatch"
+              and .verificationResult.signature.certificate.runnerEnvironment == "github-hosted"
+              and .verificationResult.signature.certificate.sourceRepositoryIdentifier == "1339077141")' \
+            custody/verified.json > /dev/null
+          echo "GITHUB_CONTROL_ISSUER_SIGNED=PASS"
+          jq -n --arg run "$GITHUB_RUN_ID" --arg sha "$GITHUB_SHA" \
+            '{schema:"tecnotron-control-git-custody-signature-receipt/v1",
+              provider_run_id:$run, signer_commit:$sha,
+              attestation:"VERIFIED", Product_effect:"NONE",
+              Product_acceptance:false, Phase2:false, lifecycle_close:false}' \
+            > custody/receipt.json
+
+      - name: Upload original verified custody evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tecnotron-control-custody-attested-grant
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            custody/observed-comment.json
+            custody/grant.json
+            custody/manifest.json
+            custody/manifest.sha256
+            custody/verified.json
+            custody/receipt.json
+            ${{ steps.issue.outputs.bundle-path }}
