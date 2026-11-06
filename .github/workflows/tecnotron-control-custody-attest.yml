@@ -287,6 +287,48 @@ jobs:
             .verificationResult.signature.certificate.githubWorkflowTrigger == "push"
             and .verificationResult.signature.certificate.runnerEnvironment == "github-hosted"
             and .verificationResult.signature.certificate.sourceRepositoryIdentifier == "1339077141")' preflight/verified.json >/dev/null
+          # IR007 A03: execute negative inventory/revocation fixtures on native
+          # GitHub Linux jq, not mocked statuses or a Product signer effect.
+          jq -cn '{total_count:2,workflow_runs:[{id:1},{id:1}]}' > preflight/duplicate-run-page.jsonl
+          jq -cn '{total_count:2,workflow_runs:[{id:1}]}' > preflight/missing-run-page.jsonl
+          for bad in duplicate-run-page missing-run-page; do
+            if jq -s -e '
+              length > 0 and all(.[]; type == "object"
+                and (.workflow_runs | type == "array")
+                and (.total_count | type == "number"))
+              and ([.[] | .workflow_runs[].id] | length) == .[0].total_count
+              and ([.[] | .workflow_runs[].id] | unique | length) == .[0].total_count
+            ' "preflight/$bad.jsonl" >/dev/null; then
+              echo 'UNSAFE_NATIVE_RUN_INVENTORY_ACCEPTED' >&2; exit 1
+            fi
+          done
+          jq -cn '[{id:1001,user:{id:54420195},
+            issue_url:"https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35",
+            body:"{\"execution_attempt_id\":\"TECNOTRON-PREFLIGHT-ATTEMPT-001\",\"status\":\"REVOKED\"}"}]' \
+            > preflight/revoked-owner-page.jsonl
+          if jq -s -e --arg attempt TECNOTRON-PREFLIGHT-ATTEMPT-001 \
+            --arg grant 900 --argjson grant_id 900 '
+            [.[][] | select(.id > $grant_id and .user.id == 54420195
+              and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35"
+              and (.body | type) == "string")
+              | select((.body | contains($attempt)) or (.body | contains($grant)))]
+            | length == 0
+          ' preflight/revoked-owner-page.jsonl >/dev/null; then
+            echo 'UNSAFE_REVOKED_AUTHORITY_ACCEPTED' >&2; exit 1
+          fi
+          # Test valid unrelated Owner comment does not spuriously revoke.
+          jq -cn '[{id:1002,user:{id:54420195},
+            issue_url:"https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35",
+            body:"unrelated note"}]' > preflight/unrelated-owner-page.jsonl
+          jq -s -e --arg attempt TECNOTRON-PREFLIGHT-ATTEMPT-001 \
+            --arg grant 900 --argjson grant_id 900 '
+            [.[][] | select(.id > $grant_id and .user.id == 54420195
+              and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35"
+              and (.body | type) == "string")
+              | select((.body | contains($attempt)) or (.body | contains($grant)))]
+            | length == 0
+          ' preflight/unrelated-owner-page.jsonl >/dev/null
+          echo 'GITHUB_REVOCATION_AND_PAGINATION_NEGATIVE_TESTS=PASS'
           echo 'GITHUB_PROTECTED_SOURCE_CERTIFICATE_PREFLIGHT=PASS'
   # Product-provenance evidence only, not TaskCycle mutation, Phase2 or merge.
   # This job is unreachable until the workflow has been competently integrated
