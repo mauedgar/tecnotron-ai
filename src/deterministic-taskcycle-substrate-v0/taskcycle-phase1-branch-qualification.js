@@ -388,6 +388,11 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
   // caller-selected signer cannot issue Product Control authority.
   if (!sha(GITHUB_CONTROL_ISSUER.signerDigest))
     return fail('FORK_CONTROL_GITHUB_SIGNER_NOT_QUALIFIED');
+  // Only a Control-runner credential may authorize read-only trust-root
+  // acquisition; neither candidate proof nor caller options may supply it.
+  const readToken = process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+  if (typeof readToken !== 'string' || !readToken || readToken.length > 4096)
+    return fail('FORK_CONTROL_CURRENT_AUTHORITY_READ_UNAVAILABLE');
   const manifestPath = proof?.githubAttestationManifestPath;
   const bundlePath = proof?.githubAttestationBundlePath;
   if (!/^[a-f0-9]{64}$/.test(proof?.control_decision_sha256 || '')
@@ -445,6 +450,7 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
       encoding: 'utf8', timeout: 30000, maxBuffer: 1048576,
       windowsHide: true,
       env: { PATH: '/usr/bin:/bin', HOME: '/nonexistent',
+        GH_TOKEN: readToken, GH_PROMPT_DISABLED: '1',
         GH_NO_UPDATE_NOTIFIER: '1', LANG: 'C', LC_ALL: 'C' },
     });
     const verified = JSON.parse(output);
