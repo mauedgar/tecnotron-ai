@@ -39,6 +39,12 @@ jobs:
           github-token: ${{ github.token }}
           path: signed-artifact
 
+      - name: Install locked runtime dependencies without lifecycle scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+
       - name: Verify actual certificate and live GitHub Control authority (NO Product effect)
         shell: bash
         env:
