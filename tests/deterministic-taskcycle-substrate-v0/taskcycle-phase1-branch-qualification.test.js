@@ -10,6 +10,7 @@ const {
   qualifyControlGitSource, authenticateGitHubControlIssuer,
   __testOnlyControlCertificateMatches: matchesCertificate,
   __testOnlyReadStableAttestationFile: readStableAttestationFile,
+  __testOnlyCurrentOwnerInventoryIsValid: ownerInventoryIsValid,
   qualifyForkedPhase1Branch: qualifyProductFork,
   __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1Branch,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
@@ -564,6 +565,41 @@ test('GitHub signer is mandatory: forged Control source and caller policy cannot
     });
     assert.deepEqual(independentIssuer, native);
   } finally { c.cleanup(); }
+});
+
+
+test('current Owner high-watermark rejects general revocation, duplicates and incomplete inventories', () => {
+  const issue = 'https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35';
+  const grantId = 6674832511;
+  const comment = (id, user = 54420195, body = 'unrelated') => ({
+    id, issue_url: issue, user: { id: user }, body,
+  });
+  const original = [
+    comment(6673895838),
+    comment(6674818980),
+    comment(grantId),
+    comment(6674841000, 100100),
+  ];
+  assert.equal(ownerInventoryIsValid(original, 4, grantId), true,
+    'verified grant with earlier Owner and later non-Owner is current');
+  assert.equal(ownerInventoryIsValid([
+    ...original.slice(0, 3),
+    comment(6674841001, 54420195,
+      'Quedan revocadas todas las autorizaciones de H6 Operator'),
+  ], 4, grantId), false, 'general natural-language Owner revocation expires lease');
+  assert.equal(ownerInventoryIsValid([...original, original[0]], 5, grantId), false,
+    'duplicate page IDs cannot satisfy the full inventory');
+  assert.equal(ownerInventoryIsValid(original.slice(1), 4, grantId), false,
+    'missing pagination entry rejected');
+  assert.equal(ownerInventoryIsValid(original, 3, grantId), false,
+    'claimed count inconsistent with actual native records');
+  assert.equal(ownerInventoryIsValid(original.map((x, i) => i === 0
+    ? { ...x, issue_url: 'https://example.invalid/issues/35' } : x), 4, grantId),
+  false, 'repository/issue mismatch rejected');
+  assert.equal(ownerInventoryIsValid([...original, { id: 6674841002 }], 5, grantId),
+    false, 'malformed issue author rejected');
+  assert.equal(ownerInventoryIsValid(original, 1001, grantId), false,
+    'oversize native pagination fails closed before grant qualification');
 });
 
 test('GitHub Control signer requires authenticated manual dispatch on the exact pinned main workflow', () => {
