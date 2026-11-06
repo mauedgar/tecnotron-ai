@@ -388,11 +388,6 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
   // caller-selected signer cannot issue Product Control authority.
   if (!sha(GITHUB_CONTROL_ISSUER.signerDigest))
     return fail('FORK_CONTROL_GITHUB_SIGNER_NOT_QUALIFIED');
-  // Only a Control-runner credential may authorize read-only trust-root
-  // acquisition; neither candidate proof nor caller options may supply it.
-  const readToken = process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
-  if (typeof readToken !== 'string' || !readToken || readToken.length > 4096)
-    return fail('FORK_CONTROL_CURRENT_AUTHORITY_READ_UNAVAILABLE');
   const manifestPath = proof?.githubAttestationManifestPath;
   const bundlePath = proof?.githubAttestationBundlePath;
   if (!/^[a-f0-9]{64}$/.test(proof?.control_decision_sha256 || '')
@@ -401,6 +396,11 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
   if (!nonempty(manifestPath) || !path.isAbsolute(manifestPath)
       || !nonempty(bundlePath) || !path.isAbsolute(bundlePath))
     return fail('FORK_CONTROL_ATTESTATION_INPUT_UNAVAILABLE');
+  // Only a Control-runner credential may authorize read-only trust-root
+  // acquisition; neither candidate proof nor caller options may supply it.
+  const readToken = process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+  if (typeof readToken !== 'string' || !readToken || readToken.length > 4096)
+    return fail('FORK_CONTROL_CURRENT_AUTHORITY_READ_UNAVAILABLE');
   let isolatedDirectory = null;
   try {
     const expected = {
