@@ -253,9 +253,14 @@ function readStableAttestationFile(filename, maxBytes) {
 // unsigned callback, worker policy or self-declared grant cannot satisfy it.
 const CONTROL_ISSUE_API = 'repos/mauedgar/tecnotron-ai/issues/35';
 const CONTROL_ISSUE_URL = 'https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35';
+// Bounded high-watermark inventory. Limits are fixed by Control, never a
+// worker/candidate setting; 5,000 comments replace the legacy 1,000-item cliff.
+const MAX_CONTROL_COMMENTS = 5000;
+const MAX_CONTROL_INVENTORY_BYTES = 16 * 1024 * 1024;
+const MAX_CONTROL_READ_MS = 120000;
 function currentOwnerInventoryIsValid(items, expectedCount, grantId) {
   if (!Array.isArray(items) || !Number.isSafeInteger(expectedCount)
-      || expectedCount < 3 || expectedCount > 1000
+      || expectedCount < 3 || expectedCount > MAX_CONTROL_COMMENTS
       || !Number.isSafeInteger(grantId) || grantId < 1
       || items.length !== expectedCount) return false;
   const ids = new Set();
@@ -279,12 +284,23 @@ function authenticateCurrentDeveloperAuthority(binary, manifest) {
       GH_TOKEN: token, GH_PROMPT_DISABLED: '1',
       GH_NO_UPDATE_NOTIFIER: '1', LANG: 'C', LC_ALL: 'C',
     };
+    const deadline = Date.now() + MAX_CONTROL_READ_MS;
+    let totalReadBytes = 0;
     const api = (endpoint, limit = 131072) => {
+      // This verifier is read-only and fail-closed. A bounded global deadline
+      // and aggregate byte budget prevent repeated native GitHub GETs from
+      // exhausting the host, regardless of issue-comment pagination.
+      const remaining = deadline - Date.now();
+      if (!Number.isFinite(remaining) || remaining <= 0)
+        throw Error('CONTROL_GITHUB_READ_DEADLINE');
       const raw = execFileSync(binary, ['api', endpoint], {
-        encoding: 'utf8', timeout: 30000, maxBuffer: limit + 1024,
-        windowsHide: true, env,
+        encoding: 'utf8', timeout: Math.max(1, Math.min(30000, remaining)),
+        maxBuffer: limit + 1024, windowsHide: true, env,
       });
-      if (Buffer.byteLength(raw, 'utf8') > limit) throw Error('API_OVERSIZE');
+      const size = Buffer.byteLength(raw, 'utf8');
+      totalReadBytes += size;
+      if (size > limit || totalReadBytes > MAX_CONTROL_INVENTORY_BYTES)
+        throw Error('CONTROL_GITHUB_READ_BUDGET_EXCEEDED');
       return JSON.parse(raw);
     };
     const match = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/35#issuecomment-([1-9][0-9]{5,19})$/
@@ -350,7 +366,7 @@ function authenticateCurrentDeveloperAuthority(binary, manifest) {
     }
     const issue = api(CONTROL_ISSUE_API);
     if (issue.state !== 'open' || !Number.isSafeInteger(issue.comments)
-        || issue.comments < 3 || issue.comments > 1000)
+        || issue.comments < 3 || issue.comments > MAX_CONTROL_COMMENTS)
       throw Error('CONTROL_ISSUE_UNAVAILABLE');
     const items = [];
     const pages = Math.ceil(issue.comments / 100);
