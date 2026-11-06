@@ -155,16 +155,19 @@ function qualifyControlGitSource({ request, originalInputs, qualifiedGitSurface,
   return { status: 'PASS', surface: proof };
 }
 
-// GitHub Actions/Sigstore signer is NOT yet deployed on the protected default
-// branch. Only a reviewed, accepted Product change may pin its exact SHA. No
-// caller-supplied policy, callback, GitHub comment or self-declared "verified"
-// field is a substitute for an issuer rooted in GitHub's signed certificate.
+// Exact protected-main GitHub issuer qualified by the genuine one-shot
+// workflow_dispatch run 42147788325 (attempt 1) and independent source
+// attestation 42141447447. The signed custody manifest has SHA-256
+// b0d89abdaae83b67456c90d7d2e468a81431f77046407c48057c3b852682e648.
+// This signature authenticates historical custody provenance ONLY; current
+// Developer authority must still be independently revalidated before Product
+// effects. The issuer SHA is fixed here, never caller or worker selected.
 const GITHUB_CONTROL_ISSUER = Object.freeze({
   repository: 'mauedgar/tecnotron-ai',
   repositoryId: '1339077141',
   signerWorkflow: 'mauedgar/tecnotron-ai/.github/workflows/tecnotron-control-custody-attest.yml',
   sourceRef: 'refs/heads/main',
-  signerDigest: null, // unqualified; MUST stay fail-closed until protected signer is admitted
+  signerDigest: 'e755ad045e17f0be76701be4ddc026b5cfc56630', // native protected-main signer, fixed
 });
 
 function exactObject(value, expected) {
