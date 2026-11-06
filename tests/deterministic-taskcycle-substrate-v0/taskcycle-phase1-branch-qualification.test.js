@@ -602,6 +602,30 @@ test('current Owner high-watermark rejects general revocation, duplicates and in
     'oversize native pagination fails closed before grant qualification');
 });
 
+test('real native issuer requires qualified Control read credentials even with syntactically valid signed digests', () => {
+  const c = context();
+  const prior = process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+  try {
+    delete process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+    const proof = {
+      ...c.controlVerifiedGitSource,
+      control_decision_sha256: 'a'.repeat(64),
+      source_qualification_sha256: 'b'.repeat(64),
+      githubAttestationManifestPath: path.join(c.root, 'absent-manifest.json'),
+      githubAttestationBundlePath: path.join(c.root, 'absent-bundle.json'),
+    };
+    assert.deepEqual(authenticateGitHubControlIssuer({
+      request: c.request, originalInputs: c.originalInputs, proof,
+    }), {
+      status: 'BLOCKED', reason: 'FORK_CONTROL_CURRENT_AUTHORITY_READ_UNAVAILABLE',
+    }, 'no worker-supplied policy or syntactic SHA can bypass Control-runner credentials');
+  } finally {
+    if (prior === undefined) delete process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+    else process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN = prior;
+    c.cleanup();
+  }
+});
+
 test('GitHub Control signer requires authenticated manual dispatch on the exact pinned main workflow', () => {
   const signer = 'a'.repeat(40);
   const digest = 'b'.repeat(64);
