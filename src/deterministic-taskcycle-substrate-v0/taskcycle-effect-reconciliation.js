@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { consumeTaskCycleInitialization } = require('./taskcycle-initialization');
-const { prepareForkedPhase1Branch, qualifyForkedPhase1Branch } = require('./taskcycle-phase1-branch-qualification');
+const { prepareForkedPhase1Branch, snapshotControlInput, qualifyControlGitSource, qualifyForkedPhase1Branch, authenticateGitHubControlIssuer } = require('./taskcycle-phase1-branch-qualification');
 const { reconcilePinnedEffect } = require('./taskcycle-pinned-effect-io');
 
 const PROJECTION_SCHEMA = 'deterministic-taskcycle-effect-reconciliation/v0';
@@ -261,10 +261,19 @@ function pass(request, finalRoot, pkg, already_reconciled = false, reason = null
   };
 }
 
-function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurface = null }) {
+function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurface = null, resolveControlGitSource = null }) {
   const base = path.resolve(root);
   return {
-    reconcileCompletedObligation({ request, observed }) {
+    reconcileCompletedObligation({ request: rawRequest, observed: rawObserved }) {
+      // Freeze caller data once. The Control resolver runs synchronously and
+      // must not change validated subject/effect identities by reentrancy.
+      let request, observed;
+      try {
+        request = structuredClone(rawRequest);
+        observed = structuredClone(rawObserved);
+      } catch {
+        return terminal(rawRequest, 'BLOCKED', 'NONE', 'RECONCILIATION_REQUEST_INVALID');
+      }
       const invalid = validateRequest(request);
       if (invalid) return terminal(request, 'BLOCKED', 'NONE', invalid);
 
@@ -299,17 +308,37 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
       // be qualified only by a Control-bound, independently checked Git source.
       // No caller-supplied request proof is sufficient for a branch exception.
       let branchProvenance = null;
+      let frozenForkSurface = null;
       const forked = request.subject.branch !== exactInputs.TASK_carrier.branch;
       if (forked) {
         if (!qualifiedGitSurface) {
           return terminal(request, 'BLOCKED', 'NONE', 'SUBJECT_NOT_EXACT_PHASE1_DESCENDANT_OF_TASK_CARRIER');
         }
+        const sourceSnapshot = snapshotControlInput(request, exactInputs, qualifiedGitSurface);
+        if (sourceSnapshot.status !== 'PASS')
+          return terminal(request, 'BLOCKED', 'NONE', sourceSnapshot.reason);
+        frozenForkSurface = sourceSnapshot.qualifiedGitSurface;
         const bound = prepareForkedPhase1Branch({
-          request, originalInputs: exactInputs, qualifiedGitSurface,
+          request, originalInputs: exactInputs, qualifiedGitSurface: frozenForkSurface,
         });
         if (bound.status !== 'PASS') {
           return terminal(request, 'BLOCKED', 'NONE', bound.reason);
         }
+        // Require separately Control-verified source before idempotent readback.
+        const custody = qualifyControlGitSource({
+          request, originalInputs: exactInputs,
+          qualifiedGitSurface: frozenForkSurface, resolveControlGitSource,
+        });
+        if (custody.status !== 'PASS')
+          return terminal(request, 'BLOCKED', 'NONE', custody.reason);
+        // A cryptographically verified trusted GitHub Control workflow is a
+        // separate mandatory issuer gate, even for an existing exact effect.
+        // Caller status, resolver function or mere Git commit cannot supply it.
+        const issuer = authenticateGitHubControlIssuer({
+          request, originalInputs: exactInputs, proof: custody.surface,
+        });
+        if (issuer.status !== 'PASS')
+          return terminal(request, 'BLOCKED', 'NONE', issuer.reason);
         // This is stable shape validation, NOT live Git qualification.
         // The latter is mandatory before first publication, but cannot
         // invalidate an already exact immutable reconciliation on branch move.
@@ -343,7 +372,11 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
           pkg,
           qualifyFirstWrite: () => {
             const qualified = qualifyForkedPhase1Branch({
-              request, originalInputs: exactInputs, qualifiedGitSurface,
+              // Freeze one Control observation for both the early custody gate
+              // and subsequent first-write Git qualification. The independent
+              // resolver is not invoked twice with potentially conflicting receipts.
+              request, originalInputs: exactInputs, qualifiedGitSurface: frozenForkSurface,
+              resolveControlGitSource: () => custody.surface,
             });
             if (qualified.status !== 'PASS') return qualified;
             const { remote_head: _observationOnly, ...immutable } = qualified.verified;
@@ -351,6 +384,13 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
               ? { status: 'PASS' }
               : { status: 'BLOCKED', reason: 'FORK_IMMUTABLE_PROVENANCE_MISMATCH' };
           },
+          // IR010-A01: reauthenticate the ORIGINAL bound Control decision,
+          // signed issuer certificate and current Owner inventory immediately
+          // before the descriptor-anchored first-write rename. This is never
+          // a repeat of an H6 native TaskCycle effect.
+          revalidateBeforePublish: () => authenticateGitHubControlIssuer({
+            request, originalInputs: exactInputs, proof: custody.surface,
+          }),
         });
         if (pinned.kind === 'EXACT') return pass(request, finalRoot, pkg, true, 'ALREADY_RECONCILED_EXACT');
         if (pinned.kind === 'CREATED') return pass(request, finalRoot, pkg);

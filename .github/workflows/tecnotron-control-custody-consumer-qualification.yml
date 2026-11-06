@@ -1,0 +1,163 @@
+name: Tecnotron real signed Control custody consumer qualification (NONPRODUCT)
+
+on:
+  pull_request:
+    branches: [tools]
+    paths:
+      - .github/workflows/tecnotron-control-custody-consumer-qualification.yml
+      - src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification.js
+      - tests/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification.test.js
+
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+
+jobs:
+  verify-real-control-certificate:
+    if: >-
+      ${{ github.repository == 'mauedgar/tecnotron-ai'
+          && github.repository_id == '1339077141'
+          && github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == 'mauedgar/tecnotron-ai'
+          && github.event.pull_request.user.login == 'mauedgar' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Qualify ephemeral Linux host and pinned root-owned execution surface
+        shell: bash
+        env:
+          TECNOTRON_RUNNER_CLASS: ${{ runner.environment }}
+        run: |
+          set -euo pipefail
+          test "$RUNNER_OS" = Linux
+          test "$TECNOTRON_RUNNER_CLASS" = github-hosted
+          node <<'NODE'
+          'use strict';
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+          if (process.platform !== 'linux' || process.getuid() === 0)
+            throw Error('UNQUALIFIED_NATIVE_HOST_OR_UID');
+          if (!fs.statSync('/proc/self/fd').isDirectory())
+            throw Error('NO_KERNEL_DESCRIPTOR_ANCHORS');
+          for (const file of ['/usr/bin/gh', '/usr/bin/git']) {
+            let parent = path.parse(file).root;
+            for (const part of file.slice(parent.length).split(path.sep)) {
+              parent = path.join(parent, part);
+              const st = fs.lstatSync(parent);
+              if (st.uid !== 0 || st.isSymbolicLink() || (st.mode & 0o022) !== 0)
+                throw Error('UNTRUSTED_ROOT_OWNED_EXECUTABLE_PATH');
+              if (parent === file && (!st.isFile() || st.nlink !== 1))
+                throw Error('UNQUALIFIED_NATIVE_EXECUTABLE');
+            }
+          }
+          const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'tecnotron-host-profile-'));
+          try {
+            fs.chmodSync(temp, 0o700);
+            const st = fs.lstatSync(temp);
+            if (!st.isDirectory() || st.uid !== process.getuid()
+                || (st.mode & 0o777) !== 0o700)
+              throw Error('PRIVATE_NATIVE_TEMP_HOME_UNAVAILABLE');
+          } finally {
+            fs.rmSync(temp, {recursive:true,force:true});
+          }
+          console.log('GITHUB_EPHEMERAL_LINUX_TRUST_PROFILE=PASS');
+          console.log('GITHUB_NATIVE_EXECUTABLE_AND_HOME=PASS');
+          NODE
+
+      - name: Checkout exact candidate without persistent credentials
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 pinned
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Restore original read-only signed custody artifact
+        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4 pinned
+        with:
+          name: tecnotron-control-custody-attested-grant
+          run-id: 42147788325
+          repository: mauedgar/tecnotron-ai
+          github-token: ${{ github.token }}
+          path: signed-artifact
+
+      - name: Install locked runtime dependencies without lifecycle scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify actual certificate and live GitHub Control authority (NO Product effect)
+        shell: bash
+        env:
+          TECNOTRON_CONTROL_GITHUB_READ_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY_ID" = 1339077141
+          test "$GITHUB_BASE_REF" = tools
+          test "$GITHUB_HEAD_REF" = fix/h6-control-git-custody-a01-20261105-001
+          /usr/bin/gh --version | head -1
+          node <<'NODE'
+          'use strict';
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { createHash } = require('node:crypto');
+          const {
+            authenticateGitHubControlIssuer,
+          } = require('./src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
+          const root = path.resolve('signed-artifact');
+          const all = [];
+          function walk(dirname, depth = 0) {
+            if (depth > 8) throw Error('ARTIFACT_NESTING_UNBOUNDED');
+            for (const name of fs.readdirSync(dirname)) {
+              const candidate = path.join(dirname, name);
+              const st = fs.lstatSync(candidate);
+              if (st.isSymbolicLink()) throw Error('ARTIFACT_SYMLINK_FORBIDDEN');
+              if (st.isDirectory()) walk(candidate, depth + 1);
+              else if (st.isFile() && st.nlink === 1) all.push(candidate);
+              else throw Error('ARTIFACT_UNSAFE_FILE');
+              if (all.length > 32) throw Error('ARTIFACT_FILE_COUNT_EXCEEDED');
+            }
+          }
+          walk(root);
+          const unique = name => {
+            const list = all.filter(f => path.basename(f) === name);
+            if (list.length !== 1) throw Error('ARTIFACT_NAME_UNQUALIFIED_'+name);
+            return path.resolve(list[0]);
+          };
+          const manifestPath = unique('manifest.json');
+          const bundlePath = unique('attestation.json');
+          const bytes = fs.readFileSync(manifestPath);
+          if (bytes.length > 65536) throw Error('MANIFEST_OVERSIZE');
+          const hash = createHash('sha256').update(bytes).digest('hex');
+          if (hash !== 'b0d89abdaae83b67456c90d7d2e468a81431f77046407c48057c3b852682e648')
+            throw Error('ORIGINAL_SIGNED_MANIFEST_DRIFT');
+          const manifest = JSON.parse(bytes.toString('utf8'));
+          if (manifest.schema !== 'tecnotron-control-git-custody/v1'
+              || manifest.source_code_commit !== '26509b74d50207bb247dcc9bdb929a63f5451e88'
+              || manifest.execution_attempt_id !== 'TECNOTRON-BETA007-H6-OPERATOR-CUSTODY-SIGN-20261105-ATTEMPT-001'
+              || manifest.control_resolution_ref !==
+                'https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-6674832511')
+            throw Error('SIGNED_MANIFEST_BOUNDARY_MISMATCH');
+          const proof = {
+            ...manifest,
+            githubAttestationManifestPath: manifestPath,
+            githubAttestationBundlePath: bundlePath,
+          };
+          const request = {
+            taskcycle: { id: manifest.taskcycle_id },
+            subject: {
+              repository: 'mauedgar/tecnotron-ai',
+              commit: manifest.subject_commit, tree: manifest.subject_tree,
+            },
+          };
+          const originalInputs = {
+            TASK_carrier: { commit: manifest.original_task_commit },
+          };
+          const result = authenticateGitHubControlIssuer({ request, originalInputs, proof });
+          if (result.status !== 'PASS')
+            throw Error('REAL_NATIVE_CUSTODY_CONSUMER_'+result.reason);
+          console.log('GITHUB_PRODUCT_CUSTODY_CONSUMER_REAL_CERTIFICATE=PASS');
+          console.log('GITHUB_PRODUCT_CURRENT_OWNER_AUTHORITY=PASS');
+          console.log('GITHUB_PRODUCT_QUALIFICATION_EFFECT=NONE');
+          NODE

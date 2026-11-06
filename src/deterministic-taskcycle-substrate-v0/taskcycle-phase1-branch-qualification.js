@@ -5,7 +5,9 @@
 // A mismatched branch remains blocked unless Product Control supplies a trusted
 // local checkout AND actual Git objects plus a current remote branch observation.
 const fs = require('node:fs');
+const os = require('node:os');
 const { createHash } = require('node:crypto');
+const { execFileSync } = require('node:child_process');
 const path = require('node:path');
 const { createGitCliAdapter } = require('../operational-spine-v0/git-execution-qualification');
 
@@ -41,14 +43,458 @@ function createReadOnlySourceGit(executable) {
   } });
 }
 
+// A one-time hash cannot prevent substitution between check and exec on a
+// writable path. Fork qualification therefore runs only on a Linux filesystem
+// where another UID cannot replace any directory entry or mutate Git bytes.
+// Same-UID peers and root are OUTSIDE this operating profile's trust boundary;
+// this is not authentication of a Product Control issuer.
 function qualifiedGitExecutable(surface) {
+  if (process.platform !== 'linux' || typeof process.getuid !== 'function')
+    throw Error('GIT_BINARY_TRUSTED_FILESYSTEM_UNAVAILABLE');
   const binary = surface.gitExecutablePath;
-  const stat = fs.lstatSync(binary);
-  if (!stat.isFile() || stat.isSymbolicLink() || fs.realpathSync(binary) !== binary)
+  if (!path.isAbsolute(binary) || path.normalize(binary) !== binary)
     throw Error('GIT_BINARY_PATH_UNQUALIFIED');
-  const observed = 'sha256:' + createHash('sha256').update(fs.readFileSync(binary)).digest('hex');
-  if (observed !== surface.gitExecutableSha256) throw Error('GIT_BINARY_IDENTITY_MISMATCH');
+  const uid = process.getuid();
+  const root = path.parse(binary).root;
+  let parent = fs.lstatSync(root);
+  if (!parent.isDirectory() || parent.isSymbolicLink()
+      || (parent.uid !== uid && parent.uid !== 0))
+    throw Error('GIT_BINARY_ANCESTOR_UNTRUSTED');
+  let at = root;
+  for (const segment of binary.slice(root.length).split(path.sep)) {
+    if (!segment || segment === '.' || segment === '..')
+      throw Error('GIT_BINARY_PATH_UNQUALIFIED');
+    at = path.join(at, segment);
+    const child = fs.lstatSync(at);
+    if (child.isSymbolicLink() || (child.uid !== uid && child.uid !== 0)
+        || ((parent.mode & 0o022) !== 0
+            && ((parent.mode & 0o1000) === 0 || child.uid !== uid)))
+      throw Error('GIT_BINARY_PATH_UNTRUSTED');
+    parent = child;
+  }
+  if (!parent.isFile() || parent.nlink !== 1 || (parent.mode & 0o022) !== 0
+      || fs.realpathSync(binary) !== binary)
+    throw Error('GIT_BINARY_PATH_UNQUALIFIED');
+  const fd = fs.openSync(binary, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+  try {
+    const before = fs.fstatSync(fd);
+    if (!before.isFile() || before.nlink !== 1 || before.dev !== parent.dev
+        || before.ino !== parent.ino || (before.mode & 0o022) !== 0)
+      throw Error('GIT_BINARY_CHANGED_BEFORE_HASH');
+    const observed = 'sha256:' + createHash('sha256').update(fs.readFileSync(fd)).digest('hex');
+    const after = fs.fstatSync(fd);
+    if (after.dev !== before.dev || after.ino !== before.ino
+        || after.size !== before.size || after.mtimeMs !== before.mtimeMs)
+      throw Error('GIT_BINARY_CHANGED_DURING_HASH');
+    if (observed !== surface.gitExecutableSha256)
+      throw Error('GIT_BINARY_IDENTITY_MISMATCH');
+  } finally { fs.closeSync(fd); }
   return binary;
+}
+
+
+/**
+ * Caller assertions do not authenticate Control custody. The resolver must
+ * originate from the competent Control composition root, independently of
+ * the request or any untrusted worker. This routine verifies correspondence,
+ * not the issuer's authority. Control must authenticate the resolver itself.
+ */
+
+function snapshotControlInput(request, originalInputs, qualifiedGitSurface) {
+  try {
+    return {
+      status: 'PASS',
+      request: structuredClone(request),
+      originalInputs: structuredClone(originalInputs),
+      qualifiedGitSurface: structuredClone(qualifiedGitSurface),
+    };
+  } catch {
+    return fail('FORK_CONTROL_CUSTODY_UNAVAILABLE');
+  }
+}
+
+function qualifyControlGitSource({ request, originalInputs, qualifiedGitSurface, resolveControlGitSource }) {
+  if (typeof resolveControlGitSource !== 'function')
+    return fail('FORK_CONTROL_CUSTODY_UNVERIFIED');
+  const snapshot = snapshotControlInput(request, originalInputs, qualifiedGitSurface);
+  if (snapshot.status !== 'PASS') return snapshot;
+  const stableRequest = snapshot.request;
+  const stableInputs = snapshot.originalInputs;
+  const stableSurface = snapshot.qualifiedGitSurface;
+  let proof;
+  try {
+    // Clone once at the boundary: a caller-held, accessor-backed or mutable
+    // resolver object must not change underneath executable/checkout checks.
+    // This only stabilizes the observation; it does NOT authenticate its issuer.
+    proof = structuredClone(resolveControlGitSource({
+      taskcycle_id: stableRequest.taskcycle.id,
+      subject: structuredClone(stableRequest.subject),
+      original_task_carrier: structuredClone(stableInputs.TASK_carrier),
+    }));
+  } catch {
+    return fail('FORK_CONTROL_CUSTODY_UNAVAILABLE');
+  }
+  if (!proof || typeof proof !== 'object' || Array.isArray(proof)
+      || proof.status !== 'CONTROL_VERIFIED_SOURCE'
+      || !nonempty(proof.execution_attempt_id)
+      || !nonempty(proof.control_resolution_ref)
+      || !sha(proof.source_code_commit)
+      || proof.taskcycle_id !== stableRequest.taskcycle.id
+      || proof.subject_commit !== stableRequest.subject.commit
+      || proof.subject_tree !== stableRequest.subject.tree
+      || proof.original_task_commit !== stableInputs.TASK_carrier.commit)
+    return fail('FORK_CONTROL_CUSTODY_UNVERIFIED');
+  for (const key of [
+    'binding', 'taskcycle_id', 'subject_branch', 'original_task_branch',
+    'repositoryPath', 'remoteUrl', 'qualification_receipt_ref',
+    'gitExecutablePath', 'gitExecutableSha256',
+  ]) {
+    if (proof[key] !== stableSurface[key])
+      return fail('FORK_CONTROL_CUSTODY_MISMATCH');
+  }
+  return { status: 'PASS', surface: proof };
+}
+
+// Exact protected-main GitHub issuer qualified by the genuine one-shot
+// workflow_dispatch run 42147788325 (attempt 1) and independent source
+// attestation 42141447447. The signed custody manifest has SHA-256
+// b0d89abdaae83b67456c90d7d2e468a81431f77046407c48057c3b852682e648.
+// This signature authenticates historical custody provenance ONLY; current
+// Developer authority must still be independently revalidated before Product
+// effects. The issuer SHA is fixed here, never caller or worker selected.
+const GITHUB_CONTROL_ISSUER = Object.freeze({
+  repository: 'mauedgar/tecnotron-ai',
+  repositoryId: '1339077141',
+  signerWorkflow: 'mauedgar/tecnotron-ai/.github/workflows/tecnotron-control-custody-attest.yml',
+  sourceRef: 'refs/heads/main',
+  signerDigest: 'e755ad045e17f0be76701be4ddc026b5cfc56630', // native protected-main signer, fixed
+});
+
+function exactObject(value, expected) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const a = Object.keys(value).sort();
+  const b = Object.keys(expected).sort();
+  return a.length === b.length && a.every((key, i) => key === b[i]
+    && value[key] === expected[key]);
+}
+
+function trustedGitHubCli() {
+  if (process.platform !== 'linux' || typeof process.getuid !== 'function')
+    throw Error('GITHUB_ATTESTATION_HOST_UNSUPPORTED');
+  // Native gh is a root-owned platform binary. Never execute an executable
+  // path/hash supplied by the candidate, a callback, PATH, or a worker.
+  const binary = '/usr/bin/gh';
+  for (const dir of ['/', '/usr', '/usr/bin']) {
+    const v = fs.lstatSync(dir);
+    if (!v.isDirectory() || v.isSymbolicLink() || v.uid !== 0
+        || (v.mode & 0o022) !== 0) throw Error('GITHUB_ATTESTATION_EXEC_ROOT_UNTRUSTED');
+  }
+  const stat = fs.lstatSync(binary);
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== 0
+      || stat.nlink !== 1 || (stat.mode & 0o022) !== 0
+      || fs.realpathSync(binary) !== binary)
+    throw Error('GITHUB_ATTESTATION_EXEC_UNTRUSTED');
+  return binary;
+}
+
+// Compare native certificate claims, never unsigned workflow descriptions or
+// GitHub artifact predicate fields. The real issuer MUST be a Developer-initiated
+// manual dispatch on the pinned main signer commit, not a push/PR test workflow.
+// The cryptographic signature itself is verified separately by gh.
+function controlCertificateMatches(entry, policy, digest) {
+  const cert = entry?.verificationResult?.signature?.certificate;
+  const subjects = entry?.verificationResult?.statement?.subject;
+  if (!cert || !Array.isArray(subjects)) return false;
+  const expectedUri = 'https://github.com/' + policy.signerWorkflow + '@' + policy.sourceRef;
+  return String(cert.sourceRepositoryIdentifier) === policy.repositoryId
+    && cert.githubWorkflowRepository === policy.repository
+    && String(cert.sourceRepositoryOwnerIdentifier) === '54420195'
+    && cert.sourceRepositoryURI === 'https://github.com/' + policy.repository
+    && cert.githubWorkflowSHA === policy.signerDigest
+    && cert.buildSignerDigest === policy.signerDigest
+    && cert.sourceRepositoryRef === policy.sourceRef
+    && cert.githubWorkflowRef === policy.sourceRef
+    && cert.githubWorkflowTrigger === 'workflow_dispatch'
+    && cert.buildTrigger === 'workflow_dispatch'
+    && cert.runnerEnvironment === 'github-hosted'
+    && cert.issuer === 'https://token.actions.githubusercontent.com'
+    && cert.subjectAlternativeName === expectedUri
+    && subjects.some((subject) => subject?.digest?.sha256 === digest);
+}
+
+// Acquire one immutable snapshot per input and verify the file descriptor
+// is the same non-symlink regular inode seen before open. The external gh
+// verifier never sees a worker-supplied mutable pathname.
+function readStableAttestationFile(filename, maxBytes) {
+  if (process.platform !== 'linux') throw Error('ATTESTATION_FILE_HOST_UNSUPPORTED');
+  const before = fs.lstatSync(filename);
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1
+      || before.size > maxBytes || (before.mode & 0o022) !== 0)
+    throw Error('ATTESTATION_INPUT_PATH_UNSAFE');
+  const fd = fs.openSync(filename, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+  try {
+    const first = fs.fstatSync(fd);
+    if (!first.isFile() || first.nlink !== 1 || first.size > maxBytes
+        || first.ino !== before.ino || first.dev !== before.dev
+        || (first.mode & 0o022) !== 0) throw Error('ATTESTATION_INPUT_CHANGED');
+    const contents = fs.readFileSync(fd);
+    const last = fs.fstatSync(fd);
+    if (last.ino !== first.ino || last.dev !== first.dev
+        || last.size !== first.size || last.mtimeMs !== first.mtimeMs
+        || last.ctimeMs !== first.ctimeMs || contents.length !== first.size)
+      throw Error('ATTESTATION_INPUT_CHANGED');
+    return contents;
+  } finally { fs.closeSync(fd); }
+}
+
+// Historical signed evidence cannot grant perpetual current Developer authority.
+// Only the native root-owned gh CLI and a CONTROL-owned read credential may
+// acquire the current issue35 Owner inventory. A caller-injected resolver,
+// unsigned callback, worker policy or self-declared grant cannot satisfy it.
+const CONTROL_ISSUE_API = 'repos/mauedgar/tecnotron-ai/issues/35';
+const CONTROL_ISSUE_URL = 'https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35';
+// Bounded high-watermark inventory. Limits are fixed by Control, never a
+// worker/candidate setting; 5,000 comments replace the legacy 1,000-item cliff.
+const MAX_CONTROL_COMMENTS = 5000;
+const MAX_CONTROL_INVENTORY_BYTES = 16 * 1024 * 1024;
+const MAX_CONTROL_READ_MS = 120000;
+function currentOwnerInventoryIsValid(items, expectedCount, grantId) {
+  if (!Array.isArray(items) || !Number.isSafeInteger(expectedCount)
+      || expectedCount < 3 || expectedCount > MAX_CONTROL_COMMENTS
+      || !Number.isSafeInteger(grantId) || grantId < 1
+      || items.length !== expectedCount) return false;
+  const ids = new Set();
+  for (const entry of items) {
+    if (!Number.isSafeInteger(entry?.id) || entry.id <= 0 || ids.has(entry.id)
+        || entry.issue_url !== CONTROL_ISSUE_URL
+        || !Number.isSafeInteger(entry.user?.id)) return false;
+    ids.add(entry.id);
+    // Conservative one-shot lease: ANY later Owner comment expires the grant.
+    if (entry.id > grantId && entry.user.id === 54420195) return false;
+  }
+  return ids.has(grantId);
+}
+function authenticateCurrentDeveloperAuthority(binary, manifest) {
+  const token = process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+  if (typeof token !== 'string' || !token || token.length > 4096)
+    return fail('FORK_CONTROL_CURRENT_AUTHORITY_READ_UNAVAILABLE');
+  try {
+    const env = {
+      PATH: '/usr/bin:/bin', HOME: '/nonexistent',
+      GH_TOKEN: token, GH_PROMPT_DISABLED: '1',
+      GH_NO_UPDATE_NOTIFIER: '1', LANG: 'C', LC_ALL: 'C',
+    };
+    const deadline = Date.now() + MAX_CONTROL_READ_MS;
+    let totalReadBytes = 0;
+    const api = (endpoint, limit = 131072) => {
+      // This verifier is read-only and fail-closed. A bounded global deadline
+      // and aggregate byte budget prevent repeated native GitHub GETs from
+      // exhausting the host, regardless of issue-comment pagination.
+      const remaining = deadline - Date.now();
+      if (!Number.isFinite(remaining) || remaining <= 0)
+        throw Error('CONTROL_GITHUB_READ_DEADLINE');
+      const raw = execFileSync(binary, ['api', endpoint], {
+        encoding: 'utf8', timeout: Math.max(1, Math.min(30000, remaining)),
+        maxBuffer: limit + 1024, windowsHide: true, env,
+      });
+      const size = Buffer.byteLength(raw, 'utf8');
+      totalReadBytes += size;
+      if (size > limit || totalReadBytes > MAX_CONTROL_INVENTORY_BYTES)
+        throw Error('CONTROL_GITHUB_READ_BUDGET_EXCEEDED');
+      return JSON.parse(raw);
+    };
+    const match = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/35#issuecomment-([1-9][0-9]{5,19})$/
+      .exec(manifest.control_resolution_ref);
+    if (!match) throw Error('BAD_SIGNED_GRANT_REF');
+    const grantId = Number(match[1]);
+    if (!Number.isSafeInteger(grantId)) throw Error('BAD_SIGNED_GRANT_ID');
+    const comment = id => api('repos/mauedgar/tecnotron-ai/issues/comments/' + id, 32768);
+    const owner = (c, id) => c?.id === id && c?.user?.id === 54420195
+      && c.user.login === 'mauedgar' && c.author_association === 'OWNER'
+      && c.issue_url === CONTROL_ISSUE_URL
+      && typeof c.created_at === 'string' && c.created_at === c.updated_at
+      && typeof c.body === 'string' && Buffer.byteLength(c.body, 'utf8') <= 8192;
+    const entry = comment(grantId);
+    if (!owner(entry, grantId)) throw Error('GRANT_NOT_ORIGINAL_OWNER');
+    const grant = JSON.parse(entry.body);
+    if (grant?.schema !== 'tecnotron-control-git-custody-grant/v2'
+        || grant.Product_effect !== 'NONE'
+        || grant.responsibility !== 'H6_OPERATOR_PHASE1_GIT_CUSTODY'
+        || grant.operation !== 'SIGN_GIT_SOURCE_CUSTODY_EVIDENCE_ONLY'
+        || grant.source_code_commit !== '26509b74d50207bb247dcc9bdb929a63f5451e88'
+        || grant.qualification_comment_id !== 6673895838
+        || !Number.isSafeInteger(grant.decision_comment_id)
+        || grant.decision_comment_id <= 0 || grant.decision_comment_id >= grantId
+        || grant.qualification_comment_id >= grantId
+        || grant.changed_paths?.length !== 1
+        || grant.changed_paths[0] !== 'attendance/operator/cli.py'
+        || grant.subject_branch !== 'task/tecnotron-h6-operator-20261104-001'
+        || grant.original_task_branch !== 'task/tecnotron-h6-attendance-parent-children-20261102-001')
+      throw Error('GRANT_SCOPE_CHANGED');
+    for (const name of ['repository', 'taskcycle_id', 'subject_commit',
+      'subject_tree', 'original_task_commit', 'source_code_commit',
+      'execution_attempt_id', 'qualification_receipt_ref']) {
+      if (grant[name] !== manifest[name]) throw Error('SIGNED_GRANT_MISMATCH');
+    }
+    const decisionEntry = comment(grant.decision_comment_id);
+    const qualEntry = comment(grant.qualification_comment_id);
+    if (!owner(decisionEntry, grant.decision_comment_id)
+        || !owner(qualEntry, grant.qualification_comment_id))
+      throw Error('ORIGINAL_AUTHORITY_CHANGED');
+    if (createHash('sha256').update(Buffer.from(decisionEntry.body)).digest('hex')
+      !== manifest.control_decision_sha256
+        || createHash('sha256').update(Buffer.from(qualEntry.body)).digest('hex')
+          !== manifest.source_qualification_sha256)
+      throw Error('SIGNED_AUTHORITY_BYTES_CHANGED');
+    const decision = JSON.parse(decisionEntry.body);
+    const qual = JSON.parse(qualEntry.body);
+    if (decision.schema !== 'tecnotron-control-git-custody-decision/v1'
+        || decision.status !== 'GRANTED' || decision.Product_effect !== 'NONE'
+        || decision.responsibility !== grant.responsibility
+        || decision.operation !== grant.operation
+        || qual.schema !== 'tecnotron-native-historical-source-qualification/v1'
+        || qual.status !== 'PASS' || qual.Product_authority !== 'NONE'
+        || qual.Product_effect !== 'NONE' || qual.provider_run_id !== 42141447447)
+      throw Error('SIGNED_AUTHORITY_NOT_CURRENT');
+    for (const name of ['repository', 'taskcycle_id', 'subject_commit',
+      'subject_tree', 'original_task_commit']) {
+      if (decision[name] !== grant[name] || qual[name] !== grant[name])
+        throw Error('CONTROL_SUBJECT_NOT_CONSISTENT');
+    }
+    for (const name of ['source_code_commit', 'execution_attempt_id']) {
+      if (decision[name] !== grant[name]) throw Error('CONTROL_ATTEMPT_NOT_CONSISTENT');
+    }
+    const issue = api(CONTROL_ISSUE_API);
+    if (issue.state !== 'open' || !Number.isSafeInteger(issue.comments)
+        || issue.comments < 3 || issue.comments > MAX_CONTROL_COMMENTS)
+      throw Error('CONTROL_ISSUE_UNAVAILABLE');
+    const items = [];
+    const pages = Math.ceil(issue.comments / 100);
+    for (let page = 1; page <= pages; page++) {
+      const batch = api(CONTROL_ISSUE_API + '/comments?per_page=100&page=' + page, 1048576);
+      if (!Array.isArray(batch) || batch.length !== Math.min(100,
+        issue.comments - (page - 1) * 100))
+        throw Error('CONTROL_INVENTORY_PAGE_INCOMPLETE');
+      items.push(...batch);
+    }
+    if (!currentOwnerInventoryIsValid(items, issue.comments, grantId))
+      throw Error('CONTROL_OWNER_REVOKED_OR_INVENTORY_UNVERIFIED');
+    for (const [id, original] of [
+      [grantId, entry], [grant.decision_comment_id, decisionEntry],
+      [grant.qualification_comment_id, qualEntry],
+    ]) {
+      const selected = items.filter(item => item.id === id);
+      if (selected.length !== 1 || selected[0].body !== original.body)
+        throw Error('ORIGINAL_CONTROL_COMMENT_DRIFT');
+    }
+    const finalIssue = api(CONTROL_ISSUE_API);
+    const finalGrant = comment(grantId);
+    if (finalIssue.state !== 'open' || finalIssue.comments !== issue.comments
+        || !owner(finalGrant, grantId) || finalGrant.body !== entry.body)
+      throw Error('CONTROL_AUTHORITY_CHANGED_DURING_READ');
+    return { status: 'PASS' };
+  } catch {
+    return fail('FORK_CONTROL_CURRENT_AUTHORITY_UNVERIFIED');
+  }
+}
+
+function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
+  // GitHub's certificate authenticates WORKFLOW provenance, not Developer
+  // acceptance/Phase2. A workflow on an unprotected ref or an arbitrary
+  // caller-selected signer cannot issue Product Control authority.
+  if (!sha(GITHUB_CONTROL_ISSUER.signerDigest))
+    return fail('FORK_CONTROL_GITHUB_SIGNER_NOT_QUALIFIED');
+  const manifestPath = proof?.githubAttestationManifestPath;
+  const bundlePath = proof?.githubAttestationBundlePath;
+  if (!/^[a-f0-9]{64}$/.test(proof?.control_decision_sha256 || '')
+      || !/^[a-f0-9]{64}$/.test(proof?.source_qualification_sha256 || ''))
+    return fail('FORK_CONTROL_AUTHORITY_DIGEST_UNVERIFIED');
+  if (!nonempty(manifestPath) || !path.isAbsolute(manifestPath)
+      || !nonempty(bundlePath) || !path.isAbsolute(bundlePath))
+    return fail('FORK_CONTROL_ATTESTATION_INPUT_UNAVAILABLE');
+  // Only a Control-runner credential may authorize read-only trust-root
+  // acquisition; neither candidate proof nor caller options may supply it.
+  const readToken = process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+  if (typeof readToken !== 'string' || !readToken || readToken.length > 4096)
+    return fail('FORK_CONTROL_CURRENT_AUTHORITY_READ_UNAVAILABLE');
+  let isolatedDirectory = null;
+  try {
+    const expected = {
+      schema: 'tecnotron-control-git-custody/v1',
+      repository: GITHUB_CONTROL_ISSUER.repository,
+      taskcycle_id: request.taskcycle.id,
+      subject_commit: request.subject.commit,
+      subject_tree: request.subject.tree,
+      original_task_commit: originalInputs.TASK_carrier.commit,
+      source_code_commit: proof.source_code_commit,
+      execution_attempt_id: proof.execution_attempt_id,
+      control_resolution_ref: proof.control_resolution_ref,
+      qualification_receipt_ref: proof.qualification_receipt_ref,
+      control_decision_sha256: proof.control_decision_sha256,
+      source_qualification_sha256: proof.source_qualification_sha256,
+    };
+    const expectedManifestBytes = readStableAttestationFile(manifestPath, 65536);
+    const expectedBundleBytes = readStableAttestationFile(bundlePath, 1048576);
+    if (!exactObject(JSON.parse(expectedManifestBytes.toString('utf8')), expected))
+      return fail('FORK_CONTROL_ATTESTATION_SUBJECT_MISMATCH');
+    const expectedManifestDigest = createHash('sha256')
+      .update(expectedManifestBytes).digest('hex');
+    const expectedBundleDigest = createHash('sha256')
+      .update(expectedBundleBytes).digest('hex');
+    const binary = trustedGitHubCli();
+    // A newly created private directory isolates both sources from caller
+    // path substitution while the native verifier reads their exact bytes.
+    // Same-UID/root mutation remains outside the declared host trust model.
+    isolatedDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'tecnotron-control-attest-'));
+    fs.chmodSync(isolatedDirectory, 0o700);
+    const isolatedManifest = path.join(isolatedDirectory, 'manifest.json');
+    const isolatedBundle = path.join(isolatedDirectory, 'bundle.json');
+    fs.writeFileSync(isolatedManifest, expectedManifestBytes, { flag: 'wx', mode: 0o400 });
+    fs.writeFileSync(isolatedBundle, expectedBundleBytes, { flag: 'wx', mode: 0o400 });
+    const args = [
+      'attestation', 'verify', isolatedManifest,
+      '--repo', GITHUB_CONTROL_ISSUER.repository,
+      '--bundle', isolatedBundle,
+      '--signer-workflow', GITHUB_CONTROL_ISSUER.signerWorkflow,
+      '--signer-digest', GITHUB_CONTROL_ISSUER.signerDigest,
+      '--source-ref', GITHUB_CONTROL_ISSUER.sourceRef,
+      '--cert-oidc-issuer', 'https://token.actions.githubusercontent.com',
+      '--deny-self-hosted-runners',
+      '--format', 'json',
+    ];
+    const output = execFileSync(binary, args, {
+      encoding: 'utf8', timeout: 30000, maxBuffer: 1048576,
+      windowsHide: true,
+      // This private directory is newly created, mode 0700 and deleted on
+      // completion. Sigstore's trust-root initialization needs writable HOME,
+      // but must never read the caller's original HOME or gh configuration.
+      env: { PATH: '/usr/bin:/bin', HOME: isolatedDirectory,
+        GH_TOKEN: readToken, GH_PROMPT_DISABLED: '1',
+        GH_NO_UPDATE_NOTIFIER: '1', LANG: 'C', LC_ALL: 'C' },
+    });
+    const verified = JSON.parse(output);
+    if (!Array.isArray(verified) || !verified.some((entry) =>
+      controlCertificateMatches(entry, GITHUB_CONTROL_ISSUER, expectedManifestDigest)))
+      return fail('FORK_CONTROL_GITHUB_CERTIFICATE_MISMATCH');
+    const stableManifest = createHash('sha256')
+      .update(readStableAttestationFile(isolatedManifest, 65536)).digest('hex');
+    const stableBundle = createHash('sha256')
+      .update(readStableAttestationFile(isolatedBundle, 1048576)).digest('hex');
+    if (stableManifest !== expectedManifestDigest || stableBundle !== expectedBundleDigest)
+      return fail('FORK_CONTROL_ATTESTATION_INPUT_RACED');
+    // The signed certificate is historical; require current Owner authority
+    // from the original GitHub provider immediately before native Git work.
+    const current = authenticateCurrentDeveloperAuthority(binary, expected);
+    if (current.status !== 'PASS') return current;
+    return { status: 'PASS' };
+  } catch {
+    return fail('FORK_CONTROL_GITHUB_ATTESTATION_UNVERIFIED');
+  } finally {
+    if (isolatedDirectory) {
+      try { fs.rmSync(isolatedDirectory, { recursive: true, force: true }); }
+      catch { /* private staging cleanup is best-effort; no Product effect */ }
+    }
+  }
 }
 
 function read(git, root, args, { nul = false, allowExitOne = false } = {}) {
@@ -131,16 +577,46 @@ function prepareForkedPhase1Branch({ request, originalInputs, qualifiedGitSurfac
   };
 }
 
-function qualifyForkedPhase1Branch({
-  request, originalInputs, qualifiedGitSurface, git = null,
+// Product entrypoint: never accept an injected Git adapter as proof of a live
+// source. The deterministic fake-adapter helper below is for unit evidence
+// only and is NOT used by taskcycle-effect-reconciliation.
+function qualifyForkedPhase1Branch(input) {
+  if (input?.git != null) return fail('FORK_GIT_ADAPTER_INJECTION_FORBIDDEN');
+  return qualifyForkedPhase1BranchWithTestAdapter({ ...input, requireNativeIssuer: true });
+}
+function qualifyForkedPhase1BranchWithTestAdapter({
+  request, originalInputs, qualifiedGitSurface, resolveControlGitSource = null,
+  git = null, requireNativeIssuer = false,
 }) {
-  const bound = prepareForkedPhase1Branch({ request, originalInputs, qualifiedGitSurface });
+  const snapshot = snapshotControlInput(request, originalInputs, qualifiedGitSurface);
+  if (snapshot.status !== 'PASS') return snapshot;
+  const stableRequest = snapshot.request;
+  const stableInputs = snapshot.originalInputs;
+  const stableSurface = snapshot.qualifiedGitSurface;
+  const bound = prepareForkedPhase1Branch({
+    request: stableRequest, originalInputs: stableInputs, qualifiedGitSurface: stableSurface,
+  });
   if (bound.status !== 'PASS') return bound;
-  const subject = request.subject;
-  const original = originalInputs.TASK_carrier;
-  const surface = qualifiedGitSurface;
+  const custody = qualifyControlGitSource({
+    request: stableRequest, originalInputs: stableInputs,
+    qualifiedGitSurface: stableSurface, resolveControlGitSource,
+  });
+  if (custody.status !== 'PASS') return custody;
+  if (requireNativeIssuer) {
+    const issuer = authenticateGitHubControlIssuer({
+      request: stableRequest, originalInputs: stableInputs, proof: custody.surface,
+    });
+    if (issuer.status !== 'PASS') return issuer;
+  }
+  const subject = stableRequest.subject;
+  const original = stableInputs.TASK_carrier;
+  const surface = custody.surface;
   try {
-    if (!git) git = createReadOnlySourceGit(qualifiedGitExecutable(surface));
+    // An injected Git adapter (used by isolated tests) must never bypass
+    // executable identity validation. The actual runtime still requires
+    // independently authenticated Control custody before invocation.
+    const executable = qualifiedGitExecutable(surface);
+    if (!git) git = createReadOnlySourceGit(executable);
     const root = path.resolve(surface.repositoryPath);
     if (!fs.statSync(root).isDirectory() || fs.realpathSync(root) !== root
         || read(git, root, ['rev-parse', '--show-toplevel']).value !== root) {
@@ -203,4 +679,13 @@ function qualifyForkedPhase1Branch({
   }
 }
 
-module.exports = { createReadOnlySourceGit, prepareForkedPhase1Branch, qualifyForkedPhase1Branch };
+module.exports = {
+  createReadOnlySourceGit, prepareForkedPhase1Branch, snapshotControlInput,
+  qualifyControlGitSource, qualifyForkedPhase1Branch, authenticateGitHubControlIssuer,
+  __testOnlyControlCertificateMatches: controlCertificateMatches,
+  __testOnlyReadStableAttestationFile: readStableAttestationFile,
+  __testOnlyCurrentOwnerInventoryIsValid: currentOwnerInventoryIsValid,
+  // Pure unit-test seam; callers must never substitute its observations for
+  // Product's qualified native entrypoint.
+  __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1BranchWithTestAdapter,
+};

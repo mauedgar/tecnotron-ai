@@ -7,7 +7,12 @@ const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const {
-  qualifyForkedPhase1Branch,
+  qualifyControlGitSource, authenticateGitHubControlIssuer,
+  __testOnlyControlCertificateMatches: matchesCertificate,
+  __testOnlyReadStableAttestationFile: readStableAttestationFile,
+  __testOnlyCurrentOwnerInventoryIsValid: ownerInventoryIsValid,
+  qualifyForkedPhase1Branch: qualifyProductFork,
+  __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1Branch,
 } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-phase1-branch-qualification');
 
 const TASK = 'add3f2525b3b711ce4e396a2e5ce2864f3ceef10';
@@ -50,6 +55,24 @@ function context() {
       qualification_receipt_ref: 'https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-6641648462',
       gitExecutablePath: binary,
       gitExecutableSha256: binaryHash,
+    },
+    controlVerifiedGitSource: {
+      status: 'CONTROL_VERIFIED_SOURCE',
+      binding: 'CONTROL_QUALIFIED_GIT',
+      taskcycle_id: TASKCYCLE,
+      subject_branch: BRANCH,
+      original_task_branch: ORIGINAL,
+      repositoryPath: root,
+      remoteUrl: REMOTE,
+      qualification_receipt_ref: 'https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-6641648462',
+      gitExecutablePath: binary,
+      gitExecutableSha256: binaryHash,
+      subject_commit: TIP,
+      subject_tree: TREE,
+      original_task_commit: TASK,
+      source_code_commit: '92f890ad57dac67d16a90235c6ec7deadc119daf',
+      execution_attempt_id: 'TEST-CONTROL-BOUND-ATTEMPT-1',
+      control_resolution_ref: 'TEST:EXTERNAL_CONTROL_RESOLUTION',
     },
     cleanup: () => fs.rmSync(root, {recursive:true,force:true}),
   };
@@ -104,6 +127,7 @@ function qualify(c, overrides = {}) {
     request: c.request,
     originalInputs: c.originalInputs,
     qualifiedGitSurface: c.qualifiedGitSurface,
+    resolveControlGitSource: () => structuredClone(c.controlVerifiedGitSource),
     git: fakeGit(c, overrides),
   });
 }
@@ -127,6 +151,7 @@ test('accepts only the other exact official GitHub HTTPS origin form', () => {
   try {
     const withoutGitSuffix = REMOTE.slice(0, -4);
     c.qualifiedGitSurface.remoteUrl = withoutGitSuffix;
+    c.controlVerifiedGitSource.remoteUrl = withoutGitSuffix;
     const r = (stdout) => ({
       stdout, exit_code: 0, stderr: '', error_code: null, timed_out: false, signal: null,
     });
@@ -268,7 +293,12 @@ test('pinning Git executable is required and hostile local credential config is 
     assert.equal(prepareForkedPhase1Branch(bound).reason,'FORK_BRANCH_BINDING_UNQUALIFIED');
     c.qualifiedGitSurface.gitExecutableSha256='sha256:'+'a'.repeat(64);
     assert.equal(prepareForkedPhase1Branch(bound).status,'PASS');
-    assert.equal(qualifyForkedPhase1Branch(bound).reason,'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    assert.equal(qualify(c).reason,'FORK_CONTROL_CUSTODY_MISMATCH');
+    c.controlVerifiedGitSource.gitExecutableSha256='sha256:'+'a'.repeat(64);
+    assert.equal(qualifyForkedPhase1Branch({
+      ...bound, resolveControlGitSource: () => structuredClone(c.controlVerifiedGitSource),
+    }).reason,'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    c.controlVerifiedGitSource.gitExecutableSha256=validHash;
     c.qualifiedGitSurface.gitExecutableSha256=validHash;
     const key='config --local --get-regexp ^(http\\..*\\.extraheader|credential\\..*|remote\\.origin\\.uploadpack)$';
     const injected={stdout:'http.https://github.com/.extraheader SENSITIVE\n',
@@ -296,3 +326,423 @@ test('Git source rejects local includes, transport proxy and protocol overrides'
     }
   } finally { c.cleanup(); }
 });
+
+test('untrusted caller label alone never qualifies fork provenance', () => {
+  const c = context();
+  try {
+    const input = { request: c.request, originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface, git: fakeGit(c) };
+    assert.equal(qualifyForkedPhase1Branch(input).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
+    assert.equal(qualifyForkedPhase1Branch({
+      ...input, resolveControlGitSource: () => { throw Error('unavailable'); },
+    }).reason, 'FORK_CONTROL_CUSTODY_UNAVAILABLE');
+    assert.equal(qualify(c).status, 'PASS');
+    assert.deepEqual(qualify(c), qualify(c), 'same Control-bound evidence is deterministic');
+  } finally { c.cleanup(); }
+});
+
+test('binary, checkout and receipt substitutions cannot override Control source', () => {
+  const c = context();
+  try {
+    const attackerRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'h6-fake-checkout-'));
+    try {
+      const binary = path.join(attackerRoot, 'substituted-git');
+      fs.writeFileSync(binary, 'attacker-selected-bytes\n');
+      c.qualifiedGitSurface.gitExecutablePath = binary;
+      c.qualifiedGitSurface.gitExecutableSha256 = 'sha256:' +
+        createHash('sha256').update(fs.readFileSync(binary)).digest('hex');
+      assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_MISMATCH');
+      c.qualifiedGitSurface.gitExecutablePath = c.controlVerifiedGitSource.gitExecutablePath;
+      c.qualifiedGitSurface.gitExecutableSha256 = c.controlVerifiedGitSource.gitExecutableSha256;
+      c.qualifiedGitSurface.repositoryPath = attackerRoot;
+      assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_MISMATCH');
+      c.qualifiedGitSurface.repositoryPath = c.root;
+      c.qualifiedGitSurface.qualification_receipt_ref = 'CONTROL:COUNTERFEIT';
+      assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_MISMATCH');
+    } finally { fs.rmSync(attackerRoot, { recursive: true, force: true }); }
+  } finally { c.cleanup(); }
+});
+
+test('Control proof must bind the actual frozen subject, TASK and execution attempt', () => {
+  const c = context();
+  try {
+    c.request.subject.commit = 'f'.repeat(40);
+    assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
+    c.request.subject.commit = TIP;
+    c.controlVerifiedGitSource.original_task_commit = 'f'.repeat(40);
+    assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
+    c.controlVerifiedGitSource.original_task_commit = TASK;
+    c.controlVerifiedGitSource.execution_attempt_id = '';
+    assert.equal(qualify(c).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
+    c.controlVerifiedGitSource.execution_attempt_id = 'TEST-CONTROL-BOUND-ATTEMPT-1';
+    assert.equal(qualify(c).status, 'PASS');
+  } finally { c.cleanup(); }
+});
+
+test('even an injected Git adapter cannot bypass a modified executable', () => {
+  const c = context();
+  try {
+    fs.writeFileSync(c.qualifiedGitSurface.gitExecutablePath, 'tampered-after-Control-pin\n');
+    const result = qualify(c);
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'FORK_GIT_EVIDENCE_UNAVAILABLE');
+  } finally { c.cleanup(); }
+});
+
+test('Control custody resolver is snapshotted once and cannot mutate proof after qualification', () => {
+  const c = context();
+  try {
+    const supplied = structuredClone(c.controlVerifiedGitSource);
+    let calls = 0;
+    const qualified = qualifyControlGitSource({
+      request: c.request,
+      originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => { calls += 1; return supplied; },
+    });
+    assert.equal(qualified.status, 'PASS');
+    assert.equal(calls, 1);
+    supplied.gitExecutablePath = path.join(c.root, 'attacker-executable');
+    supplied.gitExecutableSha256 = 'sha256:'+'f'.repeat(64);
+    supplied.repositoryPath = path.join(c.root, 'different-repository');
+    assert.equal(qualified.surface.gitExecutablePath, c.qualifiedGitSurface.gitExecutablePath);
+    assert.equal(qualified.surface.gitExecutableSha256, c.qualifiedGitSurface.gitExecutableSha256);
+    assert.equal(qualified.surface.repositoryPath, c.root);
+  } finally { c.cleanup(); }
+});
+
+test('accessor-backed or unserializable custody proof fails closed', () => {
+  const c = context();
+  try {
+    const input = {
+      request: c.request,
+      originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+    };
+    const accessor = structuredClone(c.controlVerifiedGitSource);
+    Object.defineProperty(accessor, 'gitExecutablePath', {
+      enumerable: true,
+      get() { throw new Error('untrusted getter'); },
+    });
+    assert.equal(qualifyControlGitSource({
+      ...input, resolveControlGitSource: () => accessor,
+    }).reason, 'FORK_CONTROL_CUSTODY_UNAVAILABLE');
+    assert.equal(qualifyControlGitSource({
+      ...input, resolveControlGitSource: () => ({
+        ...c.controlVerifiedGitSource, unsuspected_function: () => 1,
+      }),
+    }).reason, 'FORK_CONTROL_CUSTODY_UNAVAILABLE');
+    assert.equal(qualifyControlGitSource({
+      ...input, resolveControlGitSource: () => 'CONTROL_VERIFIED_SOURCE',
+    }).reason, 'FORK_CONTROL_CUSTODY_UNVERIFIED');
+  } finally { c.cleanup(); }
+});
+
+test('reentrant Control resolver cannot mutate the prevalidated Git surface', () => {
+  const c = context();
+  try {
+    const result = qualifyForkedPhase1Branch({
+      request: c.request,
+      originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => {
+        // A mutable closure still holds the original caller-controlled object.
+        c.qualifiedGitSurface.remoteUrl = 'https://attacker.example/repository.git';
+        c.qualifiedGitSurface.qualification_receipt_ref = 'CONTROL:FORGED';
+        return {
+          ...c.controlVerifiedGitSource,
+          remoteUrl: c.qualifiedGitSurface.remoteUrl,
+          qualification_receipt_ref: c.qualifiedGitSurface.qualification_receipt_ref,
+        };
+      },
+      git: fakeGit(c),
+    });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'FORK_CONTROL_CUSTODY_MISMATCH');
+  } finally { c.cleanup(); }
+});
+
+test('reentrant Control resolver cannot mutate the already-frozen candidate and TASK', () => {
+  const c = context();
+  try {
+    const result = qualifyForkedPhase1Branch({
+      request: c.request,
+      originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => {
+        c.request.subject.changed_paths = ['attendance/operator/attacker.py'];
+        c.originalInputs.TASK_carrier.commit = 'f'.repeat(40);
+        return structuredClone(c.controlVerifiedGitSource);
+      },
+      git: fakeGit(c),
+    });
+    assert.equal(result.status, 'PASS', result.reason);
+    assert.deepEqual(result.verified.actual_changed_paths, [FILE]);
+    assert.equal(result.verified.original_task_commit, TASK);
+  } finally { c.cleanup(); }
+});
+
+test('Product qualifier cannot accept any caller-supplied simulated Git adapter', () => {
+  const c = context();
+  try {
+    const input = {
+      request: c.request, originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => structuredClone(c.controlVerifiedGitSource),
+    };
+    assert.equal(qualifyProductFork({ ...input, git: fakeGit(c) }).reason,
+      'FORK_GIT_ADAPTER_INJECTION_FORBIDDEN');
+    assert.equal(qualifyProductFork({
+      ...input, git: { run: () => { throw Error('must never run'); } },
+    }).reason, 'FORK_GIT_ADAPTER_INJECTION_FORBIDDEN');
+  } finally { c.cleanup(); }
+});
+
+test('pinned native Git binary rejects another-UID-writable bytes and replacement directory', { skip: process.platform !== 'linux' }, () => {
+  const c = context();
+  try {
+    const nativeArgs = {
+      request: c.request, originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => structuredClone(c.controlVerifiedGitSource),
+    };
+    // Test seam reads fake Git only after the same native binary gate.
+    const observe = () => qualifyForkedPhase1Branch({ ...nativeArgs, git: fakeGit(c) });
+    assert.equal(observe().status, 'PASS');
+    fs.chmodSync(c.qualifiedGitSurface.gitExecutablePath, 0o666);
+    assert.equal(observe().reason, 'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    fs.chmodSync(c.qualifiedGitSurface.gitExecutablePath, 0o600);
+    assert.equal(observe().status, 'PASS');
+    fs.chmodSync(c.root, 0o777);
+    assert.equal(observe().reason, 'FORK_GIT_EVIDENCE_UNAVAILABLE');
+    fs.chmodSync(c.root, 0o700);
+    assert.equal(observe().status, 'PASS');
+  } finally { c.cleanup(); }
+});
+
+test('Product fork qualifier fails closed without signed decision digests even with qualified issuer', () => {
+  const c = context();
+  try {
+    const result = qualifyProductFork({
+      request: c.request, originalInputs: c.originalInputs,
+      qualifiedGitSurface: c.qualifiedGitSurface,
+      resolveControlGitSource: () => structuredClone(c.controlVerifiedGitSource),
+    });
+    // The fixture is explicitly not an executable Git implementation. No
+    // Product native qualifier can ever PASS based on its mocked observations.
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'FORK_CONTROL_AUTHORITY_DIGEST_UNVERIFIED');
+  } finally { c.cleanup(); }
+});
+
+test('GitHub signer is mandatory: forged Control source and caller policy cannot authenticate issuer', () => {
+  const c = context();
+  try {
+    const supplied = {
+      request: c.request,
+      originalInputs: c.originalInputs,
+      qualifiedGitSurface: {
+        ...c.qualifiedGitSurface,
+        // A worker cannot choose a different signer or pretend certification.
+        githubControlIssuer: {
+          status: 'VERIFIED', signerDigest: 'f'.repeat(40),
+          signerWorkflow: 'attacker/forged/.github/workflows/sign.yml',
+        },
+      },
+      resolveControlGitSource: () => structuredClone({
+        ...c.controlVerifiedGitSource,
+        githubAttestationManifestPath: path.join(c.root, 'fake-manifest.json'),
+        githubAttestationBundlePath: path.join(c.root, 'fake-bundle.json'),
+      }),
+    };
+    const native = qualifyProductFork(supplied);
+    assert.deepEqual(native, {
+      status: 'BLOCKED', reason: 'FORK_CONTROL_AUTHORITY_DIGEST_UNVERIFIED',
+    });
+    const independentIssuer = authenticateGitHubControlIssuer({
+      request: c.request, originalInputs: c.originalInputs,
+      proof: c.controlVerifiedGitSource,
+    });
+    assert.deepEqual(independentIssuer, native);
+  } finally { c.cleanup(); }
+});
+
+
+test('current Owner high-watermark rejects general revocation, duplicates and incomplete inventories', () => {
+  const issue = 'https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35';
+  const grantId = 6674832511;
+  const comment = (id, user = 54420195, body = 'unrelated') => ({
+    id, issue_url: issue, user: { id: user }, body,
+  });
+  const original = [
+    comment(6673895838),
+    comment(6674818980),
+    comment(grantId),
+    comment(6674841000, 100100),
+  ];
+  assert.equal(ownerInventoryIsValid(original, 4, grantId), true,
+    'verified grant with earlier Owner and later non-Owner is current');
+  assert.equal(ownerInventoryIsValid([
+    ...original.slice(0, 3),
+    comment(6674841001, 54420195,
+      'Quedan revocadas todas las autorizaciones de H6 Operator'),
+  ], 4, grantId), false, 'general natural-language Owner revocation expires lease');
+  assert.equal(ownerInventoryIsValid([...original, original[0]], 5, grantId), false,
+    'duplicate page IDs cannot satisfy the full inventory');
+  assert.equal(ownerInventoryIsValid(original.slice(1), 4, grantId), false,
+    'missing pagination entry rejected');
+  assert.equal(ownerInventoryIsValid(original, 3, grantId), false,
+    'claimed count inconsistent with actual native records');
+  assert.equal(ownerInventoryIsValid(original.map((x, i) => i === 0
+    ? { ...x, issue_url: 'https://example.invalid/issues/35' } : x), 4, grantId),
+  false, 'repository/issue mismatch rejected');
+  assert.equal(ownerInventoryIsValid([...original, { id: 6674841002 }], 5, grantId),
+    false, 'malformed issue author rejected');
+  const extended = [...original, ...Array.from({ length: 1200 - original.length },
+    (_, index) => comment(grantId + 2000 + index, 100100))];
+  assert.equal(ownerInventoryIsValid(extended, 1200, grantId), true,
+    'complete multi-page inventory above legacy 1000 stays eligible');
+  const bound = [...original, ...Array.from({ length: 5000 - original.length },
+    (_, index) => comment(grantId + 20000 + index, 100100))];
+  assert.equal(ownerInventoryIsValid(bound, 5000, grantId), true,
+    'exact 5000-comment bound remains supported');
+  assert.equal(ownerInventoryIsValid([...bound, comment(grantId + 11000, 100100)],
+    5001, grantId), false, 'over-cap must remain fail-closed');
+  assert.equal(ownerInventoryIsValid(original, 5001, grantId), false,
+    'claimed oversize inventory fails closed');
+});
+
+test('real native issuer requires qualified Control read credentials even with syntactically valid signed digests', () => {
+  const c = context();
+  const prior = process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+  try {
+    delete process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+    const proof = {
+      ...c.controlVerifiedGitSource,
+      control_decision_sha256: 'a'.repeat(64),
+      source_qualification_sha256: 'b'.repeat(64),
+      githubAttestationManifestPath: path.join(c.root, 'absent-manifest.json'),
+      githubAttestationBundlePath: path.join(c.root, 'absent-bundle.json'),
+    };
+    assert.deepEqual(authenticateGitHubControlIssuer({
+      request: c.request, originalInputs: c.originalInputs, proof,
+    }), {
+      status: 'BLOCKED', reason: 'FORK_CONTROL_CURRENT_AUTHORITY_READ_UNAVAILABLE',
+    }, 'no worker-supplied policy or syntactic SHA can bypass Control-runner credentials');
+  } finally {
+    if (prior === undefined) delete process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+    else process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN = prior;
+    c.cleanup();
+  }
+});
+
+test('GitHub Control signer requires authenticated manual dispatch on the exact pinned main workflow', () => {
+  const signer = 'a'.repeat(40);
+  const digest = 'b'.repeat(64);
+  const policy = {
+    repository: 'mauedgar/tecnotron-ai',
+    repositoryId: '1339077141',
+    signerWorkflow: 'mauedgar/tecnotron-ai/.github/workflows/tecnotron-control-custody-attest.yml',
+    sourceRef: 'refs/heads/main',
+    signerDigest: signer,
+  };
+  const entry = {
+    verificationResult: {
+      signature: { certificate: {
+        sourceRepositoryIdentifier: '1339077141',
+        sourceRepositoryOwnerIdentifier: '54420195',
+        githubWorkflowRepository: policy.repository,
+        sourceRepositoryURI: 'https://github.com/' + policy.repository,
+        githubWorkflowSHA: signer,
+        buildSignerDigest: signer,
+        sourceRepositoryRef: policy.sourceRef,
+        githubWorkflowRef: policy.sourceRef,
+        githubWorkflowTrigger: 'workflow_dispatch',
+        buildTrigger: 'workflow_dispatch',
+        runnerEnvironment: 'github-hosted',
+        issuer: 'https://token.actions.githubusercontent.com',
+        subjectAlternativeName: 'https://github.com/' + policy.signerWorkflow + '@' + policy.sourceRef,
+      }},
+      statement: { subject: [{ name: 'manifest.json', digest: { sha256: digest } }] },
+    },
+  };
+  assert.equal(matchesCertificate(entry, policy, digest), true);
+  for (const [field, value] of [
+    ['sourceRepositoryIdentifier', '0'],
+    ['sourceRepositoryOwnerIdentifier', '0'],
+    ['buildTrigger', 'push'],
+    ['githubWorkflowSHA', 'c'.repeat(40)],
+    ['buildSignerDigest', 'c'.repeat(40)],
+    ['sourceRepositoryRef', 'refs/heads/experiment/untrusted'],
+    ['githubWorkflowTrigger', 'push'],
+    ['runnerEnvironment', 'self-hosted'],
+    ['issuer', 'https://attacker.invalid'],
+    ['subjectAlternativeName', 'https://github.com/attacker/repo/workflow@refs/heads/main'],
+  ]) {
+    const forged = structuredClone(entry);
+    forged.verificationResult.signature.certificate[field] = value;
+    assert.equal(matchesCertificate(forged, policy, digest), false, field);
+  }
+  assert.equal(matchesCertificate(entry, policy, 'c'.repeat(64)), false,
+    'signed subject digest is immutable');
+  assert.equal(matchesCertificate({ verificationResult: { statement: entry.verificationResult.statement } },
+    policy, digest), false, 'missing certificate fails closed');
+});
+
+test('verified GitHub CLI native certificate keeps workflowRef as ref and SAN as full workflow identity', () => {
+  // Immutable original provider provenance: GitHub run 42106631053, SHA
+  // dea57a3c39688fc9679ceca8cbc75ffbcd80efec, original artifact
+  // 13453090203, ZIP digest sha256:bdb66f87582371e3dee74de7c8ef30cda833bdde98dd4fe131d2180899ba7158.
+  // This is the actual gh attestation verify JSON certificate projection for a
+  // NONPRODUCT push fixture, not a simulated successful Product dispatch.
+  const signer = 'dea57a3c39688fc9679ceca8cbc75ffbcd80efec';
+  const sourceRef = 'refs/heads/experiment/tecnotron-a01-github-attestation-20261105-001';
+  const workflow = 'mauedgar/tecnotron-ai/.github/workflows/tecnotron-control-custody-attest.yml';
+  const digest = '8ce88040f3eaea4f431b17b0f51ec137bbc7a0d40c91c106210157c9c608e4f4';
+  const cert = {
+    sourceRepositoryIdentifier: '1339077141',
+    sourceRepositoryOwnerIdentifier: '54420195',
+    githubWorkflowRepository: 'mauedgar/tecnotron-ai',
+    sourceRepositoryURI: 'https://github.com/mauedgar/tecnotron-ai',
+    githubWorkflowSHA: signer,
+    buildSignerDigest: signer,
+    sourceRepositoryRef: sourceRef,
+    githubWorkflowRef: sourceRef,
+    githubWorkflowTrigger: 'push',
+    buildTrigger: 'push',
+    runnerEnvironment: 'github-hosted',
+    issuer: 'https://token.actions.githubusercontent.com',
+    subjectAlternativeName: 'https://github.com/' + workflow + '@' + sourceRef,
+  };
+  assert.equal(cert.githubWorkflowRef, sourceRef);
+  assert.notEqual(cert.githubWorkflowRef, cert.subjectAlternativeName);
+  assert.equal(cert.subjectAlternativeName,
+    'https://github.com/' + workflow + '@' + sourceRef);
+  // The real attestation is valid as a synthetic push, and MUST be rejected
+  // as a competent manually dispatched Product Control issuer.
+  const entry = { verificationResult: {
+    signature: { certificate: cert },
+    statement: { subject: [{ name: 'manifest.json', digest: { sha256: digest } }] },
+  }};
+  const policy = { repository: 'mauedgar/tecnotron-ai', repositoryId: '1339077141',
+    signerWorkflow: workflow, sourceRef, signerDigest: signer };
+  assert.equal(matchesCertificate(entry, policy, digest), false);
+});
+
+test('native attestation input acquisition is fd-bound and rejects symlinks, mutable modes and oversize files',
+  { skip: process.platform !== 'linux' }, () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'h6-attest-file-'));
+    try {
+      const real = path.join(dir, 'manifest.json');
+      const link = path.join(dir, 'manifest-link.json');
+      fs.writeFileSync(real, Buffer.from('{"id":"control"}\n'), { flag:'wx', mode:0o600 });
+      fs.symlinkSync(real, link);
+      assert.equal(readStableAttestationFile(real, 65536).toString('utf8'), '{"id":"control"}\n');
+      assert.throws(() => readStableAttestationFile(link, 65536));
+      fs.chmodSync(real, 0o666);
+      assert.throws(() => readStableAttestationFile(real, 65536));
+      fs.chmodSync(real, 0o600);
+      assert.throws(() => readStableAttestationFile(real, 3));
+      assert.equal(readStableAttestationFile(real, 65536).toString('utf8'), '{"id":"control"}\n');
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  });
