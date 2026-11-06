@@ -24,6 +24,48 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
+      - name: Qualify ephemeral Linux host and pinned root-owned execution surface
+        shell: bash
+        env:
+          TECNOTRON_RUNNER_CLASS: ${{ runner.environment }}
+        run: |
+          set -euo pipefail
+          test "$RUNNER_OS" = Linux
+          test "$TECNOTRON_RUNNER_CLASS" = github-hosted
+          node <<'NODE'
+          'use strict';
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+          if (process.platform !== 'linux' || process.getuid() === 0)
+            throw Error('UNQUALIFIED_NATIVE_HOST_OR_UID');
+          if (!fs.statSync('/proc/self/fd').isDirectory())
+            throw Error('NO_KERNEL_DESCRIPTOR_ANCHORS');
+          for (const file of ['/usr/bin/gh', '/usr/bin/git']) {
+            let parent = path.parse(file).root;
+            for (const part of file.slice(parent.length).split(path.sep)) {
+              parent = path.join(parent, part);
+              const st = fs.lstatSync(parent);
+              if (st.uid !== 0 || st.isSymbolicLink() || (st.mode & 0o022) !== 0)
+                throw Error('UNTRUSTED_ROOT_OWNED_EXECUTABLE_PATH');
+              if (parent === file && (!st.isFile() || st.nlink !== 1))
+                throw Error('UNQUALIFIED_NATIVE_EXECUTABLE');
+            }
+          }
+          const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'tecnotron-host-profile-'));
+          try {
+            fs.chmodSync(temp, 0o700);
+            const st = fs.lstatSync(temp);
+            if (!st.isDirectory() || st.uid !== process.getuid()
+                || (st.mode & 0o777) !== 0o700)
+              throw Error('PRIVATE_NATIVE_TEMP_HOME_UNAVAILABLE');
+          } finally {
+            fs.rmSync(temp, {recursive:true,force:true});
+          }
+          console.log('GITHUB_EPHEMERAL_LINUX_TRUST_PROFILE=PASS');
+          console.log('GITHUB_NATIVE_EXECUTABLE_AND_HOME=PASS');
+          NODE
+
       - name: Checkout exact candidate without persistent credentials
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 pinned
         with:
