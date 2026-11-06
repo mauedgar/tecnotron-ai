@@ -1,0 +1,551 @@
+name: Tecnotron custody signer qualification (NONPRODUCT)
+# Synthetic attestation only. It MUST NOT issue a Product Control grant.
+# The signer on this experiment branch is NOT a Product-qualified issuer.
+on:
+  push:
+    branches:
+      - experiment/tecnotron-a01-github-attestation-20261105-001
+    paths:
+      - .github/workflows/tecnotron-control-custody-attest.yml
+
+  workflow_dispatch:
+    inputs:
+      grant_comment_id:
+        description: 'Exact Developer Control grant comment ID in Tecnotron issue 35'
+        type: string
+        required: true
+      execution_attempt_id:
+        description: 'Original immutable ExecutionAttempt, must equal Developer grant'
+        type: string
+        required: true
+
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('TECNOTRON-CUSTODY-ATTEMPT-{0}', inputs.execution_attempt_id) || 'TECNOTRON-CUSTODY-NONPRODUCT-SYNTHETIC' }}
+
+# A single source of signed evidence: serialized across every dispatch and push.
+# Pending executions queue; they NEVER cancel an earlier attempt.
+concurrency:
+  group: tecnotron-control-custody-all
+  cancel-in-progress: false
+  queue: max
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  synthetic-attestation:
+    if: >-
+      ${{ github.repository == 'mauedgar/tecnotron-ai' && github.repository_id == '1339077141' && github.event_name == 'push' && github.ref == 'refs/heads/experiment/tecnotron-a01-github-attestation-20261105-001' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Prepare fixed NONPRODUCT fixture and check caller identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "mauedgar/tecnotron-ai"
+          test "$GITHUB_REPOSITORY_ID" = "1339077141"
+          test "$GITHUB_REF" = "refs/heads/experiment/tecnotron-a01-github-attestation-20261105-001"
+          mkdir -p qualification
+          cat > qualification/manifest.json <<'FIXTURE'
+          {"schema":"tecnotron-github-custody-signer-qualification/v1","fixture":"TS-GITHUB-CUSTODY-QUAL-001","Product_authority":"NONE","Product_effect":"NONE","kind":"NONPRODUCT_SYNTHETIC"}
+          FIXTURE
+          sha256sum qualification/manifest.json | tee qualification/input-sha256.txt
+
+      - name: Sign fixed synthetic artifact (no Product grant)
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # official actions/attest v4 resolved immutable SHA
+        with:
+          subject-path: qualification/manifest.json
+
+      - name: Verify signer, source, timestamp and negative mutations
+        shell: bash
+        env:
+          ATTEST_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          test -s "$ATTEST_BUNDLE"
+          gh --version
+          verify=(
+            --repo "mauedgar/tecnotron-ai"
+            --bundle "$ATTEST_BUNDLE"
+            --signer-workflow "mauedgar/tecnotron-ai/.github/workflows/tecnotron-control-custody-attest.yml"
+            --signer-digest "$GITHUB_SHA"
+            --source-ref "$GITHUB_REF"
+            --cert-oidc-issuer "https://token.actions.githubusercontent.com"
+            --deny-self-hosted-runners
+            --format json
+          )
+          gh attestation verify qualification/manifest.json "${verify[@]}" > qualification/verified.json
+          jq -e 'type == "array" and length > 0 and all(.[]; .verificationResult.signature.certificate != null)' qualification/verified.json >/dev/null
+          echo "ATTESTATION_POSITIVE=PASS"
+          # One mismatched identity at a time: every case must be rejected.
+          if gh attestation verify qualification/manifest.json "${verify[@]}" --signer-workflow "mauedgar/tecnotron-ai/.github/workflows/evil.yml" >/dev/null 2>&1; then
+            echo "NEGATIVE_SIGNER_UNEXPECTED_PASS" >&2; exit 1
+          fi
+          echo "ATTESTATION_NEGATIVE_SIGNER=REJECTED"
+          if gh attestation verify qualification/manifest.json "${verify[@]}" --source-ref refs/heads/main >/dev/null 2>&1; then
+            echo "NEGATIVE_SOURCE_REF_UNEXPECTED_PASS" >&2; exit 1
+          fi
+          echo "ATTESTATION_NEGATIVE_SOURCE_REF=REJECTED"
+          if gh attestation verify qualification/manifest.json "${verify[@]}" --signer-digest 0000000000000000000000000000000000000000 >/dev/null 2>&1; then
+            echo "NEGATIVE_SIGNER_DIGEST_UNEXPECTED_PASS" >&2; exit 1
+          fi
+          echo "ATTESTATION_NEGATIVE_SIGNER_DIGEST=REJECTED"
+          cp qualification/manifest.json qualification/tampered.json
+          printf '\nTAMPERED' >> qualification/tampered.json
+          if gh attestation verify qualification/tampered.json "${verify[@]}" >/dev/null 2>&1; then
+            echo "NEGATIVE_TAMPER_UNEXPECTED_PASS" >&2; exit 1
+          fi
+          echo "ATTESTATION_NEGATIVE_TAMPER=REJECTED"
+          jq -n --arg sha "$GITHUB_SHA" --arg ref "$GITHUB_REF" --arg run "$GITHUB_RUN_ID" \
+            '{schema:"tecnotron-github-custody-signer-qualification-receipt/v1", Product_authority:"NONE", Product_effect:"NONE", candidate_sha:$sha, source_ref:$ref, provider_run_id:$run, positive:"PASS", wrong_signer:"REJECTED", wrong_ref:"REJECTED", wrong_digest:"REJECTED", tamper:"REJECTED"}' \
+            > qualification/receipt.json
+          cat qualification/receipt.json
+
+      # Native GitHub API contract test, read-only and NONPRODUCT. Observe the
+      # same endpoints and jq shapes the gated manual signer relies on, without
+      # supplying or authenticating any Product grant.
+      - name: Validate GitHub attestation and run inventory read contracts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha="$(cut -d' ' -f1 qualification/input-sha256.txt)"
+          gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$sha" \
+            > qualification/attestation-inventory.json
+          jq -e '.attestations | type == "array" and length >= 1' \
+            qualification/attestation-inventory.json > /dev/null
+          # Probe the absence case against the native provider: the first real
+          # grant must distinguish a verified empty inventory from 404/error.
+          absent="0000000000000000000000000000000000000000000000000000000000000000"
+          # Observe the actual HTTP status instead of parsing gh CLI stderr.
+          # A 404 only means absence after the independent positive canary.
+          # Any transport error, malformed body, denied status or size breach
+          # remains fail-closed (including transient provider failures).
+          http_status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+            --proto '=https' \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --output qualification/attestation-absent.json --write-out '%{http_code}' \
+            "https://api.github.com/repos/mauedgar/tecnotron-ai/attestations/sha256:$absent")" || {
+            echo "GITHUB_ATTESTATION_LOOKUP_TRANSPORT_FAILURE" >&2; exit 1;
+          }
+          test "$(wc -c < qualification/attestation-absent.json)" -le 262144 || {
+            echo "GITHUB_ATTESTATION_LOOKUP_RESPONSE_TOO_LARGE" >&2; exit 1;
+          }
+          case "$http_status" in
+            200)
+              jq -e '.attestations | type == "array" and length == 0' qualification/attestation-absent.json >/dev/null
+              echo "GITHUB_ATTESTATION_ABSENCE=200_EMPTY" ;;
+            404)
+              jq -e '.message == "Not Found"' qualification/attestation-absent.json >/dev/null
+              echo "GITHUB_ATTESTATION_ABSENCE=404_VERIFIED" ;;
+            *)
+              echo "GITHUB_ATTESTATION_LOOKUP_UNEXPECTED_HTTP_STATUS" >&2; exit 1 ;;
+          esac
+          gh api --paginate "repos/mauedgar/tecnotron-ai/actions/workflows/tecnotron-control-custody-attest.yml/runs?event=push&per_page=100" \
+            > qualification/run-pages.jsonl
+          jq -s -e --arg sha "$GITHUB_SHA" '
+            length > 0 and all(.[]; type == "object"
+              and (.workflow_runs | type == "array")
+              and (.total_count | type == "number"))
+            and any(.[]; any(.workflow_runs[]; .head_sha == $sha))
+            and ([.[] | .workflow_runs[].id] | length) == .[0].total_count
+            and ([.[] | .workflow_runs[].id] | unique | length) == .[0].total_count
+          ' qualification/run-pages.jsonl > /dev/null
+          gh api --paginate "repos/mauedgar/tecnotron-ai/issues/35/comments?per_page=100" \
+            > qualification/comment-pages.jsonl
+          gh api "repos/mauedgar/tecnotron-ai/issues/35" > qualification/issue-count.json
+          expected_comments="$(jq -er '.comments | select(type == "number" and . >= 0)' qualification/issue-count.json)"
+          jq -s -e --argjson expected "$expected_comments" '
+            length > 0 and all(.[]; type == "array"
+              and all(.[]; .id | type == "number"))
+            and ([.[][] | .id] | length) == $expected
+            and ([.[][] | .id] | unique | length) == $expected
+          ' qualification/comment-pages.jsonl > /dev/null
+          # Read-only qualification; log counts only, not potentially private
+          # grant/comment bodies or API inventory objects in artifacts.
+          echo "GITHUB_ATTESTATION_INVENTORY_CONTRACT=PASS"
+          echo "GITHUB_RUNS_PAGINATION_CONTRACT=PASS"
+          echo "GITHUB_COMMENTS_PAGINATION_CONTRACT=PASS"
+          echo "GITHUB_REMOTE_INVENTORY_COMPLETENESS=PASS"
+
+      # Positive native host and repository canary qualification only:
+      # no Product grant, no protected-main dispatch or lifecycle effect.
+      - name: Qualify Linux gh custody and retained canary (NONPRODUCT)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = "Linux"
+          test -x /usr/bin/gh
+          # Match the Product verifier's native root-owned, non-symlink,
+          # non-group/world-writable ancestry and single-link binary policy.
+          python3 - <<'PY'
+          import os, stat
+          for directory in ('/', '/usr', '/usr/bin'):
+              st = os.lstat(directory)
+              assert stat.S_ISDIR(st.st_mode) and not stat.S_ISLNK(st.st_mode)
+              assert st.st_uid == 0 and (st.st_mode & 0o022) == 0
+          target = '/usr/bin/gh'
+          st = os.lstat(target)
+          assert stat.S_ISREG(st.st_mode) and not stat.S_ISLNK(st.st_mode)
+          assert st.st_uid == 0 and st.st_nlink == 1
+          assert (st.st_mode & 0o022) == 0 and os.path.realpath(target) == target
+          print('GITHUB_LINUX_GH_CUSTODY=PASS')
+          PY
+          /usr/bin/gh --version | head -1
+          # Check the historical positive canary is still retrievable and
+          # unmistakably belongs to this repository. Its disappearance BLOCKS.
+          canary="8ce88040f3eaea4f431b17b0f51ec137bbc7a0d40c91c106210157c9c608e4f4"
+          gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$canary" \
+            > qualification/canary-inventory.json
+          jq -e '.attestations | type == "array" and length >= 1
+            and all(.[]; .repository_id == 1339077141)' \
+            qualification/canary-inventory.json >/dev/null
+          echo "GITHUB_ATTESTATION_CANARY_RETAINED=PASS"
+
+      - name: Upload original qualification evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # official upload-artifact v4 resolved immutable SHA
+        with:
+          name: tecnotron-control-custody-nonproduct-qualification
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            qualification/manifest.json
+            qualification/input-sha256.txt
+            qualification/verified.json
+            qualification/receipt.json
+            ${{ steps.attest.outputs.bundle-path }}
+
+  # Product-provenance evidence only, not TaskCycle mutation, Phase2 or merge.
+  # This job is unreachable until the workflow has been competently integrated
+  # into default main AND the exact main signer commit is separately pinned
+  # by the Product verifier. Never accept dispatch payload as its own grant.
+  signed-control-custody:
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository_id == '1339077141' && github.actor_id == '54420195' && github.actor == 'mauedgar' && github.triggering_actor == 'mauedgar' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      actions: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Independently authenticate immutable issue-35 Developer grant
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GRANT_ID: ${{ inputs.grant_comment_id }}
+          DISPATCH_ATTEMPT: ${{ inputs.execution_attempt_id }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "mauedgar/tecnotron-ai"
+          test "$GITHUB_REPOSITORY_ID" = "1339077141"
+          test "$GITHUB_ACTOR_ID" = "54420195"
+          test "$GITHUB_ACTOR" = "mauedgar"
+          test "$GITHUB_TRIGGERING_ACTOR" = "mauedgar"
+          test "$GITHUB_REF" = "refs/heads/main"
+          [[ "$GRANT_ID" =~ ^[1-9][0-9]{5,19}$ ]] || { echo "GRANT_ID_INVALID" >&2; exit 1; }
+          [[ "$DISPATCH_ATTEMPT" =~ ^[A-Za-z0-9_.:-]{10,160}$ ]] || {
+            echo "DISPATCH_EXECUTION_ATTEMPT_INVALID" >&2; exit 1;
+          }
+          mkdir -p custody
+          gh api "repos/mauedgar/tecnotron-ai/issues/comments/$GRANT_ID" > custody/observed-comment.json
+          jq -e --arg issue "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35" \
+            '.user.id == 54420195 and .user.login == "mauedgar" and
+             .issue_url == $issue and .author_association == "OWNER" and
+             .created_at == .updated_at and (.body | type == "string" and length <= 8192)' \
+            custody/observed-comment.json > /dev/null
+          # Canonical evidence bytes are the UTF-8 encoding of the GitHub API
+          # decoded comment body, with NO newline inserted by jq.
+          jq -j '.body' custody/observed-comment.json > custody/grant.json
+          test "$(wc -c < custody/grant.json)" -le 8192 || { echo "GRANT_TOO_LARGE" >&2; exit 1; }
+          jq -e --arg grant_id "$GRANT_ID" '
+            ((keys | sort) == ([
+              "schema", "repository", "taskcycle_id", "subject_commit",
+              "subject_tree", "original_task_commit", "source_code_commit",
+              "execution_attempt_id", "qualification_receipt_ref",
+              "decision_comment_id", "qualification_comment_id",
+              "responsibility", "operation", "subject_branch",
+              "original_task_branch", "changed_paths", "Product_effect"
+            ] | sort)) and
+            .schema == "tecnotron-control-git-custody-grant/v2" and
+            .repository == "mauedgar/tecnotron-ai" and
+            .taskcycle_id == "TASKCYCLE-TECNOTRON-ULC-OP05-H6-ATTENDANCE-OPERATOR-001" and
+            .responsibility == "H6_OPERATOR_PHASE1_GIT_CUSTODY" and
+            .operation == "SIGN_GIT_SOURCE_CUSTODY_EVIDENCE_ONLY" and
+            .Product_effect == "NONE" and
+            .subject_branch == "task/tecnotron-h6-operator-20261104-001" and
+            .original_task_branch == "task/tecnotron-h6-attendance-parent-children-20261102-001" and
+            .changed_paths == ["attendance/operator/cli.py"] and
+            (.decision_comment_id | type == "number" and . > 0) and
+            (.qualification_comment_id | type == "number" and . > 0) and
+            .decision_comment_id != .qualification_comment_id and
+            .decision_comment_id != ($grant_id | tonumber) and
+            .qualification_comment_id != ($grant_id | tonumber) and
+            (.execution_attempt_id | type == "string" and test("^[A-Za-z0-9_.:-]{10,160}$")) and
+            ([.subject_commit,.subject_tree,.original_task_commit,.source_code_commit] |
+              all(.[]; type == "string" and test("^[a-f0-9]{40}$"))) and
+            (.qualification_receipt_ref | type == "string" and
+             startswith("https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-"))
+          ' custody/grant.json > /dev/null
+          # Reobservation of TWO prior GitHub-authenticated, unedited Owner
+          # comments. A syntactically valid grant alone is never competence.
+          decision_id="$(jq -er '.decision_comment_id' custody/grant.json)"
+          qualification_id="$(jq -er '.qualification_comment_id' custody/grant.json)"
+          gh api "repos/mauedgar/tecnotron-ai/issues/comments/$decision_id" > custody/observed-decision-comment.json
+          gh api "repos/mauedgar/tecnotron-ai/issues/comments/$qualification_id" > custody/observed-qualification-comment.json
+          for item in decision qualification; do
+            jq -e --arg issue "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35" \
+              --argjson grant "$GRANT_ID" '
+                .user.id == 54420195 and .user.login == "mauedgar"
+                and .issue_url == $issue and .author_association == "OWNER"
+                and .created_at == .updated_at and .id < $grant
+                and (.body | type == "string" and length <= 8192)
+              ' "custody/observed-$item-comment.json" > /dev/null
+            jq -j '.body' "custody/observed-$item-comment.json" > "custody/$item.json"
+            test "$(wc -c < "custody/$item.json")" -le 8192 || {
+              echo "AUTHORITY_OR_QUALIFICATION_TOO_LARGE" >&2; exit 1;
+            }
+          done
+          jq -ne --slurpfile g custody/grant.json --slurpfile d custody/decision.json \
+            --slurpfile q custody/qualification.json '
+            ($g[0] | .) as $grant | ($d[0] | .) as $decision |
+            ($q[0] | .) as $qualification |
+            ([ "repository", "taskcycle_id", "subject_commit", "subject_tree",
+               "original_task_commit", "source_code_commit", "execution_attempt_id" ] |
+               all(.[]; $decision[.] == $grant[.] and $qualification[.] == $grant[.]))
+            and $decision.schema == "tecnotron-control-git-custody-decision/v1"
+            and $decision.status == "GRANTED"
+            and $decision.responsibility == $grant.responsibility
+            and $decision.operation == $grant.operation
+            and $decision.changed_paths == $grant.changed_paths
+            and $decision.Product_effect == "NONE"
+            and $qualification.schema == "tecnotron-control-git-source-qualification/v1"
+            and $qualification.status == "PASS"
+            and $qualification.Product_effect == "NONE"
+            and ($qualification.provider_run_id | type == "number" and . > 0)
+            and $grant.qualification_receipt_ref ==
+                ("https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-" +
+                  ($grant.qualification_comment_id | tostring))
+          ' > /dev/null
+          run_id="$(jq -er '.provider_run_id' custody/qualification.json)"
+          gh api "repos/mauedgar/tecnotron-ai/actions/runs/$run_id" > custody/qualification-run.json
+          jq -e --arg subject "$(jq -er '.subject_commit' custody/grant.json)" '
+            .repository.id == 1339077141
+            and .path == ".github/workflows/native-validation.yml"
+            and .event == "pull_request"
+            and .status == "completed" and .conclusion == "success"
+            and .run_attempt == 1 and .head_sha == $subject
+          ' custody/qualification-run.json > /dev/null
+          # Qualification means a provider-native CI run of this exact source,
+          # not merely a requester's PASS label.
+          test "$(jq -er '.execution_attempt_id' custody/grant.json)" = "$DISPATCH_ATTEMPT" || {
+            echo "DISPATCH_ATTEMPT_NOT_COMPETENTLY_GRANTED" >&2; exit 1;
+          }
+          subject="$(jq -er '.subject_commit' custody/grant.json)"
+          expected_tree="$(jq -er '.subject_tree' custody/grant.json)"
+          expected_parent="$(jq -er '.original_task_commit' custody/grant.json)"
+          source="$(jq -er '.source_code_commit' custody/grant.json)"
+          gh api "repos/mauedgar/tecnotron-ai/git/commits/$subject" > custody/subject-object.json
+          jq -e --arg tree "$expected_tree" --arg parent "$expected_parent" \
+            '.tree.sha == $tree and (.parents | length == 1 and .[0].sha == $parent)' \
+            custody/subject-object.json > /dev/null
+          gh api "repos/mauedgar/tecnotron-ai/git/ref/heads/tools" |
+            jq -e --arg source "$source" '.object.sha == $source' > /dev/null
+          gh api "repos/mauedgar/tecnotron-ai/git/commits/$expected_parent" |
+            jq -e --arg sha "$expected_parent" '.sha == $sha' > /dev/null
+          # Source qualification is checked independently of the comment and
+          # verified CI result: exact one-parent Git edge and exact path scope.
+          gh api "repos/mauedgar/tecnotron-ai/compare/$expected_parent...$subject" > custody/source-edge.json
+          jq -e --arg subject "$subject" --arg parent "$expected_parent" '
+            .status == "ahead" and .total_commits == 1
+            and .base_commit.sha == $parent and .commits[0].sha == $subject
+            and ([.files[].filename] == ["attendance/operator/cli.py"])
+          ' custody/source-edge.json > /dev/null
+          gh api "repos/mauedgar/tecnotron-ai/git/ref/heads/task/tecnotron-h6-operator-20261104-001" > custody/subject-remote.json
+          remote_head="$(jq -er '.object.sha' custody/subject-remote.json)"
+          gh api "repos/mauedgar/tecnotron-ai/compare/$subject...$remote_head" |
+            jq -e --arg subject "$subject" '
+              .base_commit.sha == $subject and (.status == "ahead" or .status == "identical")
+            ' > /dev/null
+          control_ref="https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-$GRANT_ID"
+          # Both hashes are of the exact GitHub API decoded UTF-8 BODY bytes.
+          # They bind the historical Developer decision and native receipt to
+          # the signed manifest; future edits/revocations do NOT renew grants.
+          decision_digest="$(sha256sum custody/decision.json | cut -d' ' -f1)"
+          qualification_digest="$(sha256sum custody/qualification.json | cut -d' ' -f1)"
+          jq -cS --arg control_ref "$control_ref" \
+            --arg decision_digest "$decision_digest" \
+            --arg qualification_digest "$qualification_digest" \
+            '{schema:"tecnotron-control-git-custody/v1",
+              repository, taskcycle_id, subject_commit, subject_tree,
+              original_task_commit, source_code_commit, execution_attempt_id,
+              control_resolution_ref:$control_ref, qualification_receipt_ref,
+              control_decision_sha256:$decision_digest,
+              source_qualification_sha256:$qualification_digest}' \
+            custody/grant.json > custody/manifest.json
+          # Refuse an edited/replaced Developer grant during signing.
+          gh api "repos/mauedgar/tecnotron-ai/issues/comments/$GRANT_ID" > custody/after-comment.json
+          cmp -s custody/observed-comment.json custody/after-comment.json || {
+            echo "GRANT_COMMENT_CHANGED_DURING_AUTHENTICATION" >&2; exit 1;
+          }
+          # Same logical ExecutionAttempt cannot be signed under two owner
+          # comments, and one grant cannot be issued twice. The job's global
+          # GitHub Actions concurrency lock serializes the check and signature.
+          test "$GITHUB_RUN_ATTEMPT" = "1" || {
+            echo "ISSUER_ATTEMPT_REPLAY_BLOCKED" >&2; exit 1;
+          }
+          attempt="$(jq -er '.execution_attempt_id' custody/grant.json)"
+          gh api --paginate "repos/mauedgar/tecnotron-ai/issues/35/comments?per_page=100" > custody/comment-pages.jsonl
+          test "$(wc -c < custody/comment-pages.jsonl)" -le 6291456 || {
+            echo "ISSUER_COMMENT_INVENTORY_TOO_LARGE" >&2; exit 1;
+          }
+          gh api "repos/mauedgar/tecnotron-ai/issues/35" > custody/issue-count.json
+          expected_comments="$(jq -er '.comments | select(type == "number" and . >= 0)' custody/issue-count.json)"
+          jq -s -e --argjson expected "$expected_comments" '
+            length > 0 and all(.[]; type == "array"
+              and all(.[]; .id | type == "number"))
+            and ([.[][] | .id] | length) == $expected
+            and ([.[][] | .id] | unique | length) == $expected
+          ' custody/comment-pages.jsonl > /dev/null
+          jq -s -e --arg attempt "$attempt" --argjson grant "$GRANT_ID" '
+            [.[][] | select((.body | type) == "string") |
+              {id, parsed:(.body | fromjson? // {})} |
+              select((.parsed.schema == "tecnotron-control-git-custody-grant/v1" or
+                   .parsed.schema == "tecnotron-control-git-custody-grant/v2")
+                and .parsed.execution_attempt_id == $attempt) | .id] |
+            length == 1 and .[0] == $grant
+          ' custody/comment-pages.jsonl > /dev/null
+          gh api --paginate "repos/mauedgar/tecnotron-ai/actions/workflows/tecnotron-control-custody-attest.yml/runs?event=workflow_dispatch&per_page=100" > custody/run-pages.jsonl
+          test "$(wc -c < custody/run-pages.jsonl)" -le 6291456 || {
+            echo "ISSUER_RUN_INVENTORY_TOO_LARGE" >&2; exit 1;
+          }
+          jq -s -e '
+            length > 0 and all(.[]; type == "object"
+              and (.workflow_runs | type == "array")
+              and (.total_count | type == "number"))
+            and ([.[] | .workflow_runs[].id] | length) == .[0].total_count
+            and ([.[] | .workflow_runs[].id] | unique | length) == .[0].total_count
+          ' custody/run-pages.jsonl > /dev/null
+          jq -s -e --arg run "$GITHUB_RUN_ID" --arg title "TECNOTRON-CUSTODY-ATTEMPT-$attempt" '
+            [.[] | .workflow_runs[] | select(.display_title == $title)] |
+            length == 1 and .[0].id == ($run | tonumber) and .[0].run_attempt == 1
+          ' custody/run-pages.jsonl > /dev/null
+          # The GitHub repository attestation index is authoritative about
+          # already-signed manifest bytes; all API failures fail CLOSED.
+          sha256sum custody/manifest.json | tee custody/manifest.sha256
+          signed_digest="$(cut -d' ' -f1 custody/manifest.sha256)"
+          # Native gh API returns HTTP 404 for an unsigned digest. Never
+          # treat a network, permission or malformed API failure as absence.
+          # First require proof of access to a repository attestation that is
+          # known to exist and has been independently verified NONPRODUCT.
+          known_sha="8ce88040f3eaea4f431b17b0f51ec137bbc7a0d40c91c106210157c9c608e4f4"
+          gh api "repos/mauedgar/tecnotron-ai/attestations/sha256:$known_sha" > custody/repository-attestation-canary.json
+          jq -e '.attestations | type == "array" and length >= 1 and
+            all(.[]; .repository_id == 1339077141)' custody/repository-attestation-canary.json >/dev/null
+          # Observe the actual HTTP status instead of parsing gh CLI stderr.
+          # A 404 only means absence after the independent positive canary.
+          # Any transport error, malformed body, denied status or size breach
+          # remains fail-closed (including transient provider failures).
+          http_status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+            --proto '=https' \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --output custody/prior-attestations.json --write-out '%{http_code}' \
+            "https://api.github.com/repos/mauedgar/tecnotron-ai/attestations/sha256:$signed_digest")" || {
+            echo "GITHUB_ATTESTATION_LOOKUP_TRANSPORT_FAILURE" >&2; exit 1;
+          }
+          test "$(wc -c < custody/prior-attestations.json)" -le 262144 || {
+            echo "GITHUB_ATTESTATION_LOOKUP_RESPONSE_TOO_LARGE" >&2; exit 1;
+          }
+          case "$http_status" in
+            200)
+              jq -e '.attestations | type == "array" and length == 0' custody/prior-attestations.json >/dev/null
+              echo "GITHUB_ATTESTATION_ABSENCE=200_EMPTY" ;;
+            404)
+              jq -e '.message == "Not Found"' custody/prior-attestations.json >/dev/null
+              echo "GITHUB_ATTESTATION_ABSENCE=404_VERIFIED" ;;
+            *)
+              echo "GITHUB_ATTESTATION_LOOKUP_UNEXPECTED_HTTP_STATUS" >&2; exit 1 ;;
+          esac
+          # Historical snapshot only. A changed or revoked comment requires
+          # a distinct, authenticated Control decision; no silent renewal.
+          for item in grant decision qualification; do
+            case "$item" in
+              grant) id="$GRANT_ID"; original="custody/observed-comment.json" ;;
+              decision) id="$decision_id"; original="custody/observed-decision-comment.json" ;;
+              qualification) id="$qualification_id"; original="custody/observed-qualification-comment.json" ;;
+            esac
+            gh api "repos/mauedgar/tecnotron-ai/issues/comments/$id" > "custody/last-$item-comment.json"
+            cmp -s "$original" "custody/last-$item-comment.json" || {
+              echo "CONTROL_GRANT_OR_EVIDENCE_DRIFT_BEFORE_SIGNATURE" >&2; exit 1;
+            }
+          done
+          echo "GITHUB_DEVELOPER_GRANT_AUTHENTICATED=PASS"
+          echo "GITHUB_CONTROL_UNIQUE_ATTEMPT=PASS"
+          echo "GITHUB_REMOTE_INVENTORY_COMPLETENESS=PASS"
+
+      - name: Attest only the verified exact Control grant
+        id: issue
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: custody/manifest.json
+
+      - name: Verify original signed subject, main source and workflow issuer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ATTEST_BUNDLE: ${{ steps.issue.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          test -s "$ATTEST_BUNDLE"
+          gh attestation verify custody/manifest.json \
+            --repo mauedgar/tecnotron-ai \
+            --bundle "$ATTEST_BUNDLE" \
+            --signer-workflow mauedgar/tecnotron-ai/.github/workflows/tecnotron-control-custody-attest.yml \
+            --signer-digest "$GITHUB_SHA" \
+            --source-ref refs/heads/main \
+            --cert-oidc-issuer https://token.actions.githubusercontent.com \
+            --deny-self-hosted-runners \
+            --format json > custody/verified.json
+          jq -e 'type == "array" and length > 0 and
+            all(.[]; .verificationResult.signature.certificate.githubWorkflowTrigger == "workflow_dispatch"
+              and .verificationResult.signature.certificate.runnerEnvironment == "github-hosted"
+              and .verificationResult.signature.certificate.sourceRepositoryIdentifier == "1339077141")' \
+            custody/verified.json > /dev/null
+          echo "GITHUB_CONTROL_ISSUER_SIGNED=PASS"
+          jq -n --arg run "$GITHUB_RUN_ID" --arg sha "$GITHUB_SHA" \
+            '{schema:"tecnotron-control-git-custody-signature-receipt/v1",
+              provider_run_id:$run, signer_commit:$sha,
+              attestation:"VERIFIED", comment_body_bytes:"GITHUB_API_BODY_DECODED_UTF8_NO_ADDED_NEWLINE",
+              qualification_source:"NATIVE_GITHUB_CI_EXACT_SUBJECT_AND_GIT_OBJECTS",
+              Product_effect:"NONE",
+              Product_acceptance:false, Phase2:false, lifecycle_close:false}' \
+            > custody/receipt.json
+
+      - name: Upload original verified custody evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tecnotron-control-custody-attested-grant
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            custody/manifest.json
+            custody/manifest.sha256
+            custody/verified.json
+            custody/receipt.json
+            ${{ steps.issue.outputs.bundle-path }}
