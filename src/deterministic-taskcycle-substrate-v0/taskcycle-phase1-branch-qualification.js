@@ -247,6 +247,141 @@ function readStableAttestationFile(filename, maxBytes) {
   } finally { fs.closeSync(fd); }
 }
 
+// Historical signed evidence cannot grant perpetual current Developer authority.
+// Only the native root-owned gh CLI and a CONTROL-owned read credential may
+// acquire the current issue35 Owner inventory. A caller-injected resolver,
+// unsigned callback, worker policy or self-declared grant cannot satisfy it.
+const CONTROL_ISSUE_API = 'repos/mauedgar/tecnotron-ai/issues/35';
+const CONTROL_ISSUE_URL = 'https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35';
+function currentOwnerInventoryIsValid(items, expectedCount, grantId) {
+  if (!Array.isArray(items) || !Number.isSafeInteger(expectedCount)
+      || expectedCount < 3 || expectedCount > 1000
+      || !Number.isSafeInteger(grantId) || grantId < 1
+      || items.length !== expectedCount) return false;
+  const ids = new Set();
+  for (const entry of items) {
+    if (!Number.isSafeInteger(entry?.id) || entry.id <= 0 || ids.has(entry.id)
+        || entry.issue_url !== CONTROL_ISSUE_URL
+        || !Number.isSafeInteger(entry.user?.id)) return false;
+    ids.add(entry.id);
+    // Conservative one-shot lease: ANY later Owner comment expires the grant.
+    if (entry.id > grantId && entry.user.id === 54420195) return false;
+  }
+  return ids.has(grantId);
+}
+function authenticateCurrentDeveloperAuthority(binary, manifest) {
+  const token = process.env.TECNOTRON_CONTROL_GITHUB_READ_TOKEN;
+  if (typeof token !== 'string' || !token || token.length > 4096)
+    return fail('FORK_CONTROL_CURRENT_AUTHORITY_READ_UNAVAILABLE');
+  try {
+    const env = {
+      PATH: '/usr/bin:/bin', HOME: '/nonexistent',
+      GH_TOKEN: token, GH_PROMPT_DISABLED: '1',
+      GH_NO_UPDATE_NOTIFIER: '1', LANG: 'C', LC_ALL: 'C',
+    };
+    const api = (endpoint, limit = 131072) => {
+      const raw = execFileSync(binary, ['api', endpoint], {
+        encoding: 'utf8', timeout: 30000, maxBuffer: limit + 1024,
+        windowsHide: true, env,
+      });
+      if (Buffer.byteLength(raw, 'utf8') > limit) throw Error('API_OVERSIZE');
+      return JSON.parse(raw);
+    };
+    const match = /^https:\/\/github\.com\/mauedgar\/tecnotron-ai\/issues\/35#issuecomment-([1-9][0-9]{5,19})$/
+      .exec(manifest.control_resolution_ref);
+    if (!match) throw Error('BAD_SIGNED_GRANT_REF');
+    const grantId = Number(match[1]);
+    if (!Number.isSafeInteger(grantId)) throw Error('BAD_SIGNED_GRANT_ID');
+    const comment = id => api('repos/mauedgar/tecnotron-ai/issues/comments/' + id, 32768);
+    const owner = (c, id) => c?.id === id && c?.user?.id === 54420195
+      && c.user.login === 'mauedgar' && c.author_association === 'OWNER'
+      && c.issue_url === CONTROL_ISSUE_URL
+      && typeof c.created_at === 'string' && c.created_at === c.updated_at
+      && typeof c.body === 'string' && Buffer.byteLength(c.body, 'utf8') <= 8192;
+    const entry = comment(grantId);
+    if (!owner(entry, grantId)) throw Error('GRANT_NOT_ORIGINAL_OWNER');
+    const grant = JSON.parse(entry.body);
+    if (grant?.schema !== 'tecnotron-control-git-custody-grant/v2'
+        || grant.Product_effect !== 'NONE'
+        || grant.responsibility !== 'H6_OPERATOR_PHASE1_GIT_CUSTODY'
+        || grant.operation !== 'SIGN_GIT_SOURCE_CUSTODY_EVIDENCE_ONLY'
+        || grant.source_code_commit !== '26509b74d50207bb247dcc9bdb929a63f5451e88'
+        || grant.qualification_comment_id !== 6673895838
+        || !Number.isSafeInteger(grant.decision_comment_id)
+        || grant.decision_comment_id <= 0 || grant.decision_comment_id >= grantId
+        || grant.qualification_comment_id >= grantId
+        || grant.changed_paths?.length !== 1
+        || grant.changed_paths[0] !== 'attendance/operator/cli.py'
+        || grant.subject_branch !== 'task/tecnotron-h6-operator-20261104-001'
+        || grant.original_task_branch !== 'task/tecnotron-h6-attendance-parent-children-20261102-001')
+      throw Error('GRANT_SCOPE_CHANGED');
+    for (const name of ['repository', 'taskcycle_id', 'subject_commit',
+      'subject_tree', 'original_task_commit', 'source_code_commit',
+      'execution_attempt_id', 'qualification_receipt_ref']) {
+      if (grant[name] !== manifest[name]) throw Error('SIGNED_GRANT_MISMATCH');
+    }
+    const decisionEntry = comment(grant.decision_comment_id);
+    const qualEntry = comment(grant.qualification_comment_id);
+    if (!owner(decisionEntry, grant.decision_comment_id)
+        || !owner(qualEntry, grant.qualification_comment_id))
+      throw Error('ORIGINAL_AUTHORITY_CHANGED');
+    if (createHash('sha256').update(Buffer.from(decisionEntry.body)).digest('hex')
+      !== manifest.control_decision_sha256
+        || createHash('sha256').update(Buffer.from(qualEntry.body)).digest('hex')
+          !== manifest.source_qualification_sha256)
+      throw Error('SIGNED_AUTHORITY_BYTES_CHANGED');
+    const decision = JSON.parse(decisionEntry.body);
+    const qual = JSON.parse(qualEntry.body);
+    if (decision.schema !== 'tecnotron-control-git-custody-decision/v1'
+        || decision.status !== 'GRANTED' || decision.Product_effect !== 'NONE'
+        || decision.responsibility !== grant.responsibility
+        || decision.operation !== grant.operation
+        || qual.schema !== 'tecnotron-native-historical-source-qualification/v1'
+        || qual.status !== 'PASS' || qual.Product_authority !== 'NONE'
+        || qual.Product_effect !== 'NONE' || qual.provider_run_id !== 42141447447)
+      throw Error('SIGNED_AUTHORITY_NOT_CURRENT');
+    for (const name of ['repository', 'taskcycle_id', 'subject_commit',
+      'subject_tree', 'original_task_commit']) {
+      if (decision[name] !== grant[name] || qual[name] !== grant[name])
+        throw Error('CONTROL_SUBJECT_NOT_CONSISTENT');
+    }
+    for (const name of ['source_code_commit', 'execution_attempt_id']) {
+      if (decision[name] !== grant[name]) throw Error('CONTROL_ATTEMPT_NOT_CONSISTENT');
+    }
+    const issue = api(CONTROL_ISSUE_API);
+    if (issue.state !== 'open' || !Number.isSafeInteger(issue.comments)
+        || issue.comments < 3 || issue.comments > 1000)
+      throw Error('CONTROL_ISSUE_UNAVAILABLE');
+    const items = [];
+    const pages = Math.ceil(issue.comments / 100);
+    for (let page = 1; page <= pages; page++) {
+      const batch = api(CONTROL_ISSUE_API + '/comments?per_page=100&page=' + page, 1048576);
+      if (!Array.isArray(batch) || batch.length !== Math.min(100,
+        issue.comments - (page - 1) * 100))
+        throw Error('CONTROL_INVENTORY_PAGE_INCOMPLETE');
+      items.push(...batch);
+    }
+    if (!currentOwnerInventoryIsValid(items, issue.comments, grantId))
+      throw Error('CONTROL_OWNER_REVOKED_OR_INVENTORY_UNVERIFIED');
+    for (const [id, original] of [
+      [grantId, entry], [grant.decision_comment_id, decisionEntry],
+      [grant.qualification_comment_id, qualEntry],
+    ]) {
+      const selected = items.filter(item => item.id === id);
+      if (selected.length !== 1 || selected[0].body !== original.body)
+        throw Error('ORIGINAL_CONTROL_COMMENT_DRIFT');
+    }
+    const finalIssue = api(CONTROL_ISSUE_API);
+    const finalGrant = comment(grantId);
+    if (finalIssue.state !== 'open' || finalIssue.comments !== issue.comments
+        || !owner(finalGrant, grantId) || finalGrant.body !== entry.body)
+      throw Error('CONTROL_AUTHORITY_CHANGED_DURING_READ');
+    return { status: 'PASS' };
+  } catch {
+    return fail('FORK_CONTROL_CURRENT_AUTHORITY_UNVERIFIED');
+  }
+}
+
 function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
   // GitHub's certificate authenticates WORKFLOW provenance, not Developer
   // acceptance/Phase2. A workflow on an unprotected ref or an arbitrary
@@ -322,6 +457,10 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
       .update(readStableAttestationFile(isolatedBundle, 1048576)).digest('hex');
     if (stableManifest !== expectedManifestDigest || stableBundle !== expectedBundleDigest)
       return fail('FORK_CONTROL_ATTESTATION_INPUT_RACED');
+    // The signed certificate is historical; require current Owner authority
+    // from the original GitHub provider immediately before native Git work.
+    const current = authenticateCurrentDeveloperAuthority(binary, expected);
+    if (current.status !== 'PASS') return current;
     return { status: 'PASS' };
   } catch {
     return fail('FORK_CONTROL_GITHUB_ATTESTATION_UNVERIFIED');
@@ -520,6 +659,7 @@ module.exports = {
   qualifyControlGitSource, qualifyForkedPhase1Branch, authenticateGitHubControlIssuer,
   __testOnlyControlCertificateMatches: controlCertificateMatches,
   __testOnlyReadStableAttestationFile: readStableAttestationFile,
+  __testOnlyCurrentOwnerInventoryIsValid: currentOwnerInventoryIsValid,
   // Pure unit-test seam; callers must never substitute its observations for
   // Product's qualified native entrypoint.
   __testOnlyQualifyForkWithAdapter: qualifyForkedPhase1BranchWithTestAdapter,
