@@ -302,32 +302,76 @@ jobs:
               echo 'UNSAFE_NATIVE_RUN_INVENTORY_ACCEPTED' >&2; exit 1
             fi
           done
-          jq -cn '[{id:1001,user:{id:54420195},
+          # Real Linux/jq negative tests of the same Owner high-watermark
+          # predicate used by both the initial issuer and pre-sign checks.
+          # Specific revoke, broad revoke (no ID), cancel, supersession,
+          # and even unrelated subsequent Owner commentary ALL invalidate
+          # a one-shot grant; non-Owner and prior Owner notes do not.
+          for reason in targeted broad cancel supersede unrelated; do
+            case "$reason" in
+              targeted) body='{"execution_attempt_id":"TECNOTRON-FAKE-ATTEMPT","status":"REVOKED"}' ;;
+              broad) body='Quedan revocadas todas las autorizaciones de firma H6 Operator' ;;
+              cancel) body='Canceladas todas las firmas futuras de custodia' ;;
+              supersede) body='Todas las decisiones anteriores son sustituidas' ;;
+              unrelated) body='Actualización de seguimiento no vinculada' ;;
+            esac
+            jq -cn --arg body "$body" '[{
+              id:1001,user:{id:54420195},
+              issue_url:"https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35",
+              body:$body
+            }]' > "preflight/later-owner-$reason.jsonl"
+            if jq -s -e --argjson grant_id 900 '
+              [.[][] | select(.id > $grant_id and .user.id == 54420195
+                and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35")]
+              | length == 0
+            ' "preflight/later-owner-$reason.jsonl" >/dev/null; then
+              echo 'UNSAFE_LATER_OWNER_AUTHORITY_ACCEPTED' >&2; exit 1
+            fi
+          done
+          jq -cn '[{id:1001,user:{id:4321},
             issue_url:"https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35",
-            body:"{\"execution_attempt_id\":\"TECNOTRON-PREFLIGHT-ATTEMPT-001\",\"status\":\"REVOKED\"}"}]' \
-            > preflight/revoked-owner-page.jsonl
-          if jq -s -e --arg attempt TECNOTRON-PREFLIGHT-ATTEMPT-001 \
-            --arg grant 900 --argjson grant_id 900 '
-            [.[][] | select(.id > $grant_id and .user.id == 54420195
-              and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35"
-              and (.body | type) == "string")
-              | select((.body | contains($attempt)) or (.body | contains($grant)))]
-            | length == 0
-          ' preflight/revoked-owner-page.jsonl >/dev/null; then
-            echo 'UNSAFE_REVOKED_AUTHORITY_ACCEPTED' >&2; exit 1
+            body:"irrelevant"}]' > preflight/nonowner.jsonl
+          jq -cn '[{id:899,user:{id:54420195},
+            issue_url:"https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35",
+            body:"earlier comment"}]' > preflight/priorowner.jsonl
+          for allowed in nonowner priorowner; do
+            jq -s -e --argjson grant_id 900 '
+              [.[][] | select(.id > $grant_id and .user.id == 54420195
+                and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35")]
+              | length == 0
+            ' "preflight/$allowed.jsonl" >/dev/null
+          done
+          # Duplicate comment IDs, dropped pages and invalid page shape
+          # cannot be interpreted as completed authoritative inventory.
+          jq -cn '[{id:41},{id:41}]' > preflight/duplicate-comments.jsonl
+          jq -cn '[{id:41}]' > preflight/missing-comments.jsonl
+          printf '{"message":"Service Unavailable"}\n' > preflight/malformed-comments.jsonl
+          for bad in duplicate-comments missing-comments malformed-comments; do
+            if jq -s -e --argjson expected 2 '
+              length > 0 and all(.[]; type == "array"
+                and all(.[]; .id | type == "number"))
+              and ([.[][] | .id] | length) == $expected
+              and ([.[][] | .id] | unique | length) == $expected
+            ' "preflight/$bad.jsonl" >/dev/null; then
+              echo 'UNSAFE_NATIVE_COMMENT_INVENTORY_ACCEPTED' >&2; exit 1
+            fi
+          done
+          # Provider-error shapes must not become empty inventories; bound
+          # read size as well as jq structure before any authority inference.
+          printf '{"message":"Forbidden"}\n' > preflight/provider-403.jsonl
+          printf '{"message":"Not Found"}\n' > preflight/provider-404.jsonl
+          for bad in provider-403 provider-404; do
+            if jq -s -e 'length > 0 and all(.[]; type == "array")' "preflight/$bad.jsonl" >/dev/null; then
+              echo 'UNSAFE_API_ERROR_ACCEPTED' >&2; exit 1
+            fi
+          done
+          # Fixed small test limit simulates the same wc-c bound without
+          # generating real multi-megabyte data in the repository.
+          printf '1234567890123456\n' > preflight/oversize.txt
+          if test "$(wc -c < preflight/oversize.txt)" -le 16; then
+            echo 'UNSAFE_OVERSIZE_INVENTORY_ACCEPTED' >&2; exit 1
           fi
-          # Test valid unrelated Owner comment does not spuriously revoke.
-          jq -cn '[{id:1002,user:{id:54420195},
-            issue_url:"https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35",
-            body:"unrelated note"}]' > preflight/unrelated-owner-page.jsonl
-          jq -s -e --arg attempt TECNOTRON-PREFLIGHT-ATTEMPT-001 \
-            --arg grant 900 --argjson grant_id 900 '
-            [.[][] | select(.id > $grant_id and .user.id == 54420195
-              and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35"
-              and (.body | type) == "string")
-              | select((.body | contains($attempt)) or (.body | contains($grant)))]
-            | length == 0
-          ' preflight/unrelated-owner-page.jsonl >/dev/null
+          echo 'GITHUB_OWNER_HIGH_WATERMARK_NEGATIVE_TESTS=PASS'
           echo 'GITHUB_REVOCATION_AND_PAGINATION_NEGATIVE_TESTS=PASS'
           echo 'GITHUB_PROTECTED_SOURCE_CERTIFICATE_PREFLIGHT=PASS'
   # Product-provenance evidence only, not TaskCycle mutation, Phase2 or merge.
@@ -568,18 +612,18 @@ jobs:
                 and .parsed.execution_attempt_id == $attempt) | .id] |
             length == 1 and .[0] == $grant
           ' custody/comment-pages.jsonl > /dev/null
-          # Fail closed on any later Owner comment in issue35 mentioning this
-          # exact grant or ExecutionAttempt. This includes explicit revocation
-          # schema tecnotron-control-git-custody-revocation/v1, supersession,
-          # cancellation and unknown forms. Never silently renew old authority.
-          jq -s -e --arg attempt "$attempt" --arg grant "$GRANT_ID" --argjson grant_id "$GRANT_ID" '
+          # One-shot Owner authority lease: ANY later Owner comment in issue
+          # #35 makes this particular grant stale, whether it is a broad H6
+          # revocation, cancellation, supersession, or an unrelated comment.
+          # This deliberately sacrifices availability to avoid interpreting
+          # arbitrary natural-language authority as if it were current.
+          # A later grant must use a NEW original ExecutionAttempt; no replay.
+          jq -s -e --argjson grant_id "$GRANT_ID" '
             [.[][] | select(.id > $grant_id and .user.id == 54420195
-              and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35"
-              and (.body | type) == "string")
-              | select((.body | contains($attempt)) or (.body | contains($grant)))]
+              and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35")]
             | length == 0
           ' custody/comment-pages.jsonl >/dev/null
-          echo 'GITHUB_CURRENT_AUTHORITY_NO_LATER_OWNER_REVOCATION=PASS'
+          echo 'GITHUB_OWNER_COMMENT_HIGH_WATERMARK=PASS'
           gh api --paginate "repos/mauedgar/tecnotron-ai/actions/workflows/tecnotron-control-custody-attest.yml/runs?event=workflow_dispatch&per_page=100" > custody/run-pages.jsonl
           test "$(wc -c < custody/run-pages.jsonl)" -le 6291456 || {
             echo "ISSUER_RUN_INVENTORY_TOO_LARGE" >&2; exit 1;
@@ -677,9 +721,9 @@ jobs:
             and ([.[][] | .id] | length) == $expected
             and ([.[][] | .id] | unique | length) == $expected
           ' custody/pre-sign-comments.jsonl >/dev/null
-          # Require original grant, decision and original qualification bodies
-          # to be exact and unchanged while separately denying later Owner
-          # revocation/supersession/unknown same-attempt material.
+          # Exact original objects must remain unchanged. Any later Owner
+          # comment on #35 expires this grant for signing, independently of
+          # wording or whether it names this grant/attempt.
           for item in grant decision qualification; do
             case "$item" in
               grant) id="$GRANT_ID"; prior="custody/observed-comment.json" ;;
@@ -691,13 +735,12 @@ jobs:
               echo 'PRESIGN_CONTROL_EVIDENCE_DRIFT' >&2; exit 1;
             }
           done
-          jq -s -e --arg attempt "$DISPATCH_ATTEMPT" --arg grant "$GRANT_ID" --argjson grant_id "$GRANT_ID" '
+          jq -s -e --argjson grant_id "$GRANT_ID" '
             [.[][] | select(.id > $grant_id and .user.id == 54420195
-              and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35"
-              and (.body | type) == "string")
-              | select((.body | contains($attempt)) or (.body | contains($grant)))]
+              and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35")]
             | length == 0
           ' custody/pre-sign-comments.jsonl >/dev/null
+          echo 'GITHUB_OWNER_COMMENT_HIGH_WATERMARK_PRESIGN=PASS'
           gh api repos/mauedgar/tecnotron-ai/git/ref/heads/tools |
             jq -e '.object.sha == "26509b74d50207bb247dcc9bdb929a63f5451e88"' >/dev/null
           echo 'GITHUB_CURRENT_CONTROL_AUTHORITY_PRESIGN=PASS'
