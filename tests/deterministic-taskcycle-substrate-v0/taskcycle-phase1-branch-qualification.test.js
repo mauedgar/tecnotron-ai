@@ -598,8 +598,18 @@ test('current Owner high-watermark rejects general revocation, duplicates and in
   false, 'repository/issue mismatch rejected');
   assert.equal(ownerInventoryIsValid([...original, { id: 6674841002 }], 5, grantId),
     false, 'malformed issue author rejected');
-  assert.equal(ownerInventoryIsValid(original, 1001, grantId), false,
-    'oversize native pagination fails closed before grant qualification');
+  const extended = [...original, ...Array.from({ length: 1200 - original.length },
+    (_, index) => comment(grantId + 2000 + index, 100100))];
+  assert.equal(ownerInventoryIsValid(extended, 1200, grantId), true,
+    'complete multi-page inventory above legacy 1000 stays eligible');
+  const bound = [...original, ...Array.from({ length: 5000 - original.length },
+    (_, index) => comment(grantId + 5000 + index, 100100))];
+  assert.equal(ownerInventoryIsValid(bound, 5000, grantId), true,
+    'exact 5000-comment bound remains supported');
+  assert.equal(ownerInventoryIsValid([...bound, comment(grantId + 11000, 100100)],
+    5001, grantId), false, 'over-cap must remain fail-closed');
+  assert.equal(ownerInventoryIsValid(original, 5001, grantId), false,
+    'claimed oversize inventory fails closed');
 });
 
 test('real native issuer requires qualified Control read credentials even with syntactically valid signed digests', () => {
