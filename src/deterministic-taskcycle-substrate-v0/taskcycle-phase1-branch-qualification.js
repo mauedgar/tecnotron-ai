@@ -449,7 +449,10 @@ function authenticateGitHubControlIssuer({ request, originalInputs, proof }) {
     const output = execFileSync(binary, args, {
       encoding: 'utf8', timeout: 30000, maxBuffer: 1048576,
       windowsHide: true,
-      env: { PATH: '/usr/bin:/bin', HOME: '/nonexistent',
+      // This private directory is newly created, mode 0700 and deleted on
+      // completion. Sigstore's trust-root initialization needs writable HOME,
+      // but must never read the caller's original HOME or gh configuration.
+      env: { PATH: '/usr/bin:/bin', HOME: isolatedDirectory,
         GH_TOKEN: readToken, GH_PROMPT_DISABLED: '1',
         GH_NO_UPDATE_NOTIFIER: '1', LANG: 'C', LC_ALL: 'C' },
     });
