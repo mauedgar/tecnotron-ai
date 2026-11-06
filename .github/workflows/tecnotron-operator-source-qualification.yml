@@ -1,0 +1,111 @@
+name: Tecnotron immutable Operator source qualification (NONPRODUCT)
+# Real provider-native source validation, not a retroactive CI claim,
+# Developer grant, Product effect, or replacement of H6 denied effects.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tecnotron-operator-source-qualification.yml
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/tecnotron-operator-source-qualification.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tecnotron-operator-source-qual-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualify-source:
+    if: >-
+      ${{ github.repository == 'mauedgar/tecnotron-ai' && github.repository_id == '1339077141' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout original immutable Git subject without write credentials
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 pinned
+        with:
+          ref: c3a493a7d6f90af2a26640b5e966e950755b79c8
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify original native Git source, path scope and current lineage
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'mauedgar/tecnotron-ai'
+          test "$GITHUB_REPOSITORY_ID" = '1339077141'
+          case "$GITHUB_EVENT_NAME" in
+            push) test "$GITHUB_REF" = 'refs/heads/main' ;;
+            pull_request) test "$GITHUB_BASE_REF" = 'main' ;;
+            *) echo 'UNTRUSTED_QUALIFICATION_TRIGGER' >&2; exit 1 ;;
+          esac
+          source=c3a493a7d6f90af2a26640b5e966e950755b79c8
+          parent=add3f2525b3b711ce4e396a2e5ce2864f3ceef10
+          tree=83fafc8df00454a9cd44774864f07d4ffedece72
+          cli_blob=feaac39b75e4aceb52e869f82854d3efd79c6e13
+          original_branch=task/tecnotron-h6-attendance-parent-children-20261102-001
+          subject_branch=task/tecnotron-h6-operator-20261104-001
+          mkdir -p qualification
+          test "$(git rev-parse HEAD)" = "$source"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$tree"
+          test "$(git rev-list --parents -n 1 HEAD)" = "$source $parent"
+          test "$(git rev-parse "$parent^{commit}")" = "$parent"
+          test "$(git diff --name-only --no-renames "$parent" "$source")" = 'attendance/operator/cli.py'
+          test "$(git rev-parse "$source:attendance/operator/cli.py")" = "$cli_blob"
+          gh api "repos/mauedgar/tecnotron-ai/git/commits/$source" \
+            > qualification/source.json
+          jq -e --arg tree "$tree" --arg parent "$parent" '
+            .tree.sha == $tree and (.parents | length == 1 and .[0].sha == $parent)
+          ' qualification/source.json >/dev/null
+          gh api "repos/mauedgar/tecnotron-ai/compare/$parent...$source" \
+            > qualification/source-edge.json
+          jq -e --arg source "$source" --arg parent "$parent" --arg blob "$cli_blob" '
+            .status == "ahead" and .ahead_by == 1 and .total_commits == 1
+            and .base_commit.sha == $parent and .commits[0].sha == $source
+            and ([.files[] | {filename,status,sha}] ==
+              [{filename:"attendance/operator/cli.py",status:"added",sha:$blob}])
+          ' qualification/source-edge.json >/dev/null
+          gh api "repos/mauedgar/tecnotron-ai/git/ref/heads/$subject_branch" \
+            > qualification/remote.json
+          remote_head="$(jq -er '.object.sha | select(test("^[a-f0-9]{40}$"))' qualification/remote.json)"
+          gh api "repos/mauedgar/tecnotron-ai/compare/$source...$remote_head" \
+            > qualification/lineage.json
+          jq -e --arg source "$source" '
+            .base_commit.sha == $source
+            and (.status == "ahead" or .status == "identical")
+          ' qualification/lineage.json >/dev/null
+          # The historical TASK carrier branch tip is mutable; it is NOT
+          # substituted for the truthful Operator child branch or original TASK.
+          gh api "repos/mauedgar/tecnotron-ai/git/ref/heads/$original_branch" \
+            | jq -e '.object.sha | type == "string" and test("^[a-f0-9]{40}$")' >/dev/null
+          jq -cn --arg subject "$source" --arg tree "$tree" --arg parent "$parent" \
+            --arg remote_head "$remote_head" --arg run "$GITHUB_RUN_ID" \
+            --arg run_sha "$GITHUB_SHA" --arg event "$GITHUB_EVENT_NAME" \
+            '{schema:"tecnotron-native-historical-source-qualification/v1",
+              repository:"mauedgar/tecnotron-ai",
+              taskcycle_id:"TASKCYCLE-TECNOTRON-ULC-OP05-H6-ATTENDANCE-OPERATOR-001",
+              responsibility:"H6_OPERATOR_PHASE1_GIT_CUSTODY",
+              subject_branch:"task/tecnotron-h6-operator-20261104-001",
+              subject_commit:$subject, subject_tree:$tree,
+              original_task_commit:$parent, changed_paths:["attendance/operator/cli.py"],
+              remote_head_at_observation:$remote_head,
+              qualification_workflow_commit:$run_sha,
+              provider_run_id:($run|tonumber), provider_event:$event,
+              status:"PASS", Product_effect:"NONE"}' > qualification/receipt.json
+          echo 'TECNOTRON_OPERATOR_NATIVE_SOURCE_QUALIFICATION=PASS'
+          cat qualification/receipt.json
+
+      - name: Retain bounded NONPRODUCT source evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4 pinned
+        with:
+          name: tecnotron-original-operator-source-qualification
+          if-no-files-found: warn
+          retention-days: 14
+          path: qualification/receipt.json
