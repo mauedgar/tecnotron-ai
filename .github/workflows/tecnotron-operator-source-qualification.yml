@@ -66,6 +66,24 @@ jobs:
               and .path == ".github/workflows/tecnotron-operator-source-qualification.yml"
               and .head_commit.id == $head
             ' qualification/native-run.json >/dev/null
+          # Confirm the event object against GitHub's native Git commit.
+          # For a PR the event SHA is a two-parent test-merge, not PR head.
+          gh api "repos/mauedgar/tecnotron-ai/git/commits/$GITHUB_SHA" \
+            > qualification/event-commit.json
+          if test "$GITHUB_EVENT_NAME" = pull_request; then
+            base_sha="$(jq -er '.pull_request.base.sha | select(test("^[a-f0-9]{40}$"))' "$GITHUB_EVENT_PATH")"
+            jq -e --arg sha "$GITHUB_SHA" --arg head "$EXPECTED_WORKFLOW_HEAD_SHA" --arg base "$base_sha" '
+              .sha == $sha and (.parents | length == 2)
+              and .parents[0].sha == $base and .parents[1].sha == $head
+            ' qualification/event-commit.json >/dev/null
+            jq -e --arg head "$EXPECTED_WORKFLOW_HEAD_SHA" --arg base "$base_sha" '
+              any(.pull_requests[]; .head.sha == $head and .base.sha == $base)
+            ' qualification/native-run.json >/dev/null
+          else
+            test "$GITHUB_SHA" = "$EXPECTED_WORKFLOW_HEAD_SHA"
+            jq -e --arg sha "$GITHUB_SHA" '.sha == $sha' qualification/event-commit.json >/dev/null
+          fi
+          echo 'GITHUB_SOURCE_QUALIFICATION_EVENT_IDENTITY=PASS'
           test "$(git rev-parse HEAD)" = "$source"
           test "$(git rev-parse 'HEAD^{tree}')" = "$tree"
           test "$(git rev-list --parents -n 1 HEAD)" = "$source $parent"
@@ -94,6 +112,13 @@ jobs:
             .base_commit.sha == $source
             and (.status == "ahead" or .status == "identical")
           ' qualification/lineage.json >/dev/null
+          # Avoid accepting branch movement between ancestry proof and receipt.
+          gh api "repos/mauedgar/tecnotron-ai/git/ref/heads/$subject_branch" \
+            > qualification/remote-last.json
+          jq -e --arg head "$remote_head" '
+            .object.type == "commit" and .object.sha == $head
+          ' qualification/remote-last.json >/dev/null
+          echo 'GITHUB_SOURCE_REMOTE_STABLE_WITHIN_QUALIFICATION=PASS'
           # The historical TASK carrier branch tip is mutable; it is NOT
           # substituted for the truthful Operator child branch or original TASK.
           gh api "repos/mauedgar/tecnotron-ai/git/ref/heads/$original_branch" \
@@ -110,6 +135,9 @@ jobs:
               subject_commit:$subject, subject_tree:$tree,
               original_task_commit:$parent, changed_paths:["attendance/operator/cli.py"],
               remote_head_at_observation:$remote_head,
+              remote_ref_status:"HISTORICAL_SNAPSHOT_ONLY",
+              require_fresh_control_reobservation_before_product_effect:true,
+              Product_authority:"NONE",
               qualification_workflow_head_sha:$head_sha,
               qualification_event_sha:$event_sha,
               provider_run_id:($run|tonumber), provider_event:$event,
@@ -125,3 +153,84 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           path: qualification/receipt.json
+
+  # Only protected-main code signs native source evidence. A PR cannot mint
+  # a protected-main credential; this signed receipt is still NOT a grant.
+  attest-native-source:
+    needs: qualify-source
+    if: >-
+      ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_id == '1339077141' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Retrieve immutable same-run original source evidence
+        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4.1.4 pinned
+        with:
+          name: tecnotron-original-operator-source-qualification
+          path: qualification
+      - name: Verify native source receipt, identity and NONPRODUCT ceiling
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s qualification/receipt.json
+          test "$GITHUB_REPOSITORY" = mauedgar/tecnotron-ai
+          test "$GITHUB_REPOSITORY_ID" = 1339077141
+          test "$GITHUB_REF" = refs/heads/main
+          jq -e --arg sha "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" '
+            .schema == "tecnotron-native-historical-source-qualification/v1"
+            and .status == "PASS" and .Product_effect == "NONE"
+            and .Product_authority == "NONE"
+            and .remote_ref_status == "HISTORICAL_SNAPSHOT_ONLY"
+            and .require_fresh_control_reobservation_before_product_effect == true
+            and .subject_commit == "c3a493a7d6f90af2a26640b5e966e950755b79c8"
+            and .subject_tree == "83fafc8df00454a9cd44774864f07d4ffedece72"
+            and .original_task_commit == "add3f2525b3b711ce4e396a2e5ce2864f3ceef10"
+            and .changed_paths == ["attendance/operator/cli.py"]
+            and .qualification_workflow_head_sha == $sha
+            and .qualification_event_sha == $sha and .provider_event == "push"
+            and (.provider_run_id | tostring) == $run
+          ' qualification/receipt.json > /dev/null
+          sha256sum qualification/receipt.json
+          echo 'GITHUB_PROTECTED_MAIN_QUALIFICATION_RECEIPT=PASS'
+      - name: Sign only protected-main NONPRODUCT source receipt
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4 pinned
+        with:
+          subject-path: qualification/receipt.json
+      - name: Verify original protected-main GitHub certificate
+        shell: bash
+        env:
+          ATTEST_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          test -s "$ATTEST_BUNDLE"
+          gh attestation verify qualification/receipt.json \
+            --repo mauedgar/tecnotron-ai \
+            --bundle "$ATTEST_BUNDLE" \
+            --signer-workflow mauedgar/tecnotron-ai/.github/workflows/tecnotron-operator-source-qualification.yml \
+            --signer-digest "$GITHUB_SHA" \
+            --source-ref refs/heads/main \
+            --cert-oidc-issuer https://token.actions.githubusercontent.com \
+            --deny-self-hosted-runners --format json > qualification/verified.json
+          jq -e 'type == "array" and length > 0 and all(.[];
+            .verificationResult.signature.certificate.githubWorkflowTrigger == "push"
+            and .verificationResult.signature.certificate.runnerEnvironment == "github-hosted"
+            and .verificationResult.signature.certificate.sourceRepositoryIdentifier == "1339077141")' qualification/verified.json >/dev/null
+          echo 'GITHUB_PROTECTED_MAIN_SOURCE_ATTESTATION=PASS'
+      - name: Retain original signed source evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tecnotron-protected-main-source-signed
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            qualification/receipt.json
+            qualification/verified.json
+            ${{ steps.attest.outputs.bundle-path }}
