@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: tecnotron-operator-source-qual-${{ github.ref }}
@@ -36,6 +37,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          EXPECTED_WORKFLOW_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = 'mauedgar/tecnotron-ai'
@@ -52,6 +54,18 @@ jobs:
           original_branch=task/tecnotron-h6-attendance-parent-children-20261102-001
           subject_branch=task/tecnotron-h6-operator-20261104-001
           mkdir -p qualification
+          # GitHub's pull_request GITHUB_SHA is the synthetic merge commit,
+          # while the authenticated run HEAD is the submitted PR head. Bind
+          # both identities rather than confusing them in the durable receipt.
+          gh api "repos/mauedgar/tecnotron-ai/actions/runs/$GITHUB_RUN_ID" \
+            > qualification/native-run.json
+          jq -e --arg head "$EXPECTED_WORKFLOW_HEAD_SHA" --arg event "$GITHUB_EVENT_NAME" \
+            --arg event_sha "$GITHUB_SHA" '
+              .repository.id == 1339077141 and .head_sha == $head
+              and .event == $event and .run_attempt == 1
+              and .path == ".github/workflows/tecnotron-operator-source-qualification.yml"
+              and .head_commit.id == $head
+            ' qualification/native-run.json >/dev/null
           test "$(git rev-parse HEAD)" = "$source"
           test "$(git rev-parse 'HEAD^{tree}')" = "$tree"
           test "$(git rev-list --parents -n 1 HEAD)" = "$source $parent"
@@ -86,7 +100,8 @@ jobs:
             | jq -e '.object.sha | type == "string" and test("^[a-f0-9]{40}$")' >/dev/null
           jq -cn --arg subject "$source" --arg tree "$tree" --arg parent "$parent" \
             --arg remote_head "$remote_head" --arg run "$GITHUB_RUN_ID" \
-            --arg run_sha "$GITHUB_SHA" --arg event "$GITHUB_EVENT_NAME" \
+            --arg event_sha "$GITHUB_SHA" --arg head_sha "$EXPECTED_WORKFLOW_HEAD_SHA" \
+            --arg event "$GITHUB_EVENT_NAME" \
             '{schema:"tecnotron-native-historical-source-qualification/v1",
               repository:"mauedgar/tecnotron-ai",
               taskcycle_id:"TASKCYCLE-TECNOTRON-ULC-OP05-H6-ATTENDANCE-OPERATOR-001",
@@ -95,7 +110,8 @@ jobs:
               subject_commit:$subject, subject_tree:$tree,
               original_task_commit:$parent, changed_paths:["attendance/operator/cli.py"],
               remote_head_at_observation:$remote_head,
-              qualification_workflow_commit:$run_sha,
+              qualification_workflow_head_sha:$head_sha,
+              qualification_event_sha:$event_sha,
               provider_run_id:($run|tonumber), provider_event:$event,
               status:"PASS", Product_effect:"NONE"}' > qualification/receipt.json
           echo 'TECNOTRON_OPERATOR_NATIVE_SOURCE_QUALIFICATION=PASS'
