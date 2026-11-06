@@ -148,10 +148,14 @@ function secureParent(rootFd, parentName) {
 // This helper ONLY materializes isolated Phase1 evidence. A PASS from the
 // qualifyFirstWrite callback proves a read-only Git SOURCE check, not Product
 // approval, Phase2 or lifecycle closure.
-function reconcilePinnedEffect({ root, taskName, obligationName, pkg, qualifyFirstWrite }) {
+function reconcilePinnedEffect({
+  root, taskName, obligationName, pkg, qualifyFirstWrite, revalidateBeforePublish,
+}) {
   if (!safeComponent(taskName) || !safeComponent(obligationName) ||
       !pkg || typeof pkg.manifestText !== 'string' || typeof pkg.projectionText !== 'string'
-      || typeof qualifyFirstWrite !== 'function') return unsafe('ANCHORED_IO_REQUEST_INVALID');
+      || typeof qualifyFirstWrite !== 'function'
+      || typeof revalidateBeforePublish !== 'function')
+    return unsafe('ANCHORED_IO_REQUEST_INVALID');
   if (process.platform !== 'linux') return unsafe('ANCHORED_IO_UNSUPPORTED_PLATFORM');
   let rootFd = null, parentFd = null, finalFd = null, staging = null;
   let attemptedPublication = false;
@@ -195,6 +199,17 @@ function reconcilePinnedEffect({ root, taskName, obligationName, pkg, qualifyFir
         return unsafe('ANCHORED_STAGING_CHANGED', 'UNKNOWN');
       // An attacker with another UID cannot mutate the private parent directory.
       // The rename operates on pinned directory objects regardless of path swaps.
+      if (childExists(parentFd, obligationName)) return unsafe('ANCHORED_FINAL_CHANGED', 'UNKNOWN');
+      // Security-critical final gate directly before the conditioned rename.
+      // A signed historical grant never implies current Developer authority.
+      // This fresh check is read-only; failures discard staging, with NONE.
+      const current = revalidateBeforePublish();
+      if (!current || current.status !== 'PASS')
+        return unsafe(current?.reason || 'FORK_CURRENT_AUTHORITY_UNVERIFIED');
+      if (!sameEntry(rootFd, taskName, parentFd)
+          || !sameEntry(parentFd, path.basename(staging), stageFd)
+          || !stableRoot(root, rootFd))
+        return unsafe('ANCHORED_PRESIGN_PUBLISH_IDENTITY_CHANGED', 'UNKNOWN');
       if (childExists(parentFd, obligationName)) return unsafe('ANCHORED_FINAL_CHANGED', 'UNKNOWN');
       attemptedPublication = true;
       fs.renameSync(proc(parentFd, path.basename(staging)), finalPath());
