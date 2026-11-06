@@ -384,6 +384,13 @@ function createTaskCycleEffectReconciliationCapability({ root, qualifiedGitSurfa
               ? { status: 'PASS' }
               : { status: 'BLOCKED', reason: 'FORK_IMMUTABLE_PROVENANCE_MISMATCH' };
           },
+          // IR010-A01: reauthenticate the ORIGINAL bound Control decision,
+          // signed issuer certificate and current Owner inventory immediately
+          // before the descriptor-anchored first-write rename. This is never
+          // a repeat of an H6 native TaskCycle effect.
+          revalidateBeforePublish: () => authenticateGitHubControlIssuer({
+            request, originalInputs: exactInputs, proof: custody.surface,
+          }),
         });
         if (pinned.kind === 'EXACT') return pass(request, finalRoot, pkg, true, 'ALREADY_RECONCILED_EXACT');
         if (pinned.kind === 'CREATED') return pass(request, finalRoot, pkg);
