@@ -344,7 +344,8 @@ jobs:
               "original_task_branch", "changed_paths", "Product_effect"
             ] | sort)) and
             .schema == "tecnotron-control-git-custody-grant/v2" and
-            .repository == "mauedgar/tecnotron-ai" and
+            .repository == "mauedgar/tecnotron-ai"
+            and .source_code_commit == "26509b74d50207bb247dcc9bdb929a63f5451e88" and
             .taskcycle_id == "TASKCYCLE-TECNOTRON-ULC-OP05-H6-ATTENDANCE-OPERATOR-001" and
             .responsibility == "H6_OPERATOR_PHASE1_GIT_CUSTODY" and
             .operation == "SIGN_GIT_SOURCE_CUSTODY_EVIDENCE_ONLY" and
@@ -525,6 +526,18 @@ jobs:
                 and .parsed.execution_attempt_id == $attempt) | .id] |
             length == 1 and .[0] == $grant
           ' custody/comment-pages.jsonl > /dev/null
+          # Fail closed on any later Owner comment in issue35 mentioning this
+          # exact grant or ExecutionAttempt. This includes explicit revocation
+          # schema tecnotron-control-git-custody-revocation/v1, supersession,
+          # cancellation and unknown forms. Never silently renew old authority.
+          jq -s -e --arg attempt "$attempt" --arg grant "$GRANT_ID" --argjson grant_id "$GRANT_ID" '
+            [.[][] | select(.id > $grant_id and .user.id == 54420195
+              and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35"
+              and (.body | type) == "string")
+              | select((.body | contains($attempt)) or (.body | contains($grant)))]
+            | length == 0
+          ' custody/comment-pages.jsonl >/dev/null
+          echo 'GITHUB_CURRENT_AUTHORITY_NO_LATER_OWNER_REVOCATION=PASS'
           gh api --paginate "repos/mauedgar/tecnotron-ai/actions/workflows/tecnotron-control-custody-attest.yml/runs?event=workflow_dispatch&per_page=100" > custody/run-pages.jsonl
           test "$(wc -c < custody/run-pages.jsonl)" -le 6291456 || {
             echo "ISSUER_RUN_INVENTORY_TOO_LARGE" >&2; exit 1;
@@ -595,6 +608,57 @@ jobs:
           echo "GITHUB_CONTROL_UNIQUE_ATTEMPT=PASS"
           echo "GITHUB_REMOTE_INVENTORY_COMPLETENESS=PASS"
 
+      # Separate pre-signature authority checkpoint. No Product grant is
+      # inferred from historical signed evidence, previous PASS, or the first
+      # read. A new Owner decision mentioning this attempt/grant blocks.
+      - name: Revalidate current grant and revocation immediately before signing
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GRANT_ID: ${{ inputs.grant_comment_id }}
+          DISPATCH_ATTEMPT: ${{ inputs.execution_attempt_id }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$GITHUB_REF" = refs/heads/main
+          [[ "$GRANT_ID" =~ ^[1-9][0-9]{5,19}$ ]]
+          jq -e --arg attempt "$DISPATCH_ATTEMPT" '.execution_attempt_id == $attempt' custody/grant.json >/dev/null
+          # Reobserve the issue and complete paginated inventory, not only a
+          # cached earlier response. Any provider error or drift blocks.
+          gh api "repos/mauedgar/tecnotron-ai/issues/35" > custody/pre-sign-issue.json
+          jq -e '.state == "open"' custody/pre-sign-issue.json >/dev/null
+          expected="$(jq -er '.comments | select(type=="number" and .>=0)' custody/pre-sign-issue.json)"
+          gh api --paginate "repos/mauedgar/tecnotron-ai/issues/35/comments?per_page=100" > custody/pre-sign-comments.jsonl
+          test "$(wc -c < custody/pre-sign-comments.jsonl)" -le 6291456
+          jq -s -e --argjson expected "$expected" '
+            length > 0 and all(.[]; type == "array" and all(.[]; .id | type == "number"))
+            and ([.[][] | .id] | length) == $expected
+            and ([.[][] | .id] | unique | length) == $expected
+          ' custody/pre-sign-comments.jsonl >/dev/null
+          # Require original grant, decision and original qualification bodies
+          # to be exact and unchanged while separately denying later Owner
+          # revocation/supersession/unknown same-attempt material.
+          for item in grant decision qualification; do
+            case "$item" in
+              grant) id="$GRANT_ID"; prior="custody/observed-comment.json" ;;
+              decision) id="$(jq -er '.decision_comment_id' custody/grant.json)"; prior="custody/observed-decision-comment.json" ;;
+              qualification) id="$(jq -er '.qualification_comment_id' custody/grant.json)"; prior="custody/observed-qualification-comment.json" ;;
+            esac
+            gh api "repos/mauedgar/tecnotron-ai/issues/comments/$id" > custody/pre-sign-$item.json
+            cmp -s "$prior" "custody/pre-sign-$item.json" || {
+              echo 'PRESIGN_CONTROL_EVIDENCE_DRIFT' >&2; exit 1;
+            }
+          done
+          jq -s -e --arg attempt "$DISPATCH_ATTEMPT" --arg grant "$GRANT_ID" --argjson grant_id "$GRANT_ID" '
+            [.[][] | select(.id > $grant_id and .user.id == 54420195
+              and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35"
+              and (.body | type) == "string")
+              | select((.body | contains($attempt)) or (.body | contains($grant)))]
+            | length == 0
+          ' custody/pre-sign-comments.jsonl >/dev/null
+          gh api repos/mauedgar/tecnotron-ai/git/ref/heads/tools |
+            jq -e '.object.sha == "26509b74d50207bb247dcc9bdb929a63f5451e88"' >/dev/null
+          echo 'GITHUB_CURRENT_CONTROL_AUTHORITY_PRESIGN=PASS'
       - name: Attest only the verified exact Control grant
         id: issue
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
