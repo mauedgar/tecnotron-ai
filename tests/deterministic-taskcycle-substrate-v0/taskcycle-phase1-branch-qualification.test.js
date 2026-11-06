@@ -519,7 +519,7 @@ test('pinned native Git binary rejects another-UID-writable bytes and replacemen
   } finally { c.cleanup(); }
 });
 
-test('Product fork qualifier fails closed before native Git when Github signer is unqualified', () => {
+test('Product fork qualifier fails closed without signed decision digests even with qualified issuer', () => {
   const c = context();
   try {
     const result = qualifyProductFork({
@@ -530,7 +530,7 @@ test('Product fork qualifier fails closed before native Git when Github signer i
     // The fixture is explicitly not an executable Git implementation. No
     // Product native qualifier can ever PASS based on its mocked observations.
     assert.equal(result.status, 'BLOCKED');
-    assert.equal(result.reason, 'FORK_CONTROL_GITHUB_SIGNER_NOT_QUALIFIED');
+    assert.equal(result.reason, 'FORK_CONTROL_AUTHORITY_DIGEST_UNVERIFIED');
   } finally { c.cleanup(); }
 });
 
@@ -556,7 +556,7 @@ test('GitHub signer is mandatory: forged Control source and caller policy cannot
     };
     const native = qualifyProductFork(supplied);
     assert.deepEqual(native, {
-      status: 'BLOCKED', reason: 'FORK_CONTROL_GITHUB_SIGNER_NOT_QUALIFIED',
+      status: 'BLOCKED', reason: 'FORK_CONTROL_AUTHORITY_DIGEST_UNVERIFIED',
     });
     const independentIssuer = authenticateGitHubControlIssuer({
       request: c.request, originalInputs: c.originalInputs,
