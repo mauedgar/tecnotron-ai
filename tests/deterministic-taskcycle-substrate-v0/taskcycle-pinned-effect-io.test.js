@@ -7,9 +7,11 @@ const path = require('node:path');
 const { reconcilePinnedEffect } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-pinned-effect-io');
 
 const pkg = Object.freeze({ manifestText: '{"manifest":1}\n', projectionText: '{"projection":1}\n' });
-const run = (root, qualifyFirstWrite = () => ({ status: 'PASS' }), packageValue = pkg) =>
+const run = (root, qualifyFirstWrite = () => ({ status: 'PASS' }), packageValue = pkg,
+  revalidateBeforePublish = () => ({ status: 'PASS' })) =>
   reconcilePinnedEffect({ root, taskName: 'TASKCYCLE-FORK-001',
-    obligationName: 'implementation', pkg: packageValue, qualifyFirstWrite });
+    obligationName: 'implementation', pkg: packageValue,
+    qualifyFirstWrite, revalidateBeforePublish });
 function fixture() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tc-pinned-output-'));
   const root = path.join(tmp, 'root');
@@ -149,5 +151,48 @@ test('Linux: ancestor safety applies to an existing exact package before replay'
     assert.match(v.reason, /ANCESTOR_RENAME_UNSAFE/);
     assert.equal(v.effect_state, 'NONE');
     assert.equal(qualificationInvoked, false);
+  } finally { f.clean(); }
+});
+
+test('Linux: revoked Control decision at the final publish boundary leaves NO effect', { skip: process.platform !== 'linux' }, () => {
+  const f = fixture();
+  try {
+    let initial = 0, final = 0;
+    const blocked = run(f.root,
+      () => { initial++; return { status: 'PASS' }; }, pkg,
+      () => { final++; return { status: 'BLOCKED', reason: 'FORK_CONTROL_CURRENT_AUTHORITY_UNVERIFIED' }; });
+    assert.equal(blocked.kind, 'BLOCKED', JSON.stringify(blocked));
+    assert.equal(blocked.effect_state, 'NONE');
+    assert.equal(blocked.reason, 'FORK_CONTROL_CURRENT_AUTHORITY_UNVERIFIED');
+    assert.equal(initial, 1);
+    assert.equal(final, 1);
+    assert.equal(fs.existsSync(path.join(f.root, 'TASKCYCLE-FORK-001', 'implementation')), false);
+    const entries = fs.readdirSync(path.join(f.root, 'TASKCYCLE-FORK-001'));
+    assert.deepEqual(entries, [], 'private staging is cleaned on current grant failure');
+  } finally { f.clean(); }
+});
+test('Linux: fail-closed revalidation error immediately before rename cannot publish', { skip: process.platform !== 'linux' }, () => {
+  const f = fixture();
+  try {
+    let final = 0;
+    const blocked = run(f.root, () => ({ status: 'PASS' }), pkg,
+      () => { final++; throw Error('GITHUB_API_UNAVAILABLE'); });
+    assert.equal(blocked.kind, 'BLOCKED', JSON.stringify(blocked));
+    assert.equal(blocked.effect_state, 'NONE');
+    assert.match(blocked.reason, /GITHUB_API_UNAVAILABLE/);
+    assert.equal(final, 1);
+    assert.equal(fs.existsSync(path.join(f.root, 'TASKCYCLE-FORK-001', 'implementation')), false);
+  } finally { f.clean(); }
+});
+test('Linux: a final authorization recheck is required once for first write, never for EXACT readback', { skip: process.platform !== 'linux' }, () => {
+  const f = fixture();
+  try {
+    let calls = 0;
+    const verify = () => { calls++; return { status: 'PASS' }; };
+    assert.equal(run(f.root, () => ({ status: 'PASS' }), pkg, verify).kind, 'CREATED');
+    assert.equal(calls, 1);
+    assert.equal(run(f.root, () => { throw Error('NO_REPEAT_INITIAL'); }, pkg,
+      () => { throw Error('NO_REPEAT_AUTHORITY_CHECK_ON_EXACT'); }).kind, 'EXACT');
+    assert.equal(calls, 1);
   } finally { f.clean(); }
 });
