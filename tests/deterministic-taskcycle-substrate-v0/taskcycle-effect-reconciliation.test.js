@@ -462,7 +462,7 @@ test('forked Phase1 cannot publish from a static Control binding without actual 
 });
 
 
-test('forked effect cannot reconcile a caller-supplied Control assertion without a qualified Github signer', () => {
+test('forked effect cannot reconcile a caller-supplied Control assertion without signed current Developer authority', () => {
   const f = fixture();
   try {
     const req = structuredClone(f.request);
@@ -496,7 +496,7 @@ test('forked effect cannot reconcile a caller-supplied Control assertion without
       resolveControlGitSource: () => structuredClone(proof),
     }).reconcileCompletedObligation({ request: req, observed: { subject: structuredClone(req.subject) } });
     assert.equal(result.status, 'BLOCKED');
-    assert.equal(result.reason, 'FORK_CONTROL_GITHUB_SIGNER_NOT_QUALIFIED');
+    assert.equal(result.reason, 'FORK_CONTROL_AUTHORITY_DIGEST_UNVERIFIED');
     assert.equal(result.effect_state, 'NONE');
     assert.deepEqual(fs.readdirSync(f.reconciliationRoot), []);
   } finally { f.cleanup(); }
