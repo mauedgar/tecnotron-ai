@@ -8,6 +8,10 @@ on:
     paths:
       - .github/workflows/tecnotron-control-custody-attest.yml
 
+  pull_request:
+    branches: [main]
+    paths: [.github/workflows/tecnotron-control-custody-attest.yml]
+
   workflow_dispatch:
     inputs:
       grant_comment_id:
@@ -225,6 +229,65 @@ jobs:
             qualification/receipt.json
             ${{ steps.attest.outputs.bundle-path }}
 
+  # This preflight only verifies the protected-main source qualification
+  # without accepting, signing or mutating Product or Developer authority.
+  source-qualification-preflight:
+    if: >-
+      ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && github.repository_id == '1339077141' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      actions: read
+      attestations: read
+    steps:
+      - name: Check original protected-main source attestation and native run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = mauedgar/tecnotron-ai
+          test "$GITHUB_REPOSITORY_ID" = 1339077141
+          mkdir -p preflight
+          gh api repos/mauedgar/tecnotron-ai/issues/comments/6673895838 > preflight/comment.json
+          jq -e '.user.id == 54420195 and .user.login == "mauedgar"
+            and .issue_url == "https://api.github.com/repos/mauedgar/tecnotron-ai/issues/35"
+            and .created_at == .updated_at' preflight/comment.json >/dev/null
+          jq -j '.body' preflight/comment.json > preflight/qualification.json
+          test "$(sha256sum preflight/qualification.json | cut -d' ' -f1)" = \
+            61555d75e1f68b9a4c718683edf0d5b5221718ffaff014e168abc3c03d68f09d
+          jq -e '.schema == "tecnotron-native-historical-source-qualification/v1"
+            and .Product_authority == "NONE" and .Product_effect == "NONE"
+            and .status == "PASS" and .provider_run_id == 42141447447
+            and .qualification_workflow_head_sha == "c535cd2769001504e2bf1d15d441350ae47768bd"
+            and .qualification_event_sha == "c535cd2769001504e2bf1d15d441350ae47768bd"
+            and .remote_ref_status == "HISTORICAL_SNAPSHOT_ONLY"
+            and .require_fresh_control_reobservation_before_product_effect == true
+            and .subject_commit == "c3a493a7d6f90af2a26640b5e966e950755b79c8"
+            and .subject_tree == "83fafc8df00454a9cd44774864f07d4ffedece72"
+            and .original_task_commit == "add3f2525b3b711ce4e396a2e5ce2864f3ceef10"
+            and .changed_paths == ["attendance/operator/cli.py"]' preflight/qualification.json >/dev/null
+          gh api repos/mauedgar/tecnotron-ai/actions/runs/42141447447 > preflight/run.json
+          jq -e '.repository.id == 1339077141 and .actor.id == 54420195
+            and .path == ".github/workflows/tecnotron-operator-source-qualification.yml"
+            and .event == "push" and .head_branch == "main"
+            and .head_sha == "c535cd2769001504e2bf1d15d441350ae47768bd"
+            and .status == "completed" and .conclusion == "success"
+            and .run_attempt == 1' preflight/run.json >/dev/null
+          gh attestation verify preflight/qualification.json \
+            --repo mauedgar/tecnotron-ai \
+            --signer-workflow mauedgar/tecnotron-ai/.github/workflows/tecnotron-operator-source-qualification.yml \
+            --signer-digest c535cd2769001504e2bf1d15d441350ae47768bd \
+            --source-ref refs/heads/main \
+            --cert-oidc-issuer https://token.actions.githubusercontent.com \
+            --deny-self-hosted-runners --format json > preflight/verified.json
+          jq -e 'type == "array" and length > 0 and all(.[];
+            .verificationResult.signature.certificate.githubWorkflowTrigger == "push"
+            and .verificationResult.signature.certificate.runnerEnvironment == "github-hosted"
+            and .verificationResult.signature.certificate.sourceRepositoryIdentifier == "1339077141")' preflight/verified.json >/dev/null
+          echo 'GITHUB_PROTECTED_SOURCE_CERTIFICATE_PREFLIGHT=PASS'
   # Product-provenance evidence only, not TaskCycle mutation, Phase2 or merge.
   # This job is unreachable until the workflow has been competently integrated
   # into default main AND the exact main signer commit is separately pinned
@@ -325,32 +388,60 @@ jobs:
             ($q[0] | .) as $qualification |
             ([ "repository", "taskcycle_id", "subject_commit", "subject_tree",
                "original_task_commit", "source_code_commit", "execution_attempt_id" ] |
-               all(.[]; $decision[.] == $grant[.] and $qualification[.] == $grant[.]))
+               all(.[]; $decision[.] == $grant[.]))
+            and ([ "repository", "taskcycle_id", "subject_commit", "subject_tree",
+               "original_task_commit" ] |
+               all(.[]; $qualification[.] == $grant[.]))
             and $decision.schema == "tecnotron-control-git-custody-decision/v1"
             and $decision.status == "GRANTED"
             and $decision.responsibility == $grant.responsibility
             and $decision.operation == $grant.operation
             and $decision.changed_paths == $grant.changed_paths
             and $decision.Product_effect == "NONE"
-            and $qualification.schema == "tecnotron-control-git-source-qualification/v1"
+            and $qualification.schema == "tecnotron-native-historical-source-qualification/v1"
             and $qualification.status == "PASS"
             and $qualification.Product_effect == "NONE"
-            and ($qualification.provider_run_id | type == "number" and . > 0)
+            and $qualification.Product_authority == "NONE"
+            and $qualification.provider_run_id == 42141447447
+            and $qualification.qualification_workflow_head_sha == "c535cd2769001504e2bf1d15d441350ae47768bd"
+            and $qualification.qualification_event_sha == "c535cd2769001504e2bf1d15d441350ae47768bd"
+            and $qualification.provider_event == "push"
+            and $qualification.remote_ref_status == "HISTORICAL_SNAPSHOT_ONLY"
+            and $qualification.require_fresh_control_reobservation_before_product_effect == true
+            and $qualification.subject_branch == "task/tecnotron-h6-operator-20261104-001"
+            and $qualification.changed_paths == ["attendance/operator/cli.py"]
+            and $grant.qualification_comment_id == 6673895838
+            and $grant.qualification_receipt_ref == "https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-6673895838"
             and $grant.qualification_receipt_ref ==
                 ("https://github.com/mauedgar/tecnotron-ai/issues/35#issuecomment-" +
                   ($grant.qualification_comment_id | tostring))
           ' > /dev/null
           run_id="$(jq -er '.provider_run_id' custody/qualification.json)"
           gh api "repos/mauedgar/tecnotron-ai/actions/runs/$run_id" > custody/qualification-run.json
-          jq -e --arg subject "$(jq -er '.subject_commit' custody/grant.json)" '
-            .repository.id == 1339077141
-            and .path == ".github/workflows/native-validation.yml"
-            and .event == "pull_request"
+          jq -e '
+            .repository.id == 1339077141 and .actor.id == 54420195
+            and .path == ".github/workflows/tecnotron-operator-source-qualification.yml"
+            and .event == "push" and .head_branch == "main"
             and .status == "completed" and .conclusion == "success"
-            and .run_attempt == 1 and .head_sha == $subject
+            and .run_attempt == 1
+            and .head_sha == "c535cd2769001504e2bf1d15d441350ae47768bd"
           ' custody/qualification-run.json > /dev/null
-          # Qualification means a provider-native CI run of this exact source,
-          # not merely a requester's PASS label.
+          # Source validation is from an immutable, GitHub-SIGNED protected-main
+          # native run; never substitute prose PASS or a synthetic PR head.
+          test "$(sha256sum custody/qualification.json | cut -d' ' -f1)" = \
+            61555d75e1f68b9a4c718683edf0d5b5221718ffaff014e168abc3c03d68f09d
+          gh attestation verify custody/qualification.json \
+            --repo mauedgar/tecnotron-ai \
+            --signer-workflow mauedgar/tecnotron-ai/.github/workflows/tecnotron-operator-source-qualification.yml \
+            --signer-digest c535cd2769001504e2bf1d15d441350ae47768bd \
+            --source-ref refs/heads/main \
+            --cert-oidc-issuer https://token.actions.githubusercontent.com \
+            --deny-self-hosted-runners --format json > custody/verified-source.json
+          jq -e 'type == "array" and length > 0 and all(.[];
+            .verificationResult.signature.certificate.githubWorkflowTrigger == "push"
+            and .verificationResult.signature.certificate.runnerEnvironment == "github-hosted"
+            and .verificationResult.signature.certificate.sourceRepositoryIdentifier == "1339077141")' custody/verified-source.json >/dev/null
+          echo 'GITHUB_SIGNED_NATIVE_SOURCE_QUALIFICATION=PASS'
           test "$(jq -er '.execution_attempt_id' custody/grant.json)" = "$DISPATCH_ATTEMPT" || {
             echo "DISPATCH_ATTEMPT_NOT_COMPETENTLY_GRANTED" >&2; exit 1;
           }
@@ -376,6 +467,12 @@ jobs:
           ' custody/source-edge.json > /dev/null
           gh api "repos/mauedgar/tecnotron-ai/git/ref/heads/task/tecnotron-h6-operator-20261104-001" > custody/subject-remote.json
           remote_head="$(jq -er '.object.sha' custody/subject-remote.json)"
+          # Fresh native branch observation and original signed historical tip
+          # must both descend from the exact original Phase1 source commit.
+          observed_at_qualification="$(jq -er '.remote_head_at_observation' custody/qualification.json)"
+          gh api "repos/mauedgar/tecnotron-ai/compare/$subject...$observed_at_qualification" |
+            jq -e --arg source "$subject" '.base_commit.sha == $source
+              and (.status == "ahead" or .status == "identical")' >/dev/null
           gh api "repos/mauedgar/tecnotron-ai/compare/$subject...$remote_head" |
             jq -e --arg subject "$subject" '
               .base_commit.sha == $subject and (.status == "ahead" or .status == "identical")
