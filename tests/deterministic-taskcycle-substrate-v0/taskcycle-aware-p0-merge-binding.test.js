@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { qualifyMergeTopology } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-close-evidence-qualification');
+const { matchesHistoricalAwareP0Source } = require('../../src/deterministic-taskcycle-substrate-v0/taskcycle-post-phase1-lifecycle');
 
 const s = c => c.repeat(40);
 const c = { baseline:s('0'), task:s('1'), phase1:s('2'), accepted:s('3'),
@@ -86,4 +87,34 @@ test('tampered merge-parent declaration, force, scope or remote correspondence c
     assert.equal(x.status,'BLOCKED');
     assert.notEqual(x.reason,'VERIFIABLE_GIT_SOURCE_UNAVAILABLE');
   }
+});
+
+test('original immutable Aware baseline/main profile must match before any Git read',()=>{
+  const request={taskcycle:{id:'TASKCYCLE-AWARE-P0-REPAIR-001'},
+    candidate:{repository:'mauedgar/aware-commerce'}};
+  const source={projection:{exact_inputs:{Product_baseline:{
+    repository:'mauedgar/aware-commerce',integration_branch:'main'
+  }}}};
+  const surface={consumer_profile:'AWARE_P0_HISTORICAL_ONLY',
+    remoteUrl:'https://github.com/mauedgar/aware-commerce.git',remoteRef:'refs/heads/main'};
+  assert.equal(matchesHistoricalAwareP0Source(request,source,surface),true);
+  for(const mutate of [
+    (q,s,g)=>{s.projection.exact_inputs.Product_baseline.integration_branch='tools'},
+    (q,s,g)=>{s.projection.exact_inputs.Product_baseline.integration_branch='develop'},
+    (q,s,g)=>{delete s.projection.exact_inputs.Product_baseline.integration_branch},
+    (q,s,g)=>{s.projection.exact_inputs.Product_baseline.repository='mauedgar/tecnotron-ai'},
+    (q,s,g)=>{q.candidate.repository='mauedgar/another-product'},
+    (q,s,g)=>{q.taskcycle.id='TASKCYCLE-UNKNOWN'},
+    (q,s,g)=>{g.consumer_profile='TECNOTRON_TOOLS'},
+    (q,s,g)=>{g.remoteRef='refs/heads/tools'},
+    (q,s,g)=>{g.remoteUrl='https://github.com/mauedgar/tecnotron-ai.git'},
+  ]){
+    const q=structuredClone(request),s=structuredClone(source),g=structuredClone(surface);
+    mutate(q,s,g);
+    assert.equal(matchesHistoricalAwareP0Source(q,s,g),false);
+  }
+  // An exact predicate match is not native Control custody, acceptance, or
+  // a permission to close. Existing qualifiedMergeObservation checks those.
+  assert.equal(matchesHistoricalAwareP0Source(request,{projection:{exact_inputs:{}}},surface),false);
+  assert.equal(matchesHistoricalAwareP0Source(request,source,null),false);
 });
