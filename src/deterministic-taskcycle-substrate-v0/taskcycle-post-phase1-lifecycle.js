@@ -154,6 +154,7 @@ function qualifiedMergeObservation(request, source, surface, resolved) {
   // sourced from request/observed.trusted_git. It has no Product authority.
   const repo = request?.candidate?.repository;
   const sourceRepo = source?.projection?.exact_inputs?.Product_baseline?.repository;
+  const sourceBranch = source?.projection?.exact_inputs?.Product_baseline?.integration_branch;
   // The exceptional Aware binding is supplied at capability construction by
   // competent Control, never by a TaskCycle request or observed event.
   const tecnotronBinding = repo === 'mauedgar/tecnotron-ai'
@@ -162,6 +163,7 @@ function qualifiedMergeObservation(request, source, surface, resolved) {
     && (surface.consumer_profile === undefined || surface.consumer_profile === 'TECNOTRON_TOOLS');
   const awareBinding = repo === 'mauedgar/aware-commerce'
     && sourceRepo === repo
+    && sourceBranch === 'main'
     && request?.taskcycle?.id === 'TASKCYCLE-AWARE-P0-REPAIR-001'
     && surface?.consumer_profile === 'AWARE_P0_HISTORICAL_ONLY'
     && surface.remoteUrl === 'https://github.com/mauedgar/aware-commerce.git'
