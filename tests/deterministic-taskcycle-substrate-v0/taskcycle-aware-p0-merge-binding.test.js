@@ -54,7 +54,10 @@ test('wrong TaskCycle, repository, ref, consumer profile or remote all fail befo
     const a=fixture();edit(a);
     const x=run(a);
     assert.equal(x.status,'BLOCKED');
-    assert.equal(x.reason,'PRODUCT_REMOTE_BINDING_UNQUALIFIED');
+    assert.equal(x.reason,
+      a.request.taskcycle.id!==a.originalTaskCycleId
+        ? 'MERGE_CLOSURE_INPUT_INVALID'
+        : 'PRODUCT_REMOTE_BINDING_UNQUALIFIED');
   }
 });
 test('missing exact Aware profile does not grant an implicit fallback',()=>{
