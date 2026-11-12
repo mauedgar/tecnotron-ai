@@ -122,7 +122,7 @@ test('negative: real Git remote origin mismatch and URL rewrite both fail closed
 test('negative: wrong real commit trees, parents, scope and branch gate fail closed',t=>{
   const f=fixture(t);
   const mutations=[
-    x=>{x.request.candidate.tree=f.tree(f.merge)},
+    x=>{x.request.candidate.tree=f.tree(f.base)},
     x=>{x.request.Phase_2.merge.parents=[f.base,f.base]},
     x=>{x.request.Phase_2.merge.validated_combined_tree=f.tree(f.base)},
     x=>{x.scope.write_scope=[];x.scope.baseline_path_scope=[x.scope.task_path]},
