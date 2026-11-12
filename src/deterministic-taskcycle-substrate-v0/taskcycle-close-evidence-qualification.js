@@ -111,7 +111,7 @@ function isExactPR43RejectedTransientPair({git,root,request,originalTaskCycleId,
 
 function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl,
   originalTaskCycleId, expectedRemoteCommit, historicalContinuity=null,
-  authorizedScopeAmendments=[]}, {git=createReadOnlyGitAdapter()}={}) {
+  authorizedScopeAmendments=[], qualifiedProductSource=null}, {git=createReadOnlyGitAdapter()}={}) {
   // historicalContinuity is retained as a compatibility input only; never an authority.
   const p2=request?.Phase_2, m=p2?.merge, c=request?.candidate;
   if(!p2 || p2.integration_mode!=='MERGE_COMMIT' || !m || !c
@@ -126,8 +126,27 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
       || p2.force!==false || p2.remote_correspondence!=='EXACT') {
     return {status:'BLOCKED',reason:'MERGE_CLOSURE_INPUT_INVALID'};
   }
-  const expectedOrigin='https://github.com/'+c.repository+'.git';
-  if(c.repository!=='mauedgar/tecnotron-ai' || remoteUrl!==expectedOrigin
+  // No caller-provided Product name can grant authority: the lifecycle
+  // supplies this binding from immutable original Phase1 inputs, independently
+  // of the incoming candidate/merge request. Direct legacy callers retain
+  // Tecnotron-only behavior when no qualified source is supplied.
+  const bound=qualifiedProductSource||{
+    repository:'mauedgar/tecnotron-ai',
+    integration_branch:'tools',
+    taskcycle_id:originalTaskCycleId,
+  };
+  const tecnotron=bound.repository==='mauedgar/tecnotron-ai'
+    && bound.integration_branch==='tools';
+  const awareP0=bound.repository==='mauedgar/aware-commerce'
+    && bound.integration_branch==='main'
+    && originalTaskCycleId==='TASKCYCLE-AWARE-P0-REPAIR-001';
+  const expectedOrigin='https://github.com/'+bound.repository+'.git';
+  const remoteBranch='refs/heads/'+bound.integration_branch;
+  if ((!tecnotron&&!awareP0)
+      || bound.taskcycle_id!==originalTaskCycleId
+      || request.taskcycle.id!==originalTaskCycleId
+      || c.repository!==bound.repository
+      || remoteUrl!==expectedOrigin
       || !sha(expectedRemoteCommit) || expectedRemoteCommit!==m.commit) {
     return {status:'BLOCKED',reason:'PRODUCT_REMOTE_BINDING_UNQUALIFIED'};
   }
@@ -198,7 +217,7 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
     // objects, while Control authenticates the original native combined-tree receipt.
     if(m.validated_combined_tree!==m.tree)
       return {status:'BLOCKED',reason:'PRETESTED_MERGE_TREE_NOT_BOUND'};
-    const remote=parseRemote(execute(git,root,['ls-remote','--heads',remoteUrl,'refs/heads/tools']),'refs/heads/tools');
+    const remote=parseRemote(execute(git,root,['ls-remote','--heads',remoteUrl,remoteBranch]),remoteBranch);
     // F006: verify historical continuation using the observed remote's
     // actual immutable commit DAG. Caller-supplied historicalContinuity
     // is NEVER authority or proof. No lazy fetch or object writes.
