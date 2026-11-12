@@ -69,6 +69,8 @@ const BASELINE_NODE_TESTS = Object.freeze([
 const OPERATIONAL_SUBSTRATE = new Set([
   'taskcycle-closure-compatibility.test.js', 'taskcycle-effect-reconciliation.test.js',
   'taskcycle-initialization.test.js', 'taskcycle-post-phase1-lifecycle.test.js',
+  'taskcycle-aware-p0-merge-binding.test.js',
+  'taskcycle-aware-p0-native-git.test.js',
   'taskcycle-phase1-branch-qualification.test.js',
   'taskcycle-pinned-effect-io.test.js',
   'taskcycle-terminal-preflight.test.js', 'conditioned-acceptance-preflight.test.js',

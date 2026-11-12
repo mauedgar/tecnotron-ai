@@ -110,6 +110,7 @@ function isExactPR43RejectedTransientPair({git,root,request,originalTaskCycleId,
 }
 
 function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl,
+  consumerProfile='TECNOTRON_TOOLS', remoteRef='refs/heads/tools',
   originalTaskCycleId, expectedRemoteCommit, historicalContinuity=null,
   authorizedScopeAmendments=[]}, {git=createReadOnlyGitAdapter()}={}) {
   // historicalContinuity is retained as a compatibility input only; never an authority.
@@ -127,7 +128,18 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
     return {status:'BLOCKED',reason:'MERGE_CLOSURE_INPUT_INVALID'};
   }
   const expectedOrigin='https://github.com/'+c.repository+'.git';
-  if(c.repository!=='mauedgar/tecnotron-ai' || remoteUrl!==expectedOrigin
+  const originalTecnotron = c.repository==='mauedgar/tecnotron-ai'
+    && consumerProfile==='TECNOTRON_TOOLS' && remoteRef==='refs/heads/tools';
+  // This is a narrowly enumerated consumer, not a generic repo/ref parameter.
+  // No authority originates here: upstream Control must authenticate and bind
+  // the source profile, repository, TaskCycle and signed qualified Git surface.
+  const originalAware = c.repository==='mauedgar/aware-commerce'
+    && consumerProfile==='AWARE_P0_HISTORICAL_ONLY'
+    && remoteRef==='refs/heads/main'
+    && originalTaskCycleId==='TASKCYCLE-AWARE-P0-REPAIR-001'
+    && request?.taskcycle?.id===originalTaskCycleId
+    && phase1?.repository===c.repository;
+  if(!(originalTecnotron || originalAware) || remoteUrl!==expectedOrigin
       || !sha(expectedRemoteCommit) || expectedRemoteCommit!==m.commit) {
     return {status:'BLOCKED',reason:'PRODUCT_REMOTE_BINDING_UNQUALIFIED'};
   }
@@ -198,7 +210,7 @@ function qualifyMergeTopology({repositoryPath, request, phase1, scope, remoteUrl
     // objects, while Control authenticates the original native combined-tree receipt.
     if(m.validated_combined_tree!==m.tree)
       return {status:'BLOCKED',reason:'PRETESTED_MERGE_TREE_NOT_BOUND'};
-    const remote=parseRemote(execute(git,root,['ls-remote','--heads',remoteUrl,'refs/heads/tools']),'refs/heads/tools');
+    const remote=parseRemote(execute(git,root,['ls-remote','--heads',remoteUrl,remoteRef]),remoteRef);
     // F006: verify historical continuation using the observed remote's
     // actual immutable commit DAG. Caller-supplied historicalContinuity
     // is NEVER authority or proof. No lazy fetch or object writes.
