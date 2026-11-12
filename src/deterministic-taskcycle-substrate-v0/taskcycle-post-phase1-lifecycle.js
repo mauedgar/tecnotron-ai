@@ -152,22 +152,35 @@ function qualifiedMergeObservation(request, source, surface, resolved) {
   if (request.Phase_2.integration_mode !== 'MERGE_COMMIT') return {error:null,verified:null};
   // surface is supplied by Product Control at capability construction, never
   // sourced from request/observed.trusted_git. It has no Product authority.
-  if (!surface || !surface.repositoryPath
+  // The original, immutable Phase1 reconciliation (not the caller request)
+  // selects a strictly enumerated consumer. No generic product authorization.
+  const p=source.projection, original=p.exact_inputs;
+  if (!original || !Array.isArray(original.write_scope) || !original.TASK_carrier
+      || !p.reconciled_effect?.subject) return {error:'ORIGINAL_SOURCE_INCOMPLETE'};
+  const originProduct=original.Product_baseline;
+  const repo=originProduct?.repository, integrationBranch=originProduct?.integration_branch;
+  const knownTecnotron=repo==='mauedgar/tecnotron-ai' && integrationBranch==='tools';
+  const knownAwareP0=repo==='mauedgar/aware-commerce' && integrationBranch==='main'
+    && request.taskcycle.id==='TASKCYCLE-AWARE-P0-REPAIR-001';
+  const qualifiedProductSource=(knownTecnotron||knownAwareP0)
+    && request.candidate.repository===repo
+    && p.reconciled_effect.subject.repository===repo
+    ? {repository:repo,integration_branch:integrationBranch,taskcycle_id:request.taskcycle.id}
+    : null;
+  if (!qualifiedProductSource || !surface || !surface.repositoryPath
       || surface.binding !== 'CONTROL_QUALIFIED_GIT'
-      || surface.remoteUrl !== 'https://github.com/mauedgar/tecnotron-ai.git'
+      || surface.remoteUrl !== 'https://github.com/'+repo+'.git'
       || !isSha256(surface.qualification_identity_sha256)
       || surface.qualification_identity_sha256 !== resolved?.git_surface_identity_sha256
       || !nonEmpty(surface.qualification_receipt_ref)
       || surface.qualification_receipt_ref !== resolved?.git_surface_receipt_ref) {
     return {error:'QUALIFIED_GIT_SURFACE_REQUIRED'};
   }
-  const p=source.projection, original=p.exact_inputs;
-  if (!original || !Array.isArray(original.write_scope) || !original.TASK_carrier
-      || !p.reconciled_effect?.subject) return {error:'ORIGINAL_SOURCE_INCOMPLETE'};
   const m=request.Phase_2.merge;
   const valid=qualifyMergeTopology({
     repositoryPath:surface.repositoryPath,
     remoteUrl:surface.remoteUrl,
+    qualifiedProductSource,
     expectedRemoteCommit:request.Phase_2.post_tools,
     request,
     phase1:{...p.reconciled_effect.subject,task_carrier:original.TASK_carrier.commit},
